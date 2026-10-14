@@ -21,7 +21,7 @@ Thêm dependency mới phải có lý do rõ ràng (kích thước bundle, có c
 ```bash
 npm run dev | build | lint | typecheck | test | test:e2e
 npx supabase gen types typescript --project-id <ID> > src/types/database.ts
-npm run import:books [-- --dry-run]   # nạp sách thật từ Google Books ("import:books": "tsx scripts/import-books.ts")
+npm run import:books [-- --dry-run] [-- --hires-covers]   # nạp sách thật từ Google Books ("import:books": "tsx scripts/import-books.ts")
 ```
 
 Trước khi báo xong: `typecheck`, `lint`, `build` phải sạch. Có đụng logic giỏ hàng/đặt hàng thì chạy thêm test liên quan.
@@ -71,10 +71,11 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 - Action trả về `Result<T>` = `{ ok: true, data } | { ok: false, code }`. Không throw ra UI. `code` là mã lỗi có bản dịch trong `messages/*.json → errors`.
 - Giỏ hàng dùng `useOptimistic`, rollback khi lỗi.
 - Đặt hàng/hủy đơn chỉ qua RPC `place_order` / `cancel_order`. Client không gửi giá hay tổng tiền.
+- Tiền tạm tính ở giỏ/checkout (subtotal, ship, giảm giá, mốc freeship) lấy từ RPC `quote_order`, không tự tính ở client.
 
 **State**
 - Filter, sort, page, query tìm kiếm nằm trên **URL searchParams**, không ở `useState`. Link chia sẻ được, back/forward đúng, render được ở server.
-- Không thêm thư viện state toàn cục. Giỏ khách vãng lai: localStorage, gộp vào `cart_items` khi đăng nhập.
+- Không thêm thư viện state toàn cục. Giỏ khách vãng lai: localStorage, gộp vào `cart_items` khi đăng nhập qua RPC `merge_cart`.
 
 **TypeScript**
 - Không `any`, không `as` để ép kiểu cho qua. Dùng types sinh từ Supabase và `z.infer`.
@@ -122,17 +123,20 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 
 - Tiền là `integer` VND.
 - RLS bật cho mọi bảng. Không tắt RLS, không dùng service role trong app.
-- Cột do trigger quản lý, không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
-- Tìm kiếm qua RPC `search_books(q)`, hỗ trợ gõ không dấu.
-- Địa chỉ 2 cấp: Tỉnh/Thành phố → Phường/Xã.
-- Phí ship: 30.000₫, miễn phí từ 300.000₫ (hằng số trong `place_order`).
+- Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
+- RPC cho app: `search_books`, `quote_order`, `place_order`, `cancel_order`, `set_default_address`, `merge_cart` (danh sách + mã lỗi ở cuối `schema.sql`). Hàm nội bộ nằm trong schema `private`, không lộ ra API.
+- Tìm kiếm qua RPC `search_books(q)`: gõ không dấu, khớp từng từ không cần đúng thứ tự. Phân trang bằng `.range()` + `count: 'exact'` (`estimated` trên RPC không chính xác).
+- Sách chỉ gắn vào danh mục lá. Trang danh mục cha lọc `category_id in (<id các danh mục con>)`.
+- Địa chỉ 2 cấp: Tỉnh/Thành phố → Phường/Xã. Đổi địa chỉ mặc định qua RPC `set_default_address`.
+- Phí ship: 30.000₫, miễn phí từ 300.000₫ (hằng số trong `private.flat_shipping_fee()` / `private.free_ship_from()`). UI lấy mốc freeship từ `quote_order`, không hard-code.
+- `reviews`: client chỉ ghi được `rating`, `content` (column grant); `user_id` tự lấy từ phiên đăng nhập.
 
 ## Dữ liệu
 
 - `seed.sql` chỉ chứa danh mục và voucher. Sách, tác giả, NXB là **dữ liệu thật**, nạp bằng `npm run import:books` từ Google Books API: tên, tác giả, NXB, ISBN, năm xuất bản, số trang, mô tả, ảnh bìa.
-- Muốn thêm sách: sửa `scripts/book-list.json` (danh mục → truy vấn, hỗ trợ cú pháp `inauthor:`, `intitle:`, `isbn:`) rồi chạy lại. Script upsert theo ISBN nên chạy lại bao nhiêu lần cũng an toàn.
+- Muốn thêm sách: sửa `scripts/book-list.json` (danh mục → truy vấn, hỗ trợ cú pháp `inauthor:`, `intitle:`, `isbn:`) rồi chạy lại. Sách đã có (theo ISBN) bị bỏ qua hoàn toàn, nên chạy lại bao nhiêu lần cũng an toàn và không đè giá, tồn kho hay chỉnh sửa trong admin.
 - Google Books không có giá bán lẻ VN, nên `price`, `original_price`, `stock` được sinh ổn định theo ISBN (chạy lại vẫn ra cùng giá). Có giá thật thì ghi đè trong admin.
-- Ảnh bìa hotlink từ `books.google.com`: thêm domain này vào `images.remotePatterns`. Muốn ảnh nét hơn hoặc tự chủ thì sau này có thể tải về Supabase Storage (bucket `book-covers`).
+- Ảnh bìa hotlink từ `books.google.com`: thêm domain này vào `images.remotePatterns`. Ảnh từ kết quả search chỉ rộng ~128px; `--hires-covers` thử lấy ảnh lớn hơn từ endpoint chi tiết (không phải sách nào cũng có). Muốn tự chủ thì sau này tải về Supabase Storage (bucket `book-covers`).
 - `description_en` để trống thì fallback về tiếng Việt. Có thể bổ sung bằng script riêng sau.
 - Dữ liệu từ nguồn ngoài có thể bẩn (thiếu mô tả, tên NXB không thống nhất, HTML lẫn trong mô tả). UI phải chịu được trường hợp thiếu field. Chuẩn hóa ở script, không chuẩn hóa ở UI.
 
