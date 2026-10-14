@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
-import { getTranslations } from 'next-intl/server'
+import { getMessages, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locale as rootLocale } from 'next/root-params'
 import { Footer } from '@/components/layout/footer'
@@ -26,7 +26,7 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
   const locale = await rootLocale()
   if (!hasLocale(routing.locales, locale)) notFound()
 
-  const t = await getTranslations('common')
+  const [t, messages] = await Promise.all([getTranslations('common'), getMessages()])
 
   return (
     <html lang={locale} className={fontVariables} suppressHydrationWarning>
@@ -38,7 +38,9 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
           {t('skipToContent')}
         </a>
         <ThemeProvider>
-          <NextIntlClientProvider>
+          {/* Client chỉ nhận namespace còn dùng useTranslations (palette, tải lười). Client leaf khác nhận
+              chuỗi đã dịch qua props → không gửi cả file messages xuống, không kéo intl-messageformat vào bundle đầu. */}
+          <NextIntlClientProvider messages={{ search: messages.search }}>
             <Header />
             <main id="main" className="flex-1">
               {children}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useSearchParams } from 'next/navigation'
-import { useLocale, useTranslations } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { Suspense } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { getPathname, usePathname } from '@/i18n/navigation'
@@ -10,26 +10,26 @@ import { routing } from '@/i18n/routing'
 type Pathname = keyof typeof routing.pathnames
 type SlugPathname = Extract<Pathname, `${string}[slug]`>
 type Query = Record<string, string[]>
+type Labels = { short: string; full: string }
 
 /** Chuyển sang ngôn ngữ còn lại, giữ nguyên trang, params và query */
-export function LocaleSwitcher() {
+export function LocaleSwitcher({ labels }: { labels: Labels }) {
   return (
     // useSearchParams cần Suspense để trang vẫn prerender được; fallback là cùng link nhưng chưa có query
-    <Suspense fallback={<LocaleLink />}>
-      <LocaleLinkWithQuery />
+    <Suspense fallback={<LocaleLink labels={labels} />}>
+      <LocaleLinkWithQuery labels={labels} />
     </Suspense>
   )
 }
 
-function LocaleLinkWithQuery() {
+function LocaleLinkWithQuery({ labels }: { labels: Labels }) {
   const searchParams = useSearchParams()
   const query: Query = {}
   for (const key of new Set(searchParams.keys())) query[key] = searchParams.getAll(key)
-  return <LocaleLink query={query} />
+  return <LocaleLink labels={labels} query={query} />
 }
 
-function LocaleLink({ query }: { query?: Query }) {
-  const t = useTranslations('layout')
+function LocaleLink({ labels, query }: { labels: Labels; query?: Query }) {
   const locale = useLocale()
   const pathname = usePathname()
   const { slug } = useParams()
@@ -44,8 +44,8 @@ function LocaleLink({ query }: { query?: Query }) {
       hrefLang={target}
       className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })}
     >
-      {t('switchLocaleShort')}
-      <span className="sr-only"> – {t('switchLocale')}</span>
+      {labels.short}
+      <span className="sr-only"> – {labels.full}</span>
     </a>
   )
 }

@@ -1,7 +1,14 @@
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
 
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
+const withNextIntl = createNextIntlPlugin({
+  requestConfig: './src/i18n/request.ts',
+  experimental: {
+    // Biên dịch ICU message lúc build → client chỉ cần bộ format nhỏ, bỏ được intl-messageformat (~16KB gzip)
+    // khỏi bundle đầu (IntlProvider kéo nó vào dù không client leaf nào gọi useTranslations).
+    messages: { path: './messages', format: 'json', locales: 'infer', precompile: true },
+  },
+})
 
 // Next nạp .env.local trước khi đọc file này. Lấy đúng host của project, không dùng wildcard *.supabase.co
 // (wildcard cho phép tối ưu ảnh từ bucket của project khác bằng server của mình).

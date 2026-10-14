@@ -2,7 +2,6 @@
 
 import { SearchIcon } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useTranslations } from 'next-intl'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 
 // Palette (cmdk + dialog) chỉ tải khi mở lần đầu; rê chuột / focus vào nút thì tải trước
@@ -12,8 +11,9 @@ const SearchPalette = dynamic(loadPalette, { ssr: false })
 const subscribeNothing = () => () => {}
 const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.userAgent)
 
-export function SearchTrigger() {
-  const t = useTranslations('layout')
+type Labels = { placeholder: string; open: string }
+
+export function SearchTrigger({ labels }: { labels: Labels }) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
@@ -46,8 +46,8 @@ export function SearchTrigger() {
         className="inline-flex size-9 items-center justify-center gap-2 rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 md:w-full md:max-w-sm md:justify-start md:border md:border-input md:bg-surface md:px-3 md:text-sm"
       >
         <SearchIcon aria-hidden className="size-4 shrink-0" />
-        <span className="hidden md:inline">{t('searchPlaceholder')}</span>
-        <span className="sr-only md:hidden">{t('openSearch')}</span>
+        <span className="hidden md:inline">{labels.placeholder}</span>
+        <span className="sr-only md:hidden">{labels.open}</span>
         <kbd
           aria-hidden
           className="ml-auto hidden rounded-sm border bg-surface-raised px-1.5 font-sans text-xs text-subtle md:inline"

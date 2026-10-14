@@ -100,10 +100,18 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
 ## Tiến độ
 
 - [x] Bổ sung 5: seed "Business & Economics", smoke test bỏ `.first()` ở "Văn học"
+- [x] Quyết định 1 (giảm JS dùng chung). Đo `measure:js -- vi` (trang chủ, gzip ngoài baseline 170KB):
+  | Bước | Tổng gzip | Ngoài baseline |
+  |---|---|---|
+  | Trước | 212.4KB | 42.4KB |
+  | A: ThemeToggle / LocaleSwitcher / SearchTrigger nhận chuỗi qua props; provider chỉ truyền namespace `search` | 212.3KB | 42.3KB |
+  | B: + `experimental.messages.precompile` của next-intl | 203.4KB | **33.4KB** (−9KB) |
+
+  Bước A không giảm vì `IntlProvider` import `initializeConfig` → `use-intl/format-message` → `intl-messageformat`, kể cả khi không client leaf nào gọi `useTranslations`. Precompile alias `use-intl/format-message` sang bản `format-only` (dùng `icu-minify`, có sẵn trong next-intl, không thêm dependency) → không còn chunk nào chứa `IntlMessageFormat`. Bước A vẫn giữ: payload RSC không còn gửi cả file messages, và giữ quy ước client leaf mới nhận chuỗi qua props.
 
 ## Quyết định tự chọn, cần duyệt
 
-(Chưa có.)
+1. **Bật `experimental.messages.precompile` của next-intl** (bổ sung 4). Lý do: −9KB gzip ở mọi trang, không thêm dependency, e2e (26) vẫn xanh, plural/format `price` trong message chạy đúng. Rủi ro: API `experimental`, có thể đổi ở bản next-intl sau; messages bị biến thành AST nên `t.raw()` trả AST (hiện không dùng). Phương án khác: bỏ precompile, chỉ bọc `NextIntlClientProvider` quanh palette (cần sửa `useLocale`/`Link` không phụ thuộc context, phức tạp hơn mà vẫn kéo `use-intl` vào chunk palette).
 
 ## Bị chặn
 

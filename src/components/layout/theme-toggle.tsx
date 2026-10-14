@@ -1,14 +1,14 @@
 'use client'
 
 import { MoonIcon, SunIcon } from 'lucide-react'
-import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 
 // Icon và nhãn đổi theo class .dark trên <html> (next-themes gắn trước khi paint) thay vì theo state JS:
 // server không biết theme → không cần chờ mounted, không lệch hydration.
-export function ThemeToggle() {
-  const t = useTranslations('layout')
+// Nhãn nhận từ Server Component: client leaf không gọi useTranslations để intl-messageformat
+// không vào bundle ban đầu (CLAUDE.md → ngân sách JS).
+export function ThemeToggle({ labels }: { labels: { toLight: string; toDark: string } }) {
   const { resolvedTheme, setTheme } = useTheme()
 
   return (
@@ -19,8 +19,8 @@ export function ThemeToggle() {
     >
       <SunIcon aria-hidden className="hidden dark:block" />
       <MoonIcon aria-hidden className="dark:hidden" />
-      <span className="sr-only hidden dark:inline">{t('toLightTheme')}</span>
-      <span className="sr-only dark:hidden">{t('toDarkTheme')}</span>
+      <span className="sr-only hidden dark:inline">{labels.toLight}</span>
+      <span className="sr-only dark:hidden">{labels.toDark}</span>
     </Button>
   )
 }

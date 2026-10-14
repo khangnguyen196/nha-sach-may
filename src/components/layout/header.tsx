@@ -24,12 +24,12 @@ export async function Header() {
         </Link>
 
         <div className="flex flex-1 justify-end md:justify-center md:px-6">
-          <SearchTrigger />
+          <SearchTrigger labels={{ placeholder: t('searchPlaceholder'), open: t('openSearch') }} />
         </div>
 
         <div className="flex items-center sm:gap-0.5">
-          <LocaleSwitcher />
-          <ThemeToggle />
+          <LocaleSwitcher labels={{ short: t('switchLocaleShort'), full: t('switchLocale') }} />
+          <ThemeToggle labels={{ toLight: t('toLightTheme'), toDark: t('toDarkTheme') }} />
           <Link href="/cart" className={iconLink}>
             <ShoppingBagIcon aria-hidden />
             <span className="sr-only">{t('cart')}</span>
