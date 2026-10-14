@@ -5,6 +5,10 @@ const PORT = 3100
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // Máy dev 4 nhân / 8GB: nhiều worker (mỗi worker một Chromium) chạy cạnh next start làm test phụ thuộc thời
+  // điểm hydration chập chờn (⌘K, đổi theme, đổi ngôn ngữ; 3/84 fail với 2 worker). 1 worker: 84/84 qua 2 lần
+  // lặp, tổng thời gian không đổi (~1.8 phút) vì build chiếm phần lớn.
+  workers: process.env.CI ? undefined : 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',

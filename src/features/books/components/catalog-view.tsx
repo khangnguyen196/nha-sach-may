@@ -178,8 +178,14 @@ function FilterGroups({ groups }: { groups: FilterGroup[] }) {
   return (
     <div className="flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center md:gap-x-8 md:gap-y-3">
       {groups.map((group) => (
-        <div key={group.key} role="group" aria-labelledby={`filter-${group.key}`} className="flex flex-col gap-2 md:flex-row md:items-center">
-          <span id={`filter-${group.key}`} className="text-xs font-medium text-subtle">
+        // aria-label thay vì aria-labelledby: nhóm filter render hai nơi (hàng desktop + sheet mobile) → tránh trùng id
+        <div
+          key={group.key}
+          role="group"
+          aria-label={group.label}
+          className="flex flex-col gap-2 md:flex-row md:items-center"
+        >
+          <span aria-hidden className="text-xs font-medium text-subtle">
             {group.label}
           </span>
           <ul className="flex flex-wrap gap-2">
