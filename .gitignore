@@ -27,3 +27,7 @@ scripts/out/
 Thumbs.db
 *.log
 .vercel
+
+# env (giữ file mẫu)
+!.env.example
+*.pem

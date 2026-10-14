@@ -1,0 +1,40 @@
+{
+  "common": {
+    "siteName": "Nhà Sách Mây",
+    "skipToContent": "Bỏ qua, tới nội dung chính"
+  },
+  "metadata": {
+    "title": "Nhà Sách Mây — sách hay cho những giờ đọc yên tĩnh",
+    "description": "Nhà sách online song ngữ Việt/Anh: văn học, kinh tế, kỹ năng sống, thiếu nhi và nhiều hơn nữa."
+  },
+  "home": {
+    "quote": "Đọc sách là được trò chuyện với những người tử tế nhất của các thế kỷ trước.",
+    "quoteAuthor": "René Descartes",
+    "categoriesTitle": "Danh mục",
+    "categoriesEmpty": "Chưa có danh mục nào.",
+    "newArrivals": "Mới về",
+    "newArrivalsEmpty": "Chưa có sách nào."
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "description": "Trang bạn tìm không tồn tại hoặc đã được chuyển đi.",
+    "backHome": "Về trang chủ"
+  },
+  "admin": {
+    "title": "Quản trị",
+    "placeholder": "Khu vực quản trị sẽ được xây dựng ở giai đoạn sau."
+  },
+  "errors": {
+    "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
+    "INVALID_ADDRESS": "Địa chỉ giao hàng không hợp lệ.",
+    "BOOK_UNAVAILABLE": "Sách \"{title}\" hiện không còn bán.",
+    "OUT_OF_STOCK": "Sách \"{title}\" chỉ còn {stock} cuốn.",
+    "CART_EMPTY": "Giỏ hàng đang trống.",
+    "INVALID_VOUCHER": "Mã giảm giá không hợp lệ hoặc đã hết hạn.",
+    "VOUCHER_MIN_ORDER": "Mã này áp dụng cho đơn từ {min_order_value, number, price}.",
+    "ORDER_NOT_CANCELLABLE": "Đơn hàng này không thể hủy.",
+    "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",
+    "INVALID_INPUT": "Dữ liệu không hợp lệ.",
+    "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
+  }
+}

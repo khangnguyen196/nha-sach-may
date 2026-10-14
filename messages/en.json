@@ -1,0 +1,40 @@
+{
+  "common": {
+    "siteName": "Nhà Sách Mây",
+    "skipToContent": "Skip to main content"
+  },
+  "metadata": {
+    "title": "Nhà Sách Mây — good books for quiet reading hours",
+    "description": "A bilingual Vietnamese/English online bookstore: literature, business, self-help, children's books and more."
+  },
+  "home": {
+    "quote": "The reading of all good books is like conversation with the finest minds of past centuries.",
+    "quoteAuthor": "René Descartes",
+    "categoriesTitle": "Categories",
+    "categoriesEmpty": "No categories yet.",
+    "newArrivals": "New arrivals",
+    "newArrivalsEmpty": "No books yet."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "admin": {
+    "title": "Admin",
+    "placeholder": "The admin area will be built in a later phase."
+  },
+  "errors": {
+    "AUTH_REQUIRED": "Please sign in to continue.",
+    "INVALID_ADDRESS": "The shipping address is invalid.",
+    "BOOK_UNAVAILABLE": "\"{title}\" is no longer available.",
+    "OUT_OF_STOCK": "Only {stock} copies of \"{title}\" are left.",
+    "CART_EMPTY": "Your cart is empty.",
+    "INVALID_VOUCHER": "This voucher code is invalid or has expired.",
+    "VOUCHER_MIN_ORDER": "This code applies to orders from {min_order_value, number, price}.",
+    "ORDER_NOT_CANCELLABLE": "This order can no longer be cancelled.",
+    "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",
+    "INVALID_INPUT": "Some of the information is invalid.",
+    "UNKNOWN": "Something went wrong. Please try again."
+  }
+}

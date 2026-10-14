@@ -1,0 +1,157 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Design system "Phòng đọc về đêm" — NGUỒN DUY NHẤT của màu, font, radius, chữ.
+ * Tên token theo quy ước shadcn để thêm component không phải sửa tay:
+ *   primary        = màu "đèn đọc sách" (CTA, giá, link, focus ring)
+ *   accent, muted  = surface-raised (nền hover / nền phụ) — KHÔNG phải màu nhấn
+ *   muted-foreground = chữ phụ (tác giả, mô tả ngắn)
+ * Token riêng: surface, surface-raised, subtle, sale, success.
+ * Dark là mặc định (:root); .light ghi đè. Không dùng mã màu ở component.
+ * .light phải nằm trên <html> (next-themes làm vậy): token alias như --card: var(--surface)
+ * được tính ở phần tử khai báo, đặt .light trên phần tử con sẽ không đổi được alias.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-subtle: var(--subtle);
+  --color-sale: var(--sale);
+  --color-success: var(--success);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-be-vietnam-pro);
+  --font-serif: var(--font-lora);
+  --font-heading: var(--font-be-vietnam-pro);
+
+  /* Radius: sm 6px (input, badge) · lg 10px (card) · xl 14px (modal, sheet) · cover 4px */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-cover: 4px;
+
+  --shadow-glow: var(--glow);
+}
+
+@theme {
+  /* Thang chữ 12 / 14 / 16 / 18 / 20 / 24 / 32 / 48 — không dùng size ngoài thang */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 3rem;
+
+  --container-reading: 68ch;
+}
+
+:root {
+  color-scheme: dark;
+  --radius: 0.625rem;
+
+  --background: #0b0b0c;
+  --foreground: #ededed;
+  --surface: #141416;
+  --surface-raised: #1c1c1f;
+  --subtle: #8a8a8a;
+  --sale: #f87171;
+  --success: #4ade80;
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: #f2b66d;
+  --primary-foreground: #1a1206;
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-raised);
+  --muted-foreground: #a3a3a3;
+  --accent: var(--surface-raised);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--sale);
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.14);
+  --ring: var(--primary);
+
+  --glow: 0 0 24px color-mix(in oklab, var(--primary) 12%, transparent);
+}
+
+.light {
+  color-scheme: light;
+
+  --background: #f7f5f0;
+  --foreground: #1c1917;
+  --surface: #ffffff;
+  --surface-raised: #efebe3;
+  --subtle: #6b6560;
+  --sale: #c2410c;
+  --success: #15803d;
+
+  --primary: #9a5b14;
+  --primary-foreground: #ffffff;
+  --muted-foreground: #57534e;
+  --border: rgb(0 0 0 / 0.1);
+  --input: rgb(0 0 0 / 0.16);
+
+  --glow: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    line-height: 1.6;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: 1.2;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

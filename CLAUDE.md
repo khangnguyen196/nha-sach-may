@@ -20,8 +20,10 @@ Thêm dependency mới phải có lý do rõ ràng (kích thước bundle, có c
 
 ```bash
 npm run dev | build | lint | typecheck | test | test:e2e
+npm run check:env                                         # kiểm tra .env.local, không in giá trị bí mật
 npx supabase gen types typescript --project-id <ID> > src/types/database.ts
-npm run import:books [-- --dry-run] [-- --hires-covers]   # nạp sách thật từ Google Books ("import:books": "tsx scripts/import-books.ts")
+npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
+npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 ```
 
 Trước khi báo xong: `typecheck`, `lint`, `build` phải sạch. Có đụng logic giỏ hàng/đặt hàng thì chạy thêm test liên quan.
@@ -41,13 +43,18 @@ src/
       components/  actions.ts  queries.ts  schemas.ts  types.ts
   components/ui/       # shadcn primitives
   components/layout/   # Header, Footer, LocaleSwitcher, ThemeToggle
-  lib/                 # supabase/{server,client}.ts, i18n-db.ts, errors.ts, utils.ts
+  lib/                 # supabase/{server,client,public,env}.ts, i18n-db.ts, errors.ts, utils.ts
   types/database.ts
+  proxy.ts             # (Next 16, thay middleware.ts) — refresh session Supabase rồi next-intl; /admin bỏ qua next-intl
 messages/vi.json  messages/en.json
 supabase/schema.sql  seed.sql  migrations/
 scripts/import-books.ts  book-list.json   # công cụ nạp dữ liệu, chạy local
-middleware.ts          # (hoặc proxy.ts tùy phiên bản Next) — gộp next-intl + refresh session Supabase
+e2e/                   # Playwright
 ```
+
+- `lib/supabase/server.ts`: client theo phiên (đọc cookies) → chỉ dùng trong `<Suspense>`. `lib/supabase/public.ts`: client anon không cookies → dùng cho query catalog trong `'use cache'`.
+- Locale ở server lấy từ `next/root-params` (`i18n/request.ts`), API ổn định từ Next 16.3, không cần cờ experimental. Nhờ vậy không cần `setRequestLocale`, trang vẫn prerender được, và `getTranslations()` gọi được trong `'use cache'` (locale tự vào cache key). `/admin` không có `[locale]` → mặc định `vi`.
+- Pathname nội bộ (thư mục trong `app/[locale]`) bằng tiếng Anh; URL tiếng Việt map trong `i18n/routing.ts`. Trong code luôn viết `<Link href="/books/...">`.
 
 Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 
@@ -88,7 +95,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 
 **Hiệu năng (mục tiêu trên mobile 4G)**
 - LCP < 2.5s, CLS < 0.1, INP < 200ms. JS client trang sách < 100KB gzip.
-- `next/image` với `sizes` đúng; ảnh bìa đầu trang (LCP) có `priority`. Font qua `next/font` (subset `latin` + `vietnamese`, `display: swap`).
+- `next/image` với `sizes` đúng; ảnh bìa đầu trang (LCP) có `preload` (Next 16 bỏ `priority`). Font qua `next/font` (subset `latin` + `vietnamese`, `display: swap`).
 - Component nặng/ít dùng (gallery zoom, rich editor admin) dùng `next/dynamic`.
 
 **Accessibility**: WCAG AA. Có focus ring rõ, điều hướng được bằng bàn phím, có `alt` cho ảnh bìa (tên sách), dùng HTML ngữ nghĩa, tôn trọng `prefers-reduced-motion`.
@@ -134,9 +141,13 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 ## Dữ liệu
 
 - `seed.sql` chỉ chứa danh mục và voucher. Sách, tác giả, NXB là **dữ liệu thật**, nạp bằng `npm run import:books` từ Google Books API: tên, tác giả, NXB, ISBN, năm xuất bản, số trang, mô tả, ảnh bìa.
-- Muốn thêm sách: sửa `scripts/book-list.json` (danh mục → truy vấn, hỗ trợ cú pháp `inauthor:`, `intitle:`, `isbn:`) rồi chạy lại. Sách đã có (theo ISBN) bị bỏ qua hoàn toàn, nên chạy lại bao nhiêu lần cũng an toàn và không đè giá, tồn kho hay chỉnh sửa trong admin.
+- Quy trình import: `--dry-run` (có/không `--hires-covers`, ghi ra 2 file riêng) → mở file xem/sửa → `--from-preview <file>` để ghi DB. Không import thẳng từ Google Books: quota Books API ~1.000 request/ngày (cần `GOOGLE_BOOKS_API_KEY`, quota ẩn danh thường đã hết), và dữ liệu vào DB phải đúng bản đã duyệt. `--from-preview` validate lại file (zod, cùng ràng buộc với DB) trước khi ghi.
+- Muốn thêm sách: sửa `scripts/book-list.json` rồi chạy lại quy trình trên. Định dạng: danh mục lá → mảng truy vấn; mỗi truy vấn là chuỗi (1 request) hoặc `{ "q": "...", "pages": n }` (n request; API trả ≤ 20 cuốn/trang dù xin 40; dừng sớm khi hết kết quả). Cú pháp dùng được với sách tiếng Việt: từ khóa trơn (`tiếng Anh`, `Nam Cao`) hoặc **một** toán tử `inauthor:`/`inpublisher:` đứng đầu + từ trơn (`inauthor:Nguyễn Nhật Ánh`, `inpublisher:Kim Đồng truyện`). **Không** dùng ngoặc kép (`inauthor:"…"` có dấu → 0 kết quả), **không** lặp toán tử cho từng từ (→ 0), **không** dùng `intitle:` / `subject:` (với `langRestrict=vi` thường ra 0). Ước tính quota: số trang search + số sách thu được (nếu `--hires-covers`); `--max-requests` (mặc định 900) chặn trên. Sách đã có (theo ISBN) bị bỏ qua hoàn toàn, nên chạy lại bao nhiêu lần cũng an toàn và không đè giá, tồn kho hay chỉnh sửa trong admin. Ngoại lệ: sách đã có mà chưa có tác giả nào (lần chạy trước bị ngắt) sẽ được gắn lại tác giả. Hệ quả: ảnh bìa chỉ chọn được một lần lúc import, muốn đổi thì sửa trong admin.
 - Google Books không có giá bán lẻ VN, nên `price`, `original_price`, `stock` được sinh ổn định theo ISBN (chạy lại vẫn ra cùng giá). Có giá thật thì ghi đè trong admin.
-- Ảnh bìa hotlink từ `books.google.com`: thêm domain này vào `images.remotePatterns`. Ảnh từ kết quả search chỉ rộng ~128px; `--hires-covers` thử lấy ảnh lớn hơn từ endpoint chi tiết (không phải sách nào cũng có). Muốn tự chủ thì sau này tải về Supabase Storage (bucket `book-covers`).
+- Ảnh bìa **không hotlink** Google. Dry-run ghi 2 URL vào preview: `cover_small` (~128px, từ kết quả search) và `cover_large` (từ endpoint chi tiết, chỉ khi `--hires-covers`). Lúc ghi DB, script tải ảnh lớn; nếu tải lỗi hoặc là PNG < 40KB (thường là trang lót toàn chữ, không phải bìa) thì dùng ảnh nhỏ. Sau đó dùng `sharp` (có sẵn theo Next) thu về WebP rộng 600px (ảnh nhỏ giữ nguyên cỡ), upload `book-covers/<isbn>.webp` rồi ghi public URL vào `cover_url`. `images.remotePatterns` chỉ cho host Storage của project, đường dẫn `book-covers`.
+- `mapVolume` chỉ giữ sách có `volumeInfo.language === 'vi'` (`langRestrict` của API không đủ chặt), chuẩn hóa chuỗi (title, subtitle, authors, publisher, description) bằng `normalizeText` và loại sách có `¿`/`�` trong tên. `normalizeText` = NFD → đưa dấu mũ/trăng (U+0302/U+0306) lên trước dấu thanh → NFC; chỉ NFC không sửa được "Nguyẽ̂n" vì hai dấu cùng combining class 230.
+- **Giới hạn của Google Books với sách Việt** (đo ngày 2026-10-14): rất ít sách Việt có ISBN (mẫu: 11–15/20 kết quả thiếu ISBN), nên mỗi trang 20 kết quả chỉ ra khoảng 3 sách dùng được. Đã bỏ `intitle:` và `subject:` vì kết hợp với `langRestrict=vi` cho kết quả không ổn định (thường ra 0). Catalog hiện có 49 sách (lượt C); lượt mở rộng dùng từ khóa trơn + `inauthor:`/`inpublisher:`.
+- Bìa "ảnh lớn" của Google có thể chỉ rộng 128px, hoặc là trang lót dạng JPEG (bộ lọc PNG < 40KB không bắt được). Sau import nên xem lại bìa; bìa sai thì thay trong admin (Phase 7).
 - `description_en` để trống thì fallback về tiếng Việt. Có thể bổ sung bằng script riêng sau.
 - Dữ liệu từ nguồn ngoài có thể bẩn (thiếu mô tả, tên NXB không thống nhất, HTML lẫn trong mô tả). UI phải chịu được trường hợp thiếu field. Chuẩn hóa ở script, không chuẩn hóa ở UI.
 
@@ -144,25 +155,37 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 
 Lấy cảm hứng từ không khí tối giản, tĩnh, tập trung của make10000hours.com, chuyển thể thành một nhà sách: không gian tối như phòng đọc ban đêm, nơi **ảnh bìa sách là nguồn màu chính**, giao diện lùi về sau. Đối lập có chủ đích với kiểu nhà sách nhồi nhét banner: ít thành phần trên một màn hình, nhiều khoảng thở, không có chữ chạy, không có hiệu ứng nhấp nháy.
 
-**Màu**: chỉ định nghĩa ở **một chỗ** (CSS variables trong `globals.css`, map vào Tailwind theme). Component chỉ dùng token ngữ nghĩa (`bg-surface`, `text-muted`, `bg-accent`…), không bao giờ dùng mã hex.
+**Màu**: chỉ định nghĩa ở **một chỗ** (CSS variables trong `src/app/globals.css`, map vào Tailwind bằng `@theme inline`). Component chỉ dùng token ngữ nghĩa (`bg-surface`, `text-muted-foreground`, `bg-primary`…), không bao giờ dùng mã hex.
+
+Tên token theo **quy ước shadcn** để thêm component không phải sửa tay. Chú ý hai chỗ dễ nhầm: `accent` và `muted` của shadcn là **nền hover** (= `surface-raised`), **không** phải màu nhấn; màu nhấn là `primary`.
 
 > TODO: các mã hex dưới đây là bản đề xuất theo tinh thần dark-minimal của make10000hours.com. Thay bằng mã màu thật của trang đó (DevTools → Inspect → color picker) để bám sát. Đổi xong thì kiểm tra lại tương phản ≥ 4.5:1 cho chữ.
 
 | Token | Dark (mặc định) | Light | Dùng cho |
 |---|---|---|---|
 | `background` | `#0B0B0C` | `#F7F5F0` | nền trang |
+| `foreground` | `#EDEDED` | `#1C1917` | chữ chính |
 | `surface` | `#141416` | `#FFFFFF` | card, panel |
 | `surface-raised` | `#1C1C1F` | `#EFEBE3` | hover, dropdown, input |
-| `border` | `rgb(255 255 255 / 0.08)` | `rgb(0 0 0 / 0.10)` | viền 1px |
-| `foreground` | `#EDEDED` | `#1C1917` | chữ chính |
-| `muted` | `#A3A3A3` | `#57534E` | chữ phụ, tác giả |
+| `primary` | `#F2B66D` | `#9A5B14` | màu "đèn đọc sách": CTA, giá, link |
+| `primary-foreground` | `#1A1206` | `#FFFFFF` | chữ trên nền primary |
+| `muted-foreground` | `#A3A3A3` | `#57534E` | chữ phụ, tác giả |
 | `subtle` | `#8A8A8A` | `#6B6560` | meta, placeholder |
-| `accent` | `#F2B66D` | `#9A5B14` | màu "đèn đọc sách": CTA, giá, link, focus ring |
-| `accent-foreground` | `#1A1206` | `#FFFFFF` | chữ trên nền accent |
 | `sale` | `#F87171` | `#C2410C` | nhãn giảm giá |
 | `success` | `#4ADE80` | `#15803D` | trạng thái thành công |
+| `border` | `rgb(255 255 255 / 0.08)` | `rgb(0 0 0 / 0.10)` | viền 1px |
+| `input` | `rgb(255 255 255 / 0.14)` | `rgb(0 0 0 / 0.16)` | viền ô nhập |
 
-Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **một** màu accent. Không thêm gradient sặc sỡ.
+Alias (không có giá trị riêng, trỏ về token ở trên):
+
+| Token shadcn | Trỏ về |
+|---|---|
+| `card`, `popover` | `surface` (chữ: `foreground`) |
+| `accent`, `muted`, `secondary` | `surface-raised` (chữ: `foreground`) |
+| `ring` | `primary` |
+| `destructive` | `sale` |
+
+Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **một** màu nhấn (`primary`). Không thêm gradient sặc sỡ.
 
 **Typography**
 - UI và nội dung: **Be Vietnam Pro** (400/500/600).
@@ -172,16 +195,16 @@ Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **mộ
 **Không gian & hình khối**
 - Spacing theo bội số của 4px. Section cách nhau 64–96px trên desktop, 40–56px trên mobile.
 - Radius: 6px (input, badge), 10px (card), 14px (modal, sheet). Ảnh bìa radius 4px.
-- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Ở dark mode, bìa sách khi hover có glow nhẹ (`accent` ở opacity rất thấp).
+- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Ở dark mode, bìa sách khi hover có glow nhẹ (`shadow-glow`: `primary` ở opacity rất thấp, light mode không có).
 
 **Chuyển động**: 150–250ms, `ease-out`. Card hover nâng lên 2px. Trang chuyển mượt, không bounce. Tắt hết khi `prefers-reduced-motion`.
 
 **Thành phần chính**
 - **Header**: sticky, nền `background` mờ 80% + `backdrop-blur`, cao 64px. Chứa logo, ô tìm kiếm ở giữa (mở command palette với `⌘K`/`Ctrl K`), ngôn ngữ, theme, giỏ hàng, tài khoản.
-- **BookCard**: ảnh bìa tỉ lệ 2:3, tên sách tối đa 2 dòng, tác giả màu `muted`, giá màu `accent`, giá gốc gạch ngang màu `subtle`, nhãn `-X%` nhỏ màu `sale`. Hết hàng thì ảnh bìa giảm opacity kèm nhãn.
+- **BookCard**: ảnh bìa tỉ lệ 2:3, tên sách tối đa 2 dòng, tác giả màu `muted-foreground`, giá màu `primary`, giá gốc gạch ngang màu `subtle`, nhãn `-X%` nhỏ màu `sale`. Hết hàng thì ảnh bìa giảm opacity kèm nhãn.
 - **Kệ sách (Shelf)**: hàng ngang cuộn được (scroll-snap), có tiêu đề cùng link "Xem tất cả". Đây là đơn vị bố cục chính của trang chủ.
 - **Trang chủ**: hero tối giản (một câu trích dẫn về đọc sách bằng Lora + 1 CTA), sau đó là các kệ Nổi bật, Bán chạy, Mới về, rồi lưới danh mục.
-- **Trang sách**: bìa lớn bên trái (sticky trên desktop), thông tin bên phải. Nút "Thêm vào giỏ" là CTA accent duy nhất trên màn hình.
+- **Trang sách**: bìa lớn bên trái (sticky trên desktop), thông tin bên phải. Nút "Thêm vào giỏ" là CTA `primary` duy nhất trên màn hình.
 - **Lưới**: 2 cột (mobile), 3 (sm), 4 (md), 5–6 (lg+).
 - Mọi trạng thái loading/rỗng/lỗi đều có thiết kế riêng, không để trang trắng.
 
@@ -189,8 +212,9 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 
 ## Bảo mật
 
+- **Claude KHÔNG mở, đọc hay sửa `.env.local`**, kể cả khi nghi nó sai. Thay vào đó chạy `npm run check:env` (`scripts/check-env.mjs`, chỉ báo biến thiếu/sai định dạng, không in giá trị) rồi báo để tôi tự sửa.
 - `.env.local` không commit. Client chỉ được dùng URL và anon/publishable key. `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng trong `scripts/` chạy local, **không bao giờ** import vào `src/`.
-- `/admin` kiểm tra `role = 'admin'` ở server (middleware và layout), không chỉ ẩn ở UI.
+- `/admin` kiểm tra `role = 'admin'` ở server (proxy và layout), không chỉ ẩn ở UI.
 - Validate mọi input ở server, kể cả khi client đã validate.
 - Tên và logo là của riêng dự án, không mượn nhận diện của nhà sách có thật. Một trang có form thanh toán mà trông giống thương hiệu thật rất dễ bị trình duyệt hoặc Vercel gắn cờ phishing khi deploy.
 
