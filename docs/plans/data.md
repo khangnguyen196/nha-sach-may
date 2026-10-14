@@ -11,4 +11,4 @@
 - [ ] Lượt A + D: chạy sau ~15h ngày 2026-10-15 (quota Books API reset 0h giờ Pacific):
   `npm run import:books -- --dry-run --hires-covers --max-requests 950` → rà sách lạc chủ đề → duyệt → `--from-preview`.
 - [ ] Phase 7: thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" (ảnh JPEG nên bộ lọc PNG < 40KB không bắt được).
-- [ ] Lọc tên summary / workbook / study guide / analysis of cho danh mục `en` (làm cùng commit D).
+- [x] Lọc tên summary / workbook / study guide / analysis of cho danh mục `en` (`isDerivativeTitle`, commit D).

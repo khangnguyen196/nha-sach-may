@@ -31,3 +31,6 @@ Thumbs.db
 # env (giữ file mẫu)
 !.env.example
 *.pem
+
+# cấu hình preview của app desktop (máy cá nhân)
+.claude/launch.json

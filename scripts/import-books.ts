@@ -32,6 +32,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { z } from 'zod'
+import type { Database } from '../src/types/database'
 
 // ---------- Types ----------
 type ImageLinks = {
@@ -78,11 +79,21 @@ export type BookInput = {
   original_price: number | null
   stock: number
   category_slug: string
+  language: BookLanguage
 }
 
 /** category_slug → truy vấn. Chuỗi = 1 trang 40 kết quả; { q, pages } = nhiều trang (startIndex 0, 40, …) */
 type BookQuery = string | { q: string; pages: number }
-export type BookList = Record<string, BookQuery[]>
+export type BookLanguage = 'vi' | 'en'
+/**
+ * Mảng truy vấn = sách tiếng Việt. `{ language: 'en', queries }` = danh mục cho phép ngôn ngữ khác
+ * (chỉ dùng cho nhánh "Sách ngoại văn"); cả langRestrict lẫn bộ lọc volumeInfo.language đều theo giá trị này.
+ */
+type CategoryQueries = BookQuery[] | { language: BookLanguage; queries: BookQuery[] }
+export type BookList = Record<string, CategoryQueries>
+
+const categoryConfig = (entry: CategoryQueries) =>
+  Array.isArray(entry) ? { language: 'vi' as const, queries: entry } : entry
 type IdSlug = { id: number; slug: string }
 type DbResult<T> = { data: T | null; error: { message: string } | null }
 
@@ -122,6 +133,9 @@ const normalizeOptional = (input: string | undefined) => (input ? normalizeText(
 /** Tên lỗi mã hóa từ nguồn (VD: "L¿ch S¿ Vi¿t Nam") → không sửa được, loại hẳn */
 export const isGarbled = (text: string) => /[¿\uFFFD]/.test(text)
 
+/** Sách ăn theo (tóm tắt, sách bài tập, hướng dẫn học…) lẫn nhiều khi tìm theo tác giả tiếng Anh → loại ở danh mục 'en' */
+export const isDerivativeTitle = (text: string) => /\b(summary|workbook|study guide|analysis of)\b/i.test(text)
+
 /** Số giả-ngẫu-nhiên 0..1, ổn định theo seed → chạy lại ra cùng giá */
 function seeded(seed: string, salt: number): number {
   let h = 2166136261 ^ salt
@@ -160,13 +174,14 @@ function pickIsbn(ids: GoogleVolume['volumeInfo']['industryIdentifiers']): strin
  * Trả về null nếu thiếu dữ liệu tối thiểu (tên, ISBN, ảnh bìa) hoặc không phải sách tiếng Việt.
  * langRestrict=vi của API không đủ chặt (vẫn lọt sách Anh/Nhật/Trung) → lọc lại theo volumeInfo.language.
  */
-export function mapVolume(v: GoogleVolume, categorySlug: string): BookInput | null {
+export function mapVolume(v: GoogleVolume, categorySlug: string, language: BookLanguage = 'vi'): BookInput | null {
   const info = v.volumeInfo
-  if (info.language !== 'vi') return null
+  if (info.language !== language) return null
   const isbn = pickIsbn(info.industryIdentifiers)
   const cover_small = bestCover(info.imageLinks)
   const title = normalizeOptional(info.title)
   if (!title || isGarbled(title) || !isbn || !cover_small) return null
+  if (language === 'en' && isDerivativeTitle(`${title} ${info.subtitle ?? ''}`)) return null
 
   const year = info.publishedDate ? Number.parseInt(info.publishedDate.slice(0, 4), 10) : NaN
   const page_count = info.pageCount && info.pageCount > 0 ? info.pageCount : null
@@ -185,6 +200,7 @@ export function mapVolume(v: GoogleVolume, categorySlug: string): BookInput | nu
     cover_small,
     cover_large: null,
     category_slug: categorySlug,
+    language,
     ...generatePricing(isbn, page_count),
   }
 }
@@ -259,11 +275,15 @@ function withKey(params: URLSearchParams) {
 // Xin 40 (tối đa theo tài liệu) nhưng thực tế API thường trả ≤ 20/trang → phân trang theo số cuốn nhận được
 const MAX_RESULTS = 40
 
-async function searchVolumes(query: string, startIndex: number): Promise<{ items: GoogleVolume[]; totalItems: number }> {
+async function searchVolumes(
+  query: string,
+  startIndex: number,
+  language: BookLanguage,
+): Promise<{ items: GoogleVolume[]; totalItems: number }> {
   const params = withKey(
     new URLSearchParams({
       q: query,
-      langRestrict: 'vi',
+      langRestrict: language,
       printType: 'books',
       maxResults: String(MAX_RESULTS),
       startIndex: String(startIndex),
@@ -309,18 +329,19 @@ export async function searchAll(
   const byIsbn = new Map<string, Candidate>()
   const categories = Object.keys(list)
   let consecutiveErrors = 0
-  for (const [index, [category, queries]] of Object.entries(list).entries()) {
+  for (const [index, [category, entry]] of Object.entries(list).entries()) {
+    const { language, queries } = categoryConfig(entry)
     const stat = stats.get(category) ?? { books: 0, large: 0, requests: 0 }
     stats.set(category, stat)
-    for (const entry of queries) {
-      const { q, pages } = typeof entry === 'string' ? { q: entry, pages: 1 } : entry
+    for (const query of queries) {
+      const { q, pages } = typeof query === 'string' ? { q: query, pages: 1 } : query
       let added = 0
       let startIndex = 0
       for (let page = 0; page < pages; page++) {
         const before = apiRequests
         let result: Awaited<ReturnType<typeof searchVolumes>>
         try {
-          result = await searchVolumes(q, startIndex)
+          result = await searchVolumes(q, startIndex, language)
           consecutiveErrors = 0
         } catch (err) {
           stat.requests += apiRequests - before
@@ -339,7 +360,7 @@ export async function searchAll(
         stat.requests += apiRequests - before
         startIndex += volumes.length
         for (const v of volumes) {
-          const book = mapVolume(v, category)
+          const book = mapVolume(v, category, language)
           if (!book || byIsbn.has(book.isbn)) continue
           const viewability = v.accessInfo?.viewability
           byIsbn.set(book.isbn, { book, volumeId: v.id, previewable: viewability === 'PARTIAL' || viewability === 'ALL_PAGES' })
@@ -462,17 +483,45 @@ function printSummary(candidates: Candidate[], stats: Map<string, CategoryStats>
   }
 }
 
+/** Khóa của sách đã có trong DB (ISBN + tên|tác giả đầu) → bỏ khỏi dry-run, khỏi tốn quota pha 2 cho chúng */
+export type ExistingKeys = { isbns: Set<string>; editions: Set<string> }
+
+export function excludeExisting(candidates: Candidate[], existing: ExistingKeys): Candidate[] {
+  return candidates.filter((c) => !existing.isbns.has(c.book.isbn) && !existing.editions.has(editionKey(c.book)))
+}
+
+/** Đọc sách đã có (cần SUPABASE_SERVICE_ROLE_KEY). Không có env → trả về null, dry-run vẫn chạy bình thường. */
+async function loadExistingKeys(): Promise<ExistingKeys | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  const db = createClient<Database>(url, key, { auth: { persistSession: false } })
+  const rows = await selectAll<{ isbn: string | null; title: string; book_authors: { authors: { name: string } | null }[] }>(
+    (from, to) => db.from('books').select('isbn, title, book_authors(authors(name))').order('id').range(from, to),
+    'books',
+  )
+  const isbns = new Set(rows.flatMap((r) => (r.isbn ? [r.isbn] : [])))
+  const editions = new Set(
+    rows.map((r) => `${slugify(r.title)}|${slugify(r.book_authors[0]?.authors?.name ?? '')}`),
+  )
+  return { isbns, editions }
+}
+
 async function collect(list: BookList, opts: { hiresCovers: boolean; maxRequests: number }): Promise<BookInput[]> {
   const stats = new Map<string, CategoryStats>()
+  const existing = await loadExistingKeys()
+  if (!existing) console.warn('  ⚠ Không đọc được DB (thiếu env) → không lọc sách đã có, pha 2 có thể tốn thêm request')
 
   console.log('Pha 1: search…')
   const { candidates: found, incomplete } = await searchAll(list, stats)
   if (apiRequests > opts.maxRequests) console.warn(`  ⚠ Riêng pha search đã vượt trần ${opts.maxRequests} request`)
 
-  const unique = dedupeEditions(found)
+  const fresh = existing ? excludeExisting(found, existing) : found
+  const unique = dedupeEditions(fresh)
   const capped = capPerCategory(unique)
   console.log(
-    `  ${found.length} sách → gộp ấn bản còn ${unique.length} → giới hạn ${MAX_PER_CATEGORY}/danh mục còn ${capped.length}`,
+    `  ${found.length} sách → bỏ ${found.length - fresh.length} đã có trong DB → gộp ấn bản còn ${unique.length} ` +
+      `→ giới hạn ${MAX_PER_CATEGORY}/danh mục còn ${capped.length}`,
   )
 
   if (opts.hiresCovers) {
@@ -655,6 +704,7 @@ async function save(books: BookInput[]) {
     price: b.price,
     original_price: b.original_price,
     stock: b.stock,
+    language: b.language,
     category_id: categoryId.get(b.category_slug) ?? null,
     publisher_id: b.publisher ? (publisherId.get(slugify(b.publisher)) ?? null) : null,
   }))
@@ -730,6 +780,8 @@ const bookInputSchema = z
     original_price: z.number().int().nonnegative().nullable(),
     stock: z.number().int().nonnegative(),
     category_slug: z.string().min(1),
+    // Preview cũ (trước khi có ngoại văn) không có field này → mặc định tiếng Việt
+    language: z.enum(['vi', 'en']).default('vi'),
   })
   .refine((b) => b.original_price === null || b.original_price >= b.price, {
     message: 'original_price phải >= price (giống check constraint trong DB)',

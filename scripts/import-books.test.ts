@@ -3,6 +3,7 @@ import {
   capPerCategory,
   dedupeEditions,
   dedupeSlugs,
+  excludeExisting,
   isLikelyPlaceholder,
   mapVolume,
   normalizeText,
@@ -128,5 +129,44 @@ describe('normalizeText', () => {
     expect(book?.authors).toEqual(['Nguyễn Nhật Ánh'])
     expect(mapVolume(volume({ title: 'L¿ch S¿ Vi¿t Nam' }), 'tho')).toBeNull()
     expect(mapVolume(volume({ title: 'Truy�n ngắn' }), 'tho')).toBeNull()
+  })
+})
+
+describe('ngôn ngữ theo danh mục (Sách ngoại văn)', () => {
+  it('danh mục en chỉ nhận sách tiếng Anh và ghi language = en', () => {
+    const en = volume({ title: 'Animal Farm', authors: ['George Orwell'], language: 'en' })
+    expect(mapVolume(en, 'ngoai-van-van-hoc', 'en')?.language).toBe('en')
+    expect(mapVolume(en, 'tieu-thuyet')).toBeNull()
+    expect(mapVolume(volume({}), 'ngoai-van-van-hoc', 'en')).toBeNull()
+    expect(mapVolume(volume({}), 'tieu-thuyet')?.language).toBe('vi')
+  })
+})
+
+describe('excludeExisting', () => {
+  it('bỏ sách trùng ISBN hoặc trùng tên + tác giả đầu với DB', () => {
+    const make = (isbn: string, title: string): Candidate => {
+      const book = mapVolume(volume({ title, industryIdentifiers: [{ type: 'ISBN_13', identifier: isbn }] }), 'tho')
+      if (!book) throw new Error('fixture')
+      return { book, volumeId: isbn, previewable: false }
+    }
+    const existing = { isbns: new Set(['9780000000501']), editions: new Set(['mat-biec|nguyen-nhat-anh']) }
+    const kept = excludeExisting(
+      [make('9780000000501', 'Khác'), make('9780000000502', 'Mắt Biếc'), make('9780000000503', 'Sách mới')],
+      existing,
+    )
+    expect(kept.map((c) => c.book.isbn)).toEqual(['9780000000503'])
+  })
+})
+
+describe('lọc sách ăn theo ở danh mục en', () => {
+  it('loại summary / workbook / study guide / analysis of (cả trong subtitle); không ảnh hưởng danh mục vi', () => {
+    const en = (title: string, subtitle?: string) =>
+      mapVolume(volume({ title, subtitle, authors: ['James Clear'], language: 'en' }), 'ngoai-van-ky-nang-song', 'en')
+    expect(en('Summary of Atomic Habits')).toBeNull()
+    expect(en('Atomic Habits', 'A Workbook')).toBeNull()
+    expect(en('1984: Study Guide')).toBeNull()
+    expect(en('An Analysis of Animal Farm')).toBeNull()
+    expect(en('Atomic Habits')?.title).toBe('Atomic Habits')
+    expect(mapVolume(volume({ title: 'Summary tiếng Việt' }), 'tho')?.title).toBe('Summary tiếng Việt')
   })
 })

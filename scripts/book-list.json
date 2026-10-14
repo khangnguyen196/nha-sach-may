@@ -1,100 +1,148 @@
 {
   "tieu-thuyet": [
-    { "q": "inauthor:Nguyễn Nhật Ánh", "pages": 3 },
-    "inauthor:Vũ Trọng Phụng",
-    "inauthor:Nam Cao",
-    "inauthor:Bảo Ninh",
-    "inauthor:Ma Văn Kháng",
-    "inauthor:Nguyễn Xuân Khánh",
+    { "q": "inauthor:Nguyễn Nhật Ánh", "pages": 4 },
+    "Vũ Trọng Phụng",
+    "Nam Cao",
+    "Bảo Ninh",
+    "Ma Văn Kháng",
+    "Hồ Biểu Chánh",
+    "Tự Lực Văn Đoàn",
     "inauthor:Dương Thụy",
-    "inauthor:Hồ Biểu Chánh",
-    "inauthor:Khái Hưng",
-    "inauthor:Nhất Linh",
-    { "q": "intitle:tiểu thuyết", "pages": 4 }
+    { "q": "tiểu thuyết Việt Nam", "pages": 4 },
+    { "q": "tiểu thuyết", "pages": 3 }
   ],
   "truyen-ngan-tan-van": [
     { "q": "inauthor:Nguyễn Ngọc Tư", "pages": 2 },
-    "inauthor:Nguyễn Huy Thiệp",
-    "inauthor:Thạch Lam",
-    "inauthor:Vũ Bằng",
-    "inauthor:Nguyễn Tuân",
-    "inauthor:Nguyễn Quang Lập",
+    { "q": "inauthor:Nguyễn Quang Lập", "pages": 2 },
+    "Nguyễn Huy Thiệp",
+    "Thạch Lam",
+    "Nguyễn Tuân",
     "inauthor:Anh Khang",
-    { "q": "intitle:tản văn", "pages": 2 },
-    { "q": "intitle:truyện ngắn", "pages": 3 }
+    { "q": "tản văn", "pages": 3 },
+    { "q": "tuyển tập truyện ngắn", "pages": 3 }
   ],
   "tho": [
-    "inauthor:Xuân Diệu",
-    "inauthor:Hàn Mặc Tử",
-    "inauthor:Nguyễn Bính",
-    "inauthor:Xuân Quỳnh",
-    "inauthor:Hồ Xuân Hương",
+    "Xuân Diệu",
+    "Hàn Mặc Tử",
+    "Nguyễn Bính",
+    "Xuân Quỳnh",
     "inauthor:Nguyễn Du",
-    { "q": "intitle:tập thơ", "pages": 2 },
-    { "q": "intitle:thơ", "pages": 3 }
+    { "q": "tập thơ", "pages": 3 },
+    { "q": "thơ Việt Nam", "pages": 3 }
   ],
   "quan-tri-lanh-dao": [
-    { "q": "intitle:quản trị", "pages": 4 },
-    { "q": "intitle:lãnh đạo", "pages": 3 },
-    { "q": "intitle:quản lý doanh nghiệp", "pages": 2 },
-    { "q": "intitle:khởi nghiệp", "pages": 2 }
+    { "q": "quản trị doanh nghiệp", "pages": 3 },
+    { "q": "nghệ thuật lãnh đạo", "pages": 3 },
+    { "q": "khởi nghiệp", "pages": 2 },
+    "quản lý nhân sự"
   ],
   "marketing-ban-hang": [
-    { "q": "intitle:marketing", "pages": 4 },
-    { "q": "intitle:bán hàng", "pages": 2 },
-    { "q": "intitle:thương hiệu", "pages": 2 },
-    "intitle:quảng cáo",
-    "intitle:chăm sóc khách hàng"
+    { "q": "tiếp thị", "pages": 3 },
+    { "q": "nghệ thuật bán hàng", "pages": 3 },
+    { "q": "xây dựng thương hiệu", "pages": 2 },
+    "chăm sóc khách hàng"
   ],
   "tai-chinh-ca-nhan": [
-    { "q": "intitle:tài chính cá nhân", "pages": 2 },
-    { "q": "intitle:đầu tư", "pages": 4 },
-    { "q": "intitle:chứng khoán", "pages": 2 },
-    "intitle:làm giàu",
-    "intitle:quản lý tiền"
+    { "q": "tài chính cá nhân", "pages": 3 },
+    { "q": "đầu tư chứng khoán", "pages": 3 },
+    { "q": "quản lý tiền bạc", "pages": 2 },
+    "làm giàu"
   ],
   "ky-nang-song": [
-    { "q": "intitle:kỹ năng sống", "pages": 3 },
-    { "q": "intitle:kỹ năng", "pages": 2 },
-    "intitle:thói quen",
-    { "q": "intitle:hạnh phúc", "pages": 2 },
-    { "q": "intitle:thành công", "pages": 2 },
-    { "q": "inauthor:Thích Nhất Hạnh", "pages": 3 }
+    { "q": "kỹ năng sống", "pages": 3 },
+    { "q": "phát triển bản thân", "pages": 3 },
+    { "q": "inauthor:Thích Nhất Hạnh", "pages": 3 },
+    "thói quen thành công"
   ],
   "tam-ly-hoc": [
-    { "q": "intitle:tâm lý học", "pages": 3 },
-    { "q": "intitle:tâm lý", "pages": 3 }
+    { "q": "tâm lý học", "pages": 4 },
+    { "q": "tâm lý", "pages": 2 }
   ],
   "truyen-tranh": [
     { "q": "inpublisher:Kim Đồng truyện tranh", "pages": 4 },
     { "q": "inpublisher:Kim Đồng truyện", "pages": 4 },
-    { "q": "intitle:truyện tranh", "pages": 2 },
-    "inauthor:Tô Hoài"
+    { "q": "truyện tranh thiếu nhi", "pages": 2 },
+    "Tô Hoài"
   ],
   "kien-thuc-bach-khoa": [
     { "q": "inpublisher:Kim Đồng khám phá", "pages": 3 },
-    { "q": "intitle:bách khoa", "pages": 2 },
-    { "q": "intitle:vì sao", "pages": 2 },
-    { "q": "intitle:khám phá thế giới", "pages": 2 }
+    { "q": "bách khoa thiếu nhi", "pages": 2 },
+    { "q": "khám phá thế giới", "pages": 2 },
+    "mười vạn câu hỏi vì sao"
   ],
   "tieng-anh": [
-    { "q": "intitle:tiếng Anh", "pages": 5 },
-    { "q": "inpublisher:MCBooks tiếng Anh", "pages": 3 },
-    "intitle:IELTS",
-    "intitle:TOEIC"
+    { "q": "học tiếng Anh", "pages": 4 },
+    { "q": "ngữ pháp tiếng Anh", "pages": 2 },
+    { "q": "từ vựng tiếng Anh", "pages": 2 },
+    { "q": "inpublisher:MCBooks", "pages": 2 }
   ],
   "tieng-nhat": [
-    { "q": "intitle:tiếng Nhật", "pages": 4 },
-    "intitle:JLPT",
-    "intitle:kanji"
+    { "q": "học tiếng Nhật", "pages": 4 },
+    { "q": "từ vựng tiếng Nhật", "pages": 2 },
+    "ngữ pháp tiếng Nhật"
   ],
   "lich-su-dia-ly": [
-    { "q": "intitle:lịch sử Việt Nam", "pages": 4 },
-    { "q": "intitle:lịch sử", "pages": 2 },
-    "inauthor:Trần Trọng Kim",
-    "inauthor:Đào Duy Anh",
-    "inauthor:Phan Huy Lê",
-    "inauthor:Hữu Ngọc",
-    { "q": "intitle:địa lý", "pages": 2 }
-  ]
+    { "q": "lịch sử Việt Nam", "pages": 4 },
+    { "q": "inauthor:Trần Trọng Kim", "pages": 2 },
+    "Phan Huy Lê",
+    "văn hóa Việt Nam",
+    { "q": "địa lý Việt Nam", "pages": 2 }
+  ],
+  "ngoai-van-van-hoc": {
+    "language": "en",
+    "queries": [
+      "inauthor:George Orwell",
+      "inauthor:Jane Austen",
+      "inauthor:Paulo Coelho",
+      "inauthor:Haruki Murakami",
+      "inauthor:Ernest Hemingway",
+      "inauthor:F. Scott Fitzgerald",
+      "inauthor:Khaled Hosseini",
+      "inauthor:Agatha Christie"
+    ]
+  },
+  "ngoai-van-kinh-doanh": {
+    "language": "en",
+    "queries": [
+      "inauthor:Peter Drucker",
+      "inauthor:Jim Collins",
+      "inauthor:Simon Sinek",
+      "inauthor:Daniel Kahneman",
+      "inauthor:Morgan Housel",
+      "inauthor:Robert Kiyosaki"
+    ]
+  },
+  "ngoai-van-ky-nang-song": {
+    "language": "en",
+    "queries": [
+      "inauthor:James Clear",
+      "inauthor:Dale Carnegie",
+      "inauthor:Stephen Covey",
+      "inauthor:Mark Manson",
+      "inauthor:Brené Brown",
+      "inauthor:Cal Newport"
+    ]
+  },
+  "ngoai-van-thieu-nhi": {
+    "language": "en",
+    "queries": [
+      "inauthor:Roald Dahl",
+      "inauthor:J.K. Rowling",
+      "inauthor:Dr. Seuss",
+      "inauthor:Eric Carle",
+      "inauthor:C.S. Lewis",
+      "inauthor:Jeff Kinney"
+    ]
+  },
+  "ngoai-van-lich-su-khoa-hoc": {
+    "language": "en",
+    "queries": [
+      "inauthor:Yuval Noah Harari",
+      "inauthor:Jared Diamond",
+      "inauthor:Stephen Hawking",
+      "inauthor:Carl Sagan",
+      "inauthor:Bill Bryson",
+      "inauthor:Siddhartha Mukherjee"
+    ]
+  }
 }
