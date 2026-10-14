@@ -15,7 +15,7 @@ test('/ là tiếng Việt, dark mặc định, có danh mục', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
   await expect(page.locator('html')).toHaveClass(/dark/)
   await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible()
-  await expect(page.getByText('Văn học', { exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByText('Văn học', { exact: true }).first()).toBeVisible()
   expect(errors).toEqual([])
 })
 
@@ -24,7 +24,7 @@ test('/en là tiếng Anh, tên danh mục dịch từ name_en', async ({ page }
   await page.goto('/en')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible()
-  await expect(page.getByText('Literature', { exact: true })).toBeVisible()
+  await expect(page.getByRole('main').getByText('Literature', { exact: true }).first()).toBeVisible()
   expect(errors).toEqual([])
 })
 

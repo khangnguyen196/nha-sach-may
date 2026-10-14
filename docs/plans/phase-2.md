@@ -1,6 +1,6 @@
 # Phase 2: Layout
 
-Trạng thái: plan đã duyệt, chưa code.
+Trạng thái: đã xong (2026-10-15).
 
 ## Quyết định đã duyệt
 
@@ -31,3 +31,16 @@ Trạng thái: plan đã duyệt, chưa code.
 - Đổi ngôn ngữ giữ query (`/?x=1` → `/en?x=1`).
 - ⌘K mở palette; từ khóa chắc chắn có → ≥ 1 kết quả; từ khóa vô nghĩa → trạng thái rỗng; điều hướng bằng phím; Esc đóng.
 - Không lỗi console.
+
+## Tiến độ
+
+- [x] messages: namespace `layout`, `search`
+- [x] /api/search (route handler + zod + cache header) — `searchBookHits` có thêm `use cache` (tag `books`) ngoài header CDN; response dạng `{ ok, data | code }`
+- [x] ThemeToggle — icon + nhãn sr-only ẩn/hiện bằng `dark:`
+- [x] LocaleSwitcher — `<a>` thường + `getPathname` của `i18n/navigation`, không dùng `Link`: `Link` có prop `locale` luôn ép prefix nên en→vi ra `/vi?x=1` và client nav giữ nguyên URL không canonical đó. Đổi ngôn ngữ giờ là tải lại cả trang. Nhãn "EN – Xem bằng tiếng Anh". Lưu `profiles.locale` để Phase 4.
+- [x] Header (logo, icon.svg) — màn < 375px ẩn chữ logo (sr-only) để 5 nút vừa 320px; giỏ/tài khoản trỏ tới trang chưa có (Phase 5/6) → 404 tạm
+- [x] Search palette (cmdk, ⌘K) — tách `search-trigger.tsx` (nút + phím tắt, nhẹ) và `search-palette.tsx` (`next/dynamic`, tải trước khi hover/focus). "Xem tất cả" là mục đầu → gõ rồi Enter là sang `/tim-kiem?q=`. Ảnh bìa trong palette `alt=""` (tên sách ngay cạnh). shadcn `command`: bỏ `input-group`/`input`/`textarea`, title sr-only đưa vào trong `DialogContent`, overlay dùng `bg-background/70`
+- [x] Footer — không in năm (Date ở Server Component phá prerender khi bật cacheComponents)
+- [x] Layout (`<main id="main">`, bỏ `<main>` ở page)
+- [x] e2e — `e2e/layout.spec.ts`; từ khóa "chắc chắn có" là `978` (mọi sách đều có ISBN-13). `smoke.spec.ts`: tìm "Văn học"/"Literature" giới hạn trong `<main>` + `.first()` (footer có link trùng tên; nhánh "Sách ngoại văn" cũng có danh mục con trùng tên)
+- [x] typecheck / lint / build / test (29) / e2e (26, desktop + mobile) sạch. JS ban đầu trang chủ ≈ 174KB gzip (cả framework), cmdk không nằm trong đó; chunk palette tải lười ≈ 48KB gzip

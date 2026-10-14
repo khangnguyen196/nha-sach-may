@@ -16,7 +16,7 @@ export default async function HomePage() {
   const parents = categories.filter((c) => c.parent_id === null)
 
   return (
-    <main id="main" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+    <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
       <figure className="max-w-reading">
         <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>
         <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
@@ -77,6 +77,6 @@ export default async function HomePage() {
           </ul>
         )}
       </section>
-    </main>
+    </div>
   )
 }

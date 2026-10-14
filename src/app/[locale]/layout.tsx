@@ -3,6 +3,8 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locale as rootLocale } from 'next/root-params'
+import { Footer } from '@/components/layout/footer'
+import { Header } from '@/components/layout/header'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 import { routing } from '@/i18n/routing'
 import { fontVariables } from '../fonts'
@@ -28,7 +30,7 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
 
   return (
     <html lang={locale} className={fontVariables} suppressHydrationWarning>
-      <body>
+      <body className="flex min-h-dvh flex-col">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-sm focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -36,7 +38,13 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
           {t('skipToContent')}
         </a>
         <ThemeProvider>
-          <NextIntlClientProvider>{children}</NextIntlClientProvider>
+          <NextIntlClientProvider>
+            <Header />
+            <main id="main" className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </NextIntlClientProvider>
         </ThemeProvider>
       </body>
     </html>

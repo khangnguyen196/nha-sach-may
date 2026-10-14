@@ -24,6 +24,32 @@
     "title": "Quản trị",
     "placeholder": "Khu vực quản trị sẽ được xây dựng ở giai đoạn sau."
   },
+  "layout": {
+    "searchPlaceholder": "Tìm sách, tác giả…",
+    "openSearch": "Mở tìm kiếm",
+    "switchLocale": "Xem bằng tiếng Anh",
+    "switchLocaleShort": "EN",
+    "toLightTheme": "Chuyển sang giao diện sáng",
+    "toDarkTheme": "Chuyển sang giao diện tối",
+    "cart": "Giỏ hàng",
+    "account": "Tài khoản",
+    "footerBrowse": "Khám phá",
+    "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books; giá bán chỉ để minh họa.",
+    "copyright": "© Nhà Sách Mây"
+  },
+  "search": {
+    "title": "Tìm kiếm sách",
+    "description": "Gõ tên sách, tác giả hoặc ISBN. Có thể gõ không dấu.",
+    "placeholder": "Tìm theo tên sách, tác giả, ISBN…",
+    "hint": "Gõ ít nhất 2 ký tự để tìm. Có thể gõ không dấu.",
+    "loading": "Đang tìm…",
+    "books": "Sách",
+    "seeAll": "Xem tất cả kết quả cho “{q}”",
+    "resultCount": "{count, plural, =0 {Không có kết quả} other {# kết quả}}",
+    "empty": "Không tìm thấy sách nào cho “{q}”",
+    "emptyHint": "Thử từ khóa ngắn hơn hoặc kiểm tra chính tả.",
+    "error": "Không tải được kết quả. Vui lòng thử lại."
+  },
   "errors": {
     "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
     "INVALID_ADDRESS": "Địa chỉ giao hàng không hợp lệ.",

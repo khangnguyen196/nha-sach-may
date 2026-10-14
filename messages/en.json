@@ -24,6 +24,32 @@
     "title": "Admin",
     "placeholder": "The admin area will be built in a later phase."
   },
+  "layout": {
+    "searchPlaceholder": "Search books, authors…",
+    "openSearch": "Open search",
+    "switchLocale": "View in Vietnamese",
+    "switchLocaleShort": "VI",
+    "toLightTheme": "Switch to light theme",
+    "toDarkTheme": "Switch to dark theme",
+    "cart": "Cart",
+    "account": "Account",
+    "footerBrowse": "Browse",
+    "footerAbout": "A non-commercial learning project. Book data comes from Google Books; prices are for illustration only.",
+    "copyright": "© Nhà Sách Mây"
+  },
+  "search": {
+    "title": "Search books",
+    "description": "Type a title, author or ISBN. Vietnamese diacritics are optional.",
+    "placeholder": "Search by title, author, ISBN…",
+    "hint": "Type at least 2 characters to search. Vietnamese diacritics are optional.",
+    "loading": "Searching…",
+    "books": "Books",
+    "seeAll": "See all results for “{q}”",
+    "resultCount": "{count, plural, =0 {No results} one {# result} other {# results}}",
+    "empty": "No books found for “{q}”",
+    "emptyHint": "Try a shorter keyword or check the spelling.",
+    "error": "Could not load results. Please try again."
+  },
   "errors": {
     "AUTH_REQUIRED": "Please sign in to continue.",
     "INVALID_ADDRESS": "The shipping address is invalid.",

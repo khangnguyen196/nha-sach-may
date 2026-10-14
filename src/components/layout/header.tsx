@@ -1,0 +1,65 @@
+import { ShoppingBagIcon, UserIcon } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
+import { buttonVariants } from '@/components/ui/button'
+import { SearchTrigger } from '@/features/books/components/search-trigger'
+import { Link } from '@/i18n/navigation'
+import { LocaleSwitcher } from './locale-switcher'
+import { ThemeToggle } from './theme-toggle'
+
+const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-muted-foreground' })
+
+export async function Header() {
+  const [t, tCommon] = await Promise.all([getTranslations('layout'), getTranslations('common')])
+
+  return (
+    <header className="sticky top-0 z-40 h-16 border-b bg-background/80 backdrop-blur">
+      <div className="mx-auto flex h-full max-w-6xl items-center gap-2 px-4 sm:px-6">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-sm text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <LogoMark />
+          {/* Màn < 375px không đủ chỗ cho chữ cạnh 5 nút → chỉ còn biểu tượng, tên vẫn đọc được bằng trình đọc màn hình */}
+          <span className="font-serif text-base font-semibold max-[374px]:sr-only sm:text-lg">{tCommon('siteName')}</span>
+        </Link>
+
+        <div className="flex flex-1 justify-end md:justify-center md:px-6">
+          <SearchTrigger />
+        </div>
+
+        <div className="flex items-center sm:gap-0.5">
+          <LocaleSwitcher />
+          <ThemeToggle />
+          <Link href="/cart" className={iconLink}>
+            <ShoppingBagIcon aria-hidden />
+            <span className="sr-only">{t('cart')}</span>
+          </Link>
+          <Link href="/account" className={iconLink}>
+            <UserIcon aria-hidden />
+            <span className="sr-only">{t('account')}</span>
+          </Link>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+// Cùng hình với src/app/icon.svg: đám mây trên cuốn sách mở
+function LogoMark() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 32 32"
+      className="size-7 text-primary"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12.5 10h7.25a2.75 2.75 0 0 0 .4-5.47 3.75 3.75 0 0 0-7.05 1.1A2.2 2.2 0 0 0 12.5 10Z" />
+      <path d="M16 15c-2.6-1.9-6.2-2.4-10-1.6v13c3.8-.8 7.4-.3 10 1.6 2.6-1.9 6.2-2.4 10-1.6v-13c-3.8-.8-7.4-.3-10 1.6Z" />
+      <path d="M16 15v13" />
+    </svg>
+  )
+}
