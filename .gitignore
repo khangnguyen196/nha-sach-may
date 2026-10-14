@@ -1,0 +1,29 @@
+# deps & build
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# env — không commit
+.env
+.env*.local
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# test
+coverage/
+playwright-report/
+test-results/
+
+# scripts output
+scripts/out/
+
+# misc
+.DS_Store
+Thumbs.db
+*.log
+.vercel
