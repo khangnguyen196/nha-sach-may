@@ -1,6 +1,48 @@
 # Phase 3: Catalog
 
-Trạng thái: **đã duyệt** (2026-10-15): chọn hết các ★, kèm 5 bổ sung (mục "Bổ sung khi duyệt"). Đang làm trên nhánh `phase-3`.
+## Báo cáo sáng (2026-10-15)
+
+**Đã xong**: toàn bộ Phase 3 trên nhánh `phase-3` (chưa merge). Trang danh mục / sách / tác giả / tìm kiếm, filter + sort + phân trang qua URL, kệ "Cùng danh mục", metadata + hreflang, 5 bổ sung khi duyệt. Viết xong `docs/plans/phase-4.md` (Auth + sổ địa chỉ, chờ duyệt, chỉ có plan). Chi tiết ở mục Tiến độ.
+
+**Quyết định tự chọn, cần duyệt** (chi tiết, lý do, phương án khác ở mục cùng tên bên dưới):
+1. Bật `experimental.messages.precompile` của next-intl (−9KB gzip mọi trang).
+2. Slug không tồn tại và `?page=999` → UI 404 + `noindex` nhưng HTTP **200** (giới hạn của Cache Components). Muốn 404 thật thì kiểm tra trong proxy, đề xuất để Phase 10.
+3. Filter mỗi nhóm một giá trị (bấm lại = bỏ chọn).
+4. Tìm kiếm: chip lọc danh mục là danh mục cha.
+5. Trang danh mục: `cat` là điều hướng, không tính là filter.
+6. Trang tác giả chưa hiện ảnh.
+7. Tie-breaker: `newest` dùng `id desc`, còn lại `id asc`.
+8. e2e chạy 1 worker khi không phải CI (`playwright.config.ts`).
+
+**Bị chặn**: không có. Không sửa schema, không chạy SQL, không mở `.env.local` (chỉ chạy `check:env`), không thêm dependency, không chạy `import:books`.
+
+**Kết quả kiểm tra** (lần chạy cuối, commit `a97c160`):
+- `typecheck`, `lint`, `build`: sạch.
+- `test` (Vitest): 48/48.
+- `test:e2e`: 42 test (desktop + mobile) × lặp 2 lần, 1 worker: 84/84. Với 2–4 worker có 1–3 test phụ thuộc thời điểm hydration fail chập chờn trên máy này (xem Tiến độ) → đặt 1 worker cho local.
+
+**Số đo JS** (`measure:js`, gzip, baseline framework 170KB):
+
+| Route | Tổng | Ngoài baseline | Ngân sách |
+|---|---|---|---|
+| Trang chủ trước Phase 3 | 212.4KB | 42.4KB | |
+| `vi/books/ban-van` | 203.2KB | **33.2KB** | 50KB ✓ |
+| `en/books/ban-van` | 203.2KB | 33.2KB | 50KB ✓ |
+| `vi` (trang chủ) | 203.2KB | 33.2KB | |
+
+**Commit trên nhánh `phase-3`**:
+- `e7da39e` chore(data): rename foreign Business category, tighten smoke test
+- `275ca5d` perf(i18n): precompile messages and pass labels to client leaves as props
+- `c046b3c` feat(catalog): category, book, author and search pages with URL filters
+- `ced06fc` test(e2e): catalog flows, shared helpers, stabilize palette shortcut
+- `a97c160` test(e2e): run locally with one worker, avoid duplicate filter ids
+- commit cuối: docs (báo cáo này + `phase-4.md`)
+
+**Nên xem khi duyệt**: hai lỗi PostgREST phát hiện khi chạy thật (order trên RPC cần cột trong select; offset vượt số dòng trả 416), ghi ở Tiến độ. "Lịch sử - Địa lý" là danh mục gốc không có con (20 cuốn gắn thẳng vào) → code coi danh mục không có con là danh mục lá và lọc theo chính nó.
+
+---
+
+Trạng thái: **đã xong** (2026-10-15) trên nhánh `phase-3`, chờ review rồi merge. Duyệt: chọn hết các ★, kèm 5 bổ sung (mục "Bổ sung khi duyệt").
 
 Phạm vi: trang danh mục, trang sách, trang tác giả, trang tìm kiếm, filter/sort/phân trang qua URL. Không có giỏ hàng (Phase 5), đánh giá (Phase 9), sitemap/OG/JSON-LD (Phase 10).
 
@@ -133,10 +175,11 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
 5. **Trang danh mục: `cat` là điều hướng, không tính là filter** → "Xóa bộ lọc" giữ danh mục con đang chọn, số trên nút "Bộ lọc (n)" không đếm nó; chip danh mục con luôn hiện cả mobile (cuộn ngang), không nằm trong sheet.
 6. **Trang tác giả chưa hiện ảnh** (`photo_url` toàn null, `remotePatterns` chỉ cho bucket `book-covers`). Thêm khi admin upload ảnh tác giả vào Storage (Phase 7).
 7. **Tie-breaker `id`**: `newest` dùng `id desc` (mới hơn trước, khớp `getNewBooks`), các sort khác `id asc`.
+8. **e2e chạy 1 worker khi không phải CI** (`playwright.config.ts`). Lý do: nhiều worker trên máy 4 nhân / 8GB làm test phụ thuộc hydration chập chờn; 1 worker ổn định và tổng thời gian không đổi. Phương án khác: giữ song song và tăng timeout (che lỗi thật nếu có), hoặc sửa từng test chờ tín hiệu sẵn sàng riêng.
 
 ## Bị chặn
 
-(Chưa có.)
+Không có.
 
 ---
 
