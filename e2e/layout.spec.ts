@@ -1,26 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-
-function collectErrors(page: Page) {
-  const errors: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
-  })
-  return errors
-}
-
-// Phím tắt chỉ có tác dụng sau hydration. Không bấm lặp tới khi mở: ⌘K là toggle, nếu chunk palette tải chậm
-// thì lần bấm thứ hai đóng nó lại. React gắn `__reactProps$…` lên DOM node khi hydrate xong → chờ dấu đó.
-async function openPalette(page: Page) {
-  await page.waitForFunction(() => {
-    const trigger = document.querySelector('header button[aria-haspopup="dialog"]')
-    return trigger !== null && Object.keys(trigger).some((key) => key.startsWith('__reactProps'))
-  })
-  await page.keyboard.press('ControlOrMeta+k')
-  const dialog = page.getByRole('dialog')
-  await expect(dialog).toBeVisible({ timeout: 10_000 })
-  return dialog
-}
+import { expect, test } from '@playwright/test'
+import { collectErrors, openPalette } from './helpers'
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')

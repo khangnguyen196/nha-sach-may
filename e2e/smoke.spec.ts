@@ -1,13 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-
-function collectErrors(page: Page) {
-  const errors: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
-  })
-  return errors
-}
+import { expect, test } from '@playwright/test'
+import { collectErrors } from './helpers'
 
 test('/ là tiếng Việt, dark mặc định, có danh mục', async ({ page }) => {
   const errors = collectErrors(page)
@@ -55,7 +47,8 @@ test('/admin chưa đăng nhập → về trang chủ', async ({ page }) => {
 
 test('bìa sách tải từ Supabase Storage qua next/image', async ({ page }) => {
   await page.goto('/')
-  const covers = page.getByRole('region', { name: 'Mới về' }).getByRole('img')
+  // Bìa trong card có alt="" (tên sách ngay bên dưới) nên không có role img → tìm theo thẻ
+  const covers = page.getByRole('region', { name: 'Mới về' }).locator('img')
   await expect(covers.first()).toBeVisible()
   expect(await covers.count()).toBeGreaterThan(0)
 

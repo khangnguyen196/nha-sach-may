@@ -119,6 +119,9 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
 - [x] Messages: `catalog`, `book`, `author`, `searchPage` (vi/en cùng bộ key)
 - [x] Vitest: `catalogParamsSchema`, `resolveSort`, `withParams` (đổi filter reset page), `toQuery`, `discountPercent`, `paginationRange`, `splitParagraphs`, `truncateText` — 48 test xanh
 - [x] JS trang sách: `measure:js -- vi/books/ban-van` = 203.2KB gzip = **baseline + 33.2KB** (ngân sách 50KB)
+- [x] e2e `e2e/catalog.spec.ts` (desktop + mobile): danh mục con `?cat=` + Back; sort `price-asc`; lọc giá (mobile qua sheet) reset trang; trang 2 không trùng trang 1 (kiểm tra tie-breaker); `?page=999` → UI 404 + `noindex`; card → trang sách → tác giả; đổi ngôn ngữ trên trang sách + fallback mô tả; palette "Xem tất cả" → `/tim-kiem` + form GET từ khóa vô nghĩa → empty state; CLS < 0.1 ở 3 trang lưới. `smoke.spec.ts`: bìa tìm bằng `locator('img')`. `collectErrors`/`openPalette` chuyển vào `e2e/helpers.ts`
+  - Next 16 giữ trang vừa rời trong DOM ở dạng ẩn (Activity) → locator CSS/text phải `filter({ visible: true })`, nếu không sẽ khớp cả bản ẩn
+  - Test palette chập chờn (9/84 khi lặp 3 lần): ⌘K bấm sau khi nút hydrate nhưng trước `useEffect` gắn listener. `openPalette` chờ thêm `networkidle` → 84/84 qua 3 lần lặp
 
 ## Quyết định tự chọn, cần duyệt
 
