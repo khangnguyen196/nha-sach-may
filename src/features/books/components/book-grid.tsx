@@ -1,0 +1,19 @@
+import type { BookCard as BookCardData } from '../queries'
+import { BookCard } from './book-card'
+
+export const GRID_CLASS = 'grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+
+// Số card thường lọt màn hình đầu ở mọi cỡ (mobile 2 cột × 2 hàng, desktop 1 hàng)
+const EAGER_COUNT = 4
+
+export function BookGrid({ books }: { books: BookCardData[] }) {
+  return (
+    <ul className={GRID_CLASS}>
+      {books.map((book, index) => (
+        <li key={book.id}>
+          <BookCard book={book} eager={index < EAGER_COUNT} />
+        </li>
+      ))}
+    </ul>
+  )
+}

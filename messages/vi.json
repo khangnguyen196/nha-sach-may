@@ -50,6 +50,110 @@
     "emptyHint": "Thử từ khóa ngắn hơn hoặc kiểm tra chính tả.",
     "error": "Không tải được kết quả. Vui lòng thử lại."
   },
+  "catalog": {
+    "home": "Trang chủ",
+    "breadcrumb": "Đường dẫn",
+    "resultCount": "{count, plural, =0 {Không có sách nào} other {# cuốn sách}}",
+    "sortLabel": "Sắp xếp",
+    "sort": {
+      "relevance": "Liên quan nhất",
+      "bestselling": "Bán chạy",
+      "newest": "Mới nhất",
+      "price-asc": "Giá tăng dần",
+      "price-desc": "Giá giảm dần"
+    },
+    "filters": "Bộ lọc",
+    "filtersActive": "{count, plural, =0 {Bộ lọc} other {Bộ lọc (#)}}",
+    "filterGroups": {
+      "cat": "Danh mục",
+      "price": "Giá",
+      "lang": "Ngôn ngữ",
+      "stock": "Tình trạng"
+    },
+    "subcategories": "Danh mục con",
+    "allInCategory": "Tất cả",
+    "price": {
+      "0-100": "Dưới 100.000 ₫",
+      "100-200": "100.000 – 200.000 ₫",
+      "200-300": "200.000 – 300.000 ₫",
+      "300-up": "Từ 300.000 ₫"
+    },
+    "lang": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh"
+    },
+    "inStock": "Còn hàng",
+    "clearFilters": "Xóa bộ lọc",
+    "close": "Xong",
+    "pagination": {
+      "label": "Phân trang",
+      "previous": "Trang trước",
+      "next": "Trang sau",
+      "page": "Trang {page}"
+    },
+    "empty": {
+      "title": "Chưa có sách nào ở đây",
+      "description": "Mục này đang được bổ sung, bạn quay lại sau nhé."
+    },
+    "emptyFiltered": {
+      "title": "Không có sách nào khớp bộ lọc",
+      "description": "Thử bỏ bớt điều kiện lọc để xem thêm sách."
+    },
+    "seeAll": "Xem tất cả",
+    "categoryMetaDescription": "Sách {name} tại Nhà Sách Mây: thông tin chi tiết, giá bán, tình trạng còn hàng."
+  },
+  "book": {
+    "authors": "Tác giả",
+    "translators": "Dịch giả",
+    "illustrators": "Minh họa",
+    "price": "Giá bán",
+    "originalPrice": "Giá gốc",
+    "discount": "-{percent}%",
+    "inStock": "Còn hàng",
+    "lowStock": "Chỉ còn {count} cuốn",
+    "outOfStock": "Hết hàng",
+    "noCover": "Chưa có ảnh bìa",
+    "description": "Giới thiệu sách",
+    "noDescription": "Cuốn sách này chưa có phần giới thiệu.",
+    "readMore": "Đọc thêm",
+    "readLess": "Thu gọn",
+    "details": "Thông tin chi tiết",
+    "isbn": "ISBN",
+    "publisher": "Nhà xuất bản",
+    "publishedYear": "Năm xuất bản",
+    "pageCount": "Số trang",
+    "format": "Hình thức",
+    "language": "Ngôn ngữ",
+    "dimensions": "Kích thước",
+    "weight": "Trọng lượng",
+    "weightValue": "{grams, number} g",
+    "formats": {
+      "paperback": "Bìa mềm",
+      "hardcover": "Bìa cứng",
+      "boxset": "Hộp sách"
+    },
+    "languages": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh"
+    },
+    "related": "Cùng danh mục",
+    "metaDescription": "{title}: thông tin chi tiết, giá bán và tình trạng còn hàng tại Nhà Sách Mây."
+  },
+  "author": {
+    "books": "Sách của tác giả",
+    "metaDescription": "Sách của {name} tại Nhà Sách Mây."
+  },
+  "searchPage": {
+    "title": "Tìm kiếm",
+    "label": "Từ khóa tìm kiếm",
+    "submit": "Tìm",
+    "resultsFor": "Kết quả cho “{q}”",
+    "hintTitle": "Bạn muốn tìm sách gì?",
+    "hint": "Gõ ít nhất 2 ký tự: tên sách, tác giả hoặc ISBN. Có thể gõ không dấu.",
+    "emptyTitle": "Không tìm thấy sách nào cho “{q}”",
+    "emptyDescription": "Thử từ khóa ngắn hơn hoặc kiểm tra chính tả.",
+    "metaDescription": "Tìm sách theo tên, tác giả hoặc ISBN tại Nhà Sách Mây."
+  },
   "errors": {
     "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
     "INVALID_ADDRESS": "Địa chỉ giao hàng không hợp lệ.",

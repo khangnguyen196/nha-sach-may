@@ -50,6 +50,110 @@
     "emptyHint": "Try a shorter keyword or check the spelling.",
     "error": "Could not load results. Please try again."
   },
+  "catalog": {
+    "home": "Home",
+    "breadcrumb": "Breadcrumb",
+    "resultCount": "{count, plural, =0 {No books} one {# book} other {# books}}",
+    "sortLabel": "Sort by",
+    "sort": {
+      "relevance": "Most relevant",
+      "bestselling": "Best selling",
+      "newest": "Newest",
+      "price-asc": "Price: low to high",
+      "price-desc": "Price: high to low"
+    },
+    "filters": "Filters",
+    "filtersActive": "{count, plural, =0 {Filters} other {Filters (#)}}",
+    "filterGroups": {
+      "cat": "Category",
+      "price": "Price",
+      "lang": "Language",
+      "stock": "Availability"
+    },
+    "subcategories": "Subcategories",
+    "allInCategory": "All",
+    "price": {
+      "0-100": "Under ₫100,000",
+      "100-200": "₫100,000 – ₫200,000",
+      "200-300": "₫200,000 – ₫300,000",
+      "300-up": "₫300,000 and up"
+    },
+    "lang": {
+      "vi": "Vietnamese",
+      "en": "English"
+    },
+    "inStock": "In stock",
+    "clearFilters": "Clear filters",
+    "close": "Done",
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous page",
+      "next": "Next page",
+      "page": "Page {page}"
+    },
+    "empty": {
+      "title": "No books here yet",
+      "description": "We are still adding books to this section. Please check back later."
+    },
+    "emptyFiltered": {
+      "title": "No books match these filters",
+      "description": "Try removing some filters to see more books."
+    },
+    "seeAll": "See all",
+    "categoryMetaDescription": "{name} books at Nhà Sách Mây: details, prices and availability."
+  },
+  "book": {
+    "authors": "Author",
+    "translators": "Translator",
+    "illustrators": "Illustrator",
+    "price": "Price",
+    "originalPrice": "Original price",
+    "discount": "-{percent}%",
+    "inStock": "In stock",
+    "lowStock": "Only {count} left",
+    "outOfStock": "Out of stock",
+    "noCover": "No cover image",
+    "description": "About this book",
+    "noDescription": "This book does not have a description yet.",
+    "readMore": "Read more",
+    "readLess": "Show less",
+    "details": "Details",
+    "isbn": "ISBN",
+    "publisher": "Publisher",
+    "publishedYear": "Published",
+    "pageCount": "Pages",
+    "format": "Format",
+    "language": "Language",
+    "dimensions": "Dimensions",
+    "weight": "Weight",
+    "weightValue": "{grams, number} g",
+    "formats": {
+      "paperback": "Paperback",
+      "hardcover": "Hardcover",
+      "boxset": "Box set"
+    },
+    "languages": {
+      "vi": "Vietnamese",
+      "en": "English"
+    },
+    "related": "More in this category",
+    "metaDescription": "{title}: details, price and availability at Nhà Sách Mây."
+  },
+  "author": {
+    "books": "Books by this author",
+    "metaDescription": "Books by {name} at Nhà Sách Mây."
+  },
+  "searchPage": {
+    "title": "Search",
+    "label": "Search keywords",
+    "submit": "Search",
+    "resultsFor": "Results for “{q}”",
+    "hintTitle": "What are you looking for?",
+    "hint": "Type at least 2 characters: a title, author or ISBN. Vietnamese diacritics are optional.",
+    "emptyTitle": "No books found for “{q}”",
+    "emptyDescription": "Try a shorter keyword or check the spelling.",
+    "metaDescription": "Search books by title, author or ISBN at Nhà Sách Mây."
+  },
   "errors": {
     "AUTH_REQUIRED": "Please sign in to continue.",
     "INVALID_ADDRESS": "The shipping address is invalid.",

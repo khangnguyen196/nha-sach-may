@@ -108,10 +108,27 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
   | B: + `experimental.messages.precompile` của next-intl | 203.4KB | **33.4KB** (−9KB) |
 
   Bước A không giảm vì `IntlProvider` import `initializeConfig` → `use-intl/format-message` → `intl-messageformat`, kể cả khi không client leaf nào gọi `useTranslations`. Precompile alias `use-intl/format-message` sang bản `format-only` (dùng `icu-minify`, có sẵn trong next-intl, không thêm dependency) → không còn chunk nào chứa `IntlMessageFormat`. Bước A vẫn giữ: payload RSC không còn gửi cả file messages, và giữ quy ước client leaf mới nhận chuỗi qua props.
+- [x] Route: trang chủ chuyển vào `(shop)/page.tsx` (dùng `BookGrid`, tên danh mục thành link); `categories/[slug]`, `books/[slug]`, `authors/[slug]`, `search`
+- [x] Query (`features/books/queries.ts`): `listBooks` (một hàm cho 3 trang, mọi sort kết thúc bằng `id`; `relevance` = `sold_count desc, created_at desc, id`), `getBookBySlug` / `getAuthorBySlug` (`React.cache` bọc `'use cache'`, tag `book:{id}`), `getRelatedBooks`, `getCategoryBySlug` (lấy từ `getCategories` đã cache), `getAllBookSlugs` / `getAllAuthorSlugs` cho `generateStaticParams`
+  - Order trên kết quả RPC `search_books` chỉ nhận cột có trong select (PostgREST: "column books.sold_count does not exist") → nhánh tìm kiếm select thêm `sold_count, created_at`
+  - Offset vượt số dòng: PostgREST trả lỗi 416 `PGRST103` thay vì mảng rỗng → coi là trang rỗng → `notFound()` (bổ sung 2)
+- [x] URL params: `catalogParamsSchema` (`schemas.ts`, `.catch()` từng field → giá trị sai về mặc định), `catalog-params.ts` (`withParams` reset trang, `toQuery` bỏ giá trị mặc định → mỗi trạng thái một URL, `catalogHref`)
+- [x] Component: `book-card`, `book-grid` (+ skeleton khớp kích thước: tên giữ chỗ `min-h-[2lh]`, tác giả `min-h-[1lh]`), `catalog-view` (số kết quả, sort, chip danh mục con, nhóm filter desktop, `FilterSheet` mobile, empty state, phân trang), `sort-select` (client), `filter-sheet` (client, `components/ui/sheet.tsx` viết tay theo shadcn trên Radix Dialog có sẵn), `pagination`, `breadcrumb`, `empty-state`, `shelf`
+- [x] Trang sách: bìa sticky `preload`, `alt` = tên sách; tác giả/dịch giả/minh họa link trang tác giả; giá + giá gốc + `-X%`; tình trạng kho; chỗ trống `h-11` cho CTA Phase 5; mô tả: đoạn đầu hiện thẳng, phần còn lại trong `<details>` (bổ sung 3), nhãn "Đọc thêm"/"Thu gọn" đổi bằng `group-open:`; bảng thông tin ẩn dòng null; kệ "Cùng danh mục" trong `<Suspense>`
+- [x] `generateMetadata` + `alternates` (canonical + hreflang qua `getPathname`, helper `i18n/alternates.ts`) cho 4 trang; tìm kiếm `robots: noindex, follow`
+- [x] Messages: `catalog`, `book`, `author`, `searchPage` (vi/en cùng bộ key)
+- [x] Vitest: `catalogParamsSchema`, `resolveSort`, `withParams` (đổi filter reset page), `toQuery`, `discountPercent`, `paginationRange`, `splitParagraphs`, `truncateText` — 48 test xanh
+- [x] JS trang sách: `measure:js -- vi/books/ban-van` = 203.2KB gzip = **baseline + 33.2KB** (ngân sách 50KB)
 
 ## Quyết định tự chọn, cần duyệt
 
 1. **Bật `experimental.messages.precompile` của next-intl** (bổ sung 4). Lý do: −9KB gzip ở mọi trang, không thêm dependency, e2e (26) vẫn xanh, plural/format `price` trong message chạy đúng. Rủi ro: API `experimental`, có thể đổi ở bản next-intl sau; messages bị biến thành AST nên `t.raw()` trả AST (hiện không dùng). Phương án khác: bỏ precompile, chỉ bọc `NextIntlClientProvider` quanh palette (cần sửa `useLocale`/`Link` không phụ thuộc context, phức tạp hơn mà vẫn kéo `use-intl` vào chunk palette).
+2. **Slug không tồn tại và `?page=999` trả HTTP 200 + UI 404 + `noindex`, không phải 404 thật.** Với Cache Components, trang có static shell nên stream bắt đầu trước khi `notFound()` chạy → status đã chốt 200 (docs Next: "After streaming starts, the status code remains 200"). `dynamicParams = false` không dùng được khi bật Cache Components. Google coi là soft 404, `noindex` giữ trang khỏi chỉ mục. e2e kiểm tra UI 404 + meta `noindex`, không kiểm tra status. Phương án khác: kiểm tra slug trong `proxy.ts` rồi rewrite sang 404 (thêm 1 query DB mỗi request, hoặc cache danh sách slug) → đề xuất để Phase 10 (SEO) nếu cần status thật.
+3. **Filter mỗi nhóm chọn một giá trị** (`price`, `lang`, `cat` là một giá trị; bấm lại chip đang chọn = bỏ chọn). Plan ghi "chọn nhiều" — tôi hiểu là kết hợp nhiều nhóm. Lý do: URL gọn, khoảng giá/ngôn ngữ chọn nhiều ít giá trị thực tế với catalog 49 cuốn. Phương án khác: `?price=0-100&price=100-200` (schema đổi sang mảng, query `.or()`).
+4. **Tìm kiếm: chip lọc danh mục là danh mục cha** (7 chip thay vì 18 danh mục lá); `cat` trong URL vẫn nhận slug lá. Phương án khác: hiện toàn bộ danh mục lá (dài, nhất là trong sheet mobile).
+5. **Trang danh mục: `cat` là điều hướng, không tính là filter** → "Xóa bộ lọc" giữ danh mục con đang chọn, số trên nút "Bộ lọc (n)" không đếm nó; chip danh mục con luôn hiện cả mobile (cuộn ngang), không nằm trong sheet.
+6. **Trang tác giả chưa hiện ảnh** (`photo_url` toàn null, `remotePatterns` chỉ cho bucket `book-covers`). Thêm khi admin upload ảnh tác giả vào Storage (Phase 7).
+7. **Tie-breaker `id`**: `newest` dùng `id desc` (mới hơn trước, khớp `getNewBooks`), các sort khác `id asc`.
 
 ## Bị chặn
 

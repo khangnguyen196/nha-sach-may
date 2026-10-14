@@ -1,7 +1,9 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
+import { cache } from 'react'
 import { createPublicClient } from '@/lib/supabase/public'
-import type { SearchHit } from './schemas'
+import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
+import type { PriceRange, SearchHit, Sort } from './schemas'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -11,14 +13,25 @@ export async function getCategories() {
 
   const { data, error } = await createPublicClient()
     .from('categories')
-    .select('id, parent_id, name, name_en, slug, sort_order')
+    .select('id, parent_id, name, name_en, description, description_en, slug, sort_order')
     .order('sort_order')
     .order('id')
   if (error) throw new Error(`getCategories: ${error.message}`)
   return data
 }
 
-/** Sách mới nhập gần đây (trang chủ tạm Phase 1; Phase 8 thay bằng kệ "Mới về"). */
+export type Category = Awaited<ReturnType<typeof getCategories>>[number]
+
+/** Danh mục theo slug, lấy từ danh sách đã cache (bảng nhỏ, không tốn thêm request) */
+export async function getCategoryBySlug(slug: string): Promise<Category | null> {
+  const categories = await getCategories()
+  return categories.find((category) => category.slug === slug) ?? null
+}
+
+// Cột của BookCard, dùng chung cho lưới, kệ, trang chủ. Kiểu BookCard derive từ query bên dưới.
+const BOOK_CARD_COLUMNS = 'id, slug, title, cover_url, price, original_price, stock, book_authors(role, authors(name))'
+
+/** Sách mới nhập gần đây (trang chủ tạm; Phase 8 thay bằng kệ "Mới về"). */
 export async function getNewBooks(limit = 12) {
   'use cache'
   cacheTag('books')
@@ -26,12 +39,165 @@ export async function getNewBooks(limit = 12) {
 
   const { data, error } = await createPublicClient()
     .from('books')
-    .select('id, title, slug, cover_url, price, original_price, book_authors(role, authors(name))')
+    .select(BOOK_CARD_COLUMNS)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit)
   if (error) throw new Error(`getNewBooks: ${error.message}`)
   return data
+}
+
+export type BookCard = Awaited<ReturnType<typeof getNewBooks>>[number]
+
+const RANGE_NOT_SATISFIABLE = 'PGRST103'
+
+export type ListBooksInput = {
+  /** Danh mục lá (trang danh mục cha truyền id các danh mục con) */
+  categoryIds?: number[]
+  /** Trang tác giả */
+  bookIds?: number[]
+  /** Từ khóa đã qua searchQuerySchema → RPC search_books */
+  q?: string
+  price?: PriceRange
+  lang?: string
+  inStock?: boolean
+  sort: Sort
+  page: number
+}
+
+/**
+ * Một hàm cho danh mục / tác giả / tìm kiếm. Mọi sort đều kết thúc bằng `id`: sold_count đang toàn 0, thiếu
+ * tie-breaker thì Postgres trả thứ tự tùy ý giữa các lần gọi → phân trang lặp/sót sách.
+ * `relevance` order tường minh, không dựa vào order bên trong RPC.
+ */
+export async function listBooks(input: ListBooksInput): Promise<{ books: BookCard[]; total: number }> {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  const supabase = createPublicClient()
+  // RPC: count 'exact' (estimated trên RPC không chính xác). Bảng: 'estimated' (vẫn exact khi dưới ngưỡng max-rows).
+  // Order trên kết quả RPC chỉ nhận cột có trong select (PostgREST báo "column books.sold_count does not exist")
+  // → thêm cột dùng để sort. Filter thì không cần.
+  let query = input.q
+    ? supabase.rpc('search_books', { q: input.q }, { count: 'exact' }).select(`${BOOK_CARD_COLUMNS}, sold_count, created_at`)
+    : supabase.from('books').select(BOOK_CARD_COLUMNS, { count: 'estimated' })
+
+  if (input.categoryIds) query = query.in('category_id', input.categoryIds)
+  if (input.bookIds) query = query.in('id', input.bookIds)
+  if (input.lang) query = query.eq('language', input.lang)
+  if (input.inStock) query = query.gt('stock', 0)
+  if (input.price) {
+    const { min, max } = PRICE_BOUNDS[input.price]
+    if (min !== undefined) query = query.gte('price', min)
+    if (max !== undefined) query = query.lt('price', max)
+  }
+
+  switch (input.sort) {
+    case 'relevance':
+    case 'bestselling':
+      query = query.order('sold_count', { ascending: false }).order('created_at', { ascending: false }).order('id')
+      break
+    case 'newest':
+      query = query.order('created_at', { ascending: false }).order('id', { ascending: false })
+      break
+    case 'price-asc':
+      query = query.order('price').order('id')
+      break
+    case 'price-desc':
+      query = query.order('price', { ascending: false }).order('id')
+      break
+  }
+
+  const from = (input.page - 1) * PAGE_SIZE
+  const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1)
+  // Offset vượt quá số dòng: PostgREST trả 416 thay vì mảng rỗng → coi là trang rỗng (trang gọi notFound)
+  if (error?.code === RANGE_NOT_SATISFIABLE) return { books: [], total: count ?? 0 }
+  if (error) throw new Error(`listBooks: ${error.message}`)
+  return { books: data, total: count ?? data.length }
+}
+
+async function getBookBySlugCached(slug: string) {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient()
+    .from('books')
+    .select(
+      `id, slug, title, subtitle, description, description_en, cover_url, price, original_price, stock, isbn,
+       page_count, format, language, published_year, weight_grams, dimensions, category_id,
+       publishers(name), book_authors(role, authors(name, slug))`,
+    )
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`getBookBySlug: ${error.message}`)
+  if (data) cacheTag(`book:${data.id}`)
+  return data
+}
+
+/** React.cache: generateMetadata và page cùng lấy một cuốn trong một request → một lần gọi */
+export const getBookBySlug = cache(getBookBySlugCached)
+
+export type BookDetail = NonNullable<Awaited<ReturnType<typeof getBookBySlugCached>>>
+
+/** Kệ "Cùng danh mục" ở trang sách, trừ chính cuốn đang xem */
+export async function getRelatedBooks(bookId: number, categoryId: number, limit = 12): Promise<BookCard[]> {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient()
+    .from('books')
+    .select(BOOK_CARD_COLUMNS)
+    .eq('category_id', categoryId)
+    .neq('id', bookId)
+    .order('sold_count', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id')
+    .limit(limit)
+  if (error) throw new Error(`getRelatedBooks: ${error.message}`)
+  return data
+}
+
+async function getAuthorBySlugCached(slug: string) {
+  'use cache'
+  cacheTag('authors', 'books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient()
+    .from('authors')
+    .select('id, name, slug, bio, bio_en, photo_url, book_authors(book_id)')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`getAuthorBySlug: ${error.message}`)
+  if (!data) return null
+  // Một người có thể vừa là tác giả vừa là dịch giả của cùng một cuốn → bỏ trùng
+  const { book_authors, ...author } = data
+  return { ...author, bookIds: [...new Set(book_authors.map((ba) => ba.book_id))] }
+}
+
+export const getAuthorBySlug = cache(getAuthorBySlugCached)
+
+/** Slug cho generateStaticParams: catalog nhỏ → prerender toàn bộ trang sách / tác giả */
+export async function getAllBookSlugs() {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient().from('books').select('slug').order('id')
+  if (error) throw new Error(`getAllBookSlugs: ${error.message}`)
+  return data.map((book) => book.slug)
+}
+
+export async function getAllAuthorSlugs() {
+  'use cache'
+  cacheTag('authors')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient().from('authors').select('slug').order('id')
+  if (error) throw new Error(`getAllAuthorSlugs: ${error.message}`)
+  return data.map((author) => author.slug)
 }
 
 const SEARCH_HIT_LIMIT = 8
