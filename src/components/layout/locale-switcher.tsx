@@ -35,10 +35,11 @@ function LocaleLink({ query }: { query?: Query }) {
   const { slug } = useParams()
   const target = routing.locales.find((l) => l !== locale) ?? routing.defaultLocale
 
-  // <a> thường thay vì Link: Link có prop `locale` luôn ép prefix (`/vi?…`), client nav giữ nguyên URL đó
-  // thay vì `/?…`. Đổi ngôn ngữ thì mọi nội dung đều đổi nên tải lại cả trang là hợp lý.
   return (
     <a
+      // Ngoại lệ (CLAUDE.md → Song ngữ): Link có prop `locale` luôn ép prefix nên en→vi ra `/vi?…` và client nav
+      // giữ nguyên URL không canonical đó. getPathname không ép prefix → `/?…`; đổi ngôn ngữ thì tải lại cả trang.
+      // eslint-disable-next-line no-restricted-syntax
       href={getPathname({ href: currentHref(pathname, slug, query), locale: target })}
       hrefLang={target}
       className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })}

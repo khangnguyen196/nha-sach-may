@@ -32,6 +32,11 @@ const eslintConfig = defineConfig([
           selector: "CallExpression[callee.property.name='select'][arguments.0.value='*']",
           message: "Không select('*'): chỉ lấy cột cần dùng.",
         },
+        {
+          // href là chuỗi cố định (#main, https://…) thì được; href tính toán = link nội bộ → phải qua Link
+          selector: "JSXOpeningElement[name.name='a'] > JSXAttribute[name.name='href'] > JSXExpressionContainer",
+          message: 'Link nội bộ dùng Link từ @/i18n/navigation để giữ locale và pathname đã dịch.',
+        },
       ],
       '@typescript-eslint/no-explicit-any': 'error',
     },

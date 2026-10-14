@@ -21,6 +21,7 @@ Thêm dependency mới phải có lý do rõ ràng (kích thước bundle, có c
 ```bash
 npm run dev | build | lint | typecheck | test | test:e2e
 npm run check:env                                         # kiểm tra .env.local, không in giá trị bí mật
+npm run measure:js -- <route>                             # sau build: JS gzip của route prerender (vi, en, vi/books/<slug>)
 npx supabase gen types typescript --project-id <ID> > src/types/database.ts
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
@@ -94,11 +95,14 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 - Không hard-code chuỗi hiển thị, màu hay khoảng cách. Chuỗi lấy từ messages, màu và khoảng cách lấy từ token.
 
 **Hiệu năng (mục tiêu trên mobile 4G)**
-- LCP < 2.5s, CLS < 0.1, INP < 200ms. JS client trang sách < 100KB gzip.
+- LCP < 2.5s, CLS < 0.1, INP < 200ms.
+- JS client: phần app thêm vào **ngoài framework ≤ 50KB gzip ở trang sách**. Baseline framework (app Next 16.4 + React 19.3 trống) ≈ 170KB gzip / ~147KB brotli, nên con số tuyệt đối < 100KB là bất khả thi.
+  Cách đo (`scripts/measure-js.mjs`): lấy mọi `<script src>` trong HTML prerender `.next/server/app/<route>.html`, gzip level 9 từng file, cộng lại, trừ 170KB. Đường dẫn là đường dẫn nội bộ (`vi/books/<slug>`, không phải `/sach/...`). Mốc 2026-10-15: trang chủ 212.4KB gzip = baseline + 42.4KB (chủ yếu `intl-messageformat` của client `useTranslations` ~16KB, lucide + radix + cva + cn ~15KB).
 - `next/image` với `sizes` đúng; ảnh bìa đầu trang (LCP) có `preload` (Next 16 bỏ `priority`). Font qua `next/font` (subset `latin` + `vietnamese`, `display: swap`).
 - Component nặng/ít dùng (gallery zoom, rich editor admin) dùng `next/dynamic`.
 
 **Accessibility**: WCAG AA. Có focus ring rõ, điều hướng được bằng bàn phím, có `alt` cho ảnh bìa (tên sách), dùng HTML ngữ nghĩa, tôn trọng `prefers-reduced-motion`.
+- **Ngoại lệ alt**: ảnh bìa nằm cùng một link/mục với tên sách hiển thị ngay bên cạnh (kết quả palette, dòng giỏ hàng, item danh sách) thì `alt=""`, vì trình đọc màn hình sẽ đọc tên hai lần. Ảnh đứng một mình (bìa lớn ở trang sách, ảnh không kèm chữ) vẫn phải có `alt` là tên sách.
 
 ## Song ngữ (i18n)
 
@@ -116,7 +120,8 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
   | `/tai-khoan` | `/en/account` |
 
   Slug của sách, danh mục, tác giả dùng chung cho cả hai ngôn ngữ.
-- Luôn dùng `Link`, `redirect`, `useRouter` từ `i18n/navigation.ts`, không import từ `next/link` hay `next/navigation`.
+- Luôn dùng `Link`, `redirect`, `useRouter`, `usePathname` từ `i18n/navigation.ts`, không import từ `next/link` hay các hàm tương ứng của `next/navigation` (ESLint chặn). Hàm next-intl không bọc (`notFound`, `useParams`, `useSearchParams`) thì import từ `next/navigation` bình thường.
+- **Ngoại lệ — `LocaleSwitcher`** dùng `<a>` thường với `href` tính bằng `getPathname` (từ `i18n/navigation.ts`), không dùng `Link`: `Link` có prop `locale` luôn ép prefix kể cả locale mặc định, nên en→vi ra `/vi?x=1` và client nav giữ nguyên URL không canonical đó (proxy không kịp chuyển về `/?x=1`). `getPathname` không ép prefix. Đổi ngôn ngữ vì vậy là tải lại cả trang, chấp nhận được vì mọi nội dung đều đổi. Chỗ này có `eslint-disable-next-line no-restricted-syntax` kèm comment; ngoài ra không chỗ nào khác được dùng `<a href={…}>` cho link nội bộ.
 - `messages/vi.json` và `en.json` chia namespace theo feature (`common`, `book`, `cart`, `checkout`, `account`, `errors`…). Bật type-safe cho message keys. Hai file phải luôn **cùng bộ key**: có test so sánh, thiếu key thì fail.
 - **Dữ liệu DB**: cột gốc là tiếng Việt, cột `*_en` là tiếng Anh (`name_en`, `description_en`, `bio_en`…). Dùng một helper duy nhất `localize(row, 'name', locale)` trong `lib/i18n-db.ts` để fallback `*_en` → cột gốc khi null. **Tên sách không dịch.**
 - Giá luôn tính bằng VND ở cả hai ngôn ngữ, format qua formatter của next-intl theo locale (vi: `98.000 ₫`, en: `₫98,000`). Ngày tháng cũng format qua formatter.

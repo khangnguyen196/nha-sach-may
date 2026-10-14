@@ -9,13 +9,16 @@ function collectErrors(page: Page) {
   return errors
 }
 
-// Phím tắt chỉ có tác dụng sau hydration → bấm lại tới khi palette mở
+// Phím tắt chỉ có tác dụng sau hydration. Không bấm lặp tới khi mở: ⌘K là toggle, nếu chunk palette tải chậm
+// thì lần bấm thứ hai đóng nó lại. React gắn `__reactProps$…` lên DOM node khi hydrate xong → chờ dấu đó.
 async function openPalette(page: Page) {
+  await page.waitForFunction(() => {
+    const trigger = document.querySelector('header button[aria-haspopup="dialog"]')
+    return trigger !== null && Object.keys(trigger).some((key) => key.startsWith('__reactProps'))
+  })
+  await page.keyboard.press('ControlOrMeta+k')
   const dialog = page.getByRole('dialog')
-  await expect(async () => {
-    await page.keyboard.press('ControlOrMeta+k')
-    await expect(dialog).toBeVisible({ timeout: 1_000 })
-  }).toPass()
+  await expect(dialog).toBeVisible({ timeout: 10_000 })
   return dialog
 }
 
