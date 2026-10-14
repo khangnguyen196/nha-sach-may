@@ -1,6 +1,6 @@
 # Phase 3: Catalog
 
-Trạng thái: **chờ duyệt**. Các mục "Cần chọn" ở cuối có đề xuất (★); duyệt nguyên plan = chọn hết các ★.
+Trạng thái: **đã duyệt** (2026-10-15): chọn hết các ★, kèm 5 bổ sung (mục "Bổ sung khi duyệt"). Đang làm trên nhánh `phase-3`.
 
 Phạm vi: trang danh mục, trang sách, trang tác giả, trang tìm kiếm, filter/sort/phân trang qua URL. Không có giỏ hàng (Phase 5), đánh giá (Phase 9), sitemap/OG/JSON-LD (Phase 10).
 
@@ -89,9 +89,25 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
 - Sửa `smoke.spec.ts` "bìa sách tải từ Storage": bìa trong card sẽ `alt=""` nên đổi `getByRole('img')` → `locator('img')`.
 - `npm run measure:js -- vi/books/<slug>` ghi kết quả vào checklist.
 
+## Bổ sung khi duyệt
+
+1. Mọi sort thêm `id` làm tie-breaker cuối (`sold_count` đang toàn 0 → phân trang lặp/sót sách). `relevance` ở tìm kiếm order tường minh: `sold_count desc, created_at desc, id`, không dựa vào thứ tự RPC.
+2. `notFound()` khi `page > 1` và query trả 0 dòng, không dựa vào `count: 'estimated'`.
+3. Mô tả dài: đoạn đầu hiện như text thường; `<details><summary>Đọc thêm</summary>` chỉ bọc phần còn lại.
+4. Quyết định 1: `NextIntlClientProvider` chỉ truyền namespace client cần; thử precompile messages của next-intl để bỏ `intl-messageformat` khỏi bundle. Ghi số đo trước/sau.
+5. `seed-foreign-books.sql`: con "Business" → "Business & Economics" (chủ dự án đã UPDATE trên Supabase). Bỏ `.first()` trong smoke test tìm "Văn học".
+
 ## Tiến độ
 
-(Thêm khi bắt đầu code.)
+- [x] Bổ sung 5: seed "Business & Economics", smoke test bỏ `.first()` ở "Văn học"
+
+## Quyết định tự chọn, cần duyệt
+
+(Chưa có.)
+
+## Bị chặn
+
+(Chưa có.)
 
 ---
 

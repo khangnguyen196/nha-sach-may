@@ -14,7 +14,7 @@ insert into public.categories (parent_id, name, name_en, slug, sort_order)
 select p.id, c.name, c.name_en, c.slug, c.sort_order
 from (values
   ('Fiction',              'Fiction',              'ngoai-van-van-hoc',          1),
-  ('Business',             'Business',             'ngoai-van-kinh-doanh',       2),
+  ('Business & Economics', 'Business & Economics', 'ngoai-van-kinh-doanh',       2),
   ('Self-help',            'Self-help',            'ngoai-van-ky-nang-song',     3),
   ('Children''s Books',    'Children''s Books',    'ngoai-van-thieu-nhi',        4),
   ('History & Science',    'History & Science',    'ngoai-van-lich-su-khoa-hoc', 5)

@@ -15,7 +15,7 @@ test('/ là tiếng Việt, dark mặc định, có danh mục', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
   await expect(page.locator('html')).toHaveClass(/dark/)
   await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible()
-  await expect(page.getByRole('main').getByText('Văn học', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('main').getByText('Văn học', { exact: true })).toBeVisible()
   expect(errors).toEqual([])
 })
 
