@@ -1,3 +1,5 @@
+import { slugify } from './slug'
+
 /**
  * Mẫu `ilike` cho ô tìm kiếm của admin (PostgREST `.ilike(cột, mẫu)`), cùng cách với RPC `search_books`:
  * từ khóa bỏ dấu như `public.normalize_vi` (khớp cột `search_text`), tách theo khoảng trắng, mỗi từ một mẫu
@@ -25,6 +27,19 @@ export function escapeLike(term: string): string {
 export function containsPatterns(query: string, maxTerms = 8): string[] {
   return normalizeSearch(query)
     .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, maxTerms)
+    .map((term) => `%${escapeLike(term)}%`)
+}
+
+/**
+ * Như containsPatterns nhưng để tìm trên cột `slug` (bảng không có `search_text`, VD tác giả): mỗi từ qua slugify
+ * ("O'Brien" → "o-brien") nên gõ có dấu / không dấu đều khớp slug.
+ */
+export function slugContainsPatterns(query: string, maxTerms = 8): string[] {
+  return query
+    .split(/\s+/)
+    .map(slugify)
     .filter(Boolean)
     .slice(0, maxTerms)
     .map((term) => `%${escapeLike(term)}%`)

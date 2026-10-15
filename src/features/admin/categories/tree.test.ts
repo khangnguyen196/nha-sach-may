@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoryTree, isLeaf, leafCategoryGroups } from './tree'
+import { categoryTree, leafCategoryGroups } from './tree'
 
 const categories = [
   { id: 1, parent_id: null, name: 'Văn học', is_active: true },
@@ -18,14 +18,6 @@ describe('categoryTree', () => {
       [3, []],
       [5, []],
     ])
-  })
-})
-
-describe('isLeaf', () => {
-  it('không có con → lá', () => {
-    expect(isLeaf(categories, 1)).toBe(false)
-    expect(isLeaf(categories, 2)).toBe(true)
-    expect(isLeaf(categories, 3)).toBe(true)
   })
 })
 

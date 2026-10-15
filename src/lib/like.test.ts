@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containsPatterns, escapeLike, normalizeSearch } from './like'
+import { containsPatterns, escapeLike, normalizeSearch, slugContainsPatterns } from './like'
 
 describe('escapeLike', () => {
   it('escape \\ trước rồi tới % và _', () => {
@@ -39,5 +39,16 @@ describe('containsPatterns', () => {
 
   it('giới hạn số từ', () => {
     expect(containsPatterns('a b c d', 2)).toEqual(['%a%', '%b%'])
+  })
+})
+
+describe('slugContainsPatterns', () => {
+  it('mỗi từ qua slugify: bỏ dấu, ký tự lạ thành gạch ngang', () => {
+    expect(slugContainsPatterns('Nguyễn  Nhật')).toEqual(['%nguyen%', '%nhat%'])
+    expect(slugContainsPatterns("O'Brien")).toEqual(['%o-brien%'])
+  })
+
+  it('từ chỉ có ký tự đặc biệt (%, _) → bỏ, không thành mẫu khớp mọi dòng', () => {
+    expect(slugContainsPatterns('% _')).toEqual([])
   })
 })

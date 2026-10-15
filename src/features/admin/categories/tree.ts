@@ -11,11 +11,6 @@ export function categoryTree<T extends CategoryNode>(categories: readonly T[]): 
     .map((root) => ({ root, children: categories.filter((category) => category.parent_id === root.id) }))
 }
 
-/** Danh mục lá (không có danh mục con): sách chỉ gắn vào đây */
-export function isLeaf(categories: readonly CategoryNode[], id: number) {
-  return !categories.some((category) => category.parent_id === id)
-}
-
 /** Danh mục lá theo nhóm danh mục gốc; `label` null = danh mục gốc không có con (chính nó là lá) */
 export type CategoryGroup = { label: string | null; options: { id: number; name: string; hidden: boolean }[] }
 
