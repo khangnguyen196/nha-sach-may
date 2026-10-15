@@ -1,6 +1,6 @@
 # Phase 7: Admin
 
-Trạng thái: **7a xong, đã merge vào `main`** (2026-10-15); `test:e2e` đầy đủ 160/160 qua trước khi merge. Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). **7b xong trên nhánh `phase-7b`, chờ duyệt merge** (2026-10-16).
+Trạng thái: **7a xong, đã merge vào `main`** (2026-10-15); `test:e2e` đầy đủ 160/160 qua trước khi merge. Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). **7b xong, đã merge vào `main`** (2026-10-16, fast-forward; bạn duyệt cả lệch plan về icon header: dưới 640px dùng thẻ ở trang tài khoản).
 
 ## Báo cáo 7b (2026-10-16)
 
