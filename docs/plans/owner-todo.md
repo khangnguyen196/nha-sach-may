@@ -58,3 +58,43 @@ VIETQR_ACCOUNT_NO=...
 VIETQR_ACCOUNT_NAME=NGUYEN VAN A   # viết HOA không dấu, đúng tên chủ tài khoản
 ```
 Đối soát vẫn bằng tay: admin xem sao kê rồi bấm "Đã nhận tiền" ở chi tiết đơn.
+
+## 5. Duyệt và merge (theo thứ tự)
+
+Ba nhánh xếp chồng: `phase-8` ← `phase-9` ← `phase-10` (mỗi nhánh chứa nhánh trước). Claude không merge / push `main`.
+1. Đọc `docs/plans/morning-report.md`, chạy migration (mục 1), chạy lại `npm run test:e2e` trên `phase-10`.
+2. Duyệt từng nhánh (hoặc chỉ `phase-10` nếu đồng ý cả ba), merge vào `main` theo thứ tự 8 → 9 → 10.
+3. Sau migration: xóa nhánh dự phòng `42703` trong `getHomeShelves` (`src/features/books/queries.ts`, hàm `sharpRows`) — hoặc nhờ Claude làm.
+
+## 6. Deploy lên Vercel (Phase 10)
+
+Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`, CI `.github/workflows/ci.yml`, `.env.example`), **không** tự deploy, không tạo tài khoản.
+
+**6.1 Vercel**
+1. vercel.com → đăng nhập bằng GitHub → **Add New… → Project** → chọn repo `nha-sach-may` → Framework: Next.js (tự nhận), Root: `./`, Build / Install command: để mặc định.
+2. **Environment Variables** (Production + Preview):
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: như `.env.local`.
+   - `SITE_URL`: domain thật (VD `https://nha-sach-may.vercel.app`). Bỏ trống thì app dùng `VERCEL_PROJECT_PRODUCTION_URL` (Vercel tự đặt).
+   - (Tùy chọn) `RESEND_API_KEY`, `EMAIL_FROM`, `VIETQR_*` (mục 3, 4).
+   - **Không** thêm `SUPABASE_SERVICE_ROLE_KEY` (chỉ dùng cho script local / CI e2e), **không** thêm `E2E_FAULT_INJECTION`.
+3. **Settings → Functions → Region**: chọn gần project Supabase (Supabase Dashboard → Project Settings → General → Region; VD Singapore `sin1`).
+4. **Deploy**. Build prerender catalog từ Supabase nên chạy `npm run covers -- --measure` (sau migration) **trước** khi deploy để kệ trang chủ dùng đúng bìa.
+
+**6.2 Supabase sau khi có domain**
+1. Authentication → URL Configuration → **Site URL** = domain Vercel; **Redirect URLs** thêm `https://<domain>/**` (giữ `http://localhost:3000/**` để dev).
+2. Template email (mục 2) dùng `{{ .SiteURL }}` → tự trỏ domain mới.
+3. (Khuyên dùng) SMTP riêng (Authentication → Emails → SMTP Settings, VD SMTP của Resend): SMTP mặc định của Supabase chỉ gửi tới thành viên organization.
+
+**6.3 GitHub Actions (CI)**
+1. Repo → Settings → Secrets and variables → Actions → **Secrets**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (job `check`: typecheck, lint, Vitest, build).
+2. e2e trên CI (tùy chọn): thêm secret `SUPABASE_SERVICE_ROLE_KEY` + **Variables** `RUN_E2E = true`. e2e tạo / xóa user, đơn, sách test thật → **nên dùng một project Supabase riêng cho CI** (chạy `schema.sql`, `seed.sql`, migration, import sách), không dùng chung DB production.
+
+**6.4 Kiểm tra sau deploy**
+- `https://<domain>/`, `/en`, `/sach/sapiens`, `/sitemap.xml`, `/robots.txt`; slug lạ `/sach/khong-co` → 404.
+- Đăng ký → email xác nhận → trang "Xác nhận email" → bấm nút.
+- Đặt một đơn COD + một đơn chuyển khoản (thông tin demo), hủy cả hai.
+- Google Search Console (tùy chọn): thêm domain, gửi `sitemap.xml`.
+
+## 7. (Tùy chọn) Captcha cho đăng ký / quên mật khẩu
+
+Chưa làm (Supabase đã giới hạn tần suất). Muốn bật: Cloudflare Turnstile → lấy site key + secret → Supabase Authentication → Attack Protection → bật CAPTCHA (Turnstile, dán secret) → nhờ Claude thêm widget vào form đăng ký / đăng nhập / quên mật khẩu (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, gửi `captchaToken` khi gọi Supabase Auth).

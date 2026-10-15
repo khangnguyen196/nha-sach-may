@@ -516,7 +516,10 @@ export async function createE2eCategory({
 
 export type E2eAdminBook = E2eBook & { category_id: number | null }
 
-/** Sách test đang bán (mặc định) trong danh mục test; không có ISBN, không bìa */
+/**
+ * Sách test đang bán (mặc định) trong danh mục test; không có ISBN, không bìa. `created_at` lùi về 2000: không lên kệ
+ * "Mới về" của trang chủ (sách bị xóa sau test mà kệ còn cache thì trang chủ prefetch link tới slug đã mất → 404).
+ */
 export async function createE2eBook({
   categoryId,
   price = 80_000,
@@ -531,7 +534,15 @@ export async function createE2eBook({
   const slug = e2eAdminSlug()
   const { data, error } = await adminClient()
     .from('books')
-    .insert({ title: `E2E sách ${slug.slice(-6)}`, slug, category_id: categoryId, price, stock, is_active: active })
+    .insert({
+      title: `E2E sách ${slug.slice(-6)}`,
+      slug,
+      category_id: categoryId,
+      price,
+      stock,
+      is_active: active,
+      created_at: '2000-01-01T00:00:00Z',
+    })
     .select('id, slug, title, price, stock, category_id')
     .single()
   if (error) throw new Error(`createE2eBook: ${error.message}`)

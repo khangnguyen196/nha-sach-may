@@ -104,13 +104,15 @@ test('khách → đăng nhập → địa chỉ → voucher → VietQR → chi t
   // 6. Chi tiết đơn → hủy (đơn chưa thanh toán) → tồn kho hoàn lại
   await main(page).getByRole('link', { name: 'Xem đơn hàng' }).click()
   await expect(page).toHaveURL(new RegExp(`/tai-khoan/don-hang/${code}$`))
-  await expect(main(page).getByTestId('vietqr')).toBeVisible()
+  // Next giữ trang vừa rời trong DOM ở dạng ẩn (Activity) → chỉ xét phần tử đang hiển thị
+  const vietqr = main(page).getByTestId('vietqr').filter({ visible: true })
+  await expect(vietqr).toBeVisible()
   await waitForHydration(page, 'main details form button[type="submit"]')
   await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
   await main(page).getByLabel('Lý do hủy').fill('Đổi ý (e2e)')
   await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()
   await expect(main(page).getByTestId('order-status').first()).toHaveText('Đã hủy', { timeout: 15_000 })
-  await expect(main(page).getByTestId('vietqr')).toHaveCount(0)
+  await expect(vietqr).toHaveCount(0)
   expect(await stockOf(first.id)).toBe(20)
 
   // 7. Danh sách đơn: đơn vừa hủy ở đầu
