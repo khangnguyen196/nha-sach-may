@@ -44,4 +44,9 @@ export type AddressInput = z.output<typeof addressSchema>
 
 export const addressIdSchema = z.coerce.number().int().positive()
 
+/** Trang quay lại sau khi thêm địa chỉ (tham số bind đi qua client); lạ → về sổ địa chỉ */
+export const addressReturnToSchema = z.enum(['checkout']).nullable().catch(null)
+
+export type AddressReturnTo = z.output<typeof addressReturnToSchema>
+
 export const emailLocaleSchema = z.object({ locale: localeSchema })

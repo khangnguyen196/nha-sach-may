@@ -8,14 +8,17 @@ import { getAddressFormProps } from '@/features/account/form-props'
 import { accountPageMetadata } from '@/features/account/metadata'
 import { getProfile } from '@/features/account/queries'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
+import { getPathname } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
+
+type Props = PageProps<'/[locale]/account/addresses/new'>
 
 export async function generateMetadata() {
   const t = await getTranslations('address')
   return accountPageMetadata(t('newTitle'), '/account/addresses/new')
 }
 
-export default async function NewAddressPage() {
+export default async function NewAddressPage({ searchParams }: Props) {
   const [t, tAccount, locale] = await Promise.all([getTranslations('address'), getTranslations('account'), getLocale()])
 
   return (
@@ -30,21 +33,28 @@ export default async function NewAddressPage() {
       <h1 className="mt-6 font-serif text-3xl font-medium">{t('newTitle')}</h1>
       <div className="mt-8">
         <Suspense fallback={<AddressFormSkeleton />}>
-          <NewAddressForm locale={locale} />
+          <NewAddressForm locale={locale} searchParams={searchParams} />
         </Suspense>
       </div>
     </div>
   )
 }
 
-async function NewAddressForm({ locale }: { locale: Locale }) {
-  const user = await requireUser(locale, '/account/addresses/new')
+async function NewAddressForm({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
+  // ?next= chỉ nhận đúng URL trang thanh toán của locale này (link "Thêm địa chỉ" ở checkout); giá trị khác bỏ qua
+  const { next } = await searchParams
+  const fromCheckout = next === getPathname({ href: '/checkout', locale })
+  const user = await requireUser(
+    locale,
+    fromCheckout ? { pathname: '/account/addresses/new', query: { next } } : '/account/addresses/new',
+  )
   const [props, profile] = await Promise.all([getAddressFormProps(locale), getProfile(user.id)])
 
   return (
     <AddressForm
       {...props}
-      action={createAddress.bind(null, locale)}
+      action={createAddress.bind(null, locale, fromCheckout ? 'checkout' : null)}
+      cancelHref={fromCheckout ? '/checkout' : '/account/addresses'}
       // Tên người nhận mặc định là tên chủ tài khoản (thường giao cho chính mình)
       initial={{
         recipientName: profile?.full_name ?? user.fullName ?? '',

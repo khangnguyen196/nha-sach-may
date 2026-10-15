@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { FormAlert, SelectField, TextField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
-import { Link } from '@/i18n/navigation'
+import { Link, type Href } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
 import type { FormMessages } from '@/lib/form-messages'
 import { useFormAction } from '@/lib/use-form-action'
@@ -43,6 +43,8 @@ type Props = {
   locale: string
   provinces: DivisionOption[]
   initial: Initial
+  /** Nút Hủy: mặc định về sổ địa chỉ; thêm địa chỉ từ trang thanh toán thì về thanh toán */
+  cancelHref?: Href
 }
 
 type WardsStatus = 'idle' | 'loading' | 'error'
@@ -60,7 +62,15 @@ function isOptionList(value: unknown): value is DivisionOption[] {
   )
 }
 
-export function AddressForm({ action, messages, labels, locale, provinces, initial }: Props) {
+export function AddressForm({
+  action,
+  messages,
+  labels,
+  locale,
+  provinces,
+  initial,
+  cancelHref = '/account/addresses',
+}: Props) {
   const { formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
   const [provinceCode, setProvinceCode] = useState(initial.provinceCode)
   const [wardCode, setWardCode] = useState(initial.wardCode)
@@ -171,7 +181,7 @@ export function AddressForm({ action, messages, labels, locale, provinces, initi
         <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.save}
         </SubmitButton>
-        <Link href="/account/addresses" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>
+        <Link href={cancelHref} className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>
           {labels.cancel}
         </Link>
       </div>

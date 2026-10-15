@@ -7,13 +7,19 @@ import { getCurrentUser } from '@/lib/auth'
 import { invalidInput, toFailure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
-import { addressIdSchema, addressSchema, emailLocaleSchema } from './schemas'
+import { addressIdSchema, addressReturnToSchema, addressSchema, emailLocaleSchema, type AddressReturnTo } from './schemas'
 
 // locale / id do page bind sẵn (`createAddress.bind(null, locale)`): Server Action không đọc được
 // next/root-params. Tham số bind đi qua client nên vẫn parse lại.
 // user_id không bao giờ nhận từ client: lấy từ phiên; RLS `with check` chặn thêm một lớp.
 
-export async function createAddress(locale: Locale, _prev: Result<null> | null, formData: FormData): Promise<Result<null>> {
+/** `returnTo` = 'checkout': lưu xong quay lại thanh toán với địa chỉ mới được chọn sẵn */
+export async function createAddress(
+  locale: Locale,
+  returnTo: AddressReturnTo,
+  _prev: Result<null> | null,
+  formData: FormData,
+): Promise<Result<null>> {
   const parsed = addressSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return invalidInput(parsed.error)
   const user = await getCurrentUser()
@@ -24,10 +30,18 @@ export async function createAddress(locale: Locale, _prev: Result<null> | null, 
   if (countError) return toFailure(countError)
 
   // Địa chỉ đầu tiên tự thành mặc định
-  const { error } = await supabase.from('addresses').insert({ ...parsed.data, user_id: user.id, is_default: count === 0 })
+  const { data, error } = await supabase
+    .from('addresses')
+    .insert({ ...parsed.data, user_id: user.id, is_default: count === 0 })
+    .select('id')
+    .single()
   if (error) return toFailure(error)
 
-  return redirect({ href: '/account/addresses', locale: parseLocale(locale) })
+  const target = addressReturnToSchema.parse(returnTo)
+  return redirect({
+    href: target === 'checkout' ? { pathname: '/checkout', query: { address: String(data.id) } } : '/account/addresses',
+    locale: parseLocale(locale),
+  })
 }
 
 export async function updateAddress(
