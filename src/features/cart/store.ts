@@ -69,6 +69,40 @@ export function writeGuestCart(items: readonly CartItem[]): boolean {
   return saved
 }
 
+// ---- Mốc gộp giỏ (đồng bộ badge giữa các tab) ----
+
+const MERGED_AT_KEY = 'nsm-cart-merged-at'
+
+/** Tab vừa gộp giỏ khách ghi lại thời điểm; tab khác dựa vào đó biết số trên badge của mình đã cũ */
+export function markGuestCartMerged() {
+  try {
+    localStorage.setItem(MERGED_AT_KEY, String(Date.now()))
+  } catch {
+    // Không ghi được thì tab khác chỉ hiện số cũ tới lần tải trang sau
+  }
+}
+
+/**
+ * Trang này được render ở server trước khi có lần gộp mới nhất → số trên badge có thể đã cũ.
+ * performance.timeOrigin = lúc bắt đầu điều hướng, trước khi server render trang.
+ */
+export function mergedSincePageLoad(): boolean {
+  try {
+    return Number(localStorage.getItem(MERGED_AT_KEY) ?? 0) > performance.timeOrigin
+  } catch {
+    return false
+  }
+}
+
+/** Tab khác vừa gộp giỏ (sự kiện storage chỉ tới các tab khác) */
+export function onGuestCartMergedElsewhere(callback: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === MERGED_AT_KEY) callback()
+  }
+  window.addEventListener('storage', onStorage)
+  return () => window.removeEventListener('storage', onStorage)
+}
+
 // ---- Phiên ----
 
 export type CartMode = 'unknown' | 'guest' | 'user'

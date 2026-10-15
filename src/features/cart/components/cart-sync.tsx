@@ -3,7 +3,14 @@
 import { useEffect } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { mergeGuestCart } from '../actions'
-import { readGuestCart, setUserCartCount, writeGuestCart } from '../store'
+import {
+  markGuestCartMerged,
+  mergedSincePageLoad,
+  onGuestCartMergedElsewhere,
+  readGuestCart,
+  setUserCartCount,
+  writeGuestCart,
+} from '../store'
 
 const MERGE_LOCK = 'nsm-cart-merge'
 
@@ -20,12 +27,15 @@ async function mergeOnce(): Promise<Outcome> {
     return 'failed'
   }
   writeGuestCart([])
+  markGuestCartMerged()
   setUserCartCount(result.data.count)
   return 'merged'
 }
 
 // Không có navigator.locks: chặn chạy chồng trong cùng tab (effect chạy 2 lần ở dev); giữa các tab thì không chặn được
 let inFlight: Promise<Outcome> | null = null
+// Mốc gộp chỉ so với lúc tải document một lần: CartSync mount lại (soft nav) thì timeOrigin vẫn cũ → tránh refresh lặp
+let checkedMergeOnLoad = false
 
 async function mergeGuestCartLocked(): Promise<Outcome> {
   // Nhiều tab cùng mở sau khi đăng nhập: tab nào cũng thấy localStorage có hàng. Khóa theo origin → tab sau
@@ -46,6 +56,16 @@ async function mergeGuestCartLocked(): Promise<Outcome> {
  */
 export function CartSync() {
   const router = useRouter()
+
+  // Tab khác gộp giỏ: lúc tab này đang mở, hoặc sau khi server đã render trang này nhưng trước khi nó hydrate
+  // (localStorage lúc đó đã rỗng, effect bên dưới không có gì để làm) → tải lại để badge đúng số
+  useEffect(() => {
+    if (!checkedMergeOnLoad) {
+      checkedMergeOnLoad = true
+      if (mergedSincePageLoad()) router.refresh()
+    }
+    return onGuestCartMergedElsewhere(() => router.refresh())
+  }, [router])
 
   useEffect(() => {
     if (readGuestCart().length === 0) return

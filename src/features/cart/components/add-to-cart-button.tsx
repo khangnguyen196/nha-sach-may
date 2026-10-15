@@ -3,7 +3,7 @@
 import { ShoppingBagIcon } from 'lucide-react'
 import { useState, useTransition, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
 import type { CartActionData } from '../actions'
 import { addItem } from '../guest-cart'
@@ -40,6 +40,7 @@ type Status = { kind: 'added' } | { kind: 'error'; message: string } | null
 export function AddToCartButton({ bookId, limit, labels, add, formAction }: Props) {
   const [status, setStatus] = useState<Status>(null)
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
 
   function addAsGuest() {
     const next = addItem(readGuestCart(), bookId, limit)
@@ -59,7 +60,11 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction }: Prop
       if (mode === 'user') beginUserAdd()
       const result = await add()
       if (mode === 'user') endUserAdd(result.ok ? result.data.count : null)
-      else if (result.ok) setUserCartCount(result.data.count)
+      else if (result.ok) {
+        setUserCartCount(result.data.count)
+        // Header có thể stream tới sau với số render trước lúc thêm, ghi đè số này → lấy lại header
+        router.refresh()
+      }
 
       if (result.ok) return setStatus({ kind: 'added' })
       if (result.code === 'AUTH_REQUIRED') return addAsGuest()
