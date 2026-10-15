@@ -10,6 +10,24 @@ test('header dính trên cùng khi cuộn', async ({ page }) => {
   expect((await header.boundingBox())?.y).toBe(0)
 })
 
+test('không tràn ngang: layout viewport bằng bề rộng màn hình (trang chủ, trang sách có kệ)', async ({ page }) => {
+  // Phần tử absolute trong kệ cuộn ngang từng kéo document rộng ~1456px ở trang sách → mobile thu nhỏ cả trang
+  await page.goto('/')
+  const bookHref = await page.locator('main a[href^="/sach/"]').first().getAttribute('href')
+  for (const path of ['/', bookHref ?? '/']) {
+    await page.goto(path)
+    // Kệ "Cùng danh mục" stream sau trong Suspense
+    await page.waitForLoadState('networkidle')
+    const { innerWidth, scrollWidth, viewport } = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }))
+    expect(innerWidth, path).toBe(page.viewportSize()?.width)
+    expect(scrollWidth, path).toBeLessThanOrEqual(viewport)
+  }
+})
+
 test('đổi theme → class trên <html> đổi', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')

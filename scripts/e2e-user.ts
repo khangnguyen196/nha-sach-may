@@ -132,3 +132,31 @@ function chunkIndex(name: string) {
   const match = /\.(\d+)$/.exec(name)
   return match ? Number(match[1]) : -1
 }
+
+/** Xóa sạch giỏ tài khoản của user (test giỏ bắt đầu từ giỏ rỗng, chạy lại được) */
+export async function clearCart(userId: string) {
+  const { error } = await adminClient().from('cart_items').delete().eq('user_id', userId)
+  if (error) throw new Error(`clearCart: ${error.message}`)
+}
+
+/** book_id → quantity trong giỏ tài khoản (kiểm tra gộp giỏ không bị cộng hai lần) */
+export async function cartQuantities(userId: string) {
+  const { data, error } = await adminClient().from('cart_items').select('book_id, quantity').eq('user_id', userId)
+  if (error) throw new Error(`cartQuantities: ${error.message}`)
+  return Object.fromEntries(data.map((row) => [row.book_id, row.quantity]))
+}
+
+export type E2eBook = { id: number; slug: string; title: string; price: number; stock: number }
+
+/** Sách đang bán có tồn kho trong [min, max], theo id (ổn định giữa các lần chạy). Quyền anon, không cần service key. */
+export async function findBooksByStock(min: number, max: number, limit = 1): Promise<E2eBook[]> {
+  const { data, error } = await anonClient()
+    .from('books')
+    .select('id, slug, title, price, stock')
+    .gte('stock', min)
+    .lte('stock', max)
+    .order('id')
+    .limit(limit)
+  if (error) throw new Error(`findBooksByStock: ${error.message}`)
+  return data
+}

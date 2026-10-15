@@ -6,7 +6,9 @@ import { BookCard } from './book-card'
 import { BookCardSkeleton } from './book-grid-skeleton'
 
 const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
-const LIST_CLASS = '-mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6'
+// relative: phần tử absolute bên trong (sr-only của BookCard) lấy danh sách làm containing block nên bị vùng cuộn
+// cắt; thiếu nó thì chúng nằm ngoài lề phải, kéo document rộng ra (~1456px ở trang sách) và mobile tự thu nhỏ trang
+const LIST_CLASS = 'relative -mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6'
 
 type Props = {
   id: string

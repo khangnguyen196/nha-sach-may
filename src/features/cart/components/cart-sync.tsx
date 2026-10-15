@@ -7,24 +7,27 @@ import { readGuestCart, setUserCartCount, writeGuestCart } from '../store'
 
 const MERGE_LOCK = 'nsm-cart-merge'
 
-// Không có navigator.locks: chặn chạy chồng trong cùng tab (effect chạy 2 lần ở dev). Giữa các tab thì không chặn được.
-let inFlight: Promise<boolean> | null = null
+// 'elsewhere': lúc vào khóa giỏ đã rỗng → tab khác vừa gộp xong, tab này cũng cần tải lại số trên badge
+type Outcome = 'merged' | 'elsewhere' | 'failed'
 
-/** Đọc lại localStorage ngay trước khi gộp; gộp xong xóa luôn (trước khi nhả khóa) */
-async function mergeOnce(): Promise<boolean> {
+/** Đọc lại localStorage trong khóa; gộp xong xóa luôn (trước khi nhả khóa) */
+async function mergeOnce(): Promise<Outcome> {
   const items = readGuestCart()
-  if (items.length === 0) return false
+  if (items.length === 0) return 'elsewhere'
   const result = await mergeGuestCart(items)
   if (!result.ok) {
     console.error('mergeGuestCart:', result.code)
-    return false
+    return 'failed'
   }
   writeGuestCart([])
   setUserCartCount(result.data.count)
-  return true
+  return 'merged'
 }
 
-async function mergeGuestCartLocked(): Promise<boolean> {
+// Không có navigator.locks: chặn chạy chồng trong cùng tab (effect chạy 2 lần ở dev); giữa các tab thì không chặn được
+let inFlight: Promise<Outcome> | null = null
+
+async function mergeGuestCartLocked(): Promise<Outcome> {
   // Nhiều tab cùng mở sau khi đăng nhập: tab nào cũng thấy localStorage có hàng. Khóa theo origin → tab sau
   // chờ tab trước gộp + xóa xong rồi mới đọc lại, thấy rỗng thì bỏ qua → số lượng không bị cộng hai lần.
   if (typeof navigator !== 'undefined' && navigator.locks) {
@@ -48,8 +51,8 @@ export function CartSync() {
     if (readGuestCart().length === 0) return
     let active = true
     mergeGuestCartLocked()
-      .then((merged) => {
-        if (merged && active) router.refresh()
+      .then((outcome) => {
+        if (outcome !== 'failed' && active) router.refresh()
       })
       .catch((error: unknown) => console.error('CartSync:', error))
     return () => {
