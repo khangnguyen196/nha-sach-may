@@ -1,9 +1,11 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
 import { cache } from 'react'
+import { SHARP_COVER_WIDTH } from '@/lib/cover-image'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
+import { fillShelf } from './utils'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -39,24 +41,80 @@ function tagBooks(books: readonly { id: number }[]) {
 // Cột của BookCard, dùng chung cho lưới, kệ, trang chủ. Kiểu BookCard derive từ query bên dưới.
 const BOOK_CARD_COLUMNS = 'id, slug, title, cover_url, price, original_price, stock, book_authors(role, authors(name))'
 
-/** Sách mới nhập gần đây (trang chủ tạm; Phase 8 thay bằng kệ "Mới về"). */
-export async function getNewBooks(limit = 12) {
+const SHELF_SIZE = 12
+/** Ẩn cả kệ (kể cả tiêu đề) khi ít sách hơn mức này; kệ khác luôn hiện */
+const SHELF_MIN = { featured: 4, bestselling: 6 }
+/** Postgres: cột không tồn tại */
+const UNDEFINED_COLUMN = '42703'
+
+function bookCards() {
+  return createPublicClient().from('books').select(BOOK_CARD_COLUMNS)
+}
+
+type BookCardQuery = ReturnType<typeof bookCards>
+type BookCardResult = Awaited<BookCardQuery>
+
+const newestFirst = (query: BookCardQuery) =>
+  query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(SHELF_SIZE)
+
+const sharpOnly = (query: BookCardQuery) => query.gte('cover_width', SHARP_COVER_WIDTH)
+
+function rows({ data, error }: BookCardResult, context: string) {
+  if (error) throw new Error(`getHomeShelves (${context}): ${error.message}`)
+  return data
+}
+
+/**
+ * Sách bìa nét của một kệ. Trước khi chạy migration 20261016010000_cover_width.sql cột chưa có → coi như chưa đo bìa
+ * nào, kệ theo thứ tự thường (trang chủ vẫn prerender được). Bỏ nhánh 42703 sau khi migration đã chạy.
+ */
+function sharpRows(result: BookCardResult, context: string) {
+  if (result.error?.code === UNDEFINED_COLUMN) return []
+  return rows(result, context)
+}
+
+/**
+ * Các kệ trang chủ (docs/plans/phase-8.md): Nổi bật (admin chọn), Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn
+ * (cây danh mục `foreignCategoryIds`). Kệ có bìa nét trước (`cover_width`), thiếu thì lấp bằng sách bìa mờ cùng thứ
+ * tự. Bán chạy giữ đúng thứ tự số bán. Tất cả query chạy song song.
+ */
+export async function getHomeShelves(foreignCategoryIds: number[]) {
   'use cache'
   cacheTag('books')
   cacheLife('hours')
 
-  const { data, error } = await createPublicClient()
-    .from('books')
-    .select(BOOK_CARD_COLUMNS)
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(limit)
-  if (error) throw new Error(`getNewBooks: ${error.message}`)
-  tagBooks(data)
-  return data
+  const featured = () => bookCards().eq('is_featured', true)
+  const vietnamese = () => bookCards().eq('language', 'vi')
+  const foreign = () => bookCards().in('category_id', foreignCategoryIds)
+
+  const [featuredSharp, featuredAll, bestselling, newSharp, newAll, foreignSharp, foreignAll] = await Promise.all([
+    newestFirst(sharpOnly(featured())),
+    newestFirst(featured()),
+    bookCards()
+      .gt('sold_count', 0)
+      .order('sold_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id')
+      .limit(SHELF_SIZE),
+    newestFirst(sharpOnly(vietnamese())),
+    newestFirst(vietnamese()),
+    newestFirst(sharpOnly(foreign())),
+    newestFirst(foreign()),
+  ])
+
+  const featuredBooks = fillShelf(sharpRows(featuredSharp, 'featured'), rows(featuredAll, 'featured'), SHELF_SIZE)
+  const bestsellingBooks = rows(bestselling, 'bestselling')
+  const shelves = {
+    featured: featuredBooks.length >= SHELF_MIN.featured ? featuredBooks : [],
+    bestselling: bestsellingBooks.length >= SHELF_MIN.bestselling ? bestsellingBooks : [],
+    newArrivals: fillShelf(sharpRows(newSharp, 'new'), rows(newAll, 'new'), SHELF_SIZE),
+    foreign: fillShelf(sharpRows(foreignSharp, 'foreign'), rows(foreignAll, 'foreign'), SHELF_SIZE),
+  }
+  tagBooks(Object.values(shelves).flat())
+  return shelves
 }
 
-export type BookCard = Awaited<ReturnType<typeof getNewBooks>>[number]
+export type BookCard = Awaited<ReturnType<typeof getHomeShelves>>['newArrivals'][number]
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 

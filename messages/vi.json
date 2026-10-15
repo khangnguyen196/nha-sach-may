@@ -13,7 +13,10 @@
     "categoriesTitle": "Danh mục",
     "categoriesEmpty": "Chưa có danh mục nào.",
     "newArrivals": "Mới về",
-    "newArrivalsEmpty": "Chưa có sách nào."
+    "newArrivalsEmpty": "Chưa có sách nào.",
+    "allBooks": "Xem tất cả sách",
+    "featured": "Nổi bật",
+    "bestselling": "Bán chạy"
   },
   "notFound": {
     "title": "Không tìm thấy trang",
@@ -428,7 +431,7 @@
     "cart": "Giỏ hàng",
     "account": "Tài khoản",
     "footerBrowse": "Khám phá",
-    "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books; giá bán chỉ để minh họa.",
+    "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books, một số ảnh bìa từ <openLibrary>Open Library</openLibrary>; giá bán chỉ để minh họa.",
     "copyright": "© Nhà Sách Mây",
     "admin": "Quản trị"
   },
@@ -495,7 +498,9 @@
       "description": "Thử bỏ bớt điều kiện lọc để xem thêm sách."
     },
     "seeAll": "Xem tất cả",
-    "categoryMetaDescription": "Sách {name} tại Nhà Sách Mây: thông tin chi tiết, giá bán, tình trạng còn hàng."
+    "categoryMetaDescription": "Sách {name} tại Nhà Sách Mây: thông tin chi tiết, giá bán, tình trạng còn hàng.",
+    "shelfPrevious": "Cuộn kệ sang trái",
+    "shelfNext": "Cuộn kệ sang phải"
   },
   "book": {
     "authors": "Tác giả",
@@ -820,5 +825,9 @@
     "VOUCHER_CODE_TAKEN": "Mã voucher này đã tồn tại.",
     "VOUCHER_IN_USE": "Voucher đã có đơn hàng dùng nên chỉ tắt được, không xóa được.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
+  },
+  "allBooks": {
+    "title": "Tất cả sách",
+    "metaDescription": "Toàn bộ sách tại Nhà Sách Mây: lọc theo giá, ngôn ngữ, tình trạng còn hàng; sắp xếp theo bán chạy, mới nhất hoặc giá."
   }
 }

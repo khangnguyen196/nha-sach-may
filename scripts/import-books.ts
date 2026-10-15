@@ -9,7 +9,7 @@
  *
  * Ảnh bìa không hotlink: preview chỉ ghi cover_small / cover_large (URL Google). Lúc ghi DB, script tải ảnh
  * (ưu tiên lớn, fallback nhỏ nếu lỗi hoặc nghi là trang lót), đổi sang WebP rộng 600px, upload lên
- * Storage book-covers/<isbn>.webp rồi ghi public URL vào books.cover_url.
+ * Storage book-covers/<isbn>.webp rồi ghi public URL vào books.cover_url (kèm chiều rộng thật vào cover_width).
  *
  * Quy trình khuyến nghị: dry-run → xem file → --from-preview. Quota Books API có hạn (~1.000 request/ngày)
  * và dữ liệu vào DB phải đúng bản đã duyệt.
@@ -31,7 +31,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { z } from 'zod'
-import { toCoverWebp } from '../src/lib/cover-image'
+import { toCoverWebp, type CoverWebp } from '../src/lib/cover-image'
 import { slugify } from '../src/lib/slug'
 import type { Database } from '../src/types/database'
 
@@ -583,7 +583,7 @@ export function isLikelyPlaceholder(img: Image) {
 const toWebp = (img: Image) => toCoverWebp(img.bytes)
 
 /** Ưu tiên ảnh lớn; lỗi tải / nghi trang lót / không decode được → ảnh nhỏ. Trả về null nếu cả hai hỏng. */
-async function prepareCover(book: BookInput): Promise<{ webp: Buffer; source: 'large' | 'small' } | null> {
+async function prepareCover(book: BookInput): Promise<{ webp: CoverWebp; source: 'large' | 'small' } | null> {
   if (book.cover_large) {
     const large = await download(book.cover_large)
     const webp = large && !isLikelyPlaceholder(large) ? await toWebp(large) : null
@@ -608,10 +608,10 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
   return out
 }
 
-/** Upload bìa cho sách mới, trả về ISBN → public URL. Sách không có bìa dùng được thì không có trong map. */
+/** Upload bìa cho sách mới, trả về ISBN → public URL + chiều rộng. Sách không có bìa dùng được thì không có trong map. */
 async function uploadCovers(db: SupabaseClient, books: BookInput[]) {
   const stats = { large: 0, small: 0, failed: [] as string[] }
-  const urls = new Map<string, string>()
+  const covers = new Map<string, { url: string; width: number }>()
 
   await mapLimit(books, 6, async (book) => {
     const cover = await prepareCover(book)
@@ -623,15 +623,15 @@ async function uploadCovers(db: SupabaseClient, books: BookInput[]) {
     // Cache 1 năm: mỗi ISBN chỉ upload một lần (sách đã có bị bỏ qua). Admin đổi bìa phải dùng tên file mới.
     const { error } = await db.storage
       .from(COVER_BUCKET)
-      .upload(path, cover.webp, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
+      .upload(path, cover.webp.data, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
     if (error) throw new Error(`Storage ${path}: ${error.message}`)
-    urls.set(book.isbn, db.storage.from(COVER_BUCKET).getPublicUrl(path).data.publicUrl)
+    covers.set(book.isbn, { url: db.storage.from(COVER_BUCKET).getPublicUrl(path).data.publicUrl, width: cover.webp.width })
     stats[cover.source]++
   })
 
   console.log(`  Bìa: ${stats.large} ảnh lớn, ${stats.small} ảnh nhỏ (fallback), ${stats.failed.length} lỗi`)
   for (const f of stats.failed) console.warn(`  ⚠ Không lấy được bìa, bỏ qua sách: ${f}`)
-  return urls
+  return covers
 }
 
 async function save(books: BookInput[]) {
@@ -664,8 +664,8 @@ async function save(books: BookInput[]) {
   }
 
   console.log(`Đang xử lý bìa cho ${newBooks.length} sách mới…`)
-  const coverUrl = await uploadCovers(db, newBooks)
-  const toInsert = newBooks.filter((b) => coverUrl.has(b.isbn))
+  const covers = await uploadCovers(db, newBooks)
+  const toInsert = newBooks.filter((b) => covers.has(b.isbn))
 
   // Sách chưa có ISBN trong DB vẫn giữ slug → dùng khóa riêng để không bao giờ trùng ISBN thật
   dedupeSlugs(toInsert, new Map(existing.map((b) => [b.slug, b.isbn ?? `id:${b.id}`])))
@@ -681,7 +681,8 @@ async function save(books: BookInput[]) {
     isbn: b.isbn,
     published_year: b.published_year,
     page_count: b.page_count,
-    cover_url: coverUrl.get(b.isbn) ?? null,
+    cover_url: covers.get(b.isbn)?.url ?? null,
+    cover_width: covers.get(b.isbn)?.width ?? null,
     price: b.price,
     original_price: b.original_price,
     stock: b.stock,

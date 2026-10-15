@@ -69,6 +69,35 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
 - Sách tiếng Việt: kết quả từ Lulu.com / MintRight Inc gần như luôn không dấu → có thể lọc theo NXB.
 - `marketing-ban-hang` vẫn 0 sách, `tieu-thuyet` / `tho` / `tam-ly-hoc` / `tieng-nhat` không thêm được sách nào dùng được.
 
+## Bìa từ Open Library (Phase 8, 2026-10-16)
+
+`npm run covers -- --openlibrary --dry-run` → tự duyệt lưới "bìa cũ | bìa mới" (`docs/plans/img/phase-8-covers-{1,2}.jpg`, số `#` trong lưới là thứ tự mục "nhận") → `--apply scripts/out/covers-approved.json`. Chạy **một lần**, 76 request tới `covers.openlibrary.org/b/isbn/<isbn>-L.jpg?default=false`, giãn 3.5 giây / request (~85 / 5 phút, dưới giới hạn 100 / IP / 5 phút), `User-Agent` nêu tên dự án + URL repo, không gặp 403 / 429.
+
+**Điều khoản** (trang tài liệu Covers API, openlibrary.org/dev/docs/api/covers, đọc 2026-10-16): API dành cho **hiển thị** bìa trên website công khai, không dành cho tải hàng loạt (tải hàng loạt thì dùng bản dump trên archive.org); đề nghị không crawl; tra theo ISBN / OCLC / LCCN / OLID giới hạn 100 request / IP / 5 phút (vượt → 403); "a courtesy link back to Open Library is appreciated". Không nêu giấy phép riêng cho ảnh bìa; bản quyền ảnh bìa thuộc nhà xuất bản (như bìa từ Google Books). Cách làm: một lần, 76 ảnh, có giãn cách, dự án phi thương mại, ghi nguồn ở footer (link Open Library cạnh dòng ghi nguồn Google Books). Ảnh tải về lưu vào Storage của project (không hotlink, cùng quy tắc với Google Books).
+
+**Kết quả**
+
+| | Sách | Bìa ≥ 300px trước | Bìa < 300px trước | Bìa ≥ 300px sau | Bìa < 300px sau |
+|---|---:|---:|---:|---:|---:|
+| Tiếng Việt | 72 | 42 | 30 | 42 | 30 |
+| Tiếng Anh | 117 | 70 | 47 | 82 | 35 |
+| **Tổng** | **189** | **112** | **77** | **124** | **65** |
+
+- 77 bìa < 300px: 76 bìa của import (`<isbn>.webp`) + 1 bìa đã thay trong admin (100 câu hỏi về lịch sử chữ Quốc ngữ, không đụng tới).
+- 76 request: **48 không có bìa** (29 / 29 sách Việt, 19 sách Anh), **10 loại tự động**, **18 nhận** → tự duyệt **12 áp dụng**, 6 bỏ qua.
+- Đã thay (bìa 128px → 308–400px, file `book-covers/ol-<isbn>-<8 hex>.webp`; bìa cũ xóa khi không đơn nào trỏ tới): Northanger Abbey, Kafka on the Shore, And the Mountains Echoed, Agatha Christie (Five Classic Murder Mysteries), Make Yourself Unforgettable, Roald Dahl's Revolting Recipes, Dr. Seuss Storybook, Dr. Seuss's Sleep Book, The Art of Eric Carle, The Eric Carle Library, A Book of Things, The Universe in a Nutshell. 11 cuốn cùng thiết kế bìa với bìa cũ; And the Mountains Echoed: bìa cũ là ảnh chụp hộp sản phẩm, bìa mới đúng tên + tác giả + NXB Bloomsbury (khớp ISBN).
+- Bìa Open Library chỉ rộng 300–400px (cỡ `-L` của họ), không đạt 600px như bìa Google tốt nhất; đủ cho thẻ kệ 160px ở màn 2x.
+
+**Bỏ qua khi tự duyệt (nghi ngờ, 6)**: không thay, giữ bìa 128px.
+- Hard-Boiled Wonderland and the End of the World; The Wind-Up Bird Chronicle; Men Without Women; Death Comes as the End; Black Holes and Baby Universes: bìa Open Library **khác thiết kế** bìa hiện tại (cùng tên, cùng tác giả, có thể là ấn bản / lần in khác của cùng ISBN). Không chắc bìa nào đúng ấn bản đang bán.
+- Pathways to Success in Your Professional & Private Lives: cả bìa cũ lẫn bìa mới đều là "Dale Carnegie's Lifetime Plan for Success", **không khớp tên sách** trong DB → nên xem lại tên / bìa trong admin.
+
+**Loại tự động (10)**: rộng < 300px: A Moveable Feast (299px), The Complete Khaled Hosseini Box Set (223px), Dr. Seuss's 1 2 3 (159px), The Grand Design (260px); tỉ lệ ngoài 1.2–1.8 (sách tranh khổ vuông / ngang, ảnh hộp): Dr. Seuss Discovers: The Human Body, Dr. Seuss's Sleep Softly Book, Eric Carle's Very Little Library, Eric Carle's How Things Grow, The Very Hungry Caterpillar's Favorite Words, The Very Eric Carle Treasury.
+
+**Còn lại**: 65 bìa < 300px (30 sách Việt, 35 sách Anh) chỉ thay được bằng tay trong admin. Kệ trang chủ ưu tiên bìa nét (`cover_width`) nên ít lộ ra ở trang chủ.
+
+**Làm mới cache**: script chạy ngoài Next nên không gọi được `updateTag`. Chạy `covers` **trước** khi build / deploy: lần build kế tiếp prerender lại với bìa mới (`next start` local: cache `hours` tự hết hoặc khởi động lại).
+
 ## Việc tiếp theo
 
 - [x] **Tôi (chủ dự án)**: chạy `supabase/seed-foreign-books.sql` trên Supabase TRƯỚC lượt A + D.
@@ -80,4 +109,6 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
   - [ ] Yuval Noah Harari Box Set (Sapiens, Homo Deus, 21 Lessons…) (bìa của sách khác: hộp "HBR's 10 Must Reads")
   - [ ] Ngoại ngữ khó đấy, nhưng bạn tự học được (ảnh lạ, không giống bìa)
 - [x] Phase 7: thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" (ảnh JPEG nên bộ lọc PNG < 40KB không bắt được).
+- [x] Phase 8: Open Library một lần (12 bìa thay, xem trên). Sau migration `cover_width`: **chủ dự án** chạy `npm run covers -- --measure`.
+- [ ] **Chủ dự án** (tùy chọn): xem lại 6 bìa "Bỏ qua khi tự duyệt" ở trên, thay trong admin nếu muốn.
 - [x] Lọc tên summary / workbook / study guide / analysis of cho danh mục `en` (`isDerivativeTitle`, commit D).

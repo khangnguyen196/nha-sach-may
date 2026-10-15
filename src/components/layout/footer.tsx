@@ -17,7 +17,19 @@ export async function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_2fr] md:py-16">
         <div>
           <p className="font-serif text-lg font-semibold">{tCommon('siteName')}</p>
-          <p className="mt-3 max-w-xs text-sm text-muted-foreground">{t('footerAbout')}</p>
+          <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+            {t.rich('footerAbout', {
+              // Ghi nguồn ảnh bìa lấy từ Covers API (docs/plans/data.md → Open Library)
+              openLibrary: (chunks) => (
+                <a
+                  href="https://openlibrary.org"
+                  className="rounded-sm underline underline-offset-4 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
+          </p>
         </div>
         {parents.length > 0 && (
           <nav aria-labelledby="footer-browse">

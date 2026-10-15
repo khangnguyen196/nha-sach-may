@@ -1,6 +1,46 @@
 # Phase 8: Trang chủ
 
-Trạng thái: **plan, chờ duyệt** (2026-10-16).
+Trạng thái: **xong trên nhánh `phase-8`, chờ migration + duyệt** (đêm 2026-10-16, chủ dự án vắng: chọn hết ★ theo `night.md`).
+
+## Báo cáo (2026-10-16)
+
+**Đã xong**
+- Trang chủ: hero (trích dẫn + CTA "Xem tất cả sách") → Nổi bật (ẩn khi < 4) → Bán chạy (ẩn khi < 6) → Mới về (chỉ sách tiếng Việt) → Sách ngoại văn (tên từ danh mục, "Xem tất cả" → `/danh-muc/sach-ngoai-van`) → Danh mục. `getHomeShelves`: 7 query song song, một `'use cache'` (tag `books` + `book:{id}`), mỗi kệ bìa nét trước rồi lấp đủ 12 (`fillShelf`, Vitest). Bán chạy giữ thứ tự số bán (không xếp bìa nét trước). `/` vẫn prerender.
+- Trang **Tất cả sách** `/sach` (`/en/books`): `CatalogView` với lọc danh mục cha / giá / ngôn ngữ / còn hàng, sắp xếp, phân trang qua URL.
+- Nút kệ trước / sau (`ShelfNav`, client leaf, từ `md`, chỉ khi kệ tràn, tôn trọng `prefers-reduced-motion`); áp dụng cho mọi kệ (cả "Cùng danh mục" ở trang sách).
+- `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest. Open Library chạy **một lần**: 76 request, 18 nhận tự động, tự duyệt lưới → **12 bìa thay** (128px → 308–400px), 6 bỏ qua (khác thiết kế / không khớp tên). Chi tiết, điều khoản, bảng trước / sau: `data.md` → "Bìa từ Open Library"; lưới: `docs/plans/img/phase-8-covers-{1,2}.jpg`. Footer ghi nguồn Open Library.
+- `toCoverWebp` trả kèm chiều rộng; admin upload bìa + import ghi `cover_width`.
+
+**Chờ migration** (`supabase/migrations/20261016010000_cover_width.sql`)
+- Trước migration: kệ không biết bìa nào nét → `sharpRows` coi lỗi `42703` (cột không tồn tại) là "chưa đo", kệ theo thứ tự thường (để `build` / e2e chạy được). **Sau migration: xóa nhánh `42703` trong `getHomeShelves`.**
+- Admin upload bìa ghi `cover_width` → **lỗi trước migration** (e2e `admin-books` "bìa: JPEG lớn → WebP 600px…" fail đúng chỗ này; 2 test sau nó trong cùng file `serial` chạy riêng thì qua). Import cũng ghi cột này: chạy migration trước khi import tiếp.
+- Sau migration: `npm run covers -- --measure` (đo 189 bìa), rồi chạy lại e2e.
+
+**Quyết định tự chọn — duyệt cuối**
+1. Chọn hết ★ (1–9). Mục 1 (Open Library): đã chạy theo yêu cầu đêm; điều khoản ghi ở `data.md`.
+2. Tự duyệt bìa: chỉ nhận bìa **cùng thiết kế** với bìa hiện tại (chắc chắn đúng ấn bản), trừ And the Mountains Echoed (bìa cũ là ảnh hộp sản phẩm, bìa mới khớp tên + tác giả + NXB). Bìa khác thiết kế dù đúng tên → bỏ qua (có thể là ấn bản khác). Phương án khác: nhận mọi bìa đúng tên / tác giả (+5 bìa).
+3. `--apply` chỉ đổi `cover_url` (chưa có cột `cover_width`), chiều rộng ghi sau bằng `--measure`.
+4. Kệ Bán chạy **không** xếp bìa nét trước (plan mục 2 ghi "mỗi kệ"): xếp lại làm sai nghĩa "bán chạy". Phương án khác: bìa nét trước như các kệ khác.
+5. Kệ "Sách ngoại văn" lọc theo **cây danh mục** `sach-ngoai-van` (khớp link "Xem tất cả"), không theo `language = 'en'`.
+6. Link "Xem tất cả" của Bán chạy là `/sach` (mặc định đã là bán chạy; `toQuery` bỏ sort mặc định nên URL canonical không có `?sort=bestselling`). Nổi bật không có "Xem tất cả" (không có trang lọc nổi bật).
+7. Nút kệ dùng cho mọi kệ, không riêng trang chủ (trang sách +0.5KB).
+8. Trang Tất cả sách có lọc danh mục cha (như trang tìm kiếm), sort mặc định bán chạy (ngữ cảnh `browse`).
+9. Đổi tên migration theo ngày thật (`20261016010000_cover_width.sql`).
+
+**Kiểm tra**
+- `typecheck`, `lint`, `build`: sạch. Vitest: 36 file / 319 test (mới: `covers`, `fillShelf`, `toCoverWebp` trả chiều rộng).
+- `test:e2e` đầy đủ: **179 / 182 qua**; 1 fail **chờ migration** (admin upload bìa), 2 không chạy do `serial` → chạy riêng: qua. `home.spec.ts` mới (6 test × desktop / mobile) qua.
+- `measure:js`: trang chủ = baseline + **39.1KB** (trước 38.5, +0.6KB nút kệ), trang sách (`sapiens`, `lam-ban-voi-bau-troi`) + **39.7KB** (trước 39.2). Trong ngân sách nút kệ ≤ 1.5KB.
+- Soát giao diện bằng ảnh chụp (desktop 1280px, Pixel 7, dark): hero, kệ, nút kệ, lưới danh mục, footer.
+
+**Giới hạn / rủi ro**: như mục cuối plan; thêm: kệ Nổi bật đang ẩn (chưa chọn sách nổi bật), Bán chạy đang ẩn (chưa có đơn thật).
+
+**Việc của bạn**: chạy migration → sinh lại types → `npm run covers -- --measure`; chọn ~12 sách nổi bật trong admin; (tùy chọn) xem 6 bìa bỏ qua trong `data.md`.
+
+---
+
+Plan gốc (đã chọn hết ★):
+
 
 Mục tiêu (CLAUDE.md → Design system): hero tối giản (trích dẫn bằng Lora + 1 CTA) → các kệ Nổi bật, Bán chạy, Mới về → lưới danh mục. Ảnh bìa là nguồn màu chính của giao diện, nên bìa mờ và kệ lệch về sách ngoại văn là hai vấn đề phải xử lý trước khi dựng kệ.
 
@@ -136,8 +176,8 @@ Danh mục      lưới danh mục gốc + con (có sẵn, chỉnh khoảng các
 
 ## Tiến độ
 
-- [ ] Migration `cover_width` + `schema.sql` + types; import / admin upload ghi `cover_width`
-- [ ] `scripts/covers.ts --measure` (đo 189 bìa)
-- [ ] (Nếu chọn) Open Library: dry-run → bạn duyệt → apply; ghi nguồn + điều khoản vào `data.md`, footer
-- [ ] `getHomeShelves`, kệ + nút kệ, hero, trang Tất cả sách
-- [ ] e2e `home.spec.ts`; typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo
+- [x] Migration `cover_width` + `schema.sql` + types (sửa tay); import / admin upload ghi `cover_width` (**chờ migration**)
+- [ ] `scripts/covers.ts --measure` (đo 189 bìa): **chủ dự án chạy sau migration**
+- [x] Open Library: dry-run → tự duyệt → apply 12 bìa; ghi nguồn + điều khoản vào `data.md`, footer
+- [x] `getHomeShelves`, kệ + nút kệ, hero, trang Tất cả sách
+- [x] e2e `home.spec.ts`; typecheck / lint / build / test sạch; e2e 179/182 (1 chờ migration); `measure:js`; báo cáo

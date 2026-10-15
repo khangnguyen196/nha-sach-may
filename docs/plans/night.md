@@ -1,4 +1,4 @@
-# Làm đêm 2026-10-16 → 17: Phase 8 → 9 → 10
+# Làm đêm 2026-10-16: Phase 8 → 9 → 10
 
 Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng chờ trả lời**. Sau khi bị nén ngữ cảnh / hết hạn mức: đọc lại `CLAUDE.md` + file này, làm tiếp từ mục chưa tick (tick ngay khi xong từng mục, commit cùng nhóm việc).
 
@@ -34,18 +34,18 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 - [x] Soát code / schema liên quan phase 9, 10 (reviews, voucher checkout, thanh toán, email, SEO, 404)
 - [x] Viết `phase-9.md`, `phase-10.md` (plan + quyết định tự chọn), `owner-todo.md`
 - [x] Migration phase 8 (`cover_width`) trên `phase-8` + `schema.sql` + types → push
-- [ ] Nhánh `phase-9` từ `phase-8`: migration phase 9 + `schema.sql` + types → push
-- [ ] Nhánh `phase-10` từ `phase-9`: migration phase 10 (nếu cần) → push
+- [x] Nhánh `phase-9` từ `phase-8`: migration phase 9 + `schema.sql` + types → push
+- [x] Nhánh `phase-10` từ `phase-9`: không cần migration (nhánh đã tạo, push)
 
 ### Phase 8 (nhánh `phase-8`)
-- [ ] `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest
-- [ ] Chạy Open Library dry-run (một lần, giãn cách) → tự duyệt lưới → `--apply` bìa chắc chắn; ghi `data.md` (điều khoản, bảng trước / sau, bìa bỏ qua)
-- [ ] Footer ghi nguồn Open Library
-- [ ] Import / admin upload ghi `cover_width` (chờ migration)
-- [ ] `getHomeShelves` + kệ (nút trước / sau) + hero + trang Tất cả sách `/sach`
-- [ ] e2e `home.spec.ts`
-- [ ] Kiểm tra: typecheck / lint / build / Vitest / e2e toàn bộ / `measure:js`
-- [ ] Báo cáo trong `phase-8.md`, tick tiến độ, cập nhật CLAUDE.md → push
+- [x] `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest
+- [x] Chạy Open Library dry-run (một lần, giãn cách) → tự duyệt lưới → `--apply` bìa chắc chắn; ghi `data.md` (điều khoản, bảng trước / sau, bìa bỏ qua)
+- [x] Footer ghi nguồn Open Library
+- [x] Import / admin upload ghi `cover_width` (chờ migration)
+- [x] `getHomeShelves` + kệ (nút trước / sau) + hero + trang Tất cả sách `/sach`
+- [x] e2e `home.spec.ts`
+- [x] Kiểm tra: typecheck / lint / build / Vitest / e2e toàn bộ / `measure:js`
+- [x] Báo cáo trong `phase-8.md`, tick tiến độ, cập nhật CLAUDE.md → push
 
 ### Phase 9 (nhánh `phase-9`, merge `phase-8` trước)
 - [ ] Theo checklist trong `phase-9.md`

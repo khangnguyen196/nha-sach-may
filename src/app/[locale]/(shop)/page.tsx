@@ -1,43 +1,73 @@
 import { getLocale, getTranslations } from 'next-intl/server'
-import { BookGrid } from '@/features/books/components/book-grid'
-import { getCategories, getNewBooks } from '@/features/books/queries'
+import { buttonVariants } from '@/components/ui/button'
+import { Shelf } from '@/features/books/components/shelf'
+import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
 import { Link } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
 
 const categoryLink =
   'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
 
-// Trang chủ tạm: Phase 8 thay bằng hero + các kệ (Nổi bật, Bán chạy, Mới về) + lưới danh mục.
+/** Nhánh danh mục sách tiếng Anh (supabase/seed-foreign-books.sql): một kệ riêng, không trộn vào "Mới về" */
+const FOREIGN_CATEGORY_SLUG = 'sach-ngoai-van'
+
+/** Sách chỉ gắn vào danh mục lá: danh mục cha → id các danh mục con */
+function leafIds(categories: Category[], root: Category) {
+  const children = categories.filter((c) => c.parent_id === root.id)
+  return children.length > 0 ? children.map((c) => c.id) : [root.id]
+}
+
+/**
+ * Hero (trích dẫn + 1 CTA) → kệ Nổi bật, Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn → lưới danh mục.
+ * Prerender: mọi query qua 'use cache' + client anon. LCP là chữ hero; ảnh kệ lazy.
+ */
 export default async function HomePage() {
-  const [t, locale, categories, books] = await Promise.all([
-    getTranslations('home'),
-    getLocale(),
-    getCategories(),
-    getNewBooks(),
-  ])
+  const [t, locale, categories] = await Promise.all([getTranslations('home'), getLocale(), getCategories()])
+  const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
+  const shelves = await getHomeShelves(foreignRoot ? leafIds(categories, foreignRoot) : [])
   const parents = categories.filter((c) => c.parent_id === null)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-      <figure className="max-w-reading">
-        <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>
-        <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
-      </figure>
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="py-16 md:py-24">
+        <figure className="max-w-reading">
+          <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>
+          <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
+        </figure>
+        <Link href="/books" className={buttonVariants({ size: 'lg', className: 'mt-8 h-11 px-6 text-base' })}>
+          {t('allBooks')}
+        </Link>
+      </div>
 
-      <section aria-labelledby="new-arrivals-title" className="mt-16 md:mt-24">
-        <h2 id="new-arrivals-title" className="text-xl font-semibold">
-          {t('newArrivals')}
-        </h2>
-        {books.length === 0 ? (
-          <p className="mt-4 text-muted-foreground">{t('newArrivalsEmpty')}</p>
+      <div className="space-y-12 md:space-y-20">
+        <Shelf id="featured" title={t('featured')} books={shelves.featured} />
+        <Shelf id="bestselling" title={t('bestselling')} href="/books" books={shelves.bestselling} />
+        {shelves.newArrivals.length > 0 ? (
+          <Shelf
+            id="new-arrivals"
+            title={t('newArrivals')}
+            href={{ pathname: '/books', query: { lang: 'vi', sort: 'newest' } }}
+            books={shelves.newArrivals}
+          />
         ) : (
-          <div className="mt-6">
-            <BookGrid books={books} />
-          </div>
+          <section aria-labelledby="new-arrivals">
+            <h2 id="new-arrivals" className="text-xl font-semibold">
+              {t('newArrivals')}
+            </h2>
+            <p className="mt-4 text-muted-foreground">{t('newArrivalsEmpty')}</p>
+          </section>
         )}
-      </section>
+        {foreignRoot && (
+          <Shelf
+            id="foreign-books"
+            title={localize(foreignRoot, 'name', locale)}
+            href={{ pathname: '/categories/[slug]', params: { slug: foreignRoot.slug } }}
+            books={shelves.foreign}
+          />
+        )}
+      </div>
 
-      <section aria-labelledby="categories-title" className="mt-16 md:mt-24">
+      <section aria-labelledby="categories-title" className="py-12 md:py-20">
         <h2 id="categories-title" className="text-xl font-semibold">
           {t('categoriesTitle')}
         </h2>
