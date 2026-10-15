@@ -15,7 +15,7 @@ Phạm vi (Lộ trình CLAUDE.md): đánh giá sách đã nhận, voucher ở ch
 
 ## Có cần migration không
 
-**Có**, `supabase/migrations/20261017000000_payments_email.sql` (+ `schema.sql`, types):
+**Có**, `supabase/migrations/20261016020000_payments_email.sql` (+ `schema.sql`, types):
 
 1. `cancel_order`: thêm `and payment_status <> 'paid'` vào câu `update` (cùng mã `ORDER_NOT_CANCELLABLE`). Đơn COD luôn `unpaid` tới khi giao → hành vi cũ giữ nguyên.
 2. Quyền cột `vouchers`: `revoke update` rồi `grant update (code, description, description_en, discount_type, discount_value, max_discount, min_order_value, usage_limit, starts_at, ends_at, is_active)`. Bỏ `used_count` (do `place_order` / trigger hủy đơn quản lý, đều `security definer`) và `created_at`. Insert giữ nguyên (form tạo không gửi `used_count`).
@@ -71,7 +71,7 @@ Idempotent (`create or replace`, `revoke` / `grant`), không đổi dữ liệu.
 
 ## File sẽ tạo / sửa
 
-- `supabase/migrations/20261017000000_payments_email.sql`, `supabase/schema.sql`, `src/types/database.ts`, `supabase/templates/{confirm-signup,reset-password}.html`
+- `supabase/migrations/20261016020000_payments_email.sql`, `supabase/schema.sql`, `src/types/database.ts`, `supabase/templates/{confirm-signup,reset-password}.html`
 - `src/features/reviews/{queries,actions,schemas,schemas.test}.ts`, `components/{review-list,review-form,rating-stars}.tsx`; trang sách
 - `src/app/admin/danh-gia/page.tsx`, `src/features/admin/reviews/*`, `admin-nav`
 - `src/features/checkout/*` (schema, action, `payment-method.tsx` → radio, `voucher-form.tsx`, `voucher.ts`), `src/features/cart/queries.ts` (`getCartQuote(voucher)`)

@@ -56,6 +56,7 @@ export type CatalogBase =
   | { pathname: '/categories/[slug]'; params: { slug: string } }
   | { pathname: '/authors/[slug]'; params: { slug: string } }
   | { pathname: '/search' }
+  | { pathname: '/books' }
 
 export function catalogHref(base: CatalogBase, params: CatalogParams, context: CatalogContext) {
   return { ...base, query: toQuery(params, context) }

@@ -4,6 +4,7 @@ import { Link, type Href } from '@/i18n/navigation'
 import type { BookCard as BookCardData } from '../queries'
 import { BookCard } from './book-card'
 import { BookCardSkeleton } from './book-grid-skeleton'
+import { ShelfNav } from './shelf-nav'
 
 const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
 // relative: phần tử absolute bên trong (sr-only của BookCard) lấy danh sách làm containing block nên bị vùng cuộn
@@ -17,24 +18,28 @@ type Props = {
   books: BookCardData[]
 }
 
-/** Kệ sách: hàng ngang cuộn được (scroll-snap). Đơn vị bố cục chính của trang chủ ở Phase 8. */
+/** Kệ sách: hàng ngang cuộn được (scroll-snap), nút trước / sau trên desktop. Đơn vị bố cục chính của trang chủ. */
 export async function Shelf({ id, title, href, books }: Props) {
   if (books.length === 0) return null
   const t = await getTranslations('catalog')
+  const listId = `${id}-list`
 
   return (
     <section aria-labelledby={id}>
       <ShelfHeading id={id} title={title}>
-        {href && (
-          <Link
-            href={href}
-            className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            {t('seeAll')}
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          {href && (
+            <Link
+              href={href}
+              className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {t('seeAll')}
+            </Link>
+          )}
+          <ShelfNav listId={listId} labels={{ previous: t('shelfPrevious'), next: t('shelfNext') }} />
+        </div>
       </ShelfHeading>
-      <ul className={LIST_CLASS}>
+      <ul id={listId} className={LIST_CLASS}>
         {books.map((book) => (
           <li key={book.id} className={ITEM_CLASS}>
             <BookCard book={book} sizes="160px" />
@@ -62,7 +67,8 @@ export function ShelfSkeleton({ id, title }: { id: string; title: string }) {
 
 function ShelfHeading({ id, title, children }: { id: string; title: string; children?: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    // min-h = cỡ nút kệ: nút hiện sau khi hydrate không làm tiêu đề nhảy
+    <div className="flex min-h-8 items-center justify-between gap-4">
       <h2 id={id} className="text-xl font-semibold">
         {title}
       </h2>

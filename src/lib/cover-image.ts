@@ -6,6 +6,8 @@ import sharp, { type Metadata } from 'sharp'
  */
 
 export const COVER_WIDTH = 600
+/** Bìa từ mức này coi là nét: thẻ sách trên kệ rộng 144–160px CSS → màn 2x cần ~300px (kệ trang chủ, scripts/covers.ts) */
+export const SHARP_COVER_WIDTH = 300
 /** Giới hạn file gốc khi admin upload: body request của Vercel tối đa 4.5MB */
 export const COVER_MAX_BYTES = 4 * 1024 * 1024
 /** Chống ảnh bom (file nhỏ nhưng giải nén ra hàng trăm triệu điểm ảnh) */
@@ -17,19 +19,26 @@ function isAcceptedFormat({ format, compression }: Metadata) {
   return format === 'jpeg' || format === 'png' || format === 'webp'
 }
 
+export type CoverWebp = {
+  data: Buffer
+  /** Chiều rộng thật (px) của file WebP → books.cover_width (kệ trang chủ ưu tiên bìa nét) */
+  width: number
+}
+
 /**
  * Ảnh JPEG / PNG / WebP / AVIF → WebP rộng tối đa 600px (ảnh nhỏ hơn giữ nguyên cỡ: phóng to chỉ nặng hơn chứ không
  * nét hơn), xoay theo EXIF. Không phải ảnh, định dạng khác (GIF, SVG…), ảnh hỏng hoặc quá nhiều điểm ảnh → null.
  */
-export async function toCoverWebp(input: Buffer): Promise<Buffer | null> {
+export async function toCoverWebp(input: Buffer): Promise<CoverWebp | null> {
   try {
     const image = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
     if (!isAcceptedFormat(await image.metadata())) return null
-    return await image
+    const { data, info } = await image
       .rotate()
       .resize({ width: COVER_WIDTH, withoutEnlargement: true })
       .webp({ quality: 80 })
-      .toBuffer()
+      .toBuffer({ resolveWithObject: true })
+    return { data, width: info.width }
   } catch {
     return null
   }

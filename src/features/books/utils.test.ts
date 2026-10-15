@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { discountPercent, paginationRange, splitParagraphs, truncateText } from './utils'
+import { discountPercent, fillShelf, paginationRange, splitParagraphs, truncateText } from './utils'
 
 describe('discountPercent', () => {
   it('làm tròn % giảm', () => {
@@ -56,5 +56,21 @@ describe('truncateText', () => {
     const result = truncateText('Một cuốn sách hay, kể về tuổi thơ ở miền quê.', 30)
     expect(result).toBe('Một cuốn sách hay, kể về tuổi…')
     expect(result.length).toBeLessThanOrEqual(30)
+  })
+})
+
+describe('fillShelf', () => {
+  const books = (...ids: number[]) => ids.map((id) => ({ id }))
+
+  it('bìa nét trước, lấp đủ bằng danh sách thường, không trùng id', () => {
+    expect(fillShelf(books(5, 2), books(1, 2, 3, 4, 5), 4).map((b) => b.id)).toEqual([5, 2, 1, 3])
+  })
+
+  it('đủ sách bìa nét thì không lấy thêm', () => {
+    expect(fillShelf(books(1, 2, 3), books(4, 5), 3).map((b) => b.id)).toEqual([1, 2, 3])
+  })
+
+  it('không có bìa nét (chưa đo / trước migration) → giữ thứ tự thường', () => {
+    expect(fillShelf([], books(3, 1, 2), 12).map((b) => b.id)).toEqual([3, 1, 2])
   })
 })

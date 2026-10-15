@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
-import { COVER_WIDTH, toCoverWebp } from './cover-image'
+import { COVER_WIDTH, toCoverWebp, type CoverWebp } from './cover-image'
 
 const background = { r: 120, g: 60, b: 20 }
 
@@ -8,8 +8,10 @@ function image(width: number, height: number) {
   return sharp({ create: { width, height, channels: 3, background } })
 }
 
-async function sizeOf(buffer: Buffer) {
-  const { format, width, height } = await sharp(buffer).metadata()
+async function sizeOf(cover: CoverWebp) {
+  const { format, width, height } = await sharp(cover.data).metadata()
+  // width trả kèm phải khớp file thật (ghi vào books.cover_width)
+  expect(cover.width).toBe(width)
   return { format, width, height }
 }
 

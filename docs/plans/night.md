@@ -1,4 +1,4 @@
-# Làm đêm 2026-10-16 → 17: Phase 8 → 9 → 10
+# Làm đêm 2026-10-16: Phase 8 → 9 → 10
 
 Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng chờ trả lời**. Sau khi bị nén ngữ cảnh / hết hạn mức: đọc lại `CLAUDE.md` + file này, làm tiếp từ mục chưa tick (tick ngay khi xong từng mục, commit cùng nhóm việc).
 
@@ -34,8 +34,8 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 - [x] Soát code / schema liên quan phase 9, 10 (reviews, voucher checkout, thanh toán, email, SEO, 404)
 - [x] Viết `phase-9.md`, `phase-10.md` (plan + quyết định tự chọn), `owner-todo.md`
 - [x] Migration phase 8 (`cover_width`) trên `phase-8` + `schema.sql` + types → push
-- [ ] Nhánh `phase-9` từ `phase-8`: migration phase 9 + `schema.sql` + types → push
-- [ ] Nhánh `phase-10` từ `phase-9`: migration phase 10 (nếu cần) → push
+- [x] Nhánh `phase-9` từ `phase-8`: migration phase 9 + `schema.sql` + types → push
+- [x] Nhánh `phase-10` từ `phase-9`: không cần migration (nhánh đã tạo, push)
 
 ### Phase 8 (nhánh `phase-8`)
 - [ ] `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest

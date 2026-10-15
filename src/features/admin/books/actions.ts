@@ -168,7 +168,7 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
 
   const storage = supabase.storage.from(COVER_BUCKET)
   const path = `${bookId.data}-${randomBytes(4).toString('hex')}.webp`
-  const { error: uploadError } = await storage.upload(path, webp, {
+  const { error: uploadError } = await storage.upload(path, webp.data, {
     contentType: 'image/webp',
     cacheControl: '31536000',
     upsert: false,
@@ -180,7 +180,7 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
 
   const { data, error } = await supabase
     .from('books')
-    .update({ cover_url: storage.getPublicUrl(path).data.publicUrl })
+    .update({ cover_url: storage.getPublicUrl(path).data.publicUrl, cover_width: webp.width })
     .eq('id', bookId.data)
     .select('id')
   if (error || data.length === 0) {

@@ -1,3 +1,19 @@
+/**
+ * Kệ trang chủ: sách bìa nét trước, rồi lấp cho đủ `limit` bằng danh sách thường (cùng điều kiện, cùng thứ tự; có thể
+ * chứa lại sách bìa nét → bỏ trùng theo id). Kệ không ngắn đi khi có ít sách bìa nét.
+ */
+export function fillShelf<T extends { id: number }>(sharp: readonly T[], all: readonly T[], limit: number): T[] {
+  const seen = new Set<number>()
+  const out: T[] = []
+  for (const book of [...sharp, ...all]) {
+    if (out.length === limit) break
+    if (seen.has(book.id)) continue
+    seen.add(book.id)
+    out.push(book)
+  }
+  return out
+}
+
 /** % giảm so với giá gốc, làm tròn; không giảm (hoặc dữ liệu lạ) → null */
 export function discountPercent(price: number, originalPrice: number | null): number | null {
   if (!originalPrice || originalPrice <= price) return null
