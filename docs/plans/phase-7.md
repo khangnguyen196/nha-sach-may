@@ -1,6 +1,51 @@
 # Phase 7: Admin
 
-Trạng thái: **đã duyệt, đang làm 7a** trên nhánh `phase-7a` (2026-10-15). Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt").
+Trạng thái: **7a xong, chờ duyệt trước khi merge** (nhánh `phase-7a`, 2026-10-15). Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). 7b chưa bắt đầu.
+
+## Báo cáo 7a (2026-10-15)
+
+**Đã xong**
+- `/admin`: tổng quan (đơn chờ xác nhận, sách sắp hết / hết hàng / đang ẩn, link sang danh sách đã lọc), khung admin (điều hướng trái trên desktop / trên cùng trên mobile, "Về cửa hàng", đổi theme), 404 tiếng Việt riêng của admin.
+- `/admin/sach`: bảng 25 dòng / trang, lọc bằng form GET trên URL (từ khóa, danh mục lá, đang bán / đã ẩn, sắp hết / hết hàng). Tìm trên `search_text` (tên + phụ đề + ISBN + tác giả, gõ không dấu), mỗi từ một `ilike` đã escape.
+- `/admin/sach/[id]`: sửa mọi cột của form, `*_en`, giá, tồn kho, danh mục (chỉ danh mục lá, nhóm theo danh mục gốc), NXB, tác giả (các dòng tác giả + vai trò, "Thêm dòng"; không JS vẫn có một dòng trống), nổi bật, ẩn / hiện, upload bìa. Lỗi tại ô: giá gốc < giá bán, slug / ISBN trùng, danh mục không phải lá.
+- `/admin/danh-muc`: cây 2 cấp kèm số sách, tạo / sửa (cha phải là gốc, danh mục có con phải là gốc, danh mục có sách không làm cha được).
+- `/admin/tac-gia`: danh sách tìm theo tên hoặc slug, tạo / sửa, danh sách sách của tác giả, xóa khi không còn sách (`AUTHOR_HAS_BOOKS`).
+- Bảo mật: mọi Server Action admin gọi `assertAdmin()` ở hai câu đầu (Vitest đọc AST các `actions.ts` kiểm tra); RLS + quyền cột + bucket là lớp cuối (e2e).
+- Cache: `catalogTagsFor` (Vitest) → `updateTag`; e2e xác nhận trang công khai đổi ngay sau khi sửa giá / tồn kho, ẩn / hiện, đổi danh mục, gắn tác giả.
+- 2 điểm bổ sung khi duyệt: `cancelAndDeleteOrders` tự hoàn kho đơn `delivered` (e2e `admin-cleanup`); escape `ilike` (`lib/like.ts` + Vitest).
+
+**Việc của bạn**
+1. Kiểm tra rồi chạy `supabase/migrations/20261015160000_admin.sql`. **Đã đổi sau lần báo đầu** (commit `e357515`): thêm mục 5, policy `book_covers_admin_select`. Storage chỉ xóa được object mà phiên đọc được: thiếu policy select thì `remove()` trả về rỗng, không báo lỗi, bìa cũ nằm lại bucket.
+2. Sinh lại types. Migration không đổi cột hay RPC public nên dự kiến không có diff.
+3. Chạy lại 2 test đang chờ migration: `npx playwright test --project=desktop-admin admin-books admin-security`.
+4. Thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" bằng admin (`docs/plans/data.md`).
+
+**Lỗi có sẵn đã sửa (ngoài phạm vi admin nhưng admin làm lộ ra)**: trang sách / danh mục / tác giả có slug không nằm trong `generateStaticParams` (tạo hoặc đổi slug sau lần build, kể cả sách import giữa hai lần deploy) trả **HTTP 500**. Với Partial Prefetching, Next dựng App Shell cho tham số chưa biết; page đọc `params` và header đọc `useParams` ngoài `<Suspense>` nên dựng shell thất bại. Đã thêm `export const instant = false` cho 3 trang đó (như trang địa chỉ / đơn hàng): slug mới render theo request, slug đã prerender giữ nguyên. Cách triệt để (đọc params trong `<Suspense>`, header không chặn shell) đụng mọi trang công khai → đề xuất làm cùng Phase 10.
+
+**Quyết định tự chọn / lệch plan**
+1. Tìm sách trên `search_text` thay vì `title` / `isbn` (đã ghi ở "Bổ sung khi duyệt").
+2. Tìm tác giả: mỗi từ là một `.or()` "tên chứa từ HOẶC slug chứa từ đã slugify", giá trị trong `.or()` quote + escape (`quoteFilterValue`). Chỉ tìm theo slug thì tác giả có slug tự đặt không tìm được bằng tên.
+3. `catalogTagsFor` thêm `books` cả khi đổi tên / phụ đề / ISBN (kết quả tìm kiếm), ngôn ngữ (bộ lọc ngôn ngữ), giá sang khoảng lọc khác, tồn kho qua 0 (bộ lọc còn hàng): các danh sách đó không chứa tag của sách. Sửa giá trong cùng khoảng, mô tả, bìa… vẫn chỉ `book:{id}`. Sách đang ẩn sửa gì cũng chỉ `book:{id}`.
+4. Đổi bìa: chỉ xóa ảnh cũ khi không `order_items` nào còn trỏ tới (`order_items.cover_url` là bản sao lúc đặt, xóa thì trang chi tiết đơn cũ mất ảnh).
+5. ESLint cho phép `redirect` / `usePathname` của `next/navigation` trong cả `features/admin` (action redirect về `/admin/...`), không chỉ `app/admin` + `components/admin`. `next/link` chỉ được import trong `admin-link.tsx`; `AdminHref` chỉ nhận `/admin…`.
+6. Lỗi tại ô của admin: khóa riêng `admin.validation` (chỉ `vi.json`, Vitest đối chiếu `ADMIN_VALIDATION_KEYS`). `useFormAction` để khối lỗi chung ở dạng `quiet` mỗi khi có lỗi tại ô (trước chỉ với `INVALID_INPUT`), để `SLUG_TAKEN`, `CATEGORY_HAS_BOOKS`, `COVER_*` không hiện hai lần. Hành vi các form cửa hàng không đổi.
+7. Query admin chờ `io()` trước Supabase (`features/admin/supabase.ts`): prefetch App Shell theo phiên của link admin từng báo "unstable value Date.now()" (Supabase so hạn token).
+8. Upload bìa kiểm tra cỡ ở client trước (không gửi file quá 4MB); không JS thì server kiểm tra như nhau.
+9. Bộ lọc danh mục ở danh sách sách chỉ có danh mục lá (sách chỉ gắn vào lá), không lọc theo danh mục cha.
+10. e2e: user admin tạo trong cùng setup (file `e2e/.auth/admin-credentials.json` riêng, không đổi dạng `credentials.json`); dọn dữ liệu theo đúng slug của spec (`cleanupE2eAdminData(slugs)`), bản không tham số chỉ ở setup / teardown; xóa tuần tự từng bảng (xóa song song sách + tác giả từng deadlock); `findBooksByStock*` bỏ sách `e2e-…` (sách admin test đang bán và có id lớn nhất). `ACCOUNT_SPECS` thêm `$` và loại `admin-*.spec.ts` (`admin-orders.spec.ts` của 7b khớp cả `orders.spec.ts`).
+
+**Kiểm tra**
+- `typecheck`, `lint`, `build`: sạch. Vitest: 31 file / 289 test qua.
+- e2e đầy đủ (160 test), 3 lượt cách nhau 3 phút (không nới timeout): 146 / 143 / 143 qua.
+  - Admin: chỉ còn 2 test chờ migration, fail đúng như dự kiến: `admin-security` "quyền cột + bucket" (chưa có quyền cột → không lỗi `permission denied`), `admin-books` "bìa cũ bị xóa" (chưa có policy select). Các test còn lại của admin qua ở lượt 2 và 3.
+  - Cửa hàng: lượt nào cũng có 2–3 test fail, mỗi lượt một test khác nhau, đều là quá thời gian / dữ liệu chưa về (`cart.spec`, `checkout.spec` mobile + desktop, `error-page.spec` mobile). Kèm `fetch failed` tới Supabase ở `createE2eCategory`, teardown `deleteUser`, và một lượt máy treo mạng (`ERR_NETWORK_IO_SUSPENDED`). Lượt 1 thì `cart.spec` qua. Tôi đánh giá là do mạng, nhưng chưa có lượt nào cửa hàng sạch hoàn toàn: nên chạy lại khi mạng ổn.
+- `measure:js` (so với build của `main`): mọi chunk app ở trang chủ / trang sách giữ nguyên kích thước. Chỉ runtime Turbopack (`turbopack-*.js`, chứa danh sách chunk của cả app) tăng 3.8 → 4.3KB gzip vì app có thêm route admin. Trang chủ = baseline + 38.5KB (main: 38.1), trang sách + 39.2KB (main: 38.7).
+
+**Giới hạn / rủi ro**
+- Ô chọn tác giả / NXB của form sách tải hết danh sách: quá 1.000 dòng sẽ bị `max-rows` của PostgREST cắt. Khi đó cần ô tìm kiếm thay `<select>`.
+- Slug mới (sau build) render theo request với `instant = false`, chưa được cache như trang đã prerender cho tới lần deploy sau.
+- Sách e2e có thể vào "Mới về" trên trang chủ nếu cache danh sách được làm mới đúng lúc test chạy. Bản deploy dùng chung DB thì có thể giữ trong cache tới hết `cacheLife('hours')`, không chỉ vài giây như plan ghi. Phase 10 tách dữ liệu e2e sẽ xử lý.
+- File > 4.5MB gửi không có JS bị Next chặn trước action → trang lỗi chung thay vì lỗi tại ô (có JS thì client chặn từ trước).
 
 Phạm vi (lộ trình): quản trị sách (sửa thông tin, `*_en`, giá, tồn kho, ẩn / hiện, upload bìa), danh mục, tác giả, đơn hàng (đổi trạng thái, hủy), voucher. Chỉ tiếng Việt, dưới `/admin` (không có `[locale]`).
 
@@ -164,7 +209,8 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 - [x] Sách: danh sách, form sửa, tác giả của sách, ẩn / hiện, upload bìa; `catalogTagsFor` + Vitest
 - [x] Danh mục, tác giả
 - [x] e2e: user admin, dọn dữ liệu `e2e-admin-`, `cancelAndDeleteOrders` cho đơn delivered + `admin-cleanup`, `admin-security`, `admin-books`, `admin-catalog`, `admin-smoke` (desktop + mobile)
-- [ ] typecheck / lint / build / test / e2e sạch; `measure:js` (trang công khai không đổi); báo cáo
+- [x] typecheck / lint / build / test sạch; `measure:js` (app không đổi, runtime Turbopack +0.5KB); báo cáo
+- [ ] e2e sạch: còn 2 test admin chờ migration; test cửa hàng fail lẻ tẻ do mạng ở cả 3 lượt
 
 7b:
 - [ ] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
