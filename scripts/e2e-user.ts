@@ -489,12 +489,16 @@ export async function cleanupE2eAdminData(slugs?: string[]) {
     if (removeError) throw new Error(`cleanupE2eAdminData (covers): ${removeError.message}`)
   }
 
-  // Sách trước danh mục: danh mục bị xóa thì category_id của sách thành null (on delete set null), không lỗi, chỉ thừa bước
-  const results = await Promise.all([
-    admin.from('books').delete().filter('slug', operator, value),
-    admin.from('authors').delete().filter('slug', operator, value),
-    ...(slugs ? [] : [admin.from('vouchers').delete().like('code', `${E2E_ADMIN_VOUCHER}%`)]),
-  ])
-  results.push(await admin.from('categories').delete().filter('slug', operator, value))
-  for (const result of results) if (result.error) throw new Error(`cleanupE2eAdminData: ${result.error.message}`)
+  // Tuần tự, không Promise.all: xóa sách và tác giả cùng lúc cùng cascade vào book_authors (trigger của nó cập nhật
+  // books) → Postgres báo deadlock. Sách trước danh mục: danh mục bị xóa trước thì chỉ thừa bước set null.
+  const deletions = [
+    () => admin.from('books').delete().filter('slug', operator, value),
+    () => admin.from('authors').delete().filter('slug', operator, value),
+    () => admin.from('categories').delete().filter('slug', operator, value),
+    ...(slugs ? [] : [() => admin.from('vouchers').delete().like('code', `${E2E_ADMIN_VOUCHER}%`)]),
+  ]
+  for (const deletion of deletions) {
+    const { error: deleteError } = await deletion()
+    if (deleteError) throw new Error(`cleanupE2eAdminData: ${deleteError.message}`)
+  }
 }
