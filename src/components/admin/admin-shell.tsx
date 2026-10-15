@@ -5,6 +5,7 @@ import {
   PackageIcon,
   PenLineIcon,
   StoreIcon,
+  MessageSquareTextIcon,
   TicketPercentIcon,
 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
@@ -30,6 +31,7 @@ export async function AdminShell({ children }: { children: ReactNode }) {
     { href: '/admin/tac-gia', label: t('nav.authors'), icon: <PenLineIcon aria-hidden /> },
     { href: '/admin/don-hang', label: t('nav.orders'), icon: <PackageIcon aria-hidden /> },
     { href: '/admin/voucher', label: t('nav.vouchers'), icon: <TicketPercentIcon aria-hidden /> },
+    { href: '/admin/danh-gia', label: t('nav.reviews'), icon: <MessageSquareTextIcon aria-hidden /> },
   ]
   const themeToggle = <ThemeToggle labels={{ toLight: tLayout('toLightTheme'), toDark: tLayout('toDarkTheme') }} />
 

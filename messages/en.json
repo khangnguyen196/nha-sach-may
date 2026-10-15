@@ -319,7 +319,9 @@
     "address": "Please choose a shipping address.",
     "note": "Notes can be at most 500 characters.",
     "invalid": "Invalid value.",
-    "reason": "The reason can be at most 500 characters."
+    "reason": "The reason can be at most 500 characters.",
+    "rating": "Please choose a rating (1–5 stars).",
+    "reviewContent": "Your review can be up to 2,000 characters."
   },
   "auth": {
     "email": "Email",
@@ -456,6 +458,7 @@
     "ORDER_STATUS_CHANGED": "This order’s status just changed elsewhere. The page now shows the latest status.",
     "VOUCHER_CODE_TAKEN": "This voucher code already exists.",
     "VOUCHER_IN_USE": "This voucher has been used in orders, so it can only be turned off, not deleted.",
+    "REVIEW_NOT_ALLOWED": "Only customers who have received this book can review it.",
     "UNKNOWN": "Something went wrong. Please try again."
   },
   "allBooks": {
@@ -505,5 +508,31 @@
     "transferTitle": "Bank transfer details",
     "transferHint": "Open the order page to scan the VietQR code. Use the order code as the transfer reference.",
     "footer": "Automated email from Nhà Sách Mây (a non-commercial learning project). Please do not reply."
+  },
+  "review": {
+    "title": "Reviews",
+    "average": "{rating} out of 5 stars",
+    "count": "{count, plural, one {# review} other {# reviews}}",
+    "none": "No reviews yet.",
+    "showing": "Showing the {shown} most recent reviews.",
+    "anonymous": "Customer",
+    "verified": "Verified purchase",
+    "loginPrompt": "Bought this book? Sign in to write a review.",
+    "login": "Sign in",
+    "notEligible": "You can review this book after you have received it.",
+    "writeTitle": "Write a review",
+    "yourTitle": "Your review",
+    "ratingLabel": "Rating",
+    "ratingOption": "{rating, plural, one {# star} other {# stars}}",
+    "contentLabel": "Review",
+    "contentHint": "Optional.",
+    "contentCount": "{count}/{max} characters",
+    "submit": "Submit review",
+    "update": "Save changes",
+    "saving": "Saving…",
+    "saved": "Review saved.",
+    "delete": "Delete review",
+    "deleting": "Deleting…",
+    "deleted": "Review deleted."
   }
 }

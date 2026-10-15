@@ -39,6 +39,7 @@
       "authors": "Tác giả",
       "orders": "Đơn hàng",
       "vouchers": "Voucher",
+      "reviews": "Đánh giá",
       "backToShop": "Về cửa hàng"
     },
     "notFound": {
@@ -424,6 +425,20 @@
       "minOrder": "Đơn tối thiểu là số nguyên từ 0 đến 100.000.000.",
       "dateTime": "Thời gian không hợp lệ.",
       "endsAfterStarts": "Thời điểm kết thúc phải sau thời điểm bắt đầu."
+    },
+    "reviews": {
+      "title": "Đánh giá",
+      "filterLabel": "Lọc theo số sao",
+      "allRatings": "Tất cả",
+      "stars": "{rating} sao",
+      "count": "{count} đánh giá",
+      "empty": "Chưa có đánh giá nào.",
+      "anonymous": "Khách hàng",
+      "book": "Sách",
+      "bookDeleted": "(sách đã xóa)",
+      "noContent": "Không có nhận xét, chỉ chấm điểm.",
+      "delete": "Gỡ đánh giá",
+      "deleting": "Đang gỡ…"
     }
   },
   "layout": {
@@ -716,7 +731,9 @@
     "address": "Vui lòng chọn địa chỉ giao hàng.",
     "note": "Ghi chú tối đa 500 ký tự.",
     "invalid": "Giá trị không hợp lệ.",
-    "reason": "Lý do hủy tối đa 500 ký tự."
+    "reason": "Lý do hủy tối đa 500 ký tự.",
+    "rating": "Vui lòng chọn số sao (1–5).",
+    "reviewContent": "Nhận xét tối đa 2.000 ký tự."
   },
   "auth": {
     "email": "Email",
@@ -853,6 +870,7 @@
     "ORDER_STATUS_CHANGED": "Đơn hàng vừa đổi trạng thái ở nơi khác. Trang đã cập nhật trạng thái mới.",
     "VOUCHER_CODE_TAKEN": "Mã voucher này đã tồn tại.",
     "VOUCHER_IN_USE": "Voucher đã có đơn hàng dùng nên chỉ tắt được, không xóa được.",
+    "REVIEW_NOT_ALLOWED": "Chỉ khách đã nhận cuốn sách này mới viết đánh giá được.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   },
   "allBooks": {
@@ -902,5 +920,31 @@
     "transferTitle": "Thông tin chuyển khoản",
     "transferHint": "Mở trang chi tiết đơn để quét mã VietQR. Nội dung chuyển khoản là mã đơn.",
     "footer": "Email tự động từ Nhà Sách Mây (dự án học tập, phi thương mại). Vui lòng không trả lời email này."
+  },
+  "review": {
+    "title": "Đánh giá",
+    "average": "{rating} trên 5 sao",
+    "count": "{count, plural, other {# đánh giá}}",
+    "none": "Chưa có đánh giá nào.",
+    "showing": "Hiện {shown} đánh giá mới nhất.",
+    "anonymous": "Khách hàng",
+    "verified": "Đã mua sách",
+    "loginPrompt": "Đã mua cuốn này? Đăng nhập để viết đánh giá.",
+    "login": "Đăng nhập",
+    "notEligible": "Bạn có thể đánh giá sau khi đã nhận cuốn sách này.",
+    "writeTitle": "Viết đánh giá",
+    "yourTitle": "Đánh giá của bạn",
+    "ratingLabel": "Chấm điểm",
+    "ratingOption": "{rating} sao",
+    "contentLabel": "Nhận xét",
+    "contentHint": "Không bắt buộc.",
+    "contentCount": "{count}/{max} ký tự",
+    "submit": "Gửi đánh giá",
+    "update": "Lưu thay đổi",
+    "saving": "Đang lưu…",
+    "saved": "Đã lưu đánh giá.",
+    "delete": "Xóa đánh giá",
+    "deleting": "Đang xóa…",
+    "deleted": "Đã xóa đánh giá."
   }
 }

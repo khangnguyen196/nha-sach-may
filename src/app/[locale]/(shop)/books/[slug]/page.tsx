@@ -1,6 +1,7 @@
 import { BookIcon } from 'lucide-react'
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import type { Locale } from 'next-intl'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Fragment, Suspense } from 'react'
@@ -19,6 +20,9 @@ import { discountPercent, splitParagraphs, truncateText } from '@/features/books
 import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
 import { cartLimit, MAX_LINES } from '@/features/cart/guest-cart'
+import { MyReview } from '@/features/reviews/components/my-review'
+import { RatingStars } from '@/features/reviews/components/rating-stars'
+import { ReviewList, ReviewListSkeleton } from '@/features/reviews/components/review-list'
 import { localeAlternates } from '@/i18n/alternates'
 import { Link } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
@@ -106,12 +110,15 @@ export default async function BookPage({ params }: Props) {
         <div className="min-w-0">
           <h1 className="font-serif text-3xl font-medium md:text-4xl">{book.title}</h1>
           {book.subtitle && <p className="mt-2 text-lg text-muted-foreground">{book.subtitle}</p>}
+          <RatingSummary book={book} />
           <People book={book} />
           <PriceBlock book={book} />
           <Description book={book} />
           <Details book={book} />
         </div>
       </div>
+
+      <Reviews book={book} locale={locale} />
 
       {leaf && (
         <div className="mt-16 md:mt-24">
@@ -121,6 +128,47 @@ export default async function BookPage({ params }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+/** Điểm trung bình (cột do trigger tính, có sẵn trong cache book:{id}) → nhảy tới khối đánh giá */
+async function RatingSummary({ book }: { book: BookDetail }) {
+  if (book.review_count === 0) return null
+  const [t, format] = await Promise.all([getTranslations('review'), getFormatter()])
+  const rating = format.number(book.avg_rating, { maximumFractionDigits: 1 })
+  return (
+    <a
+      href="#reviews"
+      className="mt-3 inline-flex items-center gap-2 rounded-sm text-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+      data-testid="rating-summary"
+    >
+      <RatingStars rating={book.avg_rating} />
+      <span className="sr-only">{t('average', { rating })}</span>
+      <span aria-hidden className="font-medium">
+        {rating}
+      </span>
+      <span className="text-muted-foreground">({t('count', { count: book.review_count })})</span>
+    </a>
+  )
+}
+
+async function Reviews({ book, locale }: { book: BookDetail; locale: Locale }) {
+  const t = await getTranslations('review')
+  return (
+    <section id="reviews" aria-labelledby="reviews-title" className="mt-16 scroll-mt-24 md:mt-24">
+      <h2 id="reviews-title" className="text-xl font-semibold">
+        {t('title')}
+      </h2>
+      <div className="mt-6 grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:gap-12">
+        <Suspense fallback={<ReviewListSkeleton />}>
+          <ReviewList bookId={book.id} />
+        </Suspense>
+        {/* Theo phiên: stream riêng, không chặn danh sách đánh giá (cache chung) */}
+        <Suspense fallback={<div className="h-24" />}>
+          <MyReview bookId={book.id} slug={book.slug} locale={locale} />
+        </Suspense>
+      </div>
+    </section>
   )
 }
 

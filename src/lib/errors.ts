@@ -32,6 +32,8 @@ export const ERROR_CODES = [
   'ORDER_STATUS_CHANGED',
   'VOUCHER_CODE_TAKEN',
   'VOUCHER_IN_USE',
+  // Phase 9: viết đánh giá khi chưa nhận sách (RLS reviews_insert_if_purchased)
+  'REVIEW_NOT_ALLOWED',
   'UNKNOWN',
 ] as const
 
@@ -53,6 +55,8 @@ export const VALIDATION_KEYS = [
   'address',
   'note',
   'reason',
+  'rating',
+  'reviewContent',
   'invalid',
 ] as const
 
