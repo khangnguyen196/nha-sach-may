@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { Suspense, type ReactNode } from 'react'
+import { ErrorMessagesProvider } from '@/components/layout/error-view'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 import { requireAdmin } from '@/features/admin/queries'
 import { fontVariables } from '../fonts'
@@ -12,14 +13,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title'), robots: { index: false, follow: false } }
 }
 
-export default function AdminLayout({ children }: LayoutProps<'/admin'>) {
+export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
+  const t = await getTranslations('errorPage')
   return (
     <html lang="vi" className={fontVariables} suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <Suspense>
-            <AdminGate>{children}</AdminGate>
-          </Suspense>
+          <ErrorMessagesProvider
+            messages={{ title: t('title'), description: t('description'), retry: t('retry'), backHome: t('backHome') }}
+          >
+            <Suspense>
+              <AdminGate>{children}</AdminGate>
+            </Suspense>
+          </ErrorMessagesProvider>
         </ThemeProvider>
       </body>
     </html>
