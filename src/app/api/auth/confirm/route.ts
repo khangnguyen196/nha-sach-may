@@ -1,7 +1,7 @@
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
-import { localeSchema } from '@/features/auth/schemas'
+import { parseLocale } from '@/features/auth/schemas'
 import { localizedPath } from '@/i18n/paths'
 import { createClient } from '@/lib/supabase/server'
 
@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
   const type = toOtpType(params.get('type'))
   const tokenHash = params.get('token_hash')
-  const parsedLocale = localeSchema.safeParse(params.get('locale'))
-  const locale = parsedLocale.success ? parsedLocale.data : 'vi'
+  const locale = parseLocale(params.get('locale'))
   const recovery = type === 'recovery'
 
   if (type && tokenHash) {

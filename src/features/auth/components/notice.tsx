@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
  */
 export function Notice({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <div role="status" className="rounded-xl border bg-surface p-6">
+    <div role="status" className="rounded-lg border bg-surface p-6">
       <h2 className="font-serif text-xl font-medium">{title}</h2>
       <div className="mt-3 text-sm text-muted-foreground">{children}</div>
       {action && <div className="mt-6">{action}</div>}

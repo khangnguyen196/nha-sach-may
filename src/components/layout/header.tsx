@@ -1,8 +1,9 @@
-import { ShoppingBagIcon, UserIcon } from 'lucide-react'
+import { ShoppingBagIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { buttonVariants } from '@/components/ui/button'
 import { SearchTrigger } from '@/features/books/components/search-trigger'
 import { Link } from '@/i18n/navigation'
+import { AccountLink } from './account-link'
 import { LocaleSwitcher } from './locale-switcher'
 import { ThemeToggle } from './theme-toggle'
 
@@ -34,10 +35,7 @@ export async function Header() {
             <ShoppingBagIcon aria-hidden />
             <span className="sr-only">{t('cart')}</span>
           </Link>
-          <Link href="/account" className={iconLink}>
-            <UserIcon aria-hidden />
-            <span className="sr-only">{t('account')}</span>
-          </Link>
+          <AccountLink />
         </div>
       </div>
     </header>

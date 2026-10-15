@@ -1,3 +1,4 @@
+import type { Locale } from 'next-intl'
 import { z } from 'zod'
 import { routing } from '@/i18n/routing'
 import type { ValidationKey } from '@/lib/errors'
@@ -6,6 +7,12 @@ import type { ValidationKey } from '@/lib/errors'
 const error = (key: ValidationKey) => ({ error: key })
 
 export const localeSchema = z.enum(routing.locales)
+
+/** Locale từ nguồn không tin được (tham số bind của Server Action, query của link email); sai → vi */
+export function parseLocale(value: unknown): Locale {
+  const parsed = localeSchema.safeParse(value)
+  return parsed.success ? parsed.data : routing.defaultLocale
+}
 
 const email = z
   .string(error('required'))

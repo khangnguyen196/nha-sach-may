@@ -12,19 +12,15 @@ import { createClient } from '@/lib/supabase/server'
 import { authErrorCode } from './errors'
 import { safeNextPath } from './next-path'
 import {
-  localeSchema,
+  parseLocale,
   passwordResetRequestSchema,
   signInSchema,
   signUpSchema,
   updatePasswordSchema,
 } from './schemas'
 
-// Server Action không đọc được next/root-params → locale do page bind sẵn (`signIn.bind(null, locale)`).
-// Vẫn parse lại: tham số bind đi qua client.
-function toLocale(value: Locale): Locale {
-  const parsed = localeSchema.safeParse(value)
-  return parsed.success ? parsed.data : 'vi'
-}
+// Server Action không đọc được next/root-params → locale do page bind sẵn (`signIn.bind(null, locale)`)
+// và được parse lại (parseLocale) vì tham số bind đi qua client.
 
 export async function signIn(locale: Locale, _prev: Result<null> | null, formData: FormData): Promise<Result<null>> {
   const parsed = signInSchema.safeParse(Object.fromEntries(formData))
@@ -37,7 +33,7 @@ export async function signIn(locale: Locale, _prev: Result<null> | null, formDat
   })
   if (error) return { ok: false, code: authErrorCode(error) }
 
-  redirectToPath(safeNextPath(parsed.data.next, getPathname({ href: '/account', locale: toLocale(locale) })))
+  redirectToPath(safeNextPath(parsed.data.next, getPathname({ href: '/account', locale: parseLocale(locale) })))
 }
 
 export async function signUp(
@@ -48,7 +44,7 @@ export async function signUp(
   const parsed = signUpSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return invalidInput(parsed.error)
 
-  const target = toLocale(locale)
+  const target = parseLocale(locale)
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -106,5 +102,5 @@ export async function signOut(locale: Locale) {
   const supabase = await createClient()
   // Chỉ kết thúc phiên trên thiết bị này
   await supabase.auth.signOut({ scope: 'local' })
-  redirect({ href: '/', locale: toLocale(locale) })
+  redirect({ href: '/', locale: parseLocale(locale) })
 }

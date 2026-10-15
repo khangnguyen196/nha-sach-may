@@ -1,5 +1,7 @@
 import 'server-only'
+import type { Locale } from 'next-intl'
 import { cache } from 'react'
+import { getPathname, redirect, type Href } from '@/i18n/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 export type CurrentUser = { id: string; email: string; fullName: string | null }
@@ -22,3 +24,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     fullName: typeof fullName === 'string' && fullName.trim() ? fullName.trim() : null,
   }
 })
+
+/**
+ * Trang cần đăng nhập: chưa có phiên → trang đăng nhập kèm ?next= về đúng trang này.
+ * Proxy đã chặn một lớp; kiểm tra lại ở server vì không chỉ dựa vào proxy (như /admin).
+ */
+export async function requireUser(locale: Locale, href: Href): Promise<CurrentUser> {
+  const user = await getCurrentUser()
+  if (user) return user
+  return redirect({ href: { pathname: '/login', query: { next: getPathname({ href, locale }) } }, locale })
+}
