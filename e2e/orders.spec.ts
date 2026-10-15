@@ -115,7 +115,8 @@ test('12 đơn: phân trang 10 + 2, mới nhất trước, lọc "Đã hủy", t
   const id = (code: string | undefined) => byCode.get(code ?? '') ?? 0
   await setOrderStatus(id(codes[0]), 'cancelled')
   await setOrderStatus(id(codes[1]), 'cancelled')
-  await setOrderStatus(id(codes[2]), 'delivered')
+  // Đi đúng luồng: trigger chặn nhảy cóc pending → delivered
+  for (const status of ['confirmed', 'shipping', 'delivered'] as const) await setOrderStatus(id(codes[2]), status)
 
   await page.goto('/tai-khoan/don-hang')
   await expect(rows(page)).toHaveCount(10)

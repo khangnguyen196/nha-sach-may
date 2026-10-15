@@ -2,6 +2,7 @@
 
 import { randomBytes } from 'node:crypto'
 import { refresh, updateTag } from 'next/cache'
+import { after } from 'next/server'
 import { COVER_MAX_BYTES, toCoverWebp } from '@/lib/cover-image'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
@@ -143,7 +144,7 @@ export async function setBookActive(id: number, active: boolean): Promise<Result
 /**
  * Upload bìa: kiểm tra cỡ trước khi đọc, kiểm tra loại bằng nội dung (sharp), thu về WebP 600px, lưu tên mới mỗi lần
  * (`<id>-<8 ký tự>.webp`: ảnh cũ đang được CDN / next/image cache 1 năm, ghi đè cùng tên thì người xem vẫn thấy bìa
- * cũ). Ghi cover_url xong mới xóa ảnh cũ; ghi lỗi thì xóa ảnh vừa upload.
+ * cũ). Ghi cover_url xong mới xóa ảnh cũ (trong `after`, sau khi trả phản hồi); ghi lỗi thì xóa ảnh vừa upload.
  */
 export async function uploadCover(id: number, _prev: Result<null> | null, formData: FormData): Promise<Result<null>> {
   const denied = await assertAdmin()
@@ -156,12 +157,14 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
     return { ok: false, code: 'INVALID_INPUT', fieldErrors: { cover: 'coverRequired' } }
   }
   if (file.size > COVER_MAX_BYTES) return { ok: false, code: 'COVER_TOO_LARGE', fieldErrors: { cover: 'coverTooLarge' } }
+
+  // Kiểm tra ảnh trước khi gọi DB: file sai báo lỗi ngay
   const webp = await toCoverWebp(Buffer.from(await file.arrayBuffer()))
   if (!webp) return { ok: false, code: 'COVER_INVALID', fieldErrors: { cover: 'coverInvalid' } }
 
   const supabase = await createClient()
-  const current = await readSnapshot(supabase, bookId.data)
-  if (!current) return UNKNOWN
+  const current = await supabase.from('books').select('cover_url').eq('id', bookId.data).maybeSingle()
+  if (current.error || !current.data) return UNKNOWN
 
   const storage = supabase.storage.from(COVER_BUCKET)
   const path = `${bookId.data}-${randomBytes(4).toString('hex')}.webp`
@@ -186,7 +189,10 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
     return error ? toFailure(error) : UNKNOWN
   }
 
-  await removeOldCover(supabase, current.coverUrl, storage.getPublicUrl('').data.publicUrl)
+  // Dọn ảnh cũ sau khi đã trả phản hồi: bìa mới đã lưu, việc dọn chỉ tốn thêm 2 lượt gọi Supabase cho người dùng chờ
+  const oldUrl = current.data.cover_url
+  const publicBase = storage.getPublicUrl('').data.publicUrl
+  after(() => removeOldCover(supabase, oldUrl, publicBase))
   expire([`book:${bookId.data}`])
   refresh()
   return { ok: true, data: null }

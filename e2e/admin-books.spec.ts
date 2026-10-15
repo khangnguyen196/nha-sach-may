@@ -160,7 +160,8 @@ test('bìa: JPEG lớn → WebP 600px tên mới, bìa cũ bị xóa, trang sác
   expect(path).toMatch(new RegExp(`^${book.id}-[0-9a-f]{8}\\.webp$`))
   const { format, width } = await sharp(await downloadCover(path)).metadata()
   expect({ format, width }).toEqual({ format: 'webp', width: 600 })
-  expect(await coverExists(oldPath)).toBe(false)
+  // Ảnh cũ xóa trong after() của action, sau khi đã trả phản hồi
+  await expect.poll(() => coverExists(oldPath), { timeout: 10_000 }).toBe(false)
 
   await page.goto(`/sach/${book.slug}`)
   await expect(main(page).getByRole('img', { name: book.title })).toHaveAttribute('src', new RegExp(encodeURIComponent(path)))
