@@ -89,8 +89,8 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
 
 ## Tiến độ
 
-- [ ] `scripts/build-divisions.ts` + `npm run build:divisions` → `src/features/account/data/divisions.json` + `NOTICE.md` (assert 34 / 3.321)
-- [ ] `features/account/divisions.ts` (tra mã → tên, tên vi → en) + Vitest
+- [x] `scripts/build-divisions.ts` + `npm run build:divisions` → `src/features/account/data/divisions.json` + `NOTICE.md` (assert 34 / 3.321)
+- [x] `features/account/divisions.ts` (tra mã → tên, tên vi → en) + Vitest
 - [ ] `i18n/routing.ts`: pathname auth + tài khoản + sổ địa chỉ
 - [ ] `lib/errors.ts` + `messages/*.json → errors`: mã lỗi auth; namespace `auth`, `account`, `address`
 - [ ] `lib/auth.ts` (`getCurrentUser`), `features/auth/{schemas,actions}.ts`, `safeNextPath` + Vitest (schema, map `AuthError.code`)

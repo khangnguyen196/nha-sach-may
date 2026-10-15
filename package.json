@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "import:books": "tsx scripts/import-books.ts",
     "check:env": "node scripts/check-env.mjs",
-    "measure:js": "node scripts/measure-js.mjs"
+    "measure:js": "node scripts/measure-js.mjs",
+    "build:divisions": "tsx scripts/build-divisions.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
