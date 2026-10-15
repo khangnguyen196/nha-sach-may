@@ -56,4 +56,4 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 - [x] Kiểm tra đủ bộ → báo cáo → push
 
 ### Sáng
-- [ ] `morning-report.md` → push (`phase-10`, kèm bản trên `phase-8`, `phase-9` nếu khác)
+- [x] `morning-report.md` → push (chỉ trên `phase-10`: nhánh này chứa cả phase 8, 9)
