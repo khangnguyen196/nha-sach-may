@@ -1,12 +1,14 @@
-import { ChevronRightIcon, MapPinIcon, PackageIcon, type LucideIcon } from 'lucide-react'
+import { ChevronRightIcon, LayoutDashboardIcon, MapPinIcon, PackageIcon, type LucideIcon } from 'lucide-react'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
+import { AdminLink } from '@/components/admin/admin-link'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { updateEmailLocale } from '@/features/account/actions'
 import { EmailLocaleForm } from '@/features/account/components/email-locale-form'
 import { accountPageMetadata } from '@/features/account/metadata'
 import { getProfile } from '@/features/account/queries'
+import { isAdmin } from '@/features/admin/auth'
 import { signOut } from '@/features/auth/actions'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
@@ -33,11 +35,12 @@ export default async function AccountPage() {
 
 async function AccountContent({ locale }: { locale: Locale }) {
   const user = await requireUser(locale, '/account')
-  const [t, tAuth, profile, messages] = await Promise.all([
+  const [t, tAuth, profile, messages, admin] = await Promise.all([
     getTranslations('account'),
     getTranslations('auth'),
     getProfile(user.id),
     getFormMessages(['AUTH_REQUIRED']),
+    isAdmin(),
   ])
   const name = profile?.full_name?.trim() || user.fullName || user.email
 
@@ -56,6 +59,13 @@ async function AccountContent({ locale }: { locale: Locale }) {
         title={t('addresses')}
         description={t('addressesDescription')}
       />
+      {admin && (
+        // Khu quản trị không có [locale] → AdminLink (sang root layout khác: Next tải lại cả trang). Chỉ render khi
+        // server xác nhận role admin; không prefetch trang admin mỗi lần mở trang tài khoản.
+        <AdminLink href="/admin" prefetch={false} className={cardClass}>
+          <CardContent icon={LayoutDashboardIcon} title={t('admin')} description={t('adminDescription')} />
+        </AdminLink>
+      )}
 
       <section className="mt-4 rounded-lg border bg-surface p-5">
         <EmailLocaleForm
@@ -90,19 +100,27 @@ type AccountCardProps = {
   description: string
 }
 
-function AccountCard({ href, icon: Icon, title, description }: AccountCardProps) {
+const cardClass =
+  'group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50'
+
+function AccountCard({ href, ...content }: AccountCardProps) {
   return (
-    <Link
-      href={href}
-      className="group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
+    <Link href={href} className={cardClass}>
+      <CardContent {...content} />
+    </Link>
+  )
+}
+
+function CardContent({ icon: Icon, title, description }: Omit<AccountCardProps, 'href'>) {
+  return (
+    <>
       <Icon aria-hidden className="size-5 shrink-0 text-primary" />
       <span className="flex-1">
         <span className="block font-medium">{title}</span>
         <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
       </span>
       <ChevronRightIcon aria-hidden className="size-4 text-muted-foreground" />
-    </Link>
+    </>
   )
 }
 

@@ -1,8 +1,10 @@
-import { UserIcon } from 'lucide-react'
+import { LayoutDashboardIcon, UserIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
+import { AdminLink } from '@/components/admin/admin-link'
 import { buttonVariants } from '@/components/ui/button'
 import { initialOf } from '@/features/account/utils'
+import { isAdmin } from '@/features/admin/auth'
 import { Link } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -31,15 +33,33 @@ async function AccountStatus() {
 
   const name = user.fullName ?? user.email
   return (
-    <Link href="/account" className={iconLink}>
-      <span
-        aria-hidden
-        className="flex size-7 items-center justify-center rounded-full bg-surface-raised text-sm font-semibold text-foreground"
-      >
-        {initialOf(name)}
-      </span>
-      <span className="sr-only">{tAccount('signedInAs', { name })}</span>
-    </Link>
+    <>
+      {/* Kiểm tra quyền là một request nữa: boundary riêng để icon tài khoản không phải chờ; chỉ admin thấy icon này */}
+      <Suspense fallback={null}>
+        <AdminIconLink />
+      </Suspense>
+      <Link href="/account" className={iconLink}>
+        <span
+          aria-hidden
+          className="flex size-7 items-center justify-center rounded-full bg-surface-raised text-sm font-semibold text-foreground"
+        >
+          {initialOf(name)}
+        </span>
+        <span className="sr-only">{tAccount('signedInAs', { name })}</span>
+      </Link>
+    </>
+  )
+}
+
+/** Link sang khu quản trị (không có [locale], root layout khác: Next tải lại cả trang). Quyền kiểm ở server. */
+async function AdminIconLink() {
+  if (!(await isAdmin())) return null
+  const t = await getTranslations('layout')
+  return (
+    <AdminLink href="/admin" prefetch={false} className={iconLink} data-testid="header-admin-link">
+      <LayoutDashboardIcon aria-hidden />
+      <span className="sr-only">{t('admin')}</span>
+    </AdminLink>
   )
 }
 
