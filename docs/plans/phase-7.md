@@ -1,0 +1,163 @@
+# Phase 7: Admin
+
+Trạng thái: **chờ duyệt** (2026-10-15). Chỉ có plan, chưa code.
+
+Phạm vi (lộ trình): quản trị sách (sửa thông tin, `*_en`, giá, tồn kho, ẩn / hiện, upload bìa), danh mục, tác giả, đơn hàng (đổi trạng thái, hủy), voucher. Chỉ tiếng Việt, dưới `/admin` (không có `[locale]`).
+
+**Không** có: nhập sách mới từ Google Books trong admin (vẫn dùng `npm run import:books`), ảnh phụ (`book_images`), sửa NXB (chỉ chọn NXB có sẵn), quản lý user / phân quyền (đặt admin vẫn bằng SQL), báo cáo doanh thu, email báo trạng thái đơn (Phase 9), rich editor (mô tả là textarea).
+
+## Có cần migration không
+
+**Có**, một file `supabase/migrations/<ngày>_admin.sql` (+ cập nhật `schema.sql`, sinh lại types):
+
+1. **Luồng trạng thái đơn ở DB** (cần chọn 8): `handle_order_status_change` chặn mọi chuyển trạng thái ngoài luồng, mã lỗi mới `ORDER_INVALID_TRANSITION` (detail `{"from": …, "to": …}`). `ORDER_REOPEN_FORBIDDEN` giữ nguyên cho `cancelled → *`.
+2. **Quyền cột của `orders`**: `revoke update on public.orders from authenticated; grant update (status, payment_status, cancelled_reason) on public.orders to authenticated`. RLS `orders_admin_update` đã giới hạn dòng cho admin; quyền cột chặn sửa tiền / địa chỉ / dòng sách kể cả khi là admin. `cancel_order` / `place_order` là `security definer` nên không bị ảnh hưởng.
+3. **Quyền cột của `books`**: chỉ cho `authenticated` update các cột sửa được trong admin; bỏ `sold_count`, `avg_rating`, `review_count`, `search_text`, `created_at`, `updated_at` (cột do DB quản lý, CLAUDE.md → Database). Insert giữ nguyên (admin không tạo sách mới ở phase này, nhưng e2e tạo sách test bằng service role). Trigger không bị chặn: quyền cột chỉ xét các cột có trong câu `UPDATE` (trigger BEFORE ghi `search_text` / `updated_at` vẫn chạy), còn `book_authors_touch_book` / `authors_touch_books` / `place_order` là `security definer`.
+4. **Giới hạn bucket `book-covers`**: `allowed_mime_types = '{image/webp}'`, `file_size_limit = 1048576` (1MB). Server chỉ upload WebP đã xử lý (600px ≈ 30–120KB), nên bucket từ chối mọi thứ khác kể cả khi ai đó có phiên admin và gọi thẳng Storage API.
+5. (Cần chọn 9) COD giao xong → `payment_status = 'paid'` trong cùng trigger.
+
+Không đổi RLS: các policy `*_admin_insert/update/delete` của catalog, `vouchers_admin_all`, `orders_admin_update`, storage `book_covers_admin_*` đã đủ.
+
+## Bảo mật: ba lớp + RLS
+
+1. **Proxy** (có sẵn): `/admin*` gọi `is_admin`, không phải admin → về `/`.
+2. **Layout** (có sẵn): `AdminGate` → `requireAdmin()`.
+3. **Mỗi Server Action admin tự kiểm tra** (mới): dòng đầu tiên của mọi action trong `features/admin/**/actions.ts` là `const denied = await assertAdmin(); if (denied) return denied` → `{ ok: false, code: 'FORBIDDEN' }` (mã mới trong `ERROR_CODES` + `errors.FORBIDDEN`). Không dựa vào layout / proxy: Server Action là endpoint POST gọi thẳng được bằng action ID, không đi qua layout.
+   - `assertAdmin()` (`features/admin/auth.ts`, `server-only`): `getCurrentUser()` + RPC `is_admin` (một request, `React.cache`).
+   - Vitest tĩnh: đọc các file `features/admin/**/actions.ts`, mọi `export async function` phải có `await assertAdmin()` là câu lệnh đầu. Thêm action mới mà quên kiểm tra thì test fail.
+4. **RLS + quyền cột** là lớp chặn cuối: user thường gọi thẳng PostgREST (`update books`, `update orders`, upload Storage) đều bị chặn. Có e2e kiểm tra bằng client của user thường.
+
+Mọi input parse bằng zod ở server (`features/admin/*/schemas.ts`), kể cả id bind sẵn.
+
+## Cần chọn
+
+★ = đề xuất.
+
+1. **Chia phase**
+   - ★ Hai nhánh, hai lần báo cáo / merge: **7a** catalog (sách + bìa, danh mục, tác giả) → **7b** đơn hàng + voucher (cần migration mục 1, 2, 5). Migration viết một lần ở đầu 7a để chạy một lần.
+   - Một nhánh cho cả phase: ít vòng duyệt hơn nhưng diff rất lớn, e2e dài, khó dừng giữa chừng.
+
+2. **Form và JS ở admin**
+   - ★ Cùng cách với cửa hàng: Server Component + form Server Action + `useFormAction` (chạy được không JS, lỗi từng ô). Admin không thuộc ngân sách 50KB của trang sách, nhưng vẫn không thêm thư viện (form, bảng, rich editor, upload). Bảng danh sách là `<table>` HTML, lọc / phân trang trên URL.
+   - Thêm thư viện bảng / form: nhanh hơn khi làm nhưng trái quy tắc "thêm dependency phải hỏi", và admin nhỏ không cần.
+
+3. **Chuỗi giao diện admin**
+   - ★ Namespace `admin` chỉ có trong `messages/vi.json`; test "cùng bộ key" bỏ qua namespace này, `en.json` xóa namespace `admin` hiện có. Kiểu message key vẫn lấy từ `vi.json` nên type-safe. Không phải dịch hàng trăm chuỗi admin không ai đọc bằng tiếng Anh.
+   - Giữ hai file cùng bộ key: đúng quy tắc hiện tại nhưng phải viết bản tiếng Anh cho toàn bộ admin.
+
+4. **Upload bìa**
+   - ★ Server Action nhận `File` qua `FormData`:
+     - Giới hạn **4MB** (giới hạn body request của Vercel là 4.5MB) + `experimental.serverActions.bodySizeLimit: '4.5mb'` trong `next.config.ts`. Kiểm tra `file.size` trước khi đọc.
+     - Kiểm tra loại bằng **nội dung file**, không tin `file.type` / đuôi: `sharp(buffer).metadata()` → chỉ nhận `jpeg`, `png`, `webp`, `avif`; `limitInputPixels` (40MP) chống ảnh bom.
+     - Xử lý giống import: rộng 600px, `withoutEnlargement`, WebP quality 80. Tách `toCoverWebp` ra `src/lib/cover-image.ts` (không `server-only`, để `scripts/import-books.ts` dùng chung), có Vitest với ảnh mẫu sinh bằng sharp.
+     - Lưu `book-covers/<book_id>-<8 ký tự ngẫu nhiên>.webp` (tên mới mỗi lần): ảnh cũ đang được CDN / `next/image` cache 1 năm (`cacheControl: '31536000'`), ghi đè cùng tên thì người xem vẫn thấy bìa cũ. Ghi `cover_url` xong mới xóa object cũ (nếu nằm trong bucket); lỗi giữa chừng thì xóa object mới vừa upload.
+     - Mã lỗi mới: `COVER_TOO_LARGE`, `COVER_INVALID` (lỗi tại ô).
+   - Client upload thẳng lên Storage bằng signed URL: không qua giới hạn 4.5MB nhưng không resize / kiểm tra được ở server (bucket chỉ nhận WebP thì client phải tự chuyển).
+
+5. **Làm mới cache khi sửa catalog** (`updateTag`, trong Server Action)
+   - ★ Hàm thuần `catalogTagsFor(change)` (`features/admin/cache-tags.ts`, Vitest), action gọi `updateTag` cho từng tag nó trả:
+     - Sửa tại chỗ (tên, phụ đề, mô tả, `*_en`, giá, giá gốc, tồn kho, bìa, NXB, năm…), **ẩn** sách: `book:{id}` (trang sách + mọi danh sách đang chứa sách đó, đã gắn tag theo sách từ 5b).
+     - Đổi sự có mặt trong danh sách: **hiện lại** sách đã ẩn, đổi danh mục, đổi slug, đổi tác giả, đổi `is_featured`: `book:{id}` + `books` (danh sách chưa chứa sách đó không có tag của nó; slug cũ cache `null` chỉ có tag `books`).
+     - Danh mục (tên, `*_en`, mô tả, thứ tự, ẩn / hiện, cha): `categories` + `books` khi ẩn / hiện hoặc đổi cha (trang danh mục cha lọc theo id danh mục con).
+     - Tác giả (tên, slug, tiểu sử, `bio_en`): `authors` + `book:{id}` của các sách của tác giả đó (tên tác giả hiện trên thẻ sách).
+     - Đơn hàng (7b): hủy → `expireOrderBooks` (có sẵn); đổi trạng thái khác không đụng tồn kho → không làm mới catalog.
+   - Luôn `updateTag('books')` cho mọi thay đổi: đơn giản nhưng mỗi lần sửa giá là xóa cache mọi danh sách.
+
+6. **Xóa**
+   - ★ Không xóa cứng sách / danh mục từ UI, chỉ **ẩn** (`is_active = false`): `order_items.book_id` là `on delete set null` (đơn cũ mất liên kết), `cart_items` xóa theo cascade, sách xóa nhầm không lấy lại được. Tác giả chỉ xóa được khi không còn sách nào (nếu không `book_authors` bị xóa theo cascade, sách mất tác giả không báo). Voucher đã dùng thì chỉ tắt, chưa dùng thì xóa được.
+   - Cho xóa cứng có xác nhận: gọn danh sách nhưng rủi ro như trên.
+
+7. **Tác giả của sách**
+   - ★ Chọn từ tác giả có sẵn: các dòng `<select>` tác giả + `<select>` vai trò (tác giả / dịch giả / minh họa), nút "Thêm dòng" (không JS: luôn có thêm 1 dòng trống). Tác giả mới tạo ở trang Tác giả. Lưu bằng một Server Action: xóa + chèn lại `book_authors` của sách (trigger `book_authors_touch_book` cập nhật `search_text`).
+   - Gõ tên, tự tạo tác giả nếu chưa có: nhanh hơn nhưng dễ sinh tác giả trùng do gõ khác dấu / hoa thường.
+
+8. **Luồng trạng thái đơn**
+   - ★ Chặn ở **DB** (migration mục 1) và chỉ hiện nút hợp lệ ở UI. Luồng: `pending → confirmed → shipping → delivered`; hủy được từ `pending`, `confirmed`, `shipping` (admin hủy **bắt buộc lý do**); `delivered` và `cancelled` là trạng thái cuối. Hàm thuần `nextStatuses(status)` ở app (Vitest) trùng bảng với DB. Trùng lúc khách tự hủy: update có điều kiện `status = <trạng thái đang hiển thị>` → 0 dòng thì báo "Đơn vừa đổi trạng thái" + `refresh()` (như Phase 6 mục 7).
+   - Chỉ chặn ở app: không cần migration, nhưng admin (hoặc script) gọi thẳng PostgREST vẫn đi lùi được (`delivered → pending`).
+
+9. **Thanh toán COD**
+   - ★ Trigger: đơn COD chuyển `delivered` → `payment_status = 'paid'`. Khớp quy tắc Phase 9 (đơn `paid` không tự hủy được) và hiện đúng "Đã thanh toán" ở trang chi tiết của khách.
+   - Admin tự đánh dấu đã thu tiền: linh hoạt hơn nhưng thêm một thao tác dễ quên.
+
+10. **Danh sách sách trong admin**
+    - ★ `<table>` 25 dòng / trang (`.range()` + `count: 'exact'`), lọc trên URL: tìm theo tên / ISBN (`ilike` trên `title` / `isbn`, client theo phiên nên thấy cả sách ẩn; `search_books` chỉ trả sách đang bán), danh mục, trạng thái (đang bán / đã ẩn), "sắp hết" (tồn kho ≤ 5). Cột: bìa nhỏ, tên, danh mục, giá, tồn kho, trạng thái. Sửa nhanh tồn kho ngay trên dòng thì để sau.
+    - Tải hết rồi lọc ở client: trái CLAUDE.md.
+
+11. **Slug**
+    - ★ Sửa được, gợi ý từ tên (dùng chung `slugify` của import, chuyển sang `src/lib/slug.ts`). Trùng → `SLUG_TAKEN` tại ô (map lỗi unique `23505` của Postgres). Đổi slug sách → link cũ 404 (chưa có redirect slug cũ, ghi vào giới hạn).
+    - Khóa slug sau khi tạo: không bao giờ hỏng link, nhưng không sửa được slug xấu từ Google Books.
+
+12. **e2e admin**
+    - ★ Project mới `desktop-admin` (+ một smoke `mobile-admin` cho danh sách và form sách):
+      - **User admin test** do `scripts/e2e-user.ts` tạo (`createE2eUser('admin')` + service role đặt `profiles.role = 'admin'`), xóa ở teardown như các user khác; `cleanupE2eUsers` dọn user sót.
+      - **Không sửa sách thật**: mọi sách / danh mục / tác giả / voucher của test có slug / mã bắt đầu `e2e-admin-` (voucher `E2E-ADMIN-…`), tạo bằng service role trong `beforeEach` (hoặc qua UI khi chính việc tạo là thứ được test), xóa trong `afterEach` + `try/finally` trong test. `cleanupE2eUsers` dọn thêm mọi dòng `e2e-admin-%` và object Storage của chúng (đọc `cover_url`) phòng khi test bị ngắt.
+      - Đơn hàng cho test trạng thái: user khách e2e đặt **sách e2e** (đang bán, trong **danh mục e2e đang ẩn** để không lọt vào trang danh mục; vẫn có thể hiện ở "Mới về" trên trang chủ trong vài giây chạy test — ghi vào giới hạn). Dọn bằng `cancelAndDeleteOrders` rồi xóa sách.
+      - Spec: `admin-books.spec.ts`, `admin-catalog.spec.ts` (danh mục, tác giả), `admin-orders.spec.ts`, `admin-vouchers.spec.ts`, `admin-security.spec.ts`.
+    - Chạy admin trên cả desktop và mobile đầy đủ: thêm ~2 phút cho e2e, admin ít khi dùng trên điện thoại.
+
+## Route (`src/app/admin/`)
+
+| Đường dẫn | Nội dung |
+|---|---|
+| `/admin` | Tổng quan: số đơn chờ xác nhận, sách sắp hết / hết hàng, link nhanh |
+| `/admin/sach` | Danh sách sách (lọc, phân trang) |
+| `/admin/sach/[id]` | Sửa sách: thông tin, `*_en`, giá, tồn kho, danh mục, NXB, tác giả, nổi bật, ẩn / hiện, bìa |
+| `/admin/danh-muc`, `/admin/danh-muc/moi`, `/admin/danh-muc/[id]` | Danh mục 2 cấp: tên, `name_en`, mô tả, `description_en`, cha, thứ tự, ẩn / hiện |
+| `/admin/tac-gia`, `/admin/tac-gia/moi`, `/admin/tac-gia/[id]` | Tác giả: tên, slug, tiểu sử, `bio_en` |
+| `/admin/don-hang`, `/admin/don-hang/[code]` | Đơn: lọc trạng thái, tìm mã / SĐT; chi tiết + nút chuyển trạng thái, hủy kèm lý do (7b) |
+| `/admin/voucher`, `/admin/voucher/moi`, `/admin/voucher/[id]` | Voucher: mã (tự viết HOA), loại, giá trị, trần, đơn tối thiểu, giới hạn lượt, thời gian, bật / tắt (7b) |
+
+- Admin không có `[locale]`, URL tiếng Việt viết thẳng tên thư mục. `Link` của `i18n/navigation` không dùng được (không có provider next-intl ở admin): thêm một `AdminLink` mỏng quanh `next/link` trong `src/components/admin/` + ngoại lệ ESLint chỉ cho thư mục `src/app/admin` và `src/components/admin`.
+- Layout admin: thanh điều hướng trái (desktop) / trên (mobile), header gọn, cùng token màu. Trang nào cũng `noindex` (layout đã có).
+- Ràng buộc danh mục: tối đa 2 cấp; danh mục đang có sách không được làm cha; danh mục cha không được gắn sách (CLAUDE.md: sách chỉ gắn danh mục lá). Kiểm tra ở action (zod + query), lỗi tại ô.
+
+## Dữ liệu (`features/admin/**/queries.ts`)
+
+- Client theo phiên (`lib/supabase/server.ts`), không `'use cache'`: admin cần thấy sách / danh mục ẩn và dữ liệu mới nhất. Mọi query trong `<Suspense>`.
+- Sách: một query `books` + `categories(name)` + `book_authors(role, authors(id, name))` + `publishers(id, name)`. Danh sách chọn danh mục lá / NXB / tác giả cho form: chạy song song `Promise.all`.
+- Đơn: `orders` + `order_items` (như Phase 6) + `profiles(full_name)` (RLS cho admin xem profile).
+
+## Messages
+
+Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đề trang, nhãn ô, nút, trạng thái, thông báo lưu. Mã lỗi mới trong `errors` (cả vi / en vì dùng chung `ERROR_CODES`): `FORBIDDEN`, `ORDER_INVALID_TRANSITION`, `SLUG_TAKEN`, `COVER_TOO_LARGE`, `COVER_INVALID`, `CATEGORY_HAS_BOOKS`, `AUTHOR_HAS_BOOKS`.
+
+## Test
+
+- Vitest: `catalogTagsFor`, `nextStatuses` (khớp bảng trong migration), `toCoverWebp` (JPEG / PNG → WebP 600px; ảnh nhỏ không phóng to; file không phải ảnh → lỗi), schema form sách (giá ≥ 0, `original_price ≥ price`, tồn kho ≥ 0, năm 1800–2100, slug), schema voucher (% ≤ 100, `ends_at > starts_at`), test tĩnh "mọi action admin gọi `assertAdmin` đầu tiên".
+- e2e (cần chọn 12):
+  - **Bảo mật**: khách / user thường vào `/admin` → về `/`; user thường gọi PostgREST `update books` / `update orders` → 0 dòng, upload Storage `book-covers` → lỗi; admin gọi `update orders set total = …` → lỗi quyền cột.
+  - **Sách** (sách e2e): sửa giá + tồn kho → trang sách công khai hiện giá / tồn kho mới ngay (`updateTag`); ẩn → trang sách 404 + biến mất khỏi danh mục; hiện lại → xuất hiện lại; đổi danh mục → danh mục mới có, danh mục cũ không; `original_price < price` → lỗi tại ô; slug trùng → `SLUG_TAKEN`.
+  - **Bìa**: upload JPEG ~1MB → `cover_url` mới trỏ `book-covers/<id>-….webp`, ảnh 600px, object cũ bị xóa, trang sách hiện bìa mới; file `.png` thực chất là text → `COVER_INVALID`; file > 4MB → `COVER_TOO_LARGE`, không có gì được upload.
+  - **Danh mục / tác giả**: tạo, sửa `name_en` → `/en/categories/…` hiện tên mới; danh mục có sách không làm cha được; xóa tác giả còn sách → `AUTHOR_HAS_BOOKS`.
+  - **Đơn** (7b): `pending → confirmed → shipping → delivered` (COD → "Đã thanh toán" ở trang chi tiết của khách); hủy không lý do → lỗi tại ô; hủy kèm lý do → tồn kho hoàn lại + trang sách cập nhật; đơn đã hủy không có nút chuyển; khách tự hủy trong lúc admin đang mở trang → admin bấm "Xác nhận" → thông báo + trạng thái mới; gọi thẳng PostgREST `cancelled → pending` → `ORDER_REOPEN_FORBIDDEN`, `delivered → pending` → `ORDER_INVALID_TRANSITION`.
+  - **Voucher** (7b): tạo `E2E-ADMIN-…` (mã viết thường tự thành HOA), % > 100 → lỗi tại ô, tắt / xóa.
+  - Mọi spec: `afterEach` + `finally` dọn dữ liệu `e2e-admin-`; chạy lại / `--repeat-each` qua.
+
+## Việc của chủ dự án
+
+1. Duyệt plan, chọn ở "Cần chọn".
+2. Chạy migration `<ngày>_admin.sql` trên Supabase (tôi viết ở đầu 7a, bạn kiểm tra trước trên Postgres local như 5b), rồi tôi sinh lại types.
+3. Sau 7a: thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" bằng admin (`docs/plans/data.md`).
+
+## Giới hạn / rủi ro đã biết
+
+- Đổi slug sách / tác giả / danh mục → link cũ 404 (chưa có bảng redirect).
+- Sách e2e của test đơn hàng có thể hiện ở "Mới về" trên trang chủ trong lúc test chạy (dùng chung DB Supabase với bản deploy).
+- `bodySizeLimit` áp cho mọi Server Action của app, không riêng upload bìa (Next chưa cho đặt theo action).
+
+## Tiến độ
+
+7a:
+- [ ] Migration `admin.sql` (luồng trạng thái đơn, quyền cột `orders` / `books`, giới hạn bucket, COD → paid) + `schema.sql` + types
+- [ ] `assertAdmin` + mã `FORBIDDEN` + test tĩnh; layout admin, điều hướng, `AdminLink` + ngoại lệ ESLint; messages `admin` chỉ vi
+- [ ] `lib/slug.ts`, `lib/cover-image.ts` (dùng chung với import) + Vitest
+- [ ] Sách: danh sách, form sửa, tác giả của sách, ẩn / hiện, upload bìa; `catalogTagsFor` + Vitest
+- [ ] Danh mục, tác giả
+- [ ] e2e: user admin, dọn dữ liệu `e2e-admin-`, `admin-security`, `admin-books`, `admin-catalog`
+- [ ] typecheck / lint / build / test / e2e sạch; `measure:js` (trang công khai không đổi); báo cáo
+
+7b:
+- [ ] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
+- [ ] Voucher: danh sách, tạo / sửa, bật / tắt / xóa
+- [ ] e2e `admin-orders`, `admin-vouchers`
+- [ ] typecheck / lint / build / test / e2e sạch; báo cáo
