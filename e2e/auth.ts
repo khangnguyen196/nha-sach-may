@@ -40,6 +40,22 @@ export function readAdminCredentials(): AdminCredentials {
   return adminCredentialsSchema.parse(JSON.parse(readFileSync(ADMIN_CREDENTIALS_PATH, 'utf8')))
 }
 
+// Sách e2e riêng của từng project tài khoản (Phase 10): checkout.spec / orders.spec đặt hàng lên đây, không lên sách thật
+export const SHOP_BOOKS_PATH = `${AUTH_DIR}/shop-books.json`
+const bookSchema = z.object({ id: z.number(), slug: z.string(), title: z.string(), price: z.number(), stock: z.number() })
+const shopBooksSchema = z.record(
+  z.string(),
+  z.object({ low: z.array(bookSchema), regular: z.array(bookSchema), plenty: z.array(bookSchema), medium: z.array(bookSchema) }),
+)
+
+export type ShopBooksFile = z.infer<typeof shopBooksSchema>
+
+export function readShopBooks(project: string) {
+  const books = shopBooksSchema.parse(JSON.parse(readFileSync(SHOP_BOOKS_PATH, 'utf8')))[project]
+  if (!books) throw new Error(`Không có sách e2e cho project ${project}`)
+  return books
+}
+
 export const NO_SESSION = { cookies: [], origins: [] }
 
 /** Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang) */

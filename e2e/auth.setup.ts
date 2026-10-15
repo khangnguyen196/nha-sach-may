@@ -1,7 +1,7 @@
 import { test as setup } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { cleanupE2eUsers, createE2eUser, makeAdmin } from '../scripts/e2e-user'
+import { cleanupE2eUsers, createE2eUser, createShopBooks, makeAdmin } from '../scripts/e2e-user'
 import {
   ACCOUNT_PROJECTS,
   ADMIN_CREDENTIALS_PATH,
@@ -12,9 +12,11 @@ import {
   login,
   NO_SESSION,
   ordersStatePath,
+  SHOP_BOOKS_PATH,
   storageStatePath,
   type AdminCredentials,
   type Credentials,
+  type ShopBooksFile,
 } from './auth'
 
 // Tạo user test bằng admin API (không gửi email), đăng nhập một lần qua UI và lưu storageState cho các test cần phiên.
@@ -41,6 +43,9 @@ setup('tạo tài khoản e2e, đăng nhập sẵn', async ({ browser, baseURL }
   // Ghi trước khi đăng nhập: setup lỗi giữa chừng thì teardown vẫn biết user nào cần xóa
   writeFileSync(CREDENTIALS_PATH, JSON.stringify(credentials, null, 2))
   writeFileSync(ADMIN_CREDENTIALS_PATH, JSON.stringify(admins, null, 2))
+  const shopBooks: ShopBooksFile = {}
+  for (const project of ACCOUNT_PROJECTS) shopBooks[project] = await createShopBooks(project)
+  writeFileSync(SHOP_BOOKS_PATH, JSON.stringify(shopBooks, null, 2))
   await Promise.all(Object.values(admins).map((admin) => makeAdmin(admin.id)))
 
   const sessions = [

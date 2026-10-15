@@ -1,7 +1,7 @@
 import { test as teardown } from '@playwright/test'
 import { existsSync, rmSync } from 'node:fs'
-import { cleanupE2eAdminData, deleteE2eUsers } from '../scripts/e2e-user'
-import { ADMIN_CREDENTIALS_PATH, CREDENTIALS_PATH, readAdminCredentials, readCredentials } from './auth'
+import { cleanupE2eAdminData, deleteE2eUsers, deleteShopBooks } from '../scripts/e2e-user'
+import { ADMIN_CREDENTIALS_PATH, CREDENTIALS_PATH, readAdminCredentials, readCredentials, SHOP_BOOKS_PATH } from './auth'
 
 // Xóa đúng các user setup vừa tạo (deleteE2eUsers hủy + xóa đơn trước để hoàn tồn kho; cascade xóa profile, địa chỉ,
 // giỏ), rồi dữ liệu admin e2e còn sót. User sót do lần chạy bị ngắt thì setup lần sau dọn.
@@ -16,4 +16,7 @@ teardown('xóa tài khoản e2e', async () => {
     rmSync(ADMIN_CREDENTIALS_PATH)
   }
   await cleanupE2eAdminData()
+  // Sau khi xóa đơn của user e2e (deleteE2eUsers): sách e2e-shop không còn đơn trỏ tới
+  await deleteShopBooks()
+  if (existsSync(SHOP_BOOKS_PATH)) rmSync(SHOP_BOOKS_PATH)
 })

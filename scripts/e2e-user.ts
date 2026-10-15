@@ -63,7 +63,7 @@ export async function cleanupE2eUsers() {
     if (data.users.length < 1000) break
   }
   await deleteE2eUsers(stale)
-  await Promise.all([deleteHiddenBooks(), cleanupE2eAdminData()])
+  await Promise.all([deleteHiddenBooks(), cleanupE2eAdminData(), deleteShopBooks()])
   return stale.length
 }
 
@@ -415,6 +415,69 @@ export async function insertReview(bookId: number, userId: string, rating: numbe
     .single()
   if (error) throw new Error(`insertReview: ${error.message}`)
   return data
+}
+
+// ---------- Sách e2e cho đặt hàng (Phase 10) ----------
+
+/** Tiền tố slug sách / danh mục mà checkout.spec, orders.spec đặt hàng lên (không đổi tồn kho của sách thật) */
+export const E2E_SHOP_SLUG = 'e2e-shop-'
+
+export type ShopBooks = { low: E2eBook[]; regular: E2eBook[]; plenty: E2eBook[]; medium: E2eBook[] }
+
+/**
+ * Bộ sách riêng của một project (setup gọi, mỗi project một bộ → chạy song song trên CI không giẫm tồn kho của nhau):
+ * danh mục gốc ẩn + con đang hiện (không lên menu, không lên sitemap), sách đang bán, `created_at` lùi về 2000 để không
+ * lên kệ "Mới về". low: tồn 4 (test vượt tồn kho), regular: tồn 60, plenty: tồn 200 (nhiều đơn), medium: tồn 40
+ * (đặt tới khi còn 3 rồi hủy).
+ */
+export async function createShopBooks(label: string): Promise<ShopBooks> {
+  const admin = adminClient()
+  const slug = (part: string) => `${E2E_SHOP_SLUG}${label}-${part}-${random()}`
+  const { data: root, error: rootError } = await admin
+    .from('categories')
+    .insert({ name: `E2E shop ${label}`, slug: slug('root'), is_active: false })
+    .select('id')
+    .single()
+  if (rootError) throw new Error(`createShopBooks (root): ${rootError.message}`)
+  const { data: leaf, error: leafError } = await admin
+    .from('categories')
+    .insert({ name: `E2E shop ${label} sách`, slug: slug('leaf'), parent_id: root.id })
+    .select('id')
+    .single()
+  if (leafError) throw new Error(`createShopBooks (leaf): ${leafError.message}`)
+
+  const specs = [
+    ['low', 95_000, 4],
+    ['low', 98_000, 4],
+    ['regular', 120_000, 60],
+    ['regular', 125_000, 60],
+    ['plenty', 80_000, 200],
+    ['medium', 90_000, 40],
+  ] as const
+  const kindOf = new Map<string, (typeof specs)[number][0]>()
+  const rows = specs.map(([kind, price, stock]) => {
+    const bookSlug = slug(kind)
+    kindOf.set(bookSlug, kind)
+    return { title: `E2E ${kind} ${bookSlug.slice(-6)}`, slug: bookSlug, category_id: leaf.id, price, stock, created_at: '2000-01-01T00:00:00Z' }
+  })
+  const { data, error } = await admin.from('books').insert(rows).select('id, slug, title, price, stock').order('id')
+  if (error) throw new Error(`createShopBooks (books): ${error.message}`)
+  const byKind = (kind: (typeof specs)[number][0]) => data.filter((book) => kindOf.get(book.slug) === kind)
+  return { low: byKind('low'), regular: byKind('regular'), plenty: byKind('plenty'), medium: byKind('medium') }
+}
+
+/** Xóa mọi sách / danh mục e2e-shop (sau khi đơn của user e2e đã xóa): teardown và setup (phần sót của lần trước) */
+export async function deleteShopBooks() {
+  const admin = adminClient()
+  const { error } = await admin.from('books').delete().like('slug', `${E2E_SHOP_SLUG}%`)
+  if (error) throw new Error(`deleteShopBooks (books): ${error.message}`)
+  // Con trước gốc (parent_id không cascade)
+  for (const isRoot of [false, true]) {
+    let query = admin.from('categories').delete().like('slug', `${E2E_SHOP_SLUG}%`)
+    query = isRoot ? query.is('parent_id', null) : query.not('parent_id', 'is', null)
+    const { error: categoryError } = await query
+    if (categoryError) throw new Error(`deleteShopBooks (categories): ${categoryError.message}`)
+  }
 }
 
 // ---------- Admin (Phase 7) ----------

@@ -10,7 +10,6 @@ import {
   deleteAddress,
   deleteE2eVouchers,
   deleteHiddenBooks,
-  findBooksByStockDesc,
   orderRow,
   ordersOf,
   placeE2eOrder,
@@ -21,7 +20,15 @@ import {
   stockOf,
   type E2eBook,
 } from '../scripts/e2e-user'
-import { ACCOUNT_PROJECTS, checkoutStatePath, fillLogin, NO_SESSION, readCredentials, type ProjectUsers } from './auth'
+import {
+  ACCOUNT_PROJECTS,
+  checkoutStatePath,
+  fillLogin,
+  NO_SESSION,
+  readCredentials,
+  readShopBooks,
+  type ProjectUsers,
+} from './auth'
 import { addFromBookPage, badge, vnd } from './cart'
 import { collectErrors, fillAddress, waitForHydration } from './helpers'
 
@@ -46,14 +53,13 @@ const SHIPPING_FEE = 30_000
 const FREE_SHIP_FROM = 300_000
 const totalOf = (subtotal: number) => subtotal + (subtotal >= FREE_SHIP_FROM ? 0 : SHIPPING_FEE)
 
-// Sách lấy từ cuối danh sách (id giảm dần) để không trùng sách của spec giỏ; mỗi project một bộ sách riêng để chạy
-// song song trên CI không giẫm tồn kho của nhau. Tồn kho ≤ 98: đặt được số lượng stock + 1 (giỏ giới hạn 99).
+// Sách e2e riêng của project (setup tạo, slug e2e-shop-…): đặt hàng không đổi tồn kho sách thật, hai project chạy song
+// song không giẫm nhau. low: tồn 4, regular: tồn 60 (≤ 98: đặt được số lượng stock + 1, giỏ giới hạn 99).
 let lowStock: E2eBook[]
 let regular: E2eBook[]
 
-test.beforeAll(async () => {
-  ;[lowStock, regular] = await Promise.all([findBooksByStockDesc(2, 5, 2), findBooksByStockDesc(20, 98, 2)])
-  if (lowStock.length === 0 || regular.length === 0) throw new Error('Cần sách tồn kho 2–5 và 20–98 để test')
+test.beforeAll(async ({}, testInfo) => {
+  ;({ low: lowStock, regular } = readShopBooks(testInfo.project.name))
 })
 
 const pick = (books: E2eBook[], index: number) => {

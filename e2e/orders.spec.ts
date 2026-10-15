@@ -4,7 +4,6 @@ import {
   cancelAndDeleteOrders,
   clearAddresses,
   clearCart,
-  findBooksByStockDesc,
   ordersOf,
   seedAddress,
   setCartItem,
@@ -13,7 +12,14 @@ import {
   stockOf,
   type E2eBook,
 } from '../scripts/e2e-user'
-import { ACCOUNT_PROJECTS, ordersStatePath, readCredentials, storageStatePath, type ProjectUsers } from './auth'
+import {
+  ACCOUNT_PROJECTS,
+  ordersStatePath,
+  readCredentials,
+  readShopBooks,
+  storageStatePath,
+  type ProjectUsers,
+} from './auth'
 import { vnd } from './cart'
 import { collectErrors, waitForHydration } from './helpers'
 
@@ -34,23 +40,14 @@ const test = base.extend<{ users: ProjectUsers; projectIndex: number }>({
 
 test.describe.configure({ mode: 'serial' })
 
-// Sách cho đơn tạo bằng RPC (mỗi đơn 1 cuốn, tồn kho ≥ 30) và cho test hủy (tồn kho 6–98: đặt tới khi còn 3 → trang
-// sách có nhãn "Chỉ còn 3 cuốn", hủy xong nhãn mất). Mỗi project một cuốn riêng. Lấy theo id giảm dần (spec giỏ dùng id
-// tăng dần) và bỏ các cuốn checkout.spec đang dùng (cùng truy vấn với spec đó).
+// Sách e2e riêng của project (setup tạo, slug e2e-shop-…, không trùng sách checkout.spec): plenty (tồn 200) cho đơn
+// tạo bằng RPC (mỗi đơn 1 cuốn), medium (tồn 40) cho test hủy (đặt tới khi còn 3 → trang sách có nhãn "Chỉ còn 3
+// cuốn", hủy xong nhãn mất).
 let plenty: E2eBook[]
 let medium: E2eBook[]
 
-test.beforeAll(async () => {
-  const [checkoutLow, checkoutRegular, candidates] = await Promise.all([
-    findBooksByStockDesc(2, 5, 2),
-    findBooksByStockDesc(20, 98, 2),
-    findBooksByStockDesc(6, 10_000, 16),
-  ])
-  const taken = new Set([...checkoutLow, ...checkoutRegular].map((book) => book.id))
-  const free = candidates.filter((book) => !taken.has(book.id))
-  plenty = free.filter((book) => book.stock >= 30).slice(0, 2)
-  medium = free.filter((book) => book.stock <= 98 && !plenty.includes(book)).slice(0, 2)
-  if (plenty.length === 0 || medium.length === 0) throw new Error('Cần sách tồn kho ≥ 30 và 6–98 để test')
+test.beforeAll(async ({}, testInfo) => {
+  ;({ plenty, medium } = readShopBooks(testInfo.project.name))
 })
 
 const pick = (books: E2eBook[], index: number) => {
