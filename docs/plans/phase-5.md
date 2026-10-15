@@ -1,6 +1,69 @@
 # Phase 5a: Giỏ hàng
 
-Trạng thái: **đã duyệt** (2026-10-15), làm trên nhánh `phase-5a`. Chọn hết các ★; mục 7 có bổ sung (khóa gộp giỏ giữa các tab), xem "Quyết định đã duyệt" ở cuối.
+## Báo cáo (2026-10-15)
+
+**Đã xong**: toàn bộ Phase 5a trên nhánh `phase-5a` (chưa merge). Gồm giỏ khách (localStorage), giỏ tài khoản (`cart_items`) và gộp giỏ khi có phiên. Gộp chạy trong khóa `navigator.locks` nên mở nhiều tab không nhân đôi số lượng. Header có badge số cuốn. Trang sách có nút "Thêm vào giỏ", vẫn dùng được khi chưa có JS. Trang `/gio-hang` dùng chung giao diện cho khách và tài khoản, tạm tính lấy từ `quote_order` / `quote_items`, có thanh freeship, cảnh báo vượt tồn kho, dòng "Ngừng bán", trạng thái rỗng / lỗi / đang tải. Chi tiết ở mục Tiến độ.
+
+**Việc của bạn**: không còn. Migration `quote_items` đã chạy, types đã sinh lại (commit `5d60f88`).
+
+**Quyết định tự chọn / lệch plan, cần duyệt**:
+1. **Zod không vào bundle client.** `store → guest-cart → schemas` từng kéo zod (~30KB gzip) vào mọi trang qua badge ở header, làm trang sách lên 65.9KB ngoài baseline. Giờ `guest-cart.ts` (chạy ở client) tự kiểm tra giỏ localStorage và tham số `items`. `schemas.ts` (zod) chỉ còn dùng cho input của Server Action. Có Vitest dạng bảng (18 ca) bắt `normalizeCartItems` và `cartItemsSchema` phải ra cùng kết quả. Lệch quy tắc "zod dùng chung client/server" ở đúng chỗ này: client chỉ đọc localStorage, không gửi dữ liệu nào mà server không parse lại.
+2. **Chuỗi có giá trị chỉ biết ở client** (tên sách của giỏ khách, số trên badge, số tiền còn thiếu để được freeship): server dịch sẵn và giữ nguyên chỗ trống, VD `t('removeLabel', { title: placeholder('title') })`. Client điền vào bằng `fillTemplate` (`lib/template.ts`, có test). Chỉ dùng cho tham số đơn giản. Vì vậy `badgeLabel` tiếng Anh viết là "Cart, items: {count}" để không cần dạng số nhiều.
+3. **Lỗi có tham số dịch ở server** (mục 10 ★): `Result` thất bại có thêm `message?`. `withMessage(locale, failure)` nằm ở `lib/error-message.ts`. Đã kiểm chứng `getTranslations({ locale })` chạy được trong Server Action; e2e kiểm tra `OUT_OF_STOCK` ở cả vi và en.
+4. **`/api/cart/guest` cache theo bộ id thay vì từng id**: sách lấy bằng **một** query `in('id', …)`, key cache là danh sách id đã sắp, tag `books` + `book:{id}`. Đổi số lượng không đổi bộ id nên vẫn trúng cache, và không tạo N query khi cache trống. Tạm tính (`quote_items`) cũng cache theo giỏ (`cacheLife('minutes')`). Response có `s-maxage=60`.
+5. **Giới hạn 99 cuốn / sách** (khi tồn kho ≥ 99) trả `INVALID_INPUT` kèm `message` "Mỗi sách đặt tối đa 99 cuốn". Không thêm mã lỗi mới. Tồn kho < 99 thì trả `OUT_OF_STOCK` kèm `title`, `stock`. Giảm số lượng luôn được, kể cả khi dòng đang vượt tồn kho.
+6. **`addToCart` không `refresh()`** vì badge cập nhật bằng kết quả action. `setCartQuantity` / `removeFromCart` có `refresh()` để `useOptimistic` nhận props mới trong cùng transition. Khi chưa có JS: người đã đăng nhập thêm xong thì chuyển sang `/gio-hang`; khách chuyển sang đăng nhập với `next` là trang sách.
+7. **Hai lỗi race do e2e phát hiện, đã sửa** (ngoài plan):
+   - Bấm "Thêm" trước khi header stream xong: header tới sau với số cũ và ghi đè số đúng. Sửa: trường hợp này gọi `router.refresh()`.
+   - Tab render ở server trước khi tab khác gộp xong nhưng hydrate sau khi localStorage đã bị xóa: badge giữ số cũ. Sửa: tab gộp xong ghi `nsm-cart-merged-at`. Tab khác tải lại khi nhận sự kiện `storage` của khóa này, hoặc khi mốc muộn hơn `performance.timeOrigin` của nó (kiểm tra một lần mỗi document).
+8. **Sửa lỗi có từ Phase 3**: trên mobile, trang sách bị giãn ngang tới khoảng 1456px nên trình duyệt thu nhỏ cả trang. Nguyên nhân: `sr-only` (absolute) trong BookCard của kệ không có ancestor `position` nằm trong vùng cuộn, nên không bị cắt. Sửa bằng `relative` ở `<ul>` của Shelf. `layout.spec.ts` có test chống tái phát (trang chủ + trang sách, desktop + mobile).
+9. **e2e**: `cart-account.spec.ts` là file riêng, chạy tuần tự (cả file dùng chung một giỏ tài khoản). Project `*-account` vẫn khớp nhờ regex `account\.spec\.ts`. `scripts/e2e-user.ts` có thêm `clearCart`, `cartQuantities` (admin) và `findBooksByStock` (chỉ quyền anon, nên `cart.spec.ts` chạy được không cần service key). Sách test lấy theo tồn kho thật, không sửa dữ liệu.
+10. Nhỏ: `item_count` của `quote_items` là số dòng (giống `quote_order`). Dòng "Số cuốn" ở tóm tắt tính ở client từ các dòng còn bán, chỉ để hiển thị. Dòng "Ngừng bán" không biết tên sách (RLS ẩn sách đã tắt), nên hiện "Sách không còn bán".
+
+**Giới hạn / rủi ro đã biết**:
+- `addToCart` đọc số lượng hiện có rồi upsert, không nguyên tử. Hai tab cùng bấm "Thêm" một sách đúng cùng lúc có thể mất 1 lần cộng (trong một tab thì nút bị khóa khi đang gửi). Muốn chặt thì cần RPC `add_to_cart`. Đề xuất để khi cần.
+- Sách ở `/api/cart/guest` cache `hours` theo tag. Admin sửa (Phase 7) revalidate tag là đúng ngay, nhưng **`place_order` (5b) trừ tồn kho mà không revalidate**, nên tồn kho hiện ở giỏ khách có thể cũ tới vài giờ (giỏ tài khoản luôn đọc mới; `place_order` vẫn kiểm tra lần cuối). Ở 5b nên rút `cacheLife` hoặc revalidate `book:{id}` sau khi đặt hàng.
+- Giỏ khách cần JS (localStorage). Không JS thì `/gio-hang` của khách chỉ hiện skeleton, còn nút ở trang sách chuyển sang đăng nhập.
+- Trình duyệt không có `navigator.locks` (Safari < 15.4): gộp không khóa, theo đúng plan.
+- Nút "Thanh toán" trỏ `/thanh-toan`, trang này chưa có (5b).
+
+**Bị chặn**: không. Không mở `.env.local` (chỉ `check:env`), không thêm dependency. Dev server của một chat khác giữ thư mục này nên không chạy được `next dev` thứ hai; kiểm tra tay bằng `build` + `start`.
+
+**Kết quả kiểm tra** (lần chạy cuối, commit `d2ea54e`):
+- `typecheck`, `lint`, `build`: sạch.
+- `test` (Vitest): 155/155 (thêm 57: giỏ khách thuần, khớp client/server, tham số `items`, `fillTemplate`, `freeShipStatus`).
+- `test:e2e`: 94/94, chạy 2 lượt liên tiếp (1 worker, desktop + mobile + account). Riêng giỏ: `cart.spec.ts` 7 test × 2, `cart-account.spec.ts` 5 test × 2, cộng 1 test tràn ngang × 2 trong `layout.spec.ts`. Không lỗi console.
+- Kiểm tra tay trên preview (bản production): thêm vào giỏ khi là khách, badge, `/gio-hang` có dòng ngừng bán, tạm tính 359.000 ₫ = 280.000 + 79.000 (freeship), giảm số lượng → 219.000 ₫ + ship 30.000 ₫.
+
+**Số đo JS** (`measure:js`, gzip, baseline 170KB):
+
+| Route | Tổng | Ngoài baseline | Ghi chú |
+|---|---|---|---|
+| `vi/books/ban-van` cuối Phase 4 | 203.5KB | 33.5KB | |
+| `vi/books/ban-van` khi zod còn lọt vào client | 235.9KB | 65.9KB | đã sửa (mục 1) |
+| `vi/books/ban-van` | 206.0KB | **36.0KB** | +2.5KB: store, badge, `CartSync`, nút thêm (plan ước tính +2–4KB) |
+| `en/books/ban-van` | 206.0KB | 36.0KB | |
+| `vi` (trang chủ) | 205.4KB | 35.4KB | |
+| `vi/cart` | 209.5KB | 39.5KB | `CartView` + `UserCart` + `GuestCart` |
+
+**Commit trên nhánh `phase-5a`**:
+- `ded1cdb` feat(db): quote_items RPC for guest carts, quote_order counts active books only
+- `19f29e2` feat(cart): guest cart store, cart actions, header badge, add-to-cart button
+- `9d118c4` feat(cart): cart page for signed-in users with optimistic quantity changes
+- `de0ba37` test(e2e): guest and account cart flows; fix shelf widening mobile book page
+- `b1b5b04` perf(cart): keep zod out of the client bundle
+- `5d60f88` feat(cart): guest cart page via /api/cart/guest and quote_items
+- `d2ea54e` fix(cart): stale header count after early add or cross-tab merge
+- commit cuối: docs (báo cáo này)
+
+**Đề xuất cập nhật CLAUDE.md** (chờ duyệt):
+- Mục Hiệu năng: module chạy ở client không import zod (≈30KB gzip). Dữ liệu client tự đọc (localStorage) thì kiểm tra bằng tay, kèm test khớp với schema zod của server.
+- Mục i18n: chuỗi có giá trị chỉ biết ở client dùng `placeholder()` + `fillTemplate` (`lib/template.ts`). Lỗi có tham số ICU từ Server Action dùng `withMessage(locale, failure)`, client hiện `failure.message`.
+- Mục Database: thêm vào phần Phí ship rằng giỏ khách tạm tính qua `quote_items` (anon).
+
+---
+
+Trạng thái: **đã xong trên nhánh `phase-5a`, chưa merge** (2026-10-15). Plan đã duyệt: chọn hết các ★; mục 7 có bổ sung (khóa gộp giỏ giữa các tab), xem "Quyết định đã duyệt" ở cuối.
 
 Phạm vi: giỏ khách vãng lai (localStorage), giỏ tài khoản (`cart_items`), gộp giỏ khi đăng nhập (`merge_cart`), badge giỏ ở header, nút "Thêm vào giỏ" ở trang sách, trang giỏ (`/gio-hang`) với tạm tính từ server và mốc freeship. **Không** có checkout COD + trang đặt hàng thành công: đề xuất tách thành Phase 5b, plan riêng (xem Cần chọn 1). Không có voucher (Phase 9).
 
@@ -153,7 +216,7 @@ Migration: `supabase/migrations/20261015090000_quote_items.sql` (idempotent, ch�
 - [x] Trang giỏ: `CartView`, tóm tắt, freeship, trạng thái rỗng / lỗi
 - [x] Messages `cart` vi/en
 - [x] e2e `cart.spec.ts` (khách: trang sách, 2 tab, tồn kho, trang giỏ, `/api/cart/guest`) + `cart-account.spec.ts` (giỏ tài khoản, gộp, gộp nhiều tab, lỗi theo locale, `/en/cart`)
-- [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách trong ngân sách
+- [x] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách trong ngân sách (36.0KB ngoài baseline)
 
 ## Quyết định đã duyệt
 
