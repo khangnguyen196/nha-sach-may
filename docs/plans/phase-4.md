@@ -36,6 +36,9 @@ Phạm vi: đăng ký, đăng nhập, đăng xuất, quên/đặt lại mật kh
 - Form dùng `useActionState` + `<form action>`: chạy được không cần JS (progressive enhancement), có JS thì hiện lỗi tại chỗ không tải lại trang. Lỗi từng field từ `z.flattenError`, lỗi chung là mã trong `errors.*`.
 - Trả `Result<T>` như quy ước. Thêm mã lỗi phía app vào `lib/errors.ts` + `messages/*.json → errors`: `INVALID_CREDENTIALS`, `EMAIL_TAKEN`, `EMAIL_NOT_CONFIRMED`, `WEAK_PASSWORD`, `RATE_LIMITED`, `LINK_EXPIRED`. Map từ `AuthError.code` của Supabase (`invalid_credentials`, `user_already_exists`, `email_not_confirmed`, `weak_password`, `over_email_send_rate_limit`, `otp_expired`); mã lạ → `UNKNOWN`.
 - Đăng ký gửi `options.data = { full_name, locale }` → trigger `handle_new_user` tạo `profiles` đúng locale (không đổi schema).
+- Đăng xuất: `signOut({ scope: 'local' })`, chỉ kết thúc phiên hiện tại.
+- Đặt lại mật khẩu: link recovery → `/api/auth/confirm` (`type=recovery`) tạo phiên → trang đặt lại mật khẩu → `updatePassword` (`auth.updateUser({ password })`). **Thành công thì gọi `signOut({ scope: 'others' })`** để thu hồi mọi phiên khác (người khác đang giữ phiên cũ trên thiết bị khác); phiên hiện tại giữ nguyên. `signOut` lỗi thì vẫn báo đổi mật khẩu thành công (mật khẩu đã đổi) nhưng ghi log server.
+  - Giới hạn: `getClaims()` xác thực JWT tại chỗ, nên phiên khác chỉ hết hạn thật khi access token hết hạn (mặc định 1 giờ) và không refresh được nữa; thu hồi chặn bước refresh. Muốn ngắn hơn thì chủ dự án giảm "JWT expiry" trong Supabase Dashboard.
 - `signUp` không tiết lộ email đã tồn tại hay chưa khi bật xác nhận email (Supabase trả user giả) → luôn hiện "Kiểm tra hộp thư".
 - `next` (trang quay lại sau đăng nhập): chỉ nhận đường dẫn nội bộ (`/` đầu, không `//`, không `\`), sai → `/tai-khoan`. Hàm `safeNextPath` có test.
 
@@ -74,6 +77,7 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
   - Header đổi sang trạng thái đã đăng nhập; đăng xuất → về trạng thái cũ, `/tai-khoan` lại bị chặn.
   - Sổ địa chỉ: thêm địa chỉ đầu tiên → là mặc định; thêm cái thứ hai, đặt làm mặc định → nhãn chuyển; số điện thoại sai → lỗi field; xóa → biến mất.
   - `/en/account` cùng luồng bằng tiếng Anh (một test ngắn).
+  - Đặt lại mật khẩu thu hồi phiên khác (dùng **user riêng** `e2e+<random>-reset@example.com` do global setup tạo, không đụng `storageState` dùng chung): đăng nhập user này ở hai browser context A và B; helper trong `scripts/e2e-user.ts` gọi `auth.admin.generateLink({ type: 'recovery', email })` lấy `hashed_token` (không gửi email); A mở `/api/auth/confirm?token_hash=…&type=recovery&next=…` → đặt mật khẩu mới → thành công. Kiểm tra: refresh token lấy từ cookie phiên của B bị từ chối (helper gọi `auth.refreshSession({ refresh_token })` bằng anon key → lỗi), refresh token của A vẫn dùng được, và đăng nhập bằng mật khẩu cũ thất bại. Không kiểm tra B bị đá ra ngay qua UI (access token còn hạn, xem giới hạn ở mục Auth).
   - Không lỗi console.
 - `npm run measure:js -- vi/books/<slug>`: header thay đổi không được làm tăng JS trang sách.
 
@@ -94,7 +98,8 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
 - [ ] `proxy.ts`: chặn `/tai-khoan/*` khi chưa đăng nhập, chuyển người đã đăng nhập khỏi trang đăng nhập/đăng ký
 - [ ] Header: trạng thái đăng nhập (Server Component trong `<Suspense>`); trang tài khoản + đăng xuất + ô chọn ngôn ngữ email (`profiles.locale`)
 - [ ] Sổ địa chỉ: queries, actions (tạo / sửa / xóa / đặt mặc định), `/api/divisions/[province]`, trang danh sách / thêm / sửa
-- [ ] e2e: global setup + teardown (`scripts/e2e-user.ts`), `storageState`, `e2e/account.spec.ts`
+- [ ] Đặt lại mật khẩu: `updatePassword` + `signOut({ scope: 'others' })`
+- [ ] e2e: global setup + teardown (`scripts/e2e-user.ts`, gồm user riêng cho test đặt lại mật khẩu + helper `generateLink` / kiểm tra refresh token), `storageState`, `e2e/account.spec.ts`
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách không tăng
 
 ---
@@ -110,7 +115,8 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
 7. **`profiles.locale`**: ghi theo locale lúc đăng ký + ô chọn "Ngôn ngữ email" trong trang tài khoản; không gắn vào LocaleSwitcher.
 8. **Tài khoản cho e2e**: global setup gọi `scripts/e2e-user.ts` (chạy local, `SUPABASE_SERVICE_ROLE_KEY` chỉ trong `scripts/`):
    - Email ngẫu nhiên mỗi lần chạy: `e2e+<random>@example.com`, mật khẩu ngẫu nhiên; tạo bằng `auth.admin.createUser({ email_confirm: true })` (không gửi email).
-   - **Trước khi tạo mới, dọn user e2e còn sót** (lần chạy trước bị ngắt): `auth.admin.listUsers` (phân trang), xóa mọi user có email khớp `e2e+*@example.com`. Teardown xóa user vừa tạo (cascade xóa profile + địa chỉ).
+   - **Trước khi tạo mới, dọn user e2e còn sót** (lần chạy trước bị ngắt): `auth.admin.listUsers` (phân trang), xóa mọi user có email khớp `e2e+*@example.com`. Teardown xóa các user vừa tạo (cascade xóa profile + địa chỉ). Ngoài user chính có thêm user `e2e+<random>-reset@example.com` chỉ dùng cho test đặt lại mật khẩu.
    - **Đăng nhập một lần** qua UI trong global setup, lưu `storageState` vào `e2e/.auth/user.json` (gitignore, cùng file thông tin đăng nhập cho test form đăng nhập); các test cần phiên dùng chung file này.
-   - Đăng xuất trong app dùng `signOut({ scope: 'local' })` (chỉ phiên hiện tại); test đăng xuất tự đăng nhập phiên riêng để không làm hỏng `storageState` dùng chung.
+   - Đăng xuất trong app dùng `signOut({ scope: 'local' })` (chỉ phiên hiện tại, **đã duyệt**); test đăng xuất tự đăng nhập phiên riêng để không làm hỏng `storageState` dùng chung.
+   - Đặt lại mật khẩu xong gọi `signOut({ scope: 'others' })`; test dùng user riêng (xem mục Test).
 9. **Trạng thái đăng nhập ở header**: Server Component trong `<Suspense>`, chỉ đổi icon/chữ cái đầu và link (0 JS thêm).
