@@ -28,3 +28,19 @@ export async function waitForHydration(page: Page, selector: string) {
     return element !== null && Object.keys(element).some((key) => key.startsWith('__reactProps'))
   }, selector)
 }
+
+/** Form địa chỉ (Phase 4), dùng ở sổ địa chỉ và luồng "Thêm địa chỉ" từ trang thanh toán */
+export async function fillAddress(
+  page: Page,
+  address: { name: string; phone: string; province: string; ward: string; street: string },
+) {
+  // Ô tỉnh nạp phường qua fetch trong onChange → phải chờ hydrate trước khi chọn
+  await waitForHydration(page, 'main form select[name="province"]')
+  await page.getByRole('main').getByLabel('Tên người nhận').fill(address.name)
+  await page.getByRole('main').getByLabel('Số điện thoại').fill(address.phone)
+  await page.getByRole('main').getByLabel('Tỉnh/Thành phố').selectOption({ label: address.province })
+  const ward = page.getByRole('main').getByLabel('Phường/Xã')
+  await expect(ward.locator('option', { hasText: address.ward })).toHaveCount(1)
+  await ward.selectOption({ label: address.ward })
+  await page.getByRole('main').getByLabel('Số nhà, tên đường').fill(address.street)
+}

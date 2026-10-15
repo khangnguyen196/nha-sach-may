@@ -1,7 +1,7 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import { canRefresh, canSignIn, clearAddresses, recoveryTokenHash, refreshTokenFromCookies } from '../scripts/e2e-user'
 import { fillLogin, login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
-import { collectErrors, waitForHydration } from './helpers'
+import { collectErrors, fillAddress, waitForHydration } from './helpers'
 
 // Mặc định mọi test dùng phiên đã đăng nhập sẵn của project (auth.setup.ts); test cần trạng thái khách tự bỏ phiên.
 const test = base.extend<{ users: ProjectUsers }>({
@@ -239,19 +239,4 @@ test.describe('đã đăng nhập', () => {
 
 function card(page: Page, name: string): Locator {
   return page.getByRole('main').getByRole('listitem').filter({ hasText: name })
-}
-
-async function fillAddress(
-  page: Page,
-  address: { name: string; phone: string; province: string; ward: string; street: string },
-) {
-  // Ô tỉnh nạp phường qua fetch trong onChange → phải chờ hydrate trước khi chọn
-  await waitForHydration(page, 'main form select[name="province"]')
-  await page.getByRole('main').getByLabel('Tên người nhận').fill(address.name)
-  await page.getByRole('main').getByLabel('Số điện thoại').fill(address.phone)
-  await page.getByRole('main').getByLabel('Tỉnh/Thành phố').selectOption({ label: address.province })
-  const ward = page.getByRole('main').getByLabel('Phường/Xã')
-  await expect(ward.locator('option', { hasText: address.ward })).toHaveCount(1)
-  await ward.selectOption({ label: address.ward })
-  await page.getByRole('main').getByLabel('Số nhà, tên đường').fill(address.street)
 }

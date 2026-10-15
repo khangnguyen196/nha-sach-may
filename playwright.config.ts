@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 3100
+// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout.spec.ts
+const ACCOUNT_SPECS = /(account|checkout)\.spec\.ts/
 
 export default defineConfig({
   testDir: './e2e',
@@ -19,18 +21,18 @@ export default defineConfig({
   projects: [
     // Catalog / layout: không cần tài khoản → chạy được không có SUPABASE_SERVICE_ROLE_KEY
     //   npx playwright test --project=desktop --project=mobile
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /account\.spec\.ts/ },
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: /account\.spec\.ts/ },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: ACCOUNT_SPECS },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: ACCOUNT_SPECS },
     // Tài khoản: setup tạo user test (admin API, cần SUPABASE_SERVICE_ROLE_KEY) + đăng nhập sẵn; teardown xóa user
     { name: 'setup', testMatch: /auth\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /auth\.teardown\.ts/ },
     {
       name: 'desktop-account',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: /account\.spec\.ts/,
+      testMatch: ACCOUNT_SPECS,
       dependencies: ['setup'],
     },
-    { name: 'mobile-account', use: { ...devices['Pixel 7'] }, testMatch: /account\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'mobile-account', use: { ...devices['Pixel 7'] }, testMatch: ACCOUNT_SPECS, dependencies: ['setup'] },
   ],
   // Chạy trên bản build production: e2e phải phản ánh đúng prerender / cache
   webServer: {

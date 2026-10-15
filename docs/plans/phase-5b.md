@@ -180,5 +180,5 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 - [x] `createAddress` nhận `returnTo` (trang thêm địa chỉ chỉ nhận `?next=` đúng bằng URL `/thanh-toan` của locale), nút Hủy về checkout
 - [x] Trang thành công (`features/orders/queries.ts → getOrderByCode`)
 - [x] Messages `checkout`, `order`, `errors.CART_CHANGED`, `validation.{address,note}`
-- [ ] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown
+- [ ] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown (xong 11 test × 2 project, user checkout riêng; còn `CART_CHANGED` + RPC idempotency, chờ migration)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo

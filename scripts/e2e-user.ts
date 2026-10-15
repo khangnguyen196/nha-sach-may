@@ -49,7 +49,7 @@ function anonClient() {
 
 const random = () => randomBytes(6).toString('hex')
 
-/** Xóa mọi user e2e còn sót (listUsers phân trang). Profile + địa chỉ xóa theo cascade. */
+/** Xóa mọi user e2e còn sót (listUsers phân trang) + đơn của họ + sách ẩn của test. Profile + địa chỉ xóa theo cascade. */
 export async function cleanupE2eUsers() {
   const admin = adminClient()
   const stale: string[] = []
@@ -60,10 +60,13 @@ export async function cleanupE2eUsers() {
     if (data.users.length < 1000) break
   }
   await deleteE2eUsers(stale)
+  await deleteHiddenBooks()
   return stale.length
 }
 
+/** Đơn của user bị hủy + xóa trước (hoàn tồn kho), rồi mới xóa user */
 export async function deleteE2eUsers(ids: string[]) {
+  await cancelAndDeleteOrders(ids)
   const admin = adminClient()
   for (const id of ids) {
     const { error } = await admin.auth.admin.deleteUser(id)
@@ -159,4 +162,105 @@ export async function findBooksByStock(min: number, max: number, limit = 1): Pro
     .limit(limit)
   if (error) throw new Error(`findBooksByStock: ${error.message}`)
   return data
+}
+
+/** Sách đang bán có tồn kho trong [min, max], id giảm dần: checkout lấy từ cuối danh sách để không trùng sách của spec giỏ */
+export async function findBooksByStockDesc(min: number, max: number, limit = 1): Promise<E2eBook[]> {
+  const { data, error } = await anonClient()
+    .from('books')
+    .select('id, slug, title, price, stock')
+    .gte('stock', min)
+    .lte('stock', max)
+    .order('id', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(`findBooksByStockDesc: ${error.message}`)
+  return data
+}
+
+/** Thêm địa chỉ (admin). Tên tỉnh / phường đầy đủ tiếng Việt như addressSchema ghi vào DB. */
+export async function seedAddress(userId: string, { recipient = 'Người Nhận E2E', isDefault = true } = {}) {
+  const { data, error } = await adminClient()
+    .from('addresses')
+    .insert({
+      user_id: userId,
+      recipient_name: recipient,
+      phone: '0912345678',
+      province: 'Thành phố Hà Nội',
+      ward: 'Phường Ba Đình',
+      street: '12 Phố Huế',
+      is_default: isDefault,
+    })
+    .select('id')
+    .single()
+  if (error) throw new Error(`seedAddress: ${error.message}`)
+  return data.id
+}
+
+export async function deleteAddress(id: number) {
+  const { error } = await adminClient().from('addresses').delete().eq('id', id)
+  if (error) throw new Error(`deleteAddress: ${error.message}`)
+}
+
+/** Đặt số lượng một dòng giỏ tài khoản (admin, bỏ qua kiểm tra tồn kho của app) */
+export async function setCartItem(userId: string, bookId: number, quantity: number) {
+  const { error } = await adminClient()
+    .from('cart_items')
+    .upsert({ user_id: userId, book_id: bookId, quantity }, { onConflict: 'user_id,book_id' })
+  if (error) throw new Error(`setCartItem: ${error.message}`)
+}
+
+export async function stockOf(bookId: number) {
+  const { data, error } = await adminClient().from('books').select('stock').eq('id', bookId).single()
+  if (error) throw new Error(`stockOf: ${error.message}`)
+  return data.stock
+}
+
+/** Đơn của user (admin), mới nhất trước, kèm dòng sách */
+export async function ordersOf(userId: string) {
+  const { data, error } = await adminClient()
+    .from('orders')
+    .select('id, order_code, status, payment_method, payment_status, note, subtotal, shipping_fee, total, order_items(book_id, quantity)')
+    .eq('user_id', userId)
+    .order('id', { ascending: false })
+  if (error) throw new Error(`ordersOf: ${error.message}`)
+  return data
+}
+
+/**
+ * Hủy rồi xóa mọi đơn của user. Hủy trước: trigger handle_order_status_change hoàn lại stock và sold_count của
+ * sách thật. Phải chạy trước khi xóa user (orders.user_id là on delete set null → đơn mồ côi, tồn kho bị trừ mãi).
+ */
+export async function cancelAndDeleteOrders(userIds: string[]) {
+  if (userIds.length === 0) return
+  const admin = adminClient()
+  const { error: cancelError } = await admin
+    .from('orders')
+    .update({ status: 'cancelled', cancelled_reason: 'e2e cleanup' })
+    .in('user_id', userIds)
+    .neq('status', 'cancelled')
+  if (cancelError) throw new Error(`cancelAndDeleteOrders (cancel): ${cancelError.message}`)
+  const { error } = await admin.from('orders').delete().in('user_id', userIds)
+  if (error) throw new Error(`cancelAndDeleteOrders (delete): ${error.message}`)
+}
+
+const HIDDEN_BOOK_SLUG = 'e2e-hidden-'
+
+/** Sách ẩn (is_active = false) tạm cho test BOOK_UNAVAILABLE: không bao giờ hiện ra catalog công khai */
+export async function createHiddenBook(): Promise<E2eBook> {
+  const suffix = random()
+  const { data, error } = await adminClient()
+    .from('books')
+    .insert({ title: `Sách ẩn E2E ${suffix}`, slug: `${HIDDEN_BOOK_SLUG}${suffix}`, price: 50_000, stock: 10, is_active: false })
+    .select('id, slug, title, price, stock')
+    .single()
+  if (error) throw new Error(`createHiddenBook: ${error.message}`)
+  return data
+}
+
+/** Xóa sách ẩn của e2e (cart_items xóa theo cascade); không truyền id → xóa mọi sách ẩn còn sót */
+export async function deleteHiddenBooks(id?: number) {
+  let query = adminClient().from('books').delete().like('slug', `${HIDDEN_BOOK_SLUG}%`).eq('is_active', false)
+  if (id !== undefined) query = query.eq('id', id)
+  const { error } = await query
+  if (error) throw new Error(`deleteHiddenBooks: ${error.message}`)
 }
