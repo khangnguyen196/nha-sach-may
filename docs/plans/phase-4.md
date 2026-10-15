@@ -1,6 +1,62 @@
 # Phase 4: Auth + sổ địa chỉ
 
-Trạng thái: **đã duyệt** (2026-10-15): chọn hết các ★, sửa mục 5 (nguồn dữ liệu hành chính) và mục 8 (tài khoản e2e). Xem "Quyết định đã duyệt" ở cuối.
+## Báo cáo (2026-10-15)
+
+**Đã xong**: toàn bộ Phase 4 trên nhánh `phase-4` (chưa merge). Đăng ký / đăng nhập / đăng xuất / quên + đặt lại mật khẩu (thu hồi phiên khác), `/api/auth/confirm`, proxy chặn `/tai-khoan/*`, trạng thái đăng nhập ở header, trang tài khoản (ngôn ngữ email), sổ địa chỉ (thêm / sửa / xóa / đặt mặc định) với dữ liệu hành chính 34 tỉnh / 3.321 phường. Chi tiết ở mục Tiến độ.
+
+**Việc của bạn**: làm theo "Việc của chủ dự án → Hướng dẫn từng bước" (URL Configuration, bật Confirm email, sửa 2 email template). e2e không phụ thuộc mấy bước này; chúng cần cho đăng ký / quên mật khẩu bằng tay. Lưu ý SMTP mặc định của Supabase chỉ gửi tới email thành viên organization.
+
+**Quyết định tự chọn / lệch plan, cần duyệt**:
+1. **Footer theo route group**: `<main>` + `Footer` chuyển từ `[locale]/layout.tsx` xuống `(shop)/layout.tsx`; `(auth)/layout.tsx` dùng `CompactFooter` (chỉ dòng bản quyền, đúng ý "không footer dày"); `not-found.tsx` tự dựng `<main>` + `Footer` vì boundary của nó nằm ngoài layout route group.
+2. **Thêm mã lỗi `SAME_PASSWORD`** (Supabase trả `same_password` khi đặt lại trùng mật khẩu cũ) và **namespace `validation`** cho lỗi từng ô: message trong zod là khóa (`passwordMin`, `phone`…), `VALIDATION_KEYS` trong `lib/errors.ts` có test khớp vi/en như `ERROR_CODES`.
+3. **Email template dùng `locale={{ .Data.locale }}` thay vì `next=`**: route chọn trang đích theo `type` (xác nhận → `/tai-khoan`, recovery → `/dat-lai-mat-khau`) đúng ngôn ngữ lúc đăng ký. `next` vẫn nhận (đã lọc bằng `safeNextPath`), e2e dùng.
+4. **e2e: mỗi project thiết bị một cặp user** (`e2e+<rand>-desktop`, `-desktop-reset`, `-mobile`, `-mobile-reset`), `storageState` riêng `e2e/.auth/{desktop,mobile}.json` + `credentials.json`, thay cho một `user.json`. Lý do: trên CI hai project chạy song song, dùng chung user thì test sổ địa chỉ / đổi mật khẩu giẫm lên nhau. Setup/teardown là **project Playwright** (`dependencies`) thay cho `globalSetup` (cần browser + webServer, có trace). Hệ quả: **mọi lần chạy e2e (kể cả catalog) cần `SUPABASE_SERVICE_ROLE_KEY`**.
+5. **Server Action không đọc được `next/root-params`** (docs Next 16) → `getLocale()`/`getTranslations()` không dùng được trong action. Locale do page bind sẵn (`signIn.bind(null, locale)`), action parse lại (`parseLocale`). Action trả **mã**; chuỗi lỗi đã dịch đi xuống form client qua props (`getFormMessages`), đúng quy ước client leaf không dùng `useTranslations`.
+6. **`src/i18n/paths.ts` → `localizedPath()`** cho proxy và Route Handler: `getPathname` của `i18n/navigation` kéo theo `i18n/request.ts` (`next/root-params`) nên không build được ở hai nơi đó. Page / Server Action vẫn dùng `getPathname`. Có test.
+7. **`useFormAction`** (`lib/use-form-action.ts`): `<form action>` của React 19 tự reset form sau khi action chạy → sai mật khẩu là mất email đã nhập. Hook dispatch trong `onSubmit` (có JS) để giữ dữ liệu; không JS thì form vẫn POST thẳng Server Action.
+8. **`await io()` trong `getCurrentUser`** trước `getClaims()`: Partial Prefetching prerender App Shell theo phiên, gặp `Date.now()` (Supabase so hạn token) thì log lỗi "unstable value Date.now()" ở mọi route đọc phiên. `io()` dừng prerender ở đó, request thật thì resolve ngay. Sau sửa: 0 lỗi server trong toàn bộ e2e.
+9. **`export const instant = false` ở trang sửa địa chỉ** (`[id]`): id không có `generateStaticParams` nên `LocaleSwitcher` (đọc `useParams`) làm build lỗi prerender. Trang riêng tư, render theo request là đủ.
+10. **Xác nhận xóa bằng `<details>`** (không JS, bàn phím dùng được, không kéo dialog vào bundle) thay vì modal.
+11. **`next` sau đăng nhập dùng `redirect` của `next/navigation`** (có `eslint-disable` + comment trong `features/auth/actions.ts`): `next` đã là URL hiển thị (`/tai-khoan/dia-chi`, `/en/account`), không phải pathname nội bộ nên không đi qua `redirect` của next-intl được.
+12. Nhỏ: điện thoại chỉ nhận `0…` hoặc `+84…` (không nhận `84…` trơn), bỏ khoảng trắng / chấm / gạch; mật khẩu tối đa 72 (giới hạn bcrypt); chữ cái ở header lấy từ **tên** (từ cuối: "Nguyễn Văn An" → "A"); `signUp` gặp email đã có vẫn hiện "Kiểm tra hộp thư"; quên mật khẩu chỉ báo lỗi `RATE_LIMITED`, lỗi khác vẫn hiện "đã gửi" (không lộ email nào có tài khoản).
+
+**Giới hạn / rủi ro đã biết**:
+- Ô phường/xã nạp qua `fetch` khi đổi tỉnh → **không JS thì không chọn được phường ở form thêm mới** (form sửa vẫn có sẵn phường của tỉnh đã lưu). Mọi form khác chạy được không JS.
+- Link xác nhận là GET và tiêu thụ token ngay: một số dịch vụ quét link trong email (Outlook Safe Links…) có thể "bấm" trước người dùng → link báo hết hạn. Cách xử lý phổ biến: trang trung gian có nút "Xác nhận" (POST). Đề xuất để Phase 9 (email theo locale).
+- Phiên trên thiết bị khác chỉ hết hạn thật khi access token hết hạn (≤ 1 giờ), như đã ghi ở mục Auth.
+
+**Bị chặn**: không. Không sửa schema, không chạy SQL, không mở `.env.local` (chỉ `check:env`), không thêm dependency. `scripts/e2e-user.ts` đọc env theo ngoại lệ đã duyệt.
+
+**Kết quả kiểm tra** (lần chạy cuối, commit `9b96d01`):
+- `typecheck`, `lint`, `build`: sạch.
+- `test` (Vitest): 95/95 (thêm 47: divisions, schemas auth + địa chỉ, `safeNextPath`, map `AuthError.code`, `invalidInput`, `VALIDATION_KEYS`, `localizedPath`, `initialOf`).
+- `test:e2e`: 68/68 (setup + teardown + 33 test × desktop/mobile, 1 worker), server không log lỗi nào. Riêng `account.spec.ts`: 13 test × 2.
+- Kiểm tra tay trên preview: `/dang-nhap`, `/en/register` (dark, desktop), lỗi từng ô ở light + mobile 375px.
+
+**Số đo JS** (`measure:js`, gzip, baseline 170KB):
+
+| Route | Tổng | Ngoài baseline | Ghi chú |
+|---|---|---|---|
+| `vi/books/ban-van` cuối Phase 3 | 203.2KB | 33.2KB | |
+| `vi/books/ban-van` trước khi đổi header | 203.5KB | 33.5KB | +0.3KB: bảng `pathnames` (8 route mới) + nhánh `[id]` của `LocaleSwitcher`, nằm trong config điều hướng client |
+| `vi/books/ban-van` sau khi đổi header | 203.5KB | **33.5KB** | header: **+0KB** (Server Component trong Suspense) |
+| `en/books/ban-van` | 203.5KB | 33.5KB | |
+| `vi/login` | 199.8KB | 29.8KB | |
+
+**Commit trên nhánh `phase-4`**:
+- `5c96fbb` feat(account): administrative divisions data from pinned source
+- `cbf00cc` feat(auth): auth routes, error codes, messages and server actions
+- `90eec2e` feat(auth): login, register, password reset pages, email confirm route, proxy guards
+- `28a9b2b` docs(phase-4): step-by-step Supabase Dashboard setup for auth emails
+- `4789b58` feat(account): header sign-in state, account page, address book
+- `9b96d01` test(e2e): account flows with per-project test users
+- commit cuối: docs (báo cáo này)
+
+**Đề xuất cập nhật CLAUDE.md** (chưa sửa, chờ bạn): thêm `npm run build:divisions` vào mục Lệnh; ghi 3 quy tắc mới: Server Action không đọc `next/root-params` (bind locale), proxy / Route Handler dùng `localizedPath` thay `getPathname`, e2e cần `SUPABASE_SERVICE_ROLE_KEY`.
+
+---
+
+Trạng thái: **đã xong trên nhánh `phase-4`, chưa merge** (2026-10-15). Plan đã duyệt: chọn hết các ★, sửa mục 5 (nguồn dữ liệu hành chính) và mục 8 (tài khoản e2e). Xem "Quyết định đã duyệt" ở cuối.
 
 Phạm vi: đăng ký, đăng nhập, đăng xuất, quên/đặt lại mật khẩu, bảo vệ khu tài khoản, sổ địa chỉ (thêm / sửa / xóa / đặt mặc định), trạng thái đăng nhập ở header. Không có giỏ hàng và `merge_cart` (Phase 5), danh sách đơn hàng (Phase 6), email theo locale (Phase 9), captcha (Phase 10).
 
@@ -144,7 +200,7 @@ Ghi chú về template:
 - [x] Sổ địa chỉ: queries, actions (tạo / sửa / xóa / đặt mặc định), `/api/divisions/[province]`, trang danh sách / thêm / sửa
 - [x] Đặt lại mật khẩu: `updatePassword` + `signOut({ scope: 'others' })`
 - [x] e2e: global setup + teardown (`scripts/e2e-user.ts`, gồm user riêng cho test đặt lại mật khẩu + helper `generateLink` / kiểm tra refresh token), `storageState`, `e2e/account.spec.ts`
-- [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách không tăng
+- [x] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách: header +0KB (bảng pathnames +0.3KB, xem Báo cáo)
 
 ---
 
