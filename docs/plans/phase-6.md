@@ -109,12 +109,12 @@ Trang danh sách: 0 JS thêm (Server Component + link). Trang chi tiết: form h
 
 ## Tiến độ
 
-- [ ] Routing `/account/orders`, `/account/orders/[code]`; thẻ "Đơn hàng của tôi" ở trang tài khoản
+- [x] Routing `/account/orders`, `/account/orders/[code]`; thẻ "Đơn hàng của tôi" ở trang tài khoản
 - [x] `features/orders/{queries,params,schemas,actions,cache,utils}.ts` + Vitest
-- [ ] Trang danh sách (lọc, phân trang, rỗng, skeleton)
-- [ ] Component `OrderDetails` dùng chung; trang chi tiết; link "Xem đơn hàng" ở trang thành công
-- [ ] Hủy đơn + `updateTag`; checkout dùng chung `expireOrderBooks`
-- [ ] Messages
+- [x] Trang danh sách (lọc, phân trang, rỗng, skeleton)
+- [x] Component `OrderDetails` dùng chung; trang chi tiết; link "Xem đơn hàng" ở trang thành công
+- [x] Hủy đơn + `updateTag`; checkout dùng chung `expireOrderBooks`
+- [x] Messages
 - [ ] e2e `orders.spec.ts` + helper
 - [ ] Trang lỗi: `ErrorView` + context chuỗi, `[locale]/error.tsx`, `(shop)/error.tsx`, `global-error.tsx`, `admin/error.tsx`; tiêm lỗi e2e; `error-page.spec.ts`
 - [x] CLAUDE.md: lộ trình Phase 9 (không tự hủy đơn đã thanh toán)

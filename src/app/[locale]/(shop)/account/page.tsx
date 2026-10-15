@@ -1,4 +1,4 @@
-import { ChevronRightIcon, MapPinIcon } from 'lucide-react'
+import { ChevronRightIcon, MapPinIcon, PackageIcon, type LucideIcon } from 'lucide-react'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
@@ -49,17 +49,13 @@ async function AccountContent({ locale }: { locale: Locale }) {
         <dd className="mt-1 font-medium break-all">{user.email}</dd>
       </dl>
 
-      <Link
+      <AccountCard href="/account/orders" icon={PackageIcon} title={t('orders')} description={t('ordersDescription')} />
+      <AccountCard
         href="/account/addresses"
-        className="group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <MapPinIcon aria-hidden className="size-5 shrink-0 text-primary" />
-        <span className="flex-1">
-          <span className="block font-medium">{t('addresses')}</span>
-          <span className="mt-0.5 block text-sm text-muted-foreground">{t('addressesDescription')}</span>
-        </span>
-        <ChevronRightIcon aria-hidden className="size-4 text-muted-foreground" />
-      </Link>
+        icon={MapPinIcon}
+        title={t('addresses')}
+        description={t('addressesDescription')}
+      />
 
       <section className="mt-4 rounded-lg border bg-surface p-5">
         <EmailLocaleForm
@@ -87,11 +83,35 @@ async function AccountContent({ locale }: { locale: Locale }) {
   )
 }
 
+type AccountCardProps = {
+  href: '/account/orders' | '/account/addresses'
+  icon: LucideIcon
+  title: string
+  description: string
+}
+
+function AccountCard({ href, icon: Icon, title, description }: AccountCardProps) {
+  return (
+    <Link
+      href={href}
+      className="group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <Icon aria-hidden className="size-5 shrink-0 text-primary" />
+      <span className="flex-1">
+        <span className="block font-medium">{title}</span>
+        <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
+      </span>
+      <ChevronRightIcon aria-hidden className="size-4 text-muted-foreground" />
+    </Link>
+  )
+}
+
 function AccountSkeleton() {
   return (
     <div aria-hidden className="animate-pulse">
       <div className="mt-3 h-5 w-48 rounded-sm bg-surface-raised" />
       <div className="mt-8 h-[78px] rounded-lg bg-surface-raised" />
+      <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[170px] rounded-lg bg-surface-raised" />
     </div>
