@@ -1,6 +1,50 @@
 # Phase 5b: Checkout COD + trang đặt hàng thành công
 
-Trạng thái: **đã duyệt** (2026-10-15): chọn hết các ★, sửa 2 điểm (xem "Sửa khi duyệt"). Làm trên nhánh `phase-5b`.
+Trạng thái: **đã xong trên nhánh `phase-5b`, chưa merge** (2026-10-15). Plan đã duyệt: chọn hết các ★, sửa 2 điểm (xem "Sửa khi duyệt").
+
+## Báo cáo (2026-10-15)
+
+**Đã xong**: toàn bộ Phase 5b. Gồm trang `/thanh-toan` (chọn địa chỉ đã lưu, ghi chú có bộ đếm, COD, tóm tắt lấy từ `quote_order`) và Server Action `placeOrder` gọi `place_order` có idempotency key + `p_expected_total`. Mỗi mã lỗi có khối lỗi riêng kèm một hành động sửa. Giỏ có vấn đề hoặc chưa có địa chỉ thì chặn ngay lúc mở trang. Nút khóa trong lúc giỏ khách còn đang gộp. Thêm địa chỉ từ checkout xong thì quay lại checkout với địa chỉ mới được chọn sẵn. Trang `/thanh-toan/thanh-cong/[code]` hiện mã đơn, ngày đặt, số tiền COD, địa chỉ, sách đã đặt. Đặt hàng xong thì `updateTag('book:{id}')`; các danh sách sách có thêm tag theo từng cuốn. Chi tiết ở mục Tiến độ.
+
+**Việc của bạn**: không còn. Migration đã chạy (bạn kiểm tra trước trên Postgres local), types tôi sinh lại bằng Supabase CLI (commit `f87b469`).
+
+**Quyết định tự chọn / lệch plan** (7 điểm đầu bạn đã duyệt):
+1. `place_order` (a) dùng `pg_advisory_xact_lock(user, key)` thay cho "kiểm tra key lần nữa sau vòng khóa giỏ".
+2. Không gắn tag `book:{id}` cho `searchBookHits` (gợi ý không hiện giá / tồn kho).
+3. `createAddress(locale, returnTo)`: chỉ nhận `'checkout'`. Trang thêm địa chỉ chỉ chấp nhận `?next=` khi nó đúng bằng URL `/thanh-toan` của locale hiện tại; nút Hủy về checkout.
+4. Mọi lỗi nghiệp vụ đều `refresh()`, trừ `UNKNOWN` (giữ key cho lần bấm lại) và `INVALID_INPUT`.
+5. `INVALID_ADDRESS`: focus vào khối lỗi, kèm link `#checkout-address` "Chọn địa chỉ khác".
+6. `useFormAction` bỏ qua submit khi đang gửi (`useActionState` xếp hàng các lần dispatch chứ không bỏ). Áp dụng cho mọi form dùng hook này (đăng nhập, đăng ký, địa chỉ…).
+7. e2e có user checkout riêng cho mỗi project, phiên lưu ở `e2e/.auth/<project>-checkout.json`. `deleteE2eUsers` hủy rồi xóa đơn trước khi xóa user. `cleanupE2eUsers` dọn thêm sách ẩn `e2e-hidden-*`.
+8. (Mới) Locator trong `checkout.spec.ts` chỉ tìm trong `<main>`. Ngay sau hydrate, React có thể còn giữ một bản sao ẩn của boundary đang stream (`<div hidden id="S:…">` cuối body), nên locator theo test id khớp 2 phần tử. Bản sao này tự mất sau khoảng 200ms, không ảnh hưởng người dùng.
+9. (Mới) Thêm `TextAreaField` vào `components/ui/field.tsx`, cùng khung với `TextField`. `fillAddress` chuyển từ `account.spec.ts` sang `e2e/helpers.ts` (hai spec cùng dùng).
+10. (Mới) `checkoutSchema` đổi CRLF → LF trước khi đếm ghi chú: trình duyệt gửi xuống dòng của textarea dạng CRLF, còn `maxLength` / bộ đếm tính LF.
+
+**Giới hạn / rủi ro đã biết**:
+- Gộp giỏ khách lỗi thì localStorage vẫn còn hàng, nút "Đặt hàng" khóa ở "Đang cập nhật giỏ hàng…" tới lần tải trang sau.
+- Hủy đơn (admin, e2e dọn dẹp) hoàn kho ở DB nhưng không làm mới cache: trang sách hiện tồn kho cũ tới khi hết `hours`. Phase 6 (`cancel_order`) nên `updateTag('book:{id}')`.
+- Server Action lỗi mạng hẳn (request không tới được server) thì `useActionState` ném lỗi lên error boundary chứ không hiện khối lỗi. Bấm lại vẫn an toàn nhờ idempotency key, nhưng trang lỗi mặc định khá thô. Chưa xử lý.
+- Ảnh `7-empty` của lần xem tay chụp lúc skeleton còn hiện; trạng thái rỗng thật đã có e2e `CART_EMPTY` kiểm tra.
+
+**Kết quả kiểm tra**:
+- `typecheck`, `lint`, `build`: sạch.
+- `test` (Vitest): 173/173 (thêm `checkoutSchema`: trim, rỗng → null, 500/501, CRLF, `address_id`, uuid, `expected_total`).
+- `test:e2e`: 13 test checkout × 2 project, qua hết (26/26) ở lần chạy riêng sau migration. Lần chạy toàn bộ trên code cuối: 117/118. Test fail là đăng nhập ở `account.spec` (mobile): nút "Đang xử lý…" chờ Supabase Auth quá 20s. Test đó qua 4/4 khi chạy lại riêng. Các lần chạy sau đó hỏng do mạng tới Supabase (`fetch failed` ngay trong helper admin ở Node, trang dừng ở skeleton). Lỗi này nằm ngoài app; cần chạy lại khi mạng ổn để có một lượt sạch hoàn toàn.
+- Xem tay (spec Playwright tạm, không commit; bản build production; desktop + mobile, dark + light): checkout, `CART_CHANGED` hiện tổng mới + khối lỗi, chặn sớm khi vượt tồn kho, trang thành công.
+
+**Số đo JS** (`measure:js`, gzip, baseline 170KB):
+
+| Route | Tổng | Ngoài baseline | Ghi chú |
+|---|---|---|---|
+| `vi` | 205.4KB | 35.4KB | |
+| `vi/books/<slug>` | 206.1KB | 36.1KB | 5a: 36.0KB |
+| `vi/cart` | 209.6KB | 39.6KB | |
+| `vi/checkout` | 207.5KB | 37.5KB | form + `useFormAction` + store giỏ |
+
+**Đề xuất cập nhật CLAUDE.md** (chưa làm, chờ duyệt):
+- Lệnh: `npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts` (CLI đã đăng nhập trên máy này).
+- `place_order` nhận `p_idempotency_key`, `p_expected_total`; `CART_CHANGED` là mã của DB. Giá trị ngẫu nhiên / theo thời gian (idempotency key) chỉ sinh trong phần động sau khi đọc phiên.
+- e2e: spec cần user dùng `ACCOUNT_SPECS` (`(account|checkout)\.spec\.ts`); locator đặt trong `<main>` khi trang có Suspense stream.
 
 ## Sửa khi duyệt
 
@@ -181,4 +225,4 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 - [x] Trang thành công (`features/orders/queries.ts → getOrderByCode`)
 - [x] Messages `checkout`, `order`, `errors.CART_CHANGED`, `validation.{address,note}`
 - [x] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown (13 test × 2 project, user checkout riêng)
-- [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo
+- [x] typecheck / lint / build / test sạch; e2e checkout 26/26, toàn bộ 117/118 (1 lỗi mạng, xem Báo cáo); `measure:js`; báo cáo
