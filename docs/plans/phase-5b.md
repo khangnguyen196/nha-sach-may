@@ -1,6 +1,17 @@
 # Phase 5b: Checkout COD + trang đặt hàng thành công
 
-Trạng thái: **chờ duyệt** (2026-10-15). Chỉ có plan, chưa code.
+Trạng thái: **đã duyệt** (2026-10-15): chọn hết các ★, sửa 2 điểm (xem "Sửa khi duyệt"). Làm trên nhánh `phase-5b`.
+
+## Sửa khi duyệt
+
+1. **Mục 1 và 3 xung đột.** Bản cũ: action gọi `quote_order` (so `expected_total`) **trước** `place_order`. Gửi lại sau khi mất phản hồi (đơn đã tạo, giỏ đã rỗng) thì quote = 0 ≠ `expected_total` → `CART_CHANGED`, thay vì trả lại đơn cũ như mục 1 hứa.
+   Sửa: phép so nằm trong `place_order`, tham số `p_expected_total int default null`, cùng migration idempotency. Thứ tự trong hàm:
+   (a) key đã có đơn → trả đơn đó;
+   (b) khóa giỏ, tính tiền;
+   (c) `p_expected_total` khác tổng vừa tính → `raise 'CART_CHANGED'` (detail: `{"total": <tổng mới>}`);
+   (d) đặt hàng.
+   Action **bỏ** lời gọi `quote_order`. `CART_CHANGED` là mã của DB: có trong danh sách mã lỗi cuối `schema.sql`. Có test (e2e gọi RPC) cho ca "gửi lại cùng key sau khi đơn đã tạo → trả đơn cũ, không `CART_CHANGED`".
+2. **Idempotency key sinh trong phần động của trang** (trong `<Suspense>`, sau khi đọc phiên), không ở static shell: giá trị ngẫu nhiên trong phần prerender sẽ lỗi build hoặc bị đóng băng vào HTML tĩnh (giống lỗi `Date.now()` ở Phase 4).
 
 Phạm vi: trang `/thanh-toan` (chọn địa chỉ đã lưu, ghi chú, COD), Server Action `placeOrder` gọi RPC `place_order`, xử lý từng mã lỗi ở UI, chống đặt trùng, làm mới cache tồn kho sau khi đặt, trang đặt hàng thành công. **Không** có: voucher và VietQR (Phase 9), danh sách / chi tiết / hủy đơn trong tài khoản (Phase 6), email xác nhận đơn (Phase 9).
 
@@ -20,7 +31,7 @@ Phạm vi: trang `/thanh-toan` (chọn địa chỉ đã lưu, ghi chú, COD), S
    - Cả ba phương án: gặp `OUT_OF_STOCK` / `BOOK_UNAVAILABLE` cũng `updateTag('book:{book_id}')` của sách trong `details`, vì lỗi này có nghĩa cache đang cũ.
 
 3. **Tổng tiền đổi giữa lúc xem và lúc bấm** (giỏ bị sửa ở tab khác, admin đổi giá)
-   - ★ Form gửi kèm tổng tiền đang hiển thị (hidden input, **chỉ để so sánh**, không dùng để tính). Action gọi `quote_order` ngay trước `place_order`, lệch thì không đặt, trả `CART_CHANGED` (mã mới, chỉ ở app) + `refresh()` để trang hiện số mới, kèm thông báo "Giỏ hàng vừa thay đổi, kiểm tra lại trước khi đặt". Tốn thêm 1 RPC mỗi đơn. Vẫn còn khe hở rất nhỏ giữa hai RPC, chấp nhận được với COD.
+   - ★ Form gửi kèm tổng tiền đang hiển thị (hidden input, **chỉ để so sánh**, không dùng để tính). ~~Action gọi `quote_order` ngay trước `place_order`~~ → **`place_order(p_expected_total)` tự so** sau khi khóa giỏ (xem "Sửa khi duyệt" 1). Lệch thì không đặt, raise `CART_CHANGED`, action `refresh()` để trang hiện số mới, kèm thông báo "Giỏ hàng vừa thay đổi, kiểm tra lại trước khi đặt". Không tốn thêm RPC, không còn khe hở giữa hai lần đọc.
    - Không kiểm tra; trang thành công hiện số thật của đơn.
 
 4. **Chưa có địa chỉ / muốn thêm địa chỉ mới**
@@ -62,16 +73,17 @@ Phạm vi: trang `/thanh-toan` (chọn địa chỉ đã lưu, ghi chú, COD), S
 
 `supabase/migrations/<ngày>_place_order_idempotency.sql` + cập nhật `schema.sql`:
 - `orders.idempotency_key uuid` (nullable) + `unique (user_id, idempotency_key)`.
-- `place_order(p_address_id, p_payment_method, p_voucher_code, p_note, p_idempotency_key uuid default null)`. Đổi chữ ký nên phải `drop function` bản 4 tham số rồi tạo lại, cấp lại `grant execute … to authenticated` / `revoke … from public, anon`.
-  - Đầu hàm: key đã có đơn của user này → `return` đơn đó.
-  - Sau vòng khóa giỏ, nếu giỏ rỗng: kiểm tra key **lần nữa** (request song song cùng key chờ khóa xong thì thấy giỏ đã bị đơn đầu xóa) → có đơn thì trả đơn đó, không có thì `CART_EMPTY`.
-  - `insert` có ghi key. `unique` là chốt cuối nếu hai request cùng key lọt qua cả hai lần kiểm tra.
+- `place_order(p_address_id, p_payment_method, p_voucher_code, p_note, p_idempotency_key uuid default null, p_expected_total int default null)`. Đổi chữ ký nên phải `drop function` bản 4 tham số rồi tạo lại, cấp lại `grant execute … to authenticated` / `revoke … from public, anon`.
+  - (a) Có key: `pg_advisory_xact_lock` theo (user, key), rồi tìm đơn theo key → có thì `return` đơn đó. Request song song cùng key chờ ở khóa này tới khi request đầu commit, rồi thấy đơn của nó. Thay cho "kiểm tra key lần nữa sau vòng khóa giỏ" của bản plan đầu: bản đó trượt khi giỏ có thêm dòng trong lúc chờ (dòng mới làm tổng lệch → `CART_CHANGED` / `OUT_OF_STOCK` thay vì trả đơn cũ).
+  - (b) Khóa giỏ + sách, tính tiền (như cũ). Giỏ rỗng → `CART_EMPTY`.
+  - (c) `p_expected_total` khác `subtotal + shipping - discount` → `CART_CHANGED` (detail `{"total": …}`), trước khi tăng `used_count` của voucher.
+  - (d) `insert` có ghi key. `unique (user_id, idempotency_key)` là chốt cuối.
 - Sinh lại `src/types/database.ts`.
 - Không đổi RLS.
 
 ## Trang `/thanh-toan`
 
-- Static shell: tiêu đề. Phần đọc phiên trong `<Suspense>` với skeleton đúng kích thước. Dữ liệu: `getCart()`, `getCartQuote()`, `getAddresses()` chạy song song (`Promise.all`).
+- Static shell: tiêu đề. Idempotency key (`crypto.randomUUID()`) sinh trong phần động, sau khi đọc phiên (xem "Sửa khi duyệt" 2). Phần đọc phiên trong `<Suspense>` với skeleton đúng kích thước. Dữ liệu: `getCart()`, `getCartQuote()`, `getAddresses()` chạy song song (`Promise.all`).
 - Bố cục 2 cột như trang giỏ: trái là **Địa chỉ giao hàng** (radio gốc theo từng địa chỉ đã lưu, mặc định chọn sẵn địa chỉ `is_default` hoặc `?address=`, link "Thêm địa chỉ", cần chọn 4 ★), **Ghi chú** (textarea, tối đa 500, đếm ký tự), **Thanh toán** (chỉ "Thanh toán khi nhận hàng (COD)", server tự đặt `cod`, client không gửi). Phải là tóm tắt đơn: các dòng (bìa nhỏ `alt=""`, tên, số lượng, thành tiền), tạm tính / phí giao hàng / tổng từ `quote_order`, link "Sửa giỏ hàng", nút "Đặt hàng" (CTA duy nhất).
 - Form là `<form action>` gọi Server Action. Chưa có JS vẫn đặt được (radio + textarea gốc). Có JS thì dùng `useFormAction` (Phase 4): giữ dữ liệu đã nhập khi lỗi, lỗi từng ô, `pending`.
 - Client leaf duy nhất: form (nút + khối lỗi + bộ đếm ghi chú + khóa khi chờ gộp giỏ). Phần tóm tắt là Server Component.
@@ -82,8 +94,8 @@ Phạm vi: trang `/thanh-toan` (chọn địa chỉ đã lưu, ghi chú, COD), S
 `placeOrder(locale, prev, formData)`, locale bind sẵn:
 1. Parse bằng zod (`features/checkout/schemas.ts`): `address_id` (số nguyên dương), `note` (trim, ≤ 500, rỗng → null), `idempotency_key` (uuid), `expected_total` (số nguyên ≥ 0, chỉ để so sánh).
 2. `getCurrentUser()`; không có → `redirect` sang đăng nhập với `next=/thanh-toan`.
-3. `quote_order()`; `total` khác `expected_total` → `refresh()` + `CART_CHANGED` (cần chọn 3 ★).
-4. `place_order({ p_address_id, p_note, p_idempotency_key })`. `p_payment_method` để mặc định `cod`, `p_voucher_code` để null (Phase 9).
+3. ~~`quote_order()` rồi so `expected_total`~~ (bỏ, xem "Sửa khi duyệt" 1).
+4. `place_order({ p_address_id, p_note, p_idempotency_key, p_expected_total })`. `p_payment_method` để mặc định `cod`, `p_voucher_code` để null (Phase 9).
 5. Thành công: lấy `book_id` của đơn (`order_items` theo `order_id`, một query), `updateTag('book:{id}')` cho từng sách, rồi `redirect` sang trang thành công theo `order_code`.
 6. Lỗi: `toFailure` → `withMessage(locale, …)`. `OUT_OF_STOCK` / `BOOK_UNAVAILABLE` thì `updateTag('book:{book_id}')` (cần chọn 2). `INVALID_ADDRESS` / `CART_EMPTY` / `CART_CHANGED` thì `refresh()` để trang hiện trạng thái thật.
 
@@ -98,11 +110,11 @@ Client không gửi giá, phí ship hay tổng để tính tiền (đúng CLAUDE
 | `INVALID_ADDRESS` | địa chỉ bị xóa / sửa ở tab khác | Địa chỉ này không còn. Hãy chọn địa chỉ khác. | `refresh()`: danh sách địa chỉ cập nhật, focus về nhóm radio; không còn địa chỉ nào thì hiện link "Thêm địa chỉ" |
 | `CART_EMPTY` | giỏ trống (đã đặt ở tab khác với key khác, hoặc xóa hết ở tab khác) | Giỏ hàng đang trống. | `refresh()` → trang hiện `EmptyState` + link về trang chủ |
 | `INVALID_INPUT` | ghi chú > 500, `address_id` / key hỏng | Lỗi tại ô ghi chú ("Ghi chú tối đa 500 ký tự") | Sửa tại chỗ, không mất nội dung đã nhập |
-| `CART_CHANGED` (mới, chỉ ở app) | tổng tiền đổi giữa lúc xem và lúc bấm | Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng. | `refresh()` → tóm tắt hiện số mới, bấm lại |
+| `CART_CHANGED` (mới, từ `place_order`) | tổng tiền đổi giữa lúc xem và lúc bấm | Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng. | `refresh()` → tóm tắt hiện số mới, bấm lại |
 | `AUTH_REQUIRED` | phiên hết hạn | (không hiện) | Chuyển sang đăng nhập, `next=/thanh-toan` |
 | `UNKNOWN` | lỗi mạng / DB | Đã có lỗi xảy ra. Vui lòng thử lại. | Bấm lại (cùng idempotency key nên không tạo đơn thứ hai) |
 
-`INVALID_VOUCHER` / `VOUCHER_MIN_ORDER` thuộc Phase 9. `CART_CHANGED` thêm vào `ERROR_CODES` + `messages/*.json → errors` (có test khớp vi/en sẵn).
+`INVALID_VOUCHER` / `VOUCHER_MIN_ORDER` thuộc Phase 9. `CART_CHANGED` thêm vào danh sách mã lỗi cuối `schema.sql`, `ERROR_CODES` + `messages/*.json → errors` (có test khớp vi/en sẵn).
 
 ## Chống bấm 2 lần ở UI
 
@@ -139,6 +151,7 @@ Namespace `checkout` (tiêu đề, địa chỉ, thêm địa chỉ, ghi chú + 
   - Chưa có địa chỉ → link "Thêm địa chỉ" → lưu → quay lại `/thanh-toan` với địa chỉ mới được chọn sẵn.
   - Bấm "Đặt hàng" 2 lần liên tiếp (double click) → đúng 1 đơn, tới trang thành công, không hiện lỗi.
   - Cùng idempotency key gửi 2 lần song song (gọi RPC bằng phiên của user e2e trong `scripts/e2e-user.ts`) → cùng một `order_id`.
+  - Gửi lại cùng key + cùng `p_expected_total` **sau khi** đơn đã tạo (giỏ đã rỗng) → trả đúng đơn cũ, không `CART_CHANGED` / `CART_EMPTY`.
   - `OUT_OF_STOCK`: admin đặt số lượng trong giỏ = `stock + 1` → đặt hàng → thông báo đúng tên + tồn kho → link về giỏ → giỏ có cảnh báo "Chỉ còn N cuốn" + "Giảm còn N".
   - `BOOK_UNAVAILABLE`: sách ẩn tạo tạm, thêm vào giỏ bằng admin → checkout chặn sớm (cần chọn 7). Gọi thẳng action bằng form khi trang đã mở trước lúc ẩn sách (ẩn sau khi mở trang) → thông báo + link về giỏ.
   - `INVALID_ADDRESS`: mở checkout, admin xóa địa chỉ đang chọn → đặt hàng → thông báo, danh sách địa chỉ cập nhật.
