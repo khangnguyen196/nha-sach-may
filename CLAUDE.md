@@ -26,6 +26,8 @@ npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
+npm run covers -- --measure                               # ghi books.cover_width cho bìa chưa đo (không gọi API ngoài)
+npm run covers -- --openlibrary --dry-run | --apply <file>  # bìa lớn hơn từ Open Library: xem trước + lưới so sánh → duyệt → ghi
 npx playwright test --project=desktop --project=mobile    # e2e catalog/layout, không cần SUPABASE_SERVICE_ROLE_KEY
 npx playwright test --project=desktop-admin --project=mobile-admin   # e2e admin (cần SUPABASE_SERVICE_ROLE_KEY)
 ```
@@ -134,6 +136,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
   | vi | en |
   |---|---|
   | `/danh-muc/[slug]` | `/en/categories/[slug]` |
+  | `/sach` (tất cả sách) | `/en/books` |
   | `/sach/[slug]` | `/en/books/[slug]` |
   | `/tac-gia/[slug]` | `/en/authors/[slug]` |
   | `/tim-kiem` | `/en/search` |
@@ -164,7 +167,7 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 - Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
 - Quyền cột (migration `admin.sql`): `orders` chỉ update được `status`, `payment_status`, `cancelled_reason`; `books` không update được cột do DB quản lý. Admin thêm ô sửa cột mới của `books` → thêm cột vào `grant update (…)`.
 - Luồng trạng thái đơn chặn ở trigger `handle_order_status_change` (mọi role, kể cả service role; bảng chuyển trong `private.order_status_transition_allowed`): `pending → confirmed → shipping → delivered`, hủy được từ 3 trạng thái đầu; `delivered`, `cancelled` là trạng thái cuối (`ORDER_INVALID_TRANSITION`, `ORDER_REOPEN_FORBIDDEN`). COD chuyển `delivered` → `payment_status = 'paid'`. App có bản trùng `nextStatuses` (`features/admin/orders/status.ts`, Vitest đọc bảng trong `schema.sql`): sửa luồng thì sửa cả hai. Admin đổi trạng thái bằng update có điều kiện `status = <trạng thái đang hiển thị>`: 0 dòng (khách vừa tự hủy…) → `ORDER_STATUS_CHANGED` + `refresh()`.
-- Bucket `book-covers` chỉ nhận `image/webp` ≤ 1MB. Ảnh bìa qua `toCoverWebp` (`lib/cover-image.ts`, dùng chung import và admin); admin lưu tên mới mỗi lần (`<book_id>-<8 hex>.webp`, ảnh cũ bị CDN cache 1 năm), chỉ xóa ảnh cũ khi không đơn nào còn trỏ tới (`order_items.cover_url`).
+- Bucket `book-covers` chỉ nhận `image/webp` ≤ 1MB. Ảnh bìa qua `toCoverWebp` (`lib/cover-image.ts`, dùng chung import và admin); admin lưu tên mới mỗi lần (`<book_id>-<8 hex>.webp`, ảnh cũ bị CDN cache 1 năm), chỉ xóa ảnh cũ khi không đơn nào còn trỏ tới (`order_items.cover_url`). `toCoverWebp` trả kèm chiều rộng thật → import, admin upload, `scripts/covers.ts` ghi `books.cover_width` (kệ trang chủ ưu tiên bìa ≥ `SHARP_COVER_WIDTH` = 300px; null = chưa đo).
 - RPC cho app: `search_books`, `quote_order`, `quote_items`, `place_order`, `cancel_order`, `set_default_address`, `merge_cart` (danh sách + mã lỗi ở cuối `schema.sql`). Hàm nội bộ nằm trong schema `private`, không lộ ra API.
 - Tìm kiếm qua RPC `search_books(q)`: gõ không dấu, khớp từng từ không cần đúng thứ tự. Phân trang bằng `.range()` + `count: 'exact'` (`estimated` trên RPC không chính xác).
 - Sách chỉ gắn vào danh mục lá. Trang danh mục cha lọc `category_id in (<id các danh mục con>)`.
@@ -182,6 +185,7 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 - Ảnh bìa **không hotlink** Google. Dry-run ghi 2 URL vào preview: `cover_small` (~128px, từ kết quả search) và `cover_large` (từ endpoint chi tiết, chỉ khi `--hires-covers`). Lúc ghi DB, script tải ảnh lớn; nếu tải lỗi hoặc là PNG < 40KB (thường là trang lót toàn chữ, không phải bìa) thì dùng ảnh nhỏ. Sau đó dùng `sharp` (có sẵn theo Next) thu về WebP rộng 600px (ảnh nhỏ giữ nguyên cỡ), upload `book-covers/<isbn>.webp` rồi ghi public URL vào `cover_url`. `images.remotePatterns` chỉ cho host Storage của project, đường dẫn `book-covers`.
 - `mapVolume` chỉ giữ sách có `volumeInfo.language === 'vi'` (`langRestrict` của API không đủ chặt), chuẩn hóa chuỗi (title, subtitle, authors, publisher, description) bằng `normalizeText` và loại sách có `¿`/`�` trong tên. `normalizeText` = NFD → đưa dấu mũ/trăng (U+0302/U+0306) lên trước dấu thanh → NFC; chỉ NFC không sửa được "Nguyẽ̂n" vì hai dấu cùng combining class 230.
 - **Giới hạn của Google Books với sách Việt** (đo ngày 2026-10-14): rất ít sách Việt có ISBN (mẫu: 11–15/20 kết quả thiếu ISBN), nên mỗi trang 20 kết quả chỉ ra khoảng 3 sách dùng được. Đã bỏ `intitle:` và `subject:` vì kết hợp với `langRestrict=vi` cho kết quả không ổn định (thường ra 0). Catalog hiện có 189 sách (lượt C: 49, lượt A + D: 140, chi tiết và danh sách sách đã loại trong `docs/plans/data.md`); lượt mở rộng dùng từ khóa trơn + `inauthor:`/`inpublisher:`.
+- Bìa mờ (< 300px) thay bằng bìa Open Library qua `scripts/covers.ts` (một request / ISBN, giãn ≥ 3.5 giây, dừng khi 403 / 429; chỉ đụng bìa tên `<isbn>.webp` của import; ghi tên mới `ol-<isbn>-<8 hex>.webp`). Điều khoản + kết quả lượt 2026-10-16 trong `docs/plans/data.md`; footer ghi nguồn Open Library. Chạy trước khi build / deploy (script không gọi được `updateTag`).
 - Bìa "ảnh lớn" của Google có thể chỉ rộng 128px, hoặc là trang lót dạng JPEG (bộ lọc PNG < 40KB không bắt được). Sau import nên xem lại bìa; bìa sai thì thay trong admin (Phase 7).
 - `description_en` để trống thì fallback về tiếng Việt. Có thể bổ sung bằng script riêng sau.
 - Dữ liệu từ nguồn ngoài có thể bẩn (thiếu mô tả, tên NXB không thống nhất, HTML lẫn trong mô tả). UI phải chịu được trường hợp thiếu field. Chuẩn hóa ở script, không chuẩn hóa ở UI.
@@ -237,8 +241,8 @@ Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **mộ
 **Thành phần chính**
 - **Header**: sticky, nền `background` mờ 80% + `backdrop-blur`, cao 64px. Chứa logo, ô tìm kiếm ở giữa (mở command palette với `⌘K`/`Ctrl K`), ngôn ngữ, theme, giỏ hàng, tài khoản.
 - **BookCard**: ảnh bìa tỉ lệ 2:3, tên sách tối đa 2 dòng, tác giả màu `muted-foreground`, giá màu `primary`, giá gốc gạch ngang màu `subtle`, nhãn `-X%` nhỏ màu `sale`. Hết hàng thì ảnh bìa giảm opacity kèm nhãn.
-- **Kệ sách (Shelf)**: hàng ngang cuộn được (scroll-snap), có tiêu đề cùng link "Xem tất cả". Đây là đơn vị bố cục chính của trang chủ.
-- **Trang chủ**: hero tối giản (một câu trích dẫn về đọc sách bằng Lora + 1 CTA), sau đó là các kệ Nổi bật, Bán chạy, Mới về, rồi lưới danh mục.
+- **Kệ sách (Shelf)**: hàng ngang cuộn được (scroll-snap), có tiêu đề cùng link "Xem tất cả", nút trước / sau từ `md` (`ShelfNav`, client leaf, chỉ hiện khi kệ tràn). Đây là đơn vị bố cục chính của trang chủ.
+- **Trang chủ**: hero tối giản (một câu trích dẫn về đọc sách bằng Lora + 1 CTA → Tất cả sách `/sach`), sau đó là các kệ Nổi bật (`is_featured`, ẩn khi < 4), Bán chạy (`sold_count > 0`, ẩn khi < 6), Mới về (chỉ sách tiếng Việt), Sách ngoại văn, rồi lưới danh mục (`getHomeShelves`).
 - **Trang sách**: bìa lớn bên trái (sticky trên desktop), thông tin bên phải. Nút "Thêm vào giỏ" là CTA `primary` duy nhất trên màn hình.
 - **Lưới**: 2 cột (mobile), 3 (sm), 4 (md), 5–6 (lg+).
 - Mọi trạng thái loading/rỗng/lỗi đều có thiết kế riêng, không để trang trắng.

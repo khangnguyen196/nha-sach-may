@@ -38,14 +38,14 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 - [x] Nhánh `phase-10` từ `phase-9`: không cần migration (nhánh đã tạo, push)
 
 ### Phase 8 (nhánh `phase-8`)
-- [ ] `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest
-- [ ] Chạy Open Library dry-run (một lần, giãn cách) → tự duyệt lưới → `--apply` bìa chắc chắn; ghi `data.md` (điều khoản, bảng trước / sau, bìa bỏ qua)
-- [ ] Footer ghi nguồn Open Library
-- [ ] Import / admin upload ghi `cover_width` (chờ migration)
-- [ ] `getHomeShelves` + kệ (nút trước / sau) + hero + trang Tất cả sách `/sach`
-- [ ] e2e `home.spec.ts`
-- [ ] Kiểm tra: typecheck / lint / build / Vitest / e2e toàn bộ / `measure:js`
-- [ ] Báo cáo trong `phase-8.md`, tick tiến độ, cập nhật CLAUDE.md → push
+- [x] `scripts/covers.ts` (`--measure`, `--openlibrary --dry-run`, `--apply`) + Vitest
+- [x] Chạy Open Library dry-run (một lần, giãn cách) → tự duyệt lưới → `--apply` bìa chắc chắn; ghi `data.md` (điều khoản, bảng trước / sau, bìa bỏ qua)
+- [x] Footer ghi nguồn Open Library
+- [x] Import / admin upload ghi `cover_width` (chờ migration)
+- [x] `getHomeShelves` + kệ (nút trước / sau) + hero + trang Tất cả sách `/sach`
+- [x] e2e `home.spec.ts`
+- [x] Kiểm tra: typecheck / lint / build / Vitest / e2e toàn bộ / `measure:js`
+- [x] Báo cáo trong `phase-8.md`, tick tiến độ, cập nhật CLAUDE.md → push
 
 ### Phase 9 (nhánh `phase-9`, merge `phase-8` trước)
 - [ ] Theo checklist trong `phase-9.md`
