@@ -18,6 +18,11 @@ if (!supabaseUrl) throw new Error('Thiếu NEXT_PUBLIC_SUPABASE_URL (chạy npm 
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Upload bìa ở admin: file ≤ 4MB (COVER_MAX_BYTES) + các ô khác của form; body request của Vercel tối đa 4.5MB.
+    // Next chưa cho đặt theo từng action nên áp cho mọi Server Action.
+    serverActions: { bodySizeLimit: '4.5mb' },
+  },
   images: {
     // Ảnh bìa đã tải về Supabase Storage (scripts/import-books.ts), không hotlink Google Books
     remotePatterns: [
