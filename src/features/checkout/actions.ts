@@ -67,6 +67,10 @@ export async function placeOrder(locale: Locale, _prev: Result<null> | null, for
   const { data: order, error } = await supabase.rpc('place_order', {
     p_address_id: parsed.data.address_id,
     p_note: parsed.data.note ?? undefined,
+    // Gửi lại cùng key (double submit, mất phản hồi) → place_order trả đúng đơn đã tạo
+    p_idempotency_key: parsed.data.idempotency_key,
+    // place_order so với tổng vừa tính sau khi khóa giỏ; lệch → CART_CHANGED
+    p_expected_total: parsed.data.expected_total,
   })
   if (error) return failed(safeLocale, toFailure(error))
 

@@ -172,13 +172,13 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 
 ## Tiến độ
 
-- [x] Migration `place_order` idempotency + `p_expected_total` + `schema.sql` (viết xong; chờ bạn kiểm tra, chạy SQL, sinh types)
+- [x] Migration `place_order` idempotency + `p_expected_total` + `schema.sql` (bạn đã kiểm tra trên Postgres local + chạy trên Supabase; types sinh lại)
 - [x] Proxy `/checkout`, routing `/checkout/success/[code]` (+ `LocaleSwitcher` nhận param `code`)
 - [x] Tag `book:{id}` cho cache danh sách (`listBooks`, `getNewBooks`, `getRelatedBooks`; bỏ `searchBookHits` vì gợi ý không hiện giá / tồn kho)
-- [ ] `features/checkout/{schemas,actions}.ts` + Vitest (schemas + Vitest xong; action tạm gọi `place_order` chữ ký cũ, chờ types mới để thêm `p_idempotency_key`, `p_expected_total`)
+- [x] `features/checkout/{schemas,actions}.ts` + Vitest (action truyền `p_idempotency_key`, `p_expected_total`)
 - [x] Trang `/thanh-toan`: địa chỉ, ghi chú, tóm tắt, form + lỗi, chờ gộp giỏ, chặn sớm
 - [x] `createAddress` nhận `returnTo` (trang thêm địa chỉ chỉ nhận `?next=` đúng bằng URL `/thanh-toan` của locale), nút Hủy về checkout
 - [x] Trang thành công (`features/orders/queries.ts → getOrderByCode`)
 - [x] Messages `checkout`, `order`, `errors.CART_CHANGED`, `validation.{address,note}`
-- [ ] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown (xong 11 test × 2 project, user checkout riêng; còn `CART_CHANGED` + RPC idempotency, chờ migration)
+- [x] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown (13 test × 2 project, user checkout riêng)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo

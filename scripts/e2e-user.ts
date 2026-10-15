@@ -264,3 +264,11 @@ export async function deleteHiddenBooks(id?: number) {
   const { error } = await query
   if (error) throw new Error(`deleteHiddenBooks: ${error.message}`)
 }
+
+/** Client anon đã đăng nhập bằng user e2e: gọi RPC như trình duyệt của chính user đó (RLS, auth.uid()) */
+export async function signedInClient(user: { email: string; password: string }) {
+  const client = anonClient()
+  const { error } = await client.auth.signInWithPassword({ email: user.email, password: user.password })
+  if (error) throw new Error(`signInWithPassword: ${error.message}`)
+  return client
+}

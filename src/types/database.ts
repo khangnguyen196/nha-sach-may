@@ -395,6 +395,7 @@ export type Database = {
           created_at: string
           discount: number
           id: number
+          idempotency_key: string | null
           note: string | null
           order_code: string
           payment_method: Database["public"]["Enums"]["payment_method"]
@@ -418,6 +419,7 @@ export type Database = {
           created_at?: string
           discount?: number
           id?: number
+          idempotency_key?: string | null
           note?: string | null
           order_code?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
@@ -441,6 +443,7 @@ export type Database = {
           created_at?: string
           discount?: number
           id?: number
+          idempotency_key?: string | null
           note?: string | null
           order_code?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
@@ -650,6 +653,7 @@ export type Database = {
           created_at: string
           discount: number
           id: number
+          idempotency_key: string | null
           note: string | null
           order_code: string
           payment_method: Database["public"]["Enums"]["payment_method"]
@@ -682,6 +686,8 @@ export type Database = {
       place_order: {
         Args: {
           p_address_id: number
+          p_expected_total?: number
+          p_idempotency_key?: string
           p_note?: string
           p_payment_method?: Database["public"]["Enums"]["payment_method"]
           p_voucher_code?: string
@@ -691,6 +697,7 @@ export type Database = {
           created_at: string
           discount: number
           id: number
+          idempotency_key: string | null
           note: string | null
           order_code: string
           payment_method: Database["public"]["Enums"]["payment_method"]

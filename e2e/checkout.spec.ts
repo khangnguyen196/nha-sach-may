@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import {
   cancelAndDeleteOrders,
   cartQuantities,
@@ -11,6 +12,7 @@ import {
   ordersOf,
   seedAddress,
   setCartItem,
+  signedInClient,
   stockOf,
   type E2eBook,
 } from '../scripts/e2e-user'
@@ -278,6 +280,66 @@ test('đặt ở tab A rồi đặt ở tab B → B báo giỏ trống, trang v�
   await expect(placeButton(tabB)).toHaveCount(0)
   expect(await ordersOf(users.checkout.id)).toHaveLength(1)
   await tabB.close()
+})
+
+test('tổng tiền đổi sau khi mở trang → CART_CHANGED, tổng mới hiện ra, bấm lại thì đặt được', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  const book = pick(regular, projectIndex)
+  const stock = await stockOf(book.id)
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, book.id, 1)
+  await openCheckout(page)
+  await expect(page.getByRole('main').getByTestId('checkout-total')).toHaveText(vnd(totalOf(book.price)))
+
+  // Giỏ sửa ở tab khác sau khi trang đã mở
+  await setCartItem(users.checkout.id, book.id, 2)
+  await placeButton(page).click()
+  await expect(checkoutError(page)).toContainText('Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng.')
+  await expect(page.getByRole('main').getByTestId('checkout-total')).toHaveText(vnd(totalOf(book.price * 2)))
+  // place_order dừng trước khi ghi: không có đơn, không trừ kho, giỏ giữ nguyên
+  expect(await ordersOf(users.checkout.id)).toHaveLength(0)
+  expect(await stockOf(book.id)).toBe(stock)
+  expect(await cartQuantities(users.checkout.id)).toEqual({ [book.id]: 2 })
+
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+  await expect(page.getByRole('main').getByTestId('order-total')).toHaveText(vnd(totalOf(book.price * 2)))
+})
+
+test('RPC: cùng key song song → một đơn; gửi lại sau khi đơn đã tạo → trả đơn cũ, không CART_CHANGED', async ({
+  users,
+  projectIndex,
+}) => {
+  const book = pick(regular, projectIndex)
+  const addressId = await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, book.id, 1)
+  const client = await signedInClient(users.checkout)
+  const args = {
+    p_address_id: addressId,
+    p_idempotency_key: randomUUID(),
+    p_expected_total: totalOf(book.price),
+  }
+
+  const [first, second] = await Promise.all([client.rpc('place_order', args), client.rpc('place_order', args)])
+  expect(first.error).toBeNull()
+  expect(second.error).toBeNull()
+  expect(second.data?.id).toBe(first.data?.id)
+
+  // Giỏ đã rỗng, tổng thật bây giờ là 0 ≠ p_expected_total: vẫn trả đơn cũ (mất phản hồi rồi gửi lại)
+  const resend = await client.rpc('place_order', args)
+  expect(resend.error).toBeNull()
+  expect(resend.data?.id).toBe(first.data?.id)
+
+  // Key khác (đơn mới thật) với giỏ rỗng → CART_EMPTY
+  const other = await client.rpc('place_order', { ...args, p_idempotency_key: randomUUID() })
+  expect(other.error?.message).toBe('CART_EMPTY')
+
+  const orders = await ordersOf(users.checkout.id)
+  expect(orders).toHaveLength(1)
+  expect(orders[0]?.order_items).toEqual([{ book_id: book.id, quantity: 1 }])
 })
 
 test('ghi chú quá 500 ký tự → lỗi tại ô, không mất nội dung', async ({ page, users, projectIndex }) => {
