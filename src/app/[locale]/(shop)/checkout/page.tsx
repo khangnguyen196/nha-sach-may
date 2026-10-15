@@ -1,0 +1,109 @@
+import { ShoppingBagIcon } from 'lucide-react'
+import type { Metadata } from 'next'
+import type { Locale } from 'next-intl'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { Suspense } from 'react'
+import { buttonVariants } from '@/components/ui/button'
+import { getAddresses } from '@/features/account/queries'
+import { EmptyState } from '@/features/books/components/empty-state'
+import { getCart, getCartQuote } from '@/features/cart/queries'
+import { placeOrder } from '@/features/checkout/actions'
+import { AddressOptions } from '@/features/checkout/components/address-options'
+import { CheckoutForm } from '@/features/checkout/components/checkout-form'
+import { CheckoutSkeleton } from '@/features/checkout/components/checkout-skeleton'
+import { CartProblems, isProblemLine, OrderSummary } from '@/features/checkout/components/order-summary'
+import { PaymentMethod } from '@/features/checkout/components/payment-method'
+import { NOTE_MAX } from '@/features/checkout/schemas'
+import { localeAlternates } from '@/i18n/alternates'
+import { Link } from '@/i18n/navigation'
+import { requireUser } from '@/lib/auth'
+import { getFormMessages } from '@/lib/form-messages'
+import { placeholder } from '@/lib/template'
+
+type Props = PageProps<'/[locale]/checkout'>
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [t, locale] = await Promise.all([getTranslations('checkout'), getLocale()])
+  return {
+    title: t('title'),
+    description: t('metaDescription'),
+    robots: { index: false, follow: false },
+    alternates: localeAlternates('/checkout', locale),
+  }
+}
+
+/** Cần đăng nhập (proxy chặn một lớp, requireUser kiểm tra lại). Static shell = tiêu đề; còn lại trong Suspense. */
+export default async function CheckoutPage({ searchParams }: Props) {
+  const [t, locale] = await Promise.all([getTranslations('checkout'), getLocale()])
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      <h1 className="font-serif text-3xl font-medium md:text-4xl">{t('title')}</h1>
+      <Suspense fallback={<CheckoutSkeleton />}>
+        <CheckoutContent locale={locale} searchParams={searchParams} />
+      </Suspense>
+    </div>
+  )
+}
+
+async function CheckoutContent({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
+  await requireUser(locale, '/checkout')
+  const [lines, quote, addresses, query, t, tCart, messages] = await Promise.all([
+    getCart(),
+    getCartQuote(),
+    getAddresses(),
+    searchParams,
+    getTranslations('checkout'),
+    getTranslations('cart'),
+    getFormMessages(['AUTH_REQUIRED', 'CART_EMPTY', 'CART_CHANGED']),
+  ])
+
+  if (lines.length === 0) {
+    return (
+      <div className="mt-8">
+        <EmptyState
+          icon={ShoppingBagIcon}
+          title={tCart('emptyTitle')}
+          description={tCart('emptyDescription')}
+          action={
+            <Link href="/" className={buttonVariants({ size: 'lg', className: 'h-10 px-4' })}>
+              {tCart('browse')}
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
+  // ?address= từ trang thêm địa chỉ; không thuộc sổ địa chỉ thì về địa chỉ mặc định (getAddresses xếp đầu)
+  const wanted = Number(query.address)
+  const selectedId = addresses.find((address) => address.id === wanted)?.id ?? addresses[0]?.id
+  const hasProblems = lines.some(isProblemLine)
+
+  return (
+    <CheckoutForm
+      action={placeOrder.bind(null, locale)}
+      messages={messages}
+      labels={{
+        noteLabel: t('noteLabel'),
+        noteHint: t('noteHint'),
+        noteCount: t('noteCount', { count: placeholder('count'), max: NOTE_MAX }),
+        placeOrder: t('placeOrder'),
+        placing: t('placing'),
+        syncingCart: t('syncingCart'),
+        fixQuantity: t('fixQuantity'),
+        fixRemove: t('fixRemove'),
+        chooseAddress: t('chooseAddress'),
+      }}
+      // Sinh ở phần động (sau khi đọc phiên), không ở static shell: giá trị ngẫu nhiên lúc prerender sẽ bị
+      // đóng băng vào HTML dùng chung. Mỗi lần render một key → đặt xong quay lại checkout là đơn mới.
+      idempotencyKey={crypto.randomUUID()}
+      expectedTotal={quote.total}
+      noteMax={NOTE_MAX}
+      blocked={addresses.length === 0 || hasProblems || quote.item_count === 0}
+      address={<AddressOptions addresses={addresses} selectedId={selectedId} locale={locale} />}
+      payment={<PaymentMethod />}
+      summary={<OrderSummary lines={lines} quote={quote} />}
+      problems={hasProblems ? <CartProblems /> : undefined}
+    />
+  )
+}

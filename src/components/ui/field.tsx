@@ -109,6 +109,32 @@ export function SelectField({
   )
 }
 
+export function TextAreaField({
+  name,
+  label,
+  error,
+  hint,
+  idPrefix,
+  labelAside,
+  className,
+  ...props
+}: FieldOwnProps & Omit<ComponentProps<'textarea'>, 'id' | 'name'>) {
+  const field = { name, label, error, hint, idPrefix, labelAside }
+  const { id, describedBy } = ids(field)
+  return (
+    <FieldShell field={field} id={id}>
+      <textarea
+        id={id}
+        name={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        className={cn(control, 'h-auto min-h-24 resize-y py-2.5 leading-relaxed', className)}
+        {...props}
+      />
+    </FieldShell>
+  )
+}
+
 /** Lỗi chung của form. `quiet`: chỉ đọc cho trình đọc màn hình (đã có lỗi hiện tại từng ô) */
 export function FormAlert({ children, quiet = false }: { children: ReactNode; quiet?: boolean }) {
   return (
