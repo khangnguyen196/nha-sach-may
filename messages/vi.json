@@ -154,6 +154,108 @@
     "emptyDescription": "Thử từ khóa ngắn hơn hoặc kiểm tra chính tả.",
     "metaDescription": "Tìm sách theo tên, tác giả hoặc ISBN tại Nhà Sách Mây."
   },
+  "validation": {
+    "required": "Vui lòng điền thông tin này.",
+    "email": "Email không hợp lệ.",
+    "passwordMin": "Mật khẩu cần ít nhất 8 ký tự.",
+    "passwordMax": "Mật khẩu tối đa 72 ký tự.",
+    "fullName": "Họ tên cần từ 1 đến 100 ký tự.",
+    "recipientName": "Tên người nhận cần từ 1 đến 100 ký tự.",
+    "phone": "Số điện thoại di động không hợp lệ (VD: 0912345678).",
+    "province": "Vui lòng chọn tỉnh/thành phố.",
+    "ward": "Vui lòng chọn phường/xã thuộc tỉnh/thành phố đã chọn.",
+    "street": "Số nhà, tên đường cần từ 1 đến 200 ký tự.",
+    "invalid": "Giá trị không hợp lệ."
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Mật khẩu",
+    "newPassword": "Mật khẩu mới",
+    "passwordHint": "Ít nhất 8 ký tự.",
+    "fullName": "Họ và tên",
+    "pending": "Đang xử lý…",
+    "login": {
+      "title": "Đăng nhập",
+      "description": "Chào mừng bạn quay lại phòng đọc.",
+      "submit": "Đăng nhập",
+      "forgot": "Quên mật khẩu?",
+      "noAccount": "Chưa có tài khoản?",
+      "registerLink": "Đăng ký"
+    },
+    "register": {
+      "title": "Tạo tài khoản",
+      "description": "Lưu địa chỉ giao hàng và theo dõi đơn hàng của bạn.",
+      "submit": "Đăng ký",
+      "hasAccount": "Đã có tài khoản?",
+      "loginLink": "Đăng nhập",
+      "checkInboxTitle": "Kiểm tra hộp thư của bạn",
+      "checkInbox": "Nếu email {email} chưa được đăng ký, chúng tôi đã gửi một liên kết xác nhận tới đó. Mở liên kết để kích hoạt tài khoản."
+    },
+    "forgot": {
+      "title": "Quên mật khẩu",
+      "description": "Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
+      "submit": "Gửi liên kết",
+      "sentTitle": "Kiểm tra hộp thư của bạn",
+      "sent": "Nếu {email} có tài khoản, liên kết đặt lại mật khẩu đã được gửi tới đó. Liên kết chỉ dùng được một lần.",
+      "backToLogin": "Quay lại đăng nhập"
+    },
+    "reset": {
+      "title": "Đặt lại mật khẩu",
+      "description": "Chọn mật khẩu mới cho tài khoản {email}. Các thiết bị khác đang đăng nhập sẽ bị đăng xuất.",
+      "submit": "Lưu mật khẩu mới",
+      "successTitle": "Đã đổi mật khẩu",
+      "success": "Mật khẩu mới đã được lưu. Các phiên đăng nhập trên thiết bị khác đã bị thu hồi.",
+      "goToAccount": "Đến trang tài khoản",
+      "noSessionTitle": "Liên kết không còn hiệu lực",
+      "noSession": "Hãy mở lại liên kết trong email đặt lại mật khẩu, hoặc yêu cầu một liên kết mới.",
+      "requestNew": "Yêu cầu liên kết mới"
+    }
+  },
+  "account": {
+    "title": "Tài khoản",
+    "greeting": "Xin chào, {name}",
+    "email": "Email",
+    "addresses": "Sổ địa chỉ",
+    "addressesDescription": "Quản lý địa chỉ giao hàng.",
+    "signOut": "Đăng xuất",
+    "emailLocale": "Ngôn ngữ email",
+    "emailLocaleDescription": "Ngôn ngữ của email xác nhận đơn hàng và thông báo gửi tới bạn.",
+    "emailLocaleOptions": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh"
+    },
+    "save": "Lưu",
+    "saved": "Đã lưu.",
+    "signedInAs": "Tài khoản của {name}"
+  },
+  "address": {
+    "title": "Sổ địa chỉ",
+    "add": "Thêm địa chỉ",
+    "emptyTitle": "Chưa có địa chỉ nào",
+    "empty": "Thêm địa chỉ giao hàng để đặt sách nhanh hơn.",
+    "default": "Mặc định",
+    "setDefault": "Đặt làm mặc định",
+    "edit": "Sửa",
+    "editLabel": "Sửa địa chỉ của {name}",
+    "delete": "Xóa",
+    "deleteLabel": "Xóa địa chỉ của {name}",
+    "confirmDelete": "Xóa địa chỉ này?",
+    "confirmDeleteAction": "Xóa vĩnh viễn",
+    "newTitle": "Thêm địa chỉ",
+    "editTitle": "Sửa địa chỉ",
+    "recipientName": "Tên người nhận",
+    "phone": "Số điện thoại",
+    "province": "Tỉnh/Thành phố",
+    "ward": "Phường/Xã",
+    "street": "Số nhà, tên đường",
+    "selectProvince": "Chọn tỉnh/thành phố",
+    "selectWard": "Chọn phường/xã",
+    "selectProvinceFirst": "Chọn tỉnh/thành phố trước",
+    "loadingWards": "Đang tải danh sách phường/xã…",
+    "wardsError": "Không tải được danh sách phường/xã. Vui lòng thử lại.",
+    "save": "Lưu địa chỉ",
+    "cancel": "Hủy"
+  },
   "errors": {
     "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
     "INVALID_ADDRESS": "Địa chỉ giao hàng không hợp lệ.",
@@ -165,6 +267,13 @@
     "ORDER_NOT_CANCELLABLE": "Đơn hàng này không thể hủy.",
     "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",
     "INVALID_INPUT": "Dữ liệu không hợp lệ.",
+    "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
+    "EMAIL_TAKEN": "Email này đã được dùng để đăng ký.",
+    "EMAIL_NOT_CONFIRMED": "Email chưa được xác nhận. Vui lòng mở thư xác nhận trong hộp thư của bạn.",
+    "WEAK_PASSWORD": "Mật khẩu quá yếu. Hãy dùng mật khẩu dài hơn, khó đoán hơn.",
+    "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu cũ.",
+    "RATE_LIMITED": "Bạn thao tác quá nhanh. Vui lòng đợi vài phút rồi thử lại.",
+    "LINK_EXPIRED": "Liên kết đã hết hạn hoặc đã được dùng. Vui lòng yêu cầu liên kết mới.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   }
 }

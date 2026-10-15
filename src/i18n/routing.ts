@@ -17,5 +17,12 @@ export const routing = defineRouting({
     '/cart': { vi: '/gio-hang', en: '/cart' },
     '/checkout': { vi: '/thanh-toan', en: '/checkout' },
     '/account': { vi: '/tai-khoan', en: '/account' },
+    '/account/addresses': { vi: '/tai-khoan/dia-chi', en: '/account/addresses' },
+    '/account/addresses/new': { vi: '/tai-khoan/dia-chi/moi', en: '/account/addresses/new' },
+    '/account/addresses/[id]': { vi: '/tai-khoan/dia-chi/[id]', en: '/account/addresses/[id]' },
+    '/login': { vi: '/dang-nhap', en: '/login' },
+    '/register': { vi: '/dang-ky', en: '/register' },
+    '/forgot-password': { vi: '/quen-mat-khau', en: '/forgot-password' },
+    '/reset-password': { vi: '/dat-lai-mat-khau', en: '/reset-password' },
   },
 })

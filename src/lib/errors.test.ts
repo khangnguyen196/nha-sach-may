@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../../messages/en.json'
 import vi from '../../messages/vi.json'
-import { ERROR_CODES, toFailure } from './errors'
+import { ERROR_CODES, invalidInput, toFailure, VALIDATION_KEYS } from './errors'
 
 describe('toFailure', () => {
   it('nhận mã lỗi và parse detail JSON', () => {
@@ -28,5 +28,27 @@ describe('ERROR_CODES', () => {
     const codes = [...ERROR_CODES].sort()
     expect(Object.keys(vi.errors).sort()).toEqual(codes)
     expect(Object.keys(en.errors).sort()).toEqual(codes)
+  })
+})
+
+describe('VALIDATION_KEYS', () => {
+  it('mỗi khóa có bản dịch ở cả hai ngôn ngữ, không thừa không thiếu', () => {
+    const keys = [...VALIDATION_KEYS].sort()
+    expect(Object.keys(vi.validation).sort()).toEqual(keys)
+    expect(Object.keys(en.validation).sort()).toEqual(keys)
+  })
+})
+
+describe('invalidInput', () => {
+  it('lấy lỗi đầu tiên của từng ô; message không phải khóa validation → invalid', () => {
+    expect(
+      invalidInput({
+        issues: [
+          { path: ['email'], message: 'required' },
+          { path: ['email'], message: 'email' },
+          { path: ['phone'], message: 'Invalid input: expected string' },
+        ],
+      }),
+    ).toEqual({ ok: false, code: 'INVALID_INPUT', fieldErrors: { email: 'required', phone: 'invalid' } })
   })
 })

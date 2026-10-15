@@ -154,6 +154,108 @@
     "emptyDescription": "Try a shorter keyword or check the spelling.",
     "metaDescription": "Search books by title, author or ISBN at Nhà Sách Mây."
   },
+  "validation": {
+    "required": "Please fill in this field.",
+    "email": "Invalid email address.",
+    "passwordMin": "Password must be at least 8 characters.",
+    "passwordMax": "Password must be at most 72 characters.",
+    "fullName": "Name must be 1 to 100 characters.",
+    "recipientName": "Recipient name must be 1 to 100 characters.",
+    "phone": "Invalid Vietnamese mobile number (e.g. 0912345678).",
+    "province": "Please choose a province or city.",
+    "ward": "Please choose a ward or commune in the selected province.",
+    "street": "Street address must be 1 to 200 characters.",
+    "invalid": "Invalid value."
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "passwordHint": "At least 8 characters.",
+    "fullName": "Full name",
+    "pending": "Please wait…",
+    "login": {
+      "title": "Sign in",
+      "description": "Welcome back to the reading room.",
+      "submit": "Sign in",
+      "forgot": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Create one"
+    },
+    "register": {
+      "title": "Create an account",
+      "description": "Save delivery addresses and track your orders.",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "checkInboxTitle": "Check your inbox",
+      "checkInbox": "If {email} isn't registered yet, we've sent a confirmation link to it. Open the link to activate your account."
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "description": "Enter the email you registered with and we'll send you a link to reset your password.",
+      "submit": "Send link",
+      "sentTitle": "Check your inbox",
+      "sent": "If {email} has an account, a password reset link has been sent to it. The link can only be used once.",
+      "backToLogin": "Back to sign in"
+    },
+    "reset": {
+      "title": "Reset password",
+      "description": "Choose a new password for {email}. Other devices that are signed in will be signed out.",
+      "submit": "Save new password",
+      "successTitle": "Password changed",
+      "success": "Your new password has been saved. Sessions on other devices have been revoked.",
+      "goToAccount": "Go to your account",
+      "noSessionTitle": "This link is no longer valid",
+      "noSession": "Open the link in your password reset email again, or request a new one.",
+      "requestNew": "Request a new link"
+    }
+  },
+  "account": {
+    "title": "Account",
+    "greeting": "Hello, {name}",
+    "email": "Email",
+    "addresses": "Address book",
+    "addressesDescription": "Manage your delivery addresses.",
+    "signOut": "Sign out",
+    "emailLocale": "Email language",
+    "emailLocaleDescription": "Language of the order confirmations and notifications we email you.",
+    "emailLocaleOptions": {
+      "vi": "Vietnamese",
+      "en": "English"
+    },
+    "save": "Save",
+    "saved": "Saved.",
+    "signedInAs": "{name}'s account"
+  },
+  "address": {
+    "title": "Address book",
+    "add": "Add address",
+    "emptyTitle": "No addresses yet",
+    "empty": "Add a delivery address to check out faster.",
+    "default": "Default",
+    "setDefault": "Set as default",
+    "edit": "Edit",
+    "editLabel": "Edit {name}'s address",
+    "delete": "Delete",
+    "deleteLabel": "Delete {name}'s address",
+    "confirmDelete": "Delete this address?",
+    "confirmDeleteAction": "Delete permanently",
+    "newTitle": "Add address",
+    "editTitle": "Edit address",
+    "recipientName": "Recipient name",
+    "phone": "Phone number",
+    "province": "Province / City",
+    "ward": "Ward / Commune",
+    "street": "Street address",
+    "selectProvince": "Choose a province or city",
+    "selectWard": "Choose a ward or commune",
+    "selectProvinceFirst": "Choose a province or city first",
+    "loadingWards": "Loading wards…",
+    "wardsError": "Couldn't load the list of wards. Please try again.",
+    "save": "Save address",
+    "cancel": "Cancel"
+  },
   "errors": {
     "AUTH_REQUIRED": "Please sign in to continue.",
     "INVALID_ADDRESS": "The shipping address is invalid.",
@@ -165,6 +267,13 @@
     "ORDER_NOT_CANCELLABLE": "This order can no longer be cancelled.",
     "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",
     "INVALID_INPUT": "Some of the information is invalid.",
+    "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "EMAIL_TAKEN": "This email is already registered.",
+    "EMAIL_NOT_CONFIRMED": "Your email is not confirmed yet. Please open the confirmation email in your inbox.",
+    "WEAK_PASSWORD": "This password is too weak. Use a longer, harder to guess password.",
+    "SAME_PASSWORD": "Your new password must be different from the old one.",
+    "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
+    "LINK_EXPIRED": "This link has expired or was already used. Please request a new one.",
     "UNKNOWN": "Something went wrong. Please try again."
   }
 }
