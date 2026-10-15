@@ -163,11 +163,16 @@ Namespace `checkout` (tiêu đề, địa chỉ, thêm địa chỉ, ghi chú + 
 
 ## Việc của chủ dự án
 
-- Chạy migration idempotency trên Supabase (SQL Editor), rồi sinh lại types. Hướng dẫn từng bước ghi ở đây khi tới bước đó; trong lúc chờ, tôi làm phần không phụ thuộc chữ ký `place_order` mới.
+Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (chờ kiểm tra trước khi chạy). Trong lúc chờ, tôi làm phần không phụ thuộc chữ ký `place_order` mới.
+
+1. Supabase Dashboard → SQL Editor → dán toàn bộ file migration → Run. File tự bọc `begin … commit`, chạy lại vẫn an toàn.
+2. Kiểm tra: `select pg_get_function_identity_arguments('public.place_order'::regproc);` ra 6 tham số (`…, p_idempotency_key uuid, p_expected_total integer`), và `\d public.orders` (hoặc Table Editor) có cột `idempotency_key`.
+3. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` → `Functions.place_order.Args` có `p_idempotency_key?`, `p_expected_total?`; `orders.Row` có `idempotency_key`.
+4. Báo tôi để nối action vào RPC mới và chạy e2e.
 
 ## Tiến độ
 
-- [ ] Migration `place_order` idempotency + `schema.sql` (chờ bạn chạy SQL + sinh types)
+- [x] Migration `place_order` idempotency + `p_expected_total` + `schema.sql` (viết xong; chờ bạn kiểm tra, chạy SQL, sinh types)
 - [ ] Proxy `/checkout`, routing `/checkout/success/[code]`
 - [ ] Tag `book:{id}` cho cache danh sách
 - [ ] `features/checkout/{schemas,actions}.ts` + Vitest

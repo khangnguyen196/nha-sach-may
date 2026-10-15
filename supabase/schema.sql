@@ -430,6 +430,8 @@ create table public.orders (
   voucher_code     text,
 
   cancelled_reason text,
+  -- Chống đặt trùng: place_order gửi lại cùng key trả đúng đơn đã tạo
+  idempotency_key  uuid,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   check (total = subtotal + shipping_fee - discount),
@@ -440,6 +442,8 @@ create table public.orders (
 
 create index orders_user_idx   on public.orders (user_id, created_at desc);
 create index orders_status_idx on public.orders (status);
+-- Chốt cuối ở mức DB: một key chỉ gắn với một đơn của mỗi user (key null không bị ràng buộc)
+create unique index orders_user_idempotency_key on public.orders (user_id, idempotency_key);
 
 create trigger orders_updated_at before update on public.orders
   for each row execute function public.set_updated_at();
@@ -495,10 +499,12 @@ create trigger orders_status_change before update of status on public.orders
 
 -- Phí ship: xem private.shipping_fee() ở đầu file
 create or replace function public.place_order(
-  p_address_id     bigint,
-  p_payment_method public.payment_method default 'cod',
-  p_voucher_code   text default null,
-  p_note           text default null
+  p_address_id      bigint,
+  p_payment_method  public.payment_method default 'cod',
+  p_voucher_code    text default null,
+  p_note            text default null,
+  p_idempotency_key uuid default null,
+  p_expected_total  int default null
 )
 returns public.orders
 language plpgsql security definer set search_path = '' as $$
@@ -513,10 +519,24 @@ declare
   v_subtotal  int := 0;
   v_shipping  int;
   v_discount  int := 0;
+  v_total     int;
   v_order     public.orders;
 begin
   if v_user is null then
     raise exception 'AUTH_REQUIRED';
+  end if;
+
+  -- (a) Gửi lại cùng key (bấm 2 lần, mất phản hồi rồi gửi lại) → trả đúng đơn đã tạo, kể cả khi
+  -- giỏ đã rỗng hay địa chỉ đã đổi. Khóa theo (user, key): request song song cùng key chờ ở đây
+  -- tới khi request đầu commit, rồi thấy đơn của nó (mỗi câu lệnh plpgsql đọc snapshot mới).
+  if p_idempotency_key is not null then
+    perform pg_advisory_xact_lock(hashtextextended(v_user::text || ':' || p_idempotency_key::text, 0));
+
+    select * into v_order from public.orders
+     where user_id = v_user and idempotency_key = p_idempotency_key;
+    if found then
+      return v_order;
+    end if;
   end if;
 
   if char_length(v_note) > 500 then
@@ -530,7 +550,7 @@ begin
     raise exception 'INVALID_ADDRESS';
   end if;
 
-  -- Khóa CẢ dòng giỏ lẫn dòng sách. Nếu chỉ khóa sách, request thứ hai (bấm đặt hàng 2 lần)
+  -- (b) Khóa CẢ dòng giỏ lẫn dòng sách. Nếu chỉ khóa sách, request thứ hai (bấm đặt hàng 2 lần)
   -- vẫn thấy dòng giỏ cũ trong snapshot, tính ra tiền, rồi tạo một đơn không có sách nào.
   for v_item in
     select c.book_id, c.quantity, b.title, b.price, b.stock, b.is_active
@@ -564,6 +584,19 @@ begin
      where code = upper(btrim(p_voucher_code))
        for update;
     v_discount := private.voucher_discount(v_voucher, v_subtotal);
+  end if;
+
+  v_total := v_subtotal + v_shipping - v_discount;
+
+  -- (c) Tổng người dùng đang thấy khác tổng thật (giỏ sửa ở tab khác, admin đổi giá) → không đặt.
+  -- So sau khi đã khóa giỏ nên không còn khe hở giữa lúc so và lúc đặt.
+  if p_expected_total is not null and p_expected_total <> v_total then
+    raise exception 'CART_CHANGED'
+      using detail = json_build_object('total', v_total)::text;
+  end if;
+
+  -- (d) Đặt hàng
+  if v_voucher.id is not null then
     update public.vouchers set used_count = used_count + 1 where id = v_voucher.id;
   end if;
 
@@ -571,12 +604,12 @@ begin
     user_id, payment_method,
     recipient_name, phone, province, ward, street, note,
     subtotal, shipping_fee, discount, total,
-    voucher_id, voucher_code
+    voucher_id, voucher_code, idempotency_key
   ) values (
     v_user, p_payment_method,
     v_addr.recipient_name, v_addr.phone, v_addr.province, v_addr.ward, v_addr.street, v_note,
-    v_subtotal, v_shipping, v_discount, v_subtotal + v_shipping - v_discount,
-    v_voucher.id, v_voucher.code
+    v_subtotal, v_shipping, v_discount, v_total,
+    v_voucher.id, v_voucher.code, p_idempotency_key
   )
   returning * into v_order;
 
@@ -969,8 +1002,8 @@ grant  update (rating, content)                   on public.reviews to authentic
 -- ---------------------------------------------------------------------
 -- 12. QUYỀN GỌI HÀM
 -- ---------------------------------------------------------------------
-revoke execute on function public.place_order(bigint, public.payment_method, text, text) from public, anon;
-grant  execute on function public.place_order(bigint, public.payment_method, text, text) to authenticated;
+revoke execute on function public.place_order(bigint, public.payment_method, text, text, uuid, int) from public, anon;
+grant  execute on function public.place_order(bigint, public.payment_method, text, text, uuid, int) to authenticated;
 
 revoke execute on function public.cancel_order(bigint, text) from public, anon;
 grant  execute on function public.cancel_order(bigint, text) to authenticated;
@@ -1017,7 +1050,8 @@ create policy "book_covers_admin_delete" on storage.objects
 --   search_books(q)                         — anon + authenticated
 --   quote_order(p_voucher_code)             — tiền tạm tính ở giỏ / checkout
 --   quote_items(p_items jsonb)              — tạm tính giỏ khách (anon + authenticated)
---   place_order(p_address_id, p_payment_method, p_voucher_code, p_note)
+--   place_order(p_address_id, p_payment_method, p_voucher_code, p_note,
+--               p_idempotency_key, p_expected_total)
 --   cancel_order(p_order_id, p_reason)
 --   set_default_address(p_address_id)
 --   merge_cart(p_items jsonb)               — gộp giỏ localStorage khi đăng nhập
@@ -1025,7 +1059,8 @@ create policy "book_covers_admin_delete" on storage.objects
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
 --   AUTH_REQUIRED, INVALID_ADDRESS, BOOK_UNAVAILABLE, OUT_OF_STOCK, CART_EMPTY,
 --   INVALID_VOUCHER, VOUCHER_MIN_ORDER, ORDER_NOT_CANCELLABLE, ORDER_REOPEN_FORBIDDEN,
---   INVALID_INPUT (detail: {"field": ..., "max": ...})
+--   INVALID_INPUT (detail: {"field": ..., "max": ...}),
+--   CART_CHANGED (place_order, p_expected_total khác tổng thật; detail: {"total": ...})
 --
 -- SAU KHI CHẠY XONG:
 -- 1. Chạy seed.sql để có dữ liệu mẫu.
