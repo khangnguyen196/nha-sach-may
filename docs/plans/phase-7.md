@@ -216,7 +216,9 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 - [x] e2e sạch: `test:e2e` đầy đủ 160/160
 
 7b:
-- [ ] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
-- [ ] Voucher: danh sách, tạo / sửa, bật / tắt / xóa
+- [x] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
+- [x] Voucher: danh sách, tạo / sửa, bật / tắt / xóa
+- [x] (Bổ sung khi duyệt 7b) Link "Quản trị" chỉ admin thấy: trang tài khoản + cạnh icon tài khoản ở header
+- [ ] e2e: admin thấy link, khách thường không thấy
 - [ ] e2e `admin-orders`, `admin-vouchers`
 - [ ] typecheck / lint / build / test / e2e sạch; báo cáo
