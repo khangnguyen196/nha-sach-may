@@ -145,6 +145,26 @@ test('luồng mua COD: khách thêm sách → đăng nhập → đặt hàng →
   await guest.close()
 })
 
+test('badge về 0 sau khi đặt hàng khi số trên badge đến từ lần "Thêm" (header chưa render lại từ server)', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  await seedAddress(users.checkout.id)
+  // Trang sách tải lúc giỏ rỗng: header từ server = 0; bấm "Thêm" → store 1, prop của header vẫn 0
+  await addFromBookPage(page, pick(regular, projectIndex))
+  // Điều hướng phía client: layout (header) giữ nguyên, không render lại từ server
+  await page.getByRole('banner').getByRole('link', { name: /Giỏ hàng/ }).click()
+  await expect(page).toHaveURL(/\/gio-hang$/)
+  await page.getByTestId('cart-summary').getByRole('link', { name: 'Thanh toán' }).click()
+  await expect(page).toHaveURL(/\/thanh-toan$/)
+  await expect(placeButton(page)).toBeEnabled()
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+  await expect(page.getByRole('main').getByTestId('order-code')).toBeVisible()
+  await expect(badge(page)).toHaveCount(0)
+})
+
 test('chưa có địa chỉ → "Thêm địa chỉ" → lưu → quay lại thanh toán với địa chỉ mới được chọn', async ({
   page,
   users,

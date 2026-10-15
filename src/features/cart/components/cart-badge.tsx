@@ -22,9 +22,12 @@ export function CartBadge({ labels, session }: Props) {
   const signedIn = session?.signedIn
   const serverCount = session?.count ?? null
 
+  // Phụ thuộc vào object `session`, không vào giá trị: mỗi lần server render lại header là một object mới, kể cả
+  // khi số không đổi. Store có thể đã lệch khỏi prop (thêm vào giỏ, gộp giỏ ghi thẳng vào store) → server render lại
+  // với đúng số cũ của prop (VD: trang tải lúc giỏ 0, thêm 1, đặt hàng → server lại trả 0) vẫn phải ghi đè store.
   useEffect(() => {
-    if (signedIn !== undefined) setCartSession(signedIn, serverCount)
-  }, [signedIn, serverCount])
+    if (session) setCartSession(session.signedIn, session.count)
+  }, [session])
 
   const storeCount = useCartCount()
   // Lần render đầu (kể cả HTML từ server) store chưa có phiên → dùng số server gửi kèm cho người đã đăng nhập

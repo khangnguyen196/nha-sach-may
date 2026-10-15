@@ -20,6 +20,11 @@ Trạng thái: **đã xong trên nhánh `phase-5b`, chưa merge** (2026-10-15). 
 9. (Mới) Thêm `TextAreaField` vào `components/ui/field.tsx`, cùng khung với `TextField`. `fillAddress` chuyển từ `account.spec.ts` sang `e2e/helpers.ts` (hai spec cùng dùng).
 10. (Mới) `checkoutSchema` đổi CRLF → LF trước khi đếm ghi chú: trình duyệt gửi xuống dòng của textarea dạng CRLF, còn `maxLength` / bộ đếm tính LF.
 
+**Sửa sau báo cáo** (2026-10-15):
+- Test đặt lại mật khẩu tạo user riêng mỗi lần chạy (retry / `--repeat-each` qua).
+- `useFormAction`: lỗi mạng → `UNKNOWN` trong khối lỗi của form (không lên error boundary); e2e chặn request / mất phản hồi → bấm lại cùng key → 1 đơn.
+- **Bug badge**: `CartBadge` chỉ đồng bộ store khi *giá trị* prop đổi, trong khi store còn được ghi thẳng (thêm vào giỏ, gộp giỏ). Tải trang lúc giỏ 0 → thêm 1 (store 1, prop 0) → điều hướng client sang checkout (layout giữ nguyên) → đặt hàng → header render lại với 0 = prop cũ → effect không chạy → badge giữ 1. Sửa: effect phụ thuộc object `session` (mỗi lần server render là object mới). e2e tái hiện: fail 2/2 trước khi sửa, qua 4/4 sau khi sửa. Lần fail của luồng mua COD (mobile) ở lượt e2e thứ 3 thì khác: badge lấy số từ lần gộp giỏ + `refresh` nên prop đổi 1 → 0 và effect có chạy; fail ở đó là do header stream về sau 5s (cả lượt chậm gấp đôi bình thường), không phải bug này.
+
 **Giới hạn / rủi ro đã biết**:
 - Gộp giỏ khách lỗi thì localStorage vẫn còn hàng, nút "Đặt hàng" khóa ở "Đang cập nhật giỏ hàng…" tới lần tải trang sau.
 - Hủy đơn (admin, e2e dọn dẹp) hoàn kho ở DB nhưng không làm mới cache: trang sách hiện tồn kho cũ tới khi hết `hours`. Phase 6 (`cancel_order`) nên `updateTag('book:{id}')`.
