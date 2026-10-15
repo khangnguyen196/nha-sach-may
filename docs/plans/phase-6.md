@@ -1,6 +1,6 @@
 # Phase 6: Tài khoản: đơn hàng
 
-Trạng thái: **xong, chờ duyệt để merge** (nhánh `phase-6`, 2026-10-15). Plan đã duyệt: chọn hết các ★, bổ sung 2 điểm (xem "Bổ sung khi duyệt").
+Trạng thái: **đã xong, đã merge vào `main`** (2026-10-15). Sau duyệt: `fault-injection` luôn tắt khi `VERCEL_ENV=production` (có Vitest); rủi ro trùng sách e2e ghi vào lộ trình Phase 10; 3 đề xuất CLAUDE.md đã áp dụng. Plan đã duyệt: chọn hết các ★, bổ sung 2 điểm (xem "Bổ sung khi duyệt").
 
 ## Báo cáo (2026-10-15)
 
@@ -48,7 +48,7 @@ Trạng thái: **xong, chờ duyệt để merge** (nhánh `phase-6`, 2026-10-15
 
 +2.6KB đều trên mọi trang = chunk `global-error` + context chuỗi lỗi + `LocaleError`. Trang đơn hàng không prerender theo user nên không đo.
 
-**Đề xuất cập nhật CLAUDE.md** (chưa làm, chờ duyệt):
+**Đề xuất cập nhật CLAUDE.md** (đã duyệt, đã áp dụng):
 - Trang lỗi: chuỗi `errorPage` đi qua `ErrorMessagesProvider` (layout) → `error.tsx`; `global-error` dùng bản chép `i18n/global-error-messages.ts` (có test khớp).
 - `global-error.tsx` và `ErrorView` không import thư viện dùng chung (next-intl, radix, next-themes, lucide): Turbopack chép lại cho nhóm chunk của `global-error`. Đổi file đặc biệt của Next (`error`, `global-error`, `not-found`…) thì chạy `measure:js`.
 - e2e: mỗi project 3 user (chính / checkout / orders); `ACCOUNT_SPECS` = `(account|checkout|orders|error-page)\.spec\.ts`. Ép lỗi Supabase bằng cookie `e2e-fault=rest` (server e2e chạy với `E2E_FAULT_INJECTION=1`); không đặt biến này ngoài e2e.
