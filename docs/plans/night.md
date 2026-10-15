@@ -31,9 +31,9 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 
 ### Đầu đêm
 - [x] `night.md` (file này), nhánh `phase-8` từ `main`
-- [ ] Soát code / schema liên quan phase 9, 10 (reviews, voucher checkout, thanh toán, email, SEO, 404)
-- [ ] Viết `phase-9.md`, `phase-10.md` (plan + quyết định tự chọn), `owner-todo.md`
-- [ ] Migration phase 8 (`cover_width`) trên `phase-8` + `schema.sql` + types → push
+- [x] Soát code / schema liên quan phase 9, 10 (reviews, voucher checkout, thanh toán, email, SEO, 404)
+- [x] Viết `phase-9.md`, `phase-10.md` (plan + quyết định tự chọn), `owner-todo.md`
+- [x] Migration phase 8 (`cover_width`) trên `phase-8` + `schema.sql` + types → push
 - [ ] Nhánh `phase-9` từ `phase-8`: migration phase 9 + `schema.sql` + types → push
 - [ ] Nhánh `phase-10` từ `phase-9`: migration phase 10 (nếu cần) → push
 

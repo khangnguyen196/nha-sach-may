@@ -191,6 +191,7 @@ create table public.books (
   stock           integer not null default 0 check (stock >= 0),
 
   cover_url       text,
+  cover_width     smallint constraint books_cover_width_check check (cover_width between 1 and 10000),  -- chiều rộng thật (px) của bìa; null = chưa đo
   page_count      int check (page_count > 0),
   format          public.book_format not null default 'paperback',
   language        text not null default 'vi',
@@ -979,7 +980,7 @@ $$;
 revoke update on public.books from anon, authenticated;
 grant  update (
   title, slug, subtitle, description, description_en, category_id, publisher_id, isbn,
-  price, original_price, stock, cover_url, page_count, format, language, published_year,
+  price, original_price, stock, cover_url, cover_width, page_count, format, language, published_year,
   weight_grams, dimensions, is_active, is_featured
 ) on public.books to authenticated;
 

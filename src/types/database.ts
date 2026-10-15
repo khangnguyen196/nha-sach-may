@@ -155,6 +155,7 @@ export type Database = {
           avg_rating: number
           category_id: number | null
           cover_url: string | null
+          cover_width: number | null
           created_at: string
           description: string | null
           description_en: string | null
@@ -184,6 +185,7 @@ export type Database = {
           avg_rating?: number
           category_id?: number | null
           cover_url?: string | null
+          cover_width?: number | null
           created_at?: string
           description?: string | null
           description_en?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           avg_rating?: number
           category_id?: number | null
           cover_url?: string | null
+          cover_width?: number | null
           created_at?: string
           description?: string | null
           description_en?: string | null
@@ -750,6 +753,7 @@ export type Database = {
           avg_rating: number
           category_id: number | null
           cover_url: string | null
+          cover_width: number | null
           created_at: string
           description: string | null
           description_en: string | null
