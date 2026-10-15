@@ -1,4 +1,7 @@
 import type { OrderStatus } from '@/features/orders/params'
+import type { Database } from '@/types/database'
+
+type Payment = Pick<Database['public']['Tables']['orders']['Row'], 'status' | 'payment_method' | 'payment_status'>
 
 /**
  * Trạng thái đơn được phép chuyển tới, trùng bảng `private.order_status_transition_allowed` (trigger chặn ở DB với
@@ -33,4 +36,9 @@ export function forwardStatus(status: OrderStatus): ForwardStatus | null {
 
 export function canAdminCancel(status: OrderStatus) {
   return nextStatuses(status).includes('cancelled')
+}
+
+/** "Đã nhận tiền": chỉ đơn chuyển khoản chưa thanh toán, chưa hủy (COD tự thành `paid` khi giao — trigger) */
+export function canMarkPaid(order: Payment) {
+  return order.payment_method === 'bank_transfer' && order.payment_status === 'unpaid' && order.status !== 'cancelled'
 }

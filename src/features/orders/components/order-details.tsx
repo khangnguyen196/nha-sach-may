@@ -93,6 +93,17 @@ export async function OrderDetails({ order, locale, highlight }: Props) {
               {order.shipping_fee === 0 ? tCart('freeShipping') : price(order.shipping_fee)}
             </dd>
           </div>
+          {order.discount > 0 && (
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-muted-foreground">
+                {t('discount')}
+                {order.voucher_code && <span className="ml-1 font-mono text-xs">({order.voucher_code})</span>}
+              </dt>
+              <dd className="text-success tabular-nums" data-testid="order-discount">
+                −{price(order.discount)}
+              </dd>
+            </div>
+          )}
           <div className="flex items-baseline justify-between gap-4 border-t pt-3 text-base">
             <dt className="font-semibold">{tCart('total')}</dt>
             <dd className="font-semibold text-primary tabular-nums" data-testid="order-total">

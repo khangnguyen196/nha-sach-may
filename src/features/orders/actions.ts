@@ -1,6 +1,7 @@
 'use server'
 
 import { refresh } from 'next/cache'
+import { after } from 'next/server'
 import type { Locale } from 'next-intl'
 import { getPathname, redirect } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
@@ -9,6 +10,7 @@ import { invalidInput, toFailure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
 import { expireOrderBooks } from './cache'
+import { notifyOrder, ownRecipient } from './emails'
 import { ORDER_CODE } from './queries'
 import { cancelOrderSchema, orderIdSchema } from './schemas'
 
@@ -34,7 +36,8 @@ export async function cancelOrder(
   if (!id.success) return { ok: false, code: 'ORDER_NOT_CANCELLABLE' }
   const parsed = cancelOrderSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return invalidInput(parsed.error)
-  if (!(await getCurrentUser())) redirectToLogin(safeLocale, code)
+  const user = await getCurrentUser()
+  if (!user) redirectToLogin(safeLocale, code)
 
   const supabase = await createClient()
   const { error } = await supabase.rpc('cancel_order', {
@@ -52,6 +55,10 @@ export async function cancelOrder(
 
   // Hủy đơn hoàn tồn kho (trigger) → trang sách và danh sách đang chứa các sách này hết cũ
   await expireOrderBooks(supabase, id.data)
+  after(async () => {
+    const recipient = await ownRecipient(supabase, user)
+    if (recipient) await notifyOrder(supabase, id.data, 'cancelled', recipient)
+  })
   refresh()
   return { ok: true, data: null }
 }

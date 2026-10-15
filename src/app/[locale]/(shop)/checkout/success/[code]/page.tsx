@@ -7,6 +7,8 @@ import { Suspense } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { OrderDetails, OrderDetailsSkeleton } from '@/features/orders/components/order-details'
 import { getOrderByCode } from '@/features/orders/queries'
+import { awaitingTransfer } from '@/features/orders/utils'
+import { VietQrCard } from '@/features/payments/components/vietqr-card'
 import { Link } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
 
@@ -52,9 +54,18 @@ async function OrderSuccess({ locale, params }: { locale: Locale; params: Props[
           order={order}
           locale={locale}
           highlight={
-            <p className="-mt-2 text-center font-medium text-primary" data-testid="order-cod">
-              {t('codAmount', { total: format.number(order.total, 'price') })}
-            </p>
+            order.payment_method === 'bank_transfer' ? (
+              <>
+                <p className="-mt-2 text-center font-medium text-primary" data-testid="order-bank-amount">
+                  {t('bankAmount', { total: format.number(order.total, 'price') })}
+                </p>
+                {awaitingTransfer(order) && <VietQrCard orderCode={order.order_code} amount={order.total} />}
+              </>
+            ) : (
+              <p className="-mt-2 text-center font-medium text-primary" data-testid="order-cod">
+                {t('codAmount', { total: format.number(order.total, 'price') })}
+              </p>
+            )
           }
         />
       </div>

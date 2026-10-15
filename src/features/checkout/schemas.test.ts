@@ -17,7 +17,20 @@ describe('checkoutSchema', () => {
       note: 'Giao giờ hành chính',
       idempotency_key: KEY,
       expected_total: 128000,
+      payment_method: 'cod',
+      voucher_code: null,
     })
+  })
+
+  it('phương thức thanh toán: COD mặc định, chuyển khoản, giá trị lạ → lỗi', () => {
+    expect(checkoutSchema.parse({ ...valid, payment_method: 'bank_transfer' }).payment_method).toBe('bank_transfer')
+    expect(checkoutSchema.safeParse({ ...valid, payment_method: 'momo' }).success).toBe(false)
+  })
+
+  it('mã voucher: viết HOA; rỗng → null; sai dạng → lỗi', () => {
+    expect(checkoutSchema.parse({ ...valid, voucher_code: ' giam10 ' }).voucher_code).toBe('GIAM10')
+    expect(checkoutSchema.parse({ ...valid, voucher_code: '' }).voucher_code).toBeNull()
+    expect(fieldErrors({ ...valid, voucher_code: 'GIẢM' })).toEqual({ voucher_code: 'invalid' })
   })
 
   it.each([[''], ['   '], [undefined]])('ghi chú rỗng (%j) → null', (note) => {

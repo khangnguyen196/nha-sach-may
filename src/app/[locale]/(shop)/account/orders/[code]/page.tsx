@@ -10,7 +10,8 @@ import { OrderDetails, OrderDetailsSkeleton } from '@/features/orders/components
 import { OrderStatusBadge } from '@/features/orders/components/order-status-badge'
 import { getOrderByCode } from '@/features/orders/queries'
 import { REASON_MAX } from '@/features/orders/schemas'
-import { canCancel } from '@/features/orders/utils'
+import { awaitingTransfer, canCancel } from '@/features/orders/utils'
+import { VietQrCard } from '@/features/payments/components/vietqr-card'
 import { requireUser } from '@/lib/auth'
 import { getFormMessages } from '@/lib/form-messages'
 import { placeholder } from '@/lib/template'
@@ -72,7 +73,10 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
           locale={locale}
           highlight={
             <p className="-mt-2 text-sm text-muted-foreground">
-              {tOrder('payment')}: <span className="text-foreground">{tOrder('cod')}</span>
+              {tOrder('payment')}:{' '}
+              <span className="text-foreground" data-testid="order-payment-method">
+                {order.payment_method === 'bank_transfer' ? tOrder('bankTransfer') : tOrder('cod')}
+              </span>
               {' · '}
               <span
                 className={order.payment_status === 'paid' ? 'text-success' : 'text-foreground'}
@@ -84,6 +88,12 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
           }
         />
       </div>
+
+      {awaitingTransfer(order) && (
+        <div className="mt-6">
+          <VietQrCard orderCode={order.order_code} amount={order.total} />
+        </div>
+      )}
 
       <CancelOrderForm
         action={cancelOrder.bind(null, locale, order.id, order.order_code)}

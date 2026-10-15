@@ -4,10 +4,10 @@ import { Suspense } from 'react'
 import { AdminBackLink, AdminPage } from '@/components/admin/admin-page'
 import { FormSkeleton } from '@/components/admin/form-skeleton'
 import { getAdminFormMessages } from '@/features/admin/form-messages'
-import { advanceOrder, cancelOrderAsAdmin } from '@/features/admin/orders/actions'
+import { advanceOrder, cancelOrderAsAdmin, markOrderPaid } from '@/features/admin/orders/actions'
 import { AdvanceOrderForm } from '@/features/admin/orders/components/advance-order-form'
 import { getAdminOrder } from '@/features/admin/orders/queries'
-import { canAdminCancel, forwardStatus } from '@/features/admin/orders/status'
+import { canAdminCancel, canMarkPaid, forwardStatus } from '@/features/admin/orders/status'
 import { CancelOrderForm } from '@/features/orders/components/cancel-order-form'
 import { OrderDetails } from '@/features/orders/components/order-details'
 import { OrderStatusBadge } from '@/features/orders/components/order-status-badge'
@@ -125,6 +125,20 @@ async function Order({ params }: { params: Props['params'] }) {
               </div>
             )}
           </dl>
+          {canMarkPaid(order) && <p className="text-sm text-muted-foreground">{t('payment.markPaidHint')}</p>}
+          {/* Luôn render (label null khi không còn bấm được) để thông báo kết quả còn sau refresh() */}
+          <AdvanceOrderForm
+            action={markOrderPaid.bind(null, order.id)}
+            messages={messages}
+            label={canMarkPaid(order) ? t('payment.markPaid') : null}
+            pendingLabel={t('payment.markPaidPending')}
+            doneLabel={t('payment.markPaidDone')}
+          />
+          {order.payment_status === 'paid' && canAdminCancel(order.status) && (
+            <p className="text-sm text-muted-foreground" data-testid="order-refund-note">
+              {t('payment.refundNote')}
+            </p>
+          )}
         </section>
 
         <section aria-labelledby="order-customer-title" className={panel}>

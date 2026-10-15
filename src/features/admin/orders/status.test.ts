@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { Constants } from '@/types/database'
-import { canAdminCancel, forwardStatus, nextStatuses } from './status'
+import { canAdminCancel, canMarkPaid, forwardStatus, nextStatuses } from './status'
 
 const STATUSES = Constants.public.Enums.order_status
 
@@ -53,5 +53,21 @@ describe('forwardStatus', () => {
 describe('canAdminCancel', () => {
   it('hủy được từ 3 trạng thái đầu', () => {
     expect(STATUSES.filter(canAdminCancel)).toEqual(['pending', 'confirmed', 'shipping'])
+  })
+})
+
+describe('canMarkPaid', () => {
+  const order = { status: 'pending', payment_method: 'bank_transfer', payment_status: 'unpaid' } as const
+
+  it('đơn chuyển khoản chưa thanh toán, chưa hủy', () => {
+    expect(canMarkPaid(order)).toBe(true)
+    expect(canMarkPaid({ ...order, status: 'delivered' })).toBe(true)
+  })
+
+  it('COD, đã thanh toán / hoàn tiền, đã hủy → không', () => {
+    expect(canMarkPaid({ ...order, payment_method: 'cod' })).toBe(false)
+    expect(canMarkPaid({ ...order, payment_status: 'paid' })).toBe(false)
+    expect(canMarkPaid({ ...order, payment_status: 'refunded' })).toBe(false)
+    expect(canMarkPaid({ ...order, status: 'cancelled' })).toBe(false)
   })
 })

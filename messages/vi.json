@@ -303,7 +303,12 @@
         "method": "Phương thức",
         "bankTransfer": "Chuyển khoản",
         "status": "Trạng thái",
-        "voucher": "Mã giảm giá"
+        "voucher": "Mã giảm giá",
+        "markPaid": "Đã nhận tiền",
+        "markPaidPending": "Đang ghi nhận…",
+        "markPaidDone": "Đã ghi nhận thanh toán.",
+        "markPaidHint": "Đối chiếu sao kê: số tiền và nội dung chuyển khoản (mã đơn) phải khớp trước khi bấm.",
+        "refundNote": "Đơn đã thanh toán: hủy đơn sẽ chuyển trạng thái thanh toán thành \"Đã hoàn tiền\". Hoàn tiền cho khách ngoài hệ thống."
       },
       "customer": {
         "title": "Khách hàng",
@@ -607,7 +612,14 @@
     "fixQuantity": "Về giỏ hàng để sửa số lượng",
     "fixRemove": "Về giỏ hàng để xóa sách này",
     "chooseAddress": "Chọn địa chỉ khác",
-    "addressGone": "Địa chỉ này không còn. Hãy chọn địa chỉ khác."
+    "addressGone": "Địa chỉ này không còn. Hãy chọn địa chỉ khác.",
+    "bankTransfer": "Chuyển khoản ngân hàng (VietQR)",
+    "bankTransferHint": "Quét mã QR sau khi đặt hàng. Dự án học tập: tài khoản nhận là tài khoản demo.",
+    "voucherLabel": "Mã giảm giá",
+    "voucherApply": "Áp dụng",
+    "voucherApplied": "Đã áp dụng mã {code}",
+    "voucherRemove": "Bỏ mã",
+    "discount": "Giảm giá"
   },
   "order": {
     "successTitle": "Đặt hàng thành công",
@@ -634,7 +646,11 @@
       "unpaid": "Chưa thanh toán",
       "paid": "Đã thanh toán",
       "refunded": "Đã hoàn tiền"
-    }
+    },
+    "bankTransfer": "Chuyển khoản ngân hàng (VietQR)",
+    "bankAmount": "Chuyển khoản: {total}",
+    "discount": "Giảm giá",
+    "voucher": "Mã {code}"
   },
   "orders": {
     "title": "Đơn hàng của tôi",
@@ -829,5 +845,49 @@
   "allBooks": {
     "title": "Tất cả sách",
     "metaDescription": "Toàn bộ sách tại Nhà Sách Mây: lọc theo giá, ngôn ngữ, tình trạng còn hàng; sắp xếp theo bán chạy, mới nhất hoặc giá."
+  },
+  "payment": {
+    "title": "Chuyển khoản qua VietQR",
+    "lead": "Mở app ngân hàng và quét mã QR: số tiền và nội dung chuyển khoản đã điền sẵn.",
+    "demoWarning": "Dự án học tập: thông tin chuyển khoản dưới đây là demo, không phải tài khoản thật. Đừng chuyển tiền.",
+    "bank": "Ngân hàng",
+    "accountNo": "Số tài khoản",
+    "accountName": "Chủ tài khoản",
+    "amount": "Số tiền",
+    "content": "Nội dung chuyển khoản",
+    "qrLabel": "Mã VietQR chuyển khoản cho đơn {code}",
+    "afterTransfer": "Cửa hàng xác nhận thủ công sau khi nhận tiền; trạng thái thanh toán cập nhật ở trang chi tiết đơn."
+  },
+  "email": {
+    "subject": {
+      "placed": "Đã nhận đơn hàng {code}",
+      "confirmed": "Đơn hàng {code} đã được xác nhận",
+      "shipping": "Đơn hàng {code} đang được giao",
+      "delivered": "Đơn hàng {code} đã giao thành công",
+      "cancelled": "Đơn hàng {code} đã bị hủy",
+      "paid": "Đã nhận thanh toán cho đơn hàng {code}"
+    },
+    "lead": {
+      "placed": "Cảm ơn bạn đã đặt sách tại Nhà Sách Mây. Đơn hàng đang chờ cửa hàng xác nhận.",
+      "confirmed": "Cửa hàng đã xác nhận đơn hàng và đang chuẩn bị sách cho bạn.",
+      "shipping": "Đơn hàng đang trên đường tới bạn.",
+      "delivered": "Đơn hàng đã giao thành công. Chúc bạn có những giờ đọc thật vui!",
+      "cancelled": "Đơn hàng của bạn đã bị hủy.",
+      "paid": "Cửa hàng đã nhận được tiền chuyển khoản cho đơn hàng của bạn."
+    },
+    "cancelledReason": "Lý do: {reason}",
+    "refunded": "Đơn đã thanh toán: cửa hàng sẽ liên hệ để hoàn tiền.",
+    "items": "Sách trong đơn",
+    "quantity": "× {quantity}",
+    "subtotal": "Tạm tính",
+    "shipping": "Phí vận chuyển",
+    "freeShipping": "Miễn phí",
+    "discount": "Giảm giá",
+    "total": "Tổng cộng",
+    "paymentMethod": "Thanh toán: {method}",
+    "viewOrder": "Xem đơn hàng",
+    "transferTitle": "Thông tin chuyển khoản",
+    "transferHint": "Mở trang chi tiết đơn để quét mã VietQR. Nội dung chuyển khoản là mã đơn.",
+    "footer": "Email tự động từ Nhà Sách Mây (dự án học tập, phi thương mại). Vui lòng không trả lời email này."
   }
 }

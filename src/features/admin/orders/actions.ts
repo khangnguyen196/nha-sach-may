@@ -1,7 +1,9 @@
 'use server'
 
 import { refresh } from 'next/cache'
+import { after } from 'next/server'
 import { expireOrderBooks } from '@/features/orders/cache'
+import { notifyOrder } from '@/features/orders/emails'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdmin } from '../auth'
@@ -37,10 +39,15 @@ export async function advanceOrder(id: number, shownStatus: string): Promise<Res
   if (error) return toFailure(error)
   refresh()
   // Đổi trạng thái (không phải hủy) không đụng tồn kho → không làm mới cache catalog
-  return data.length === 0 ? STATUS_CHANGED : { ok: true, data: null }
+  if (data.length === 0) return STATUS_CHANGED
+  after(() => notifyOrder(supabase, orderId.data, to))
+  return { ok: true, data: null }
 }
 
-/** Hủy kèm lý do (bắt buộc); trigger hoàn tồn kho + lượt dùng voucher → làm mới trang sách của các sách trong đơn */
+/**
+ * Hủy kèm lý do (bắt buộc); trigger hoàn tồn kho + lượt dùng voucher → làm mới trang sách của các sách trong đơn.
+ * Đơn chuyển khoản đã thanh toán → `refunded` (cửa hàng hoàn tiền ngoài hệ thống; khách không tự hủy được đơn này).
+ */
 export async function cancelOrderAsAdmin(
   id: number,
   shownStatus: string,
@@ -62,11 +69,45 @@ export async function cancelOrderAsAdmin(
     .update({ status: 'cancelled', cancelled_reason: parsed.data.reason })
     .eq('id', orderId.data)
     .eq('status', from.data)
+    .select('id, payment_status')
+  if (error) return toFailure(error)
+  refresh()
+  const cancelled = data[0]
+  if (!cancelled) return STATUS_CHANGED
+
+  if (cancelled.payment_status === 'paid') {
+    const refund = await supabase
+      .from('orders')
+      .update({ payment_status: 'refunded' })
+      .eq('id', orderId.data)
+      .eq('payment_status', 'paid')
+    // Đơn đã hủy xong; chỉ trạng thái thanh toán chưa đổi → log, admin thấy "Đã thanh toán" trên đơn đã hủy
+    if (refund.error) console.error('cancelOrderAsAdmin (refunded):', refund.error.message)
+  }
+  await expireOrderBooks(supabase, orderId.data)
+  after(() => notifyOrder(supabase, orderId.data, 'cancelled'))
+  return { ok: true, data: null }
+}
+
+/** Ghi nhận đã nhận tiền chuyển khoản (admin tự đối soát sao kê); update có điều kiện như đổi trạng thái */
+export async function markOrderPaid(id: number): Promise<Result<null>> {
+  const denied = await assertAdmin()
+  if (denied) return denied
+  const orderId = rowIdSchema.safeParse(id)
+  if (!orderId.success) return UNKNOWN
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ payment_status: 'paid' })
+    .eq('id', orderId.data)
+    .eq('payment_method', 'bank_transfer')
+    .eq('payment_status', 'unpaid')
+    .neq('status', 'cancelled')
     .select('id')
   if (error) return toFailure(error)
   refresh()
   if (data.length === 0) return STATUS_CHANGED
-
-  await expireOrderBooks(supabase, orderId.data)
+  after(() => notifyOrder(supabase, orderId.data, 'paid'))
   return { ok: true, data: null }
 }

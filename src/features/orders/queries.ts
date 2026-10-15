@@ -6,7 +6,7 @@ import { FILTER_STATUSES, ORDERS_PAGE_SIZE, type OrderListParams } from './param
 // (admin xem được mọi đơn). Chỉ gọi trong <Suspense>.
 
 const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
-  street, note, subtotal, shipping_fee, discount, total, cancelled_reason, created_at,
+  street, note, subtotal, shipping_fee, discount, voucher_code, total, cancelled_reason, created_at,
   order_items(id, title, cover_url, unit_price, quantity, line_total)`
 
 // Mã đơn do generate_order_code() sinh: NS + YYMMDD + số thứ tự (≥ 5 chữ số)

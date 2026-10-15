@@ -33,6 +33,8 @@ type Props = {
   idempotencyKey: string
   /** Tổng đang hiển thị, chỉ để place_order so sánh */
   expectedTotal: number
+  /** Mã voucher đã áp dụng (hợp lệ) trên trang; null = không voucher */
+  voucherCode: string | null
   noteMax: number
   /** Server đã biết không đặt được: chưa có địa chỉ, giỏ có dòng hết hàng / ngừng bán */
   blocked: boolean
@@ -40,6 +42,8 @@ type Props = {
   address: ReactNode
   payment: ReactNode
   summary: ReactNode
+  /** Ô mã giảm giá (thuộc form GET riêng qua thuộc tính `form`) */
+  voucher: ReactNode
   /** Cảnh báo giỏ có vấn đề, hiện trên nút */
   problems?: ReactNode
 }
@@ -74,11 +78,13 @@ export function CheckoutForm({
   labels,
   idempotencyKey,
   expectedTotal,
+  voucherCode,
   noteMax,
   blocked,
   address,
   payment,
   summary,
+  voucher,
   problems,
 }: Props) {
   const { state, formProps, pending, formError, fieldError } = useFormAction(action, messages)
@@ -101,6 +107,7 @@ export function CheckoutForm({
     <form {...formProps} className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
       <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       <input type="hidden" name="expected_total" value={expectedTotal} />
+      {voucherCode && <input type="hidden" name="voucher_code" value={voucherCode} />}
 
       <div className="grid content-start gap-10">
         {address}
@@ -123,6 +130,7 @@ export function CheckoutForm({
 
       <aside className="h-fit rounded-lg border bg-surface p-5 lg:sticky lg:top-24" data-testid="checkout-summary">
         {summary}
+        {voucher}
         {problems}
         {alert && failure && (
           <div ref={alertRef} tabIndex={-1} className="mt-4 outline-none" data-testid="checkout-error">

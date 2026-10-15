@@ -1,6 +1,7 @@
 'use server'
 
 import { refresh, updateTag } from 'next/cache'
+import { after } from 'next/server'
 import type { Locale } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import { getPathname, redirect } from '@/i18n/navigation'
@@ -10,11 +11,12 @@ import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors
 import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
 import { expireOrderBooks } from '@/features/orders/cache'
+import { notifyOrder, ownRecipient } from '@/features/orders/emails'
 import { checkoutSchema } from './schemas'
 
 // locale do page bind sẵn (Server Action không đọc được next/root-params); tham số bind đi qua client nên parse lại.
-// Client chỉ gửi địa chỉ, ghi chú, idempotency key và tổng đang hiển thị (để place_order so sánh); giá, phí ship,
-// tổng tiền đều do place_order tính.
+// Client chỉ gửi địa chỉ, ghi chú, phương thức thanh toán, mã voucher, idempotency key và tổng đang hiển thị (để
+// place_order so sánh); giá, phí ship, giảm giá, tổng tiền đều do place_order tính.
 
 function redirectToLogin(locale: Locale): never {
   return redirect({
@@ -49,11 +51,14 @@ export async function placeOrder(locale: Locale, _prev: Result<null> | null, for
   const safeLocale = parseLocale(locale)
   const parsed = checkoutSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return invalidInput(parsed.error)
-  if (!(await getCurrentUser())) redirectToLogin(safeLocale)
+  const user = await getCurrentUser()
+  if (!user) redirectToLogin(safeLocale)
 
   const supabase = await createClient()
   const { data: order, error } = await supabase.rpc('place_order', {
     p_address_id: parsed.data.address_id,
+    p_payment_method: parsed.data.payment_method,
+    p_voucher_code: parsed.data.voucher_code ?? undefined,
     p_note: parsed.data.note ?? undefined,
     // Gửi lại cùng key (double submit, mất phản hồi) → place_order trả đúng đơn đã tạo
     p_idempotency_key: parsed.data.idempotency_key,
@@ -63,6 +68,11 @@ export async function placeOrder(locale: Locale, _prev: Result<null> | null, for
   if (error) return failed(safeLocale, toFailure(error))
 
   await expireOrderBooks(supabase, order.id)
+  // Gửi lại cùng key (đơn đã có) vẫn vào đây: email "đã nhận đơn" có thể gửi hai lần, chấp nhận
+  after(async () => {
+    const recipient = await ownRecipient(supabase, user)
+    if (recipient) await notifyOrder(supabase, order.id, 'placed', recipient)
+  })
   return redirect({
     href: { pathname: '/checkout/success/[code]', params: { code: order.order_code } },
     locale: safeLocale,

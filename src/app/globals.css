@@ -40,6 +40,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-qr: var(--qr);
+  --color-qr-background: var(--qr-background);
 
   --font-sans: var(--font-be-vietnam-pro);
   --font-serif: var(--font-lora);
@@ -100,6 +102,10 @@
   --ring: var(--primary);
 
   --glow: 0 0 24px color-mix(in oklab, var(--primary) 12%, transparent);
+
+  /* Mã QR (VietQR): app ngân hàng cần module tối trên nền sáng → giống nhau ở cả hai theme */
+  --qr: #000000;
+  --qr-background: #ffffff;
 }
 
 .light {

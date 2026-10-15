@@ -10,8 +10,10 @@ export function isProblemLine(line: CartLine) {
   return !line.book || line.quantity > line.book.stock
 }
 
-/** Tóm tắt ở cột phải: các dòng + tạm tính / phí ship / tổng từ quote_order (không tự tính tổng) */
-export async function OrderSummary({ lines, quote }: { lines: CartLine[]; quote: CartQuote }) {
+type Props = { lines: CartLine[]; quote: CartQuote & { discount: number }; voucherCode: string | null }
+
+/** Tóm tắt ở cột phải: các dòng + tạm tính / phí ship / giảm giá / tổng từ quote_order (không tự tính tổng) */
+export async function OrderSummary({ lines, quote, voucherCode }: Props) {
   const [t, tCart, format] = await Promise.all([getTranslations('checkout'), getTranslations('cart'), getFormatter()])
   const price = (value: number) => format.number(value, 'price')
 
@@ -78,6 +80,17 @@ export async function OrderSummary({ lines, quote }: { lines: CartLine[]; quote:
             {quote.shipping_fee === 0 && quote.item_count > 0 ? tCart('freeShipping') : price(quote.shipping_fee)}
           </dd>
         </div>
+        {quote.discount > 0 && (
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-muted-foreground">
+              {t('discount')}
+              {voucherCode && <span className="ml-1 font-mono text-xs">({voucherCode})</span>}
+            </dt>
+            <dd className="text-success tabular-nums" data-testid="checkout-discount">
+              −{price(quote.discount)}
+            </dd>
+          </div>
+        )}
         <div className="flex items-baseline justify-between gap-4 border-t pt-3 text-base">
           <dt className="font-semibold">{tCart('total')}</dt>
           <dd className="font-semibold text-primary tabular-nums" data-testid="checkout-total">

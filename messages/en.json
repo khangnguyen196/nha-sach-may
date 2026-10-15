@@ -215,7 +215,14 @@
     "fixQuantity": "Go to cart to change the quantity",
     "fixRemove": "Go to cart to remove this book",
     "chooseAddress": "Choose another address",
-    "addressGone": "This address no longer exists. Please choose another one."
+    "addressGone": "This address no longer exists. Please choose another one.",
+    "bankTransfer": "Bank transfer (VietQR)",
+    "bankTransferHint": "Scan the QR code after placing your order. Learning project: the receiving account is a demo.",
+    "voucherLabel": "Voucher code",
+    "voucherApply": "Apply",
+    "voucherApplied": "Code {code} applied",
+    "voucherRemove": "Remove code",
+    "discount": "Discount"
   },
   "order": {
     "successTitle": "Order placed",
@@ -242,7 +249,11 @@
       "unpaid": "Not paid yet",
       "paid": "Paid",
       "refunded": "Refunded"
-    }
+    },
+    "bankTransfer": "Bank transfer (VietQR)",
+    "bankAmount": "Bank transfer: {total}",
+    "discount": "Discount",
+    "voucher": "Code {code}"
   },
   "orders": {
     "title": "My orders",
@@ -437,5 +448,49 @@
   "allBooks": {
     "title": "All books",
     "metaDescription": "Every book at Nhà Sách Mây: filter by price, language and availability; sort by bestselling, newest or price."
+  },
+  "payment": {
+    "title": "Pay by bank transfer (VietQR)",
+    "lead": "Open your banking app and scan the QR code: the amount and reference are filled in for you.",
+    "demoWarning": "Learning project: the bank details below are a demo, not a real account. Do not transfer money.",
+    "bank": "Bank",
+    "accountNo": "Account number",
+    "accountName": "Account name",
+    "amount": "Amount",
+    "content": "Transfer reference",
+    "qrLabel": "VietQR transfer code for order {code}",
+    "afterTransfer": "The store confirms payments manually; the payment status updates on your order page."
+  },
+  "email": {
+    "subject": {
+      "placed": "We received your order {code}",
+      "confirmed": "Order {code} confirmed",
+      "shipping": "Order {code} is on its way",
+      "delivered": "Order {code} delivered",
+      "cancelled": "Order {code} cancelled",
+      "paid": "Payment received for order {code}"
+    },
+    "lead": {
+      "placed": "Thank you for ordering from Nhà Sách Mây. Your order is waiting for the store to confirm.",
+      "confirmed": "The store has confirmed your order and is preparing your books.",
+      "shipping": "Your order is on its way to you.",
+      "delivered": "Your order has been delivered. Happy reading!",
+      "cancelled": "Your order has been cancelled.",
+      "paid": "The store has received your bank transfer for this order."
+    },
+    "cancelledReason": "Reason: {reason}",
+    "refunded": "This order was paid: the store will contact you about the refund.",
+    "items": "Books in this order",
+    "quantity": "× {quantity}",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "freeShipping": "Free",
+    "discount": "Discount",
+    "total": "Total",
+    "paymentMethod": "Payment: {method}",
+    "viewOrder": "View order",
+    "transferTitle": "Bank transfer details",
+    "transferHint": "Open the order page to scan the VietQR code. Use the order code as the transfer reference.",
+    "footer": "Automated email from Nhà Sách Mây (a non-commercial learning project). Please do not reply."
   }
 }

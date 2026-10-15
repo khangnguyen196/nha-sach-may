@@ -48,15 +48,57 @@ const checks = [
   {
     name: 'GOOGLE_BOOKS_API_KEY',
     required: false,
+    hint: 'quota ẩn danh của Google Books thường đã hết',
     test: (value) => (/^AIza[0-9A-Za-z_-]{35}$/.test(value) ? null : 'không giống định dạng API key của Google (AIza…, 39 ký tự)'),
   },
+  // Phase 9–10: đều tùy chọn, thiếu thì app vẫn chạy (email chỉ ghi log, VietQR dùng thông tin demo)
+  {
+    name: 'SITE_URL',
+    required: false,
+    hint: 'link trong email / sitemap dùng VERCEL_PROJECT_PRODUCTION_URL hoặc http://localhost:3000',
+    test(value) {
+      try {
+        const url = new URL(value)
+        if (url.protocol !== 'https:' && url.hostname !== 'localhost') return 'phải là https (trừ localhost)'
+        return url.pathname === '/' && !url.search ? null : 'chỉ là URL gốc, không kèm đường dẫn'
+      } catch {
+        return 'không phải URL hợp lệ'
+      }
+    },
+  },
+  {
+    name: 'RESEND_API_KEY',
+    required: false,
+    hint: 'email đơn hàng chỉ ghi log, không gửi',
+    test: (value) => (value.startsWith('re_') ? null : 'API key của Resend bắt đầu bằng re_'),
+  },
+  {
+    name: 'EMAIL_FROM',
+    required: false,
+    hint: 'cần cùng RESEND_API_KEY',
+    test: (value) => (/^([^<>]+<)?[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>?$/.test(value) ? null : 'dạng "Tên <email@domain>" hoặc email@domain'),
+  },
+  {
+    name: 'VIETQR_BANK_BIN',
+    required: false,
+    hint: 'VietQR dùng thông tin demo (cần đủ 4 biến VIETQR_*)',
+    test: (value) => (/^\d{6}$/.test(value) ? null : 'BIN ngân hàng (NAPAS) gồm 6 chữ số'),
+  },
+  { name: 'VIETQR_BANK_NAME', required: false, hint: 'cần đủ 4 biến VIETQR_*', test: () => null },
+  {
+    name: 'VIETQR_ACCOUNT_NO',
+    required: false,
+    hint: 'cần đủ 4 biến VIETQR_*',
+    test: (value) => (/^[0-9A-Za-z]{1,19}$/.test(value) ? null : 'chỉ chữ / số, tối đa 19 ký tự'),
+  },
+  { name: 'VIETQR_ACCOUNT_NAME', required: false, hint: 'cần đủ 4 biến VIETQR_*', test: () => null },
 ]
 
 let failed = false
-for (const { name, required, test } of checks) {
+for (const { name, required, hint, test } of checks) {
   const raw = process.env[name]
   if (!raw) {
-    console.log(`${required ? '✖' : '!'} ${name}: chưa đặt${required ? '' : ' (tùy chọn, nhưng quota ẩn danh của Google Books thường đã hết)'}`)
+    console.log(`${required ? '✖' : '!'} ${name}: chưa đặt${required ? '' : ` (tùy chọn: ${hint})`}`)
     failed ||= required
     continue
   }
@@ -66,6 +108,16 @@ for (const { name, required, test } of checks) {
     failed = true
   } else {
     console.log(`✔ ${name}`)
+  }
+}
+
+// Biến đi theo nhóm: đặt một nửa thì app bỏ qua cả nhóm (coi như chưa cấu hình)
+const groups = [['RESEND_API_KEY', 'EMAIL_FROM'], ['VIETQR_BANK_BIN', 'VIETQR_BANK_NAME', 'VIETQR_ACCOUNT_NO', 'VIETQR_ACCOUNT_NAME']]
+for (const group of groups) {
+  const set = group.filter((name) => process.env[name])
+  if (set.length > 0 && set.length < group.length) {
+    console.log(`✖ Đặt thiếu nhóm ${group.join(' + ')}: app sẽ bỏ qua cả nhóm`)
+    failed = true
   }
 }
 
