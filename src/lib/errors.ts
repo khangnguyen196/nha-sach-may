@@ -12,6 +12,7 @@ export const ERROR_CODES = [
   'ORDER_NOT_CANCELLABLE',
   'ORDER_REOPEN_FORBIDDEN',
   'INVALID_INPUT',
+  'CART_CHANGED',
   'INVALID_CREDENTIALS',
   'EMAIL_TAKEN',
   'EMAIL_NOT_CONFIRMED',
@@ -37,6 +38,8 @@ export const VALIDATION_KEYS = [
   'province',
   'ward',
   'street',
+  'address',
+  'note',
   'invalid',
 ] as const
 

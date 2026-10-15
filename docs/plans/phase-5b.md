@@ -175,10 +175,10 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 - [x] Migration `place_order` idempotency + `p_expected_total` + `schema.sql` (viết xong; chờ bạn kiểm tra, chạy SQL, sinh types)
 - [x] Proxy `/checkout`, routing `/checkout/success/[code]` (+ `LocaleSwitcher` nhận param `code`)
 - [x] Tag `book:{id}` cho cache danh sách (`listBooks`, `getNewBooks`, `getRelatedBooks`; bỏ `searchBookHits` vì gợi ý không hiện giá / tồn kho)
-- [ ] `features/checkout/{schemas,actions}.ts` + Vitest
+- [ ] `features/checkout/{schemas,actions}.ts` + Vitest (schemas + Vitest xong; action chờ chữ ký mới)
 - [ ] Trang `/thanh-toan`: địa chỉ, ghi chú, tóm tắt, form + lỗi, chờ gộp giỏ, chặn sớm
 - [ ] `createAddress` nhận `next`
 - [ ] Trang thành công
-- [ ] Messages `checkout`, `order`, `errors.CART_CHANGED`
+- [x] Messages `checkout`, `order`, `errors.CART_CHANGED`, `validation.{address,note}`
 - [ ] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo

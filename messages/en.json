@@ -184,6 +184,43 @@
     "loadError": "Could not load your cart. Check your connection and try again.",
     "retry": "Try again"
   },
+  "checkout": {
+    "title": "Checkout",
+    "metaDescription": "Confirm your shipping address and order your books at Nhà Sách Mây.",
+    "addressHeading": "Shipping address",
+    "addAddress": "Add address",
+    "noAddress": "You have no saved shipping address yet. Add one to place your order.",
+    "noteLabel": "Order note",
+    "noteHint": "Optional. E.g. deliver during office hours.",
+    "noteCount": "{count}/{max} characters",
+    "paymentHeading": "Payment method",
+    "cod": "Cash on delivery (COD)",
+    "codHint": "Pay the courier in cash when your books arrive.",
+    "summary": "Your order",
+    "editCart": "Edit cart",
+    "quantity": "Qty: {quantity}",
+    "placeOrder": "Place order",
+    "placing": "Placing order…",
+    "syncingCart": "Updating your cart…",
+    "problemsTitle": "Your cart needs a fix before you can order.",
+    "fixInCart": "Go to cart to fix it",
+    "fixQuantity": "Go to cart to change the quantity",
+    "fixRemove": "Go to cart to remove this book",
+    "chooseAddress": "Choose another address",
+    "addressGone": "This address no longer exists. Please choose another one."
+  },
+  "order": {
+    "successTitle": "Order placed",
+    "successLead": "Thank you! Your order is waiting for the store to confirm it.",
+    "code": "Order number",
+    "placedAt": "Order date",
+    "codAmount": "Pay on delivery: {total}",
+    "shippingTo": "Ship to",
+    "note": "Note",
+    "items": "Books ordered",
+    "quantity": "Qty: {quantity}",
+    "continueShopping": "Continue shopping"
+  },
   "author": {
     "books": "Books by this author",
     "metaDescription": "Books by {name} at Nhà Sách Mây."
@@ -210,6 +247,8 @@
     "province": "Please choose a province or city.",
     "ward": "Please choose a ward or commune in the selected province.",
     "street": "Street address must be 1 to 200 characters.",
+    "address": "Please choose a shipping address.",
+    "note": "Notes can be at most 500 characters.",
     "invalid": "Invalid value."
   },
   "auth": {
@@ -312,6 +351,7 @@
     "ORDER_NOT_CANCELLABLE": "This order can no longer be cancelled.",
     "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",
     "INVALID_INPUT": "Some of the information is invalid.",
+    "CART_CHANGED": "Your cart has just changed. Check the new total, then place your order.",
     "INVALID_CREDENTIALS": "Incorrect email or password.",
     "EMAIL_TAKEN": "This email is already registered.",
     "EMAIL_NOT_CONFIRMED": "Your email is not confirmed yet. Please open the confirmation email in your inbox.",

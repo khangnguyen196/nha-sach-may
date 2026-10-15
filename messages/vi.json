@@ -184,6 +184,43 @@
     "loadError": "Không tải được giỏ hàng. Kiểm tra kết nối rồi thử lại.",
     "retry": "Thử lại"
   },
+  "checkout": {
+    "title": "Thanh toán",
+    "metaDescription": "Xác nhận địa chỉ giao hàng và đặt sách tại Nhà Sách Mây.",
+    "addressHeading": "Địa chỉ giao hàng",
+    "addAddress": "Thêm địa chỉ",
+    "noAddress": "Bạn chưa có địa chỉ giao hàng nào. Thêm một địa chỉ để đặt hàng.",
+    "noteLabel": "Ghi chú cho đơn hàng",
+    "noteHint": "Không bắt buộc. VD: giao trong giờ hành chính.",
+    "noteCount": "{count}/{max} ký tự",
+    "paymentHeading": "Phương thức thanh toán",
+    "cod": "Thanh toán khi nhận hàng (COD)",
+    "codHint": "Trả tiền mặt cho người giao hàng khi nhận sách.",
+    "summary": "Đơn hàng của bạn",
+    "editCart": "Sửa giỏ hàng",
+    "quantity": "Số lượng: {quantity}",
+    "placeOrder": "Đặt hàng",
+    "placing": "Đang đặt hàng…",
+    "syncingCart": "Đang cập nhật giỏ hàng…",
+    "problemsTitle": "Giỏ hàng cần sửa trước khi đặt hàng.",
+    "fixInCart": "Về giỏ hàng để sửa",
+    "fixQuantity": "Về giỏ hàng để sửa số lượng",
+    "fixRemove": "Về giỏ hàng để xóa sách này",
+    "chooseAddress": "Chọn địa chỉ khác",
+    "addressGone": "Địa chỉ này không còn. Hãy chọn địa chỉ khác."
+  },
+  "order": {
+    "successTitle": "Đặt hàng thành công",
+    "successLead": "Cảm ơn bạn! Đơn hàng đang chờ cửa hàng xác nhận.",
+    "code": "Mã đơn hàng",
+    "placedAt": "Ngày đặt",
+    "codAmount": "Thanh toán khi nhận hàng: {total}",
+    "shippingTo": "Giao đến",
+    "note": "Ghi chú",
+    "items": "Sách đã đặt",
+    "quantity": "Số lượng: {quantity}",
+    "continueShopping": "Tiếp tục mua sắm"
+  },
   "author": {
     "books": "Sách của tác giả",
     "metaDescription": "Sách của {name} tại Nhà Sách Mây."
@@ -210,6 +247,8 @@
     "province": "Vui lòng chọn tỉnh/thành phố.",
     "ward": "Vui lòng chọn phường/xã thuộc tỉnh/thành phố đã chọn.",
     "street": "Số nhà, tên đường cần từ 1 đến 200 ký tự.",
+    "address": "Vui lòng chọn địa chỉ giao hàng.",
+    "note": "Ghi chú tối đa 500 ký tự.",
     "invalid": "Giá trị không hợp lệ."
   },
   "auth": {
@@ -312,6 +351,7 @@
     "ORDER_NOT_CANCELLABLE": "Đơn hàng này không thể hủy.",
     "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",
     "INVALID_INPUT": "Dữ liệu không hợp lệ.",
+    "CART_CHANGED": "Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng.",
     "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
     "EMAIL_TAKEN": "Email này đã được dùng để đăng ký.",
     "EMAIL_NOT_CONFIRMED": "Email chưa được xác nhận. Vui lòng mở thư xác nhận trong hộp thư của bạn.",
