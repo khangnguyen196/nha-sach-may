@@ -259,6 +259,17 @@ export async function getAllBookSlugs() {
   return data.map((book) => book.slug)
 }
 
+/** Sitemap: slug + ngày sửa + danh mục của mọi sách đang bán (RLS) */
+export async function getSitemapBooks() {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient().from('books').select('slug, updated_at, category_id').order('id')
+  if (error) throw new Error(`getSitemapBooks: ${error.message}`)
+  return data
+}
+
 export async function getAllAuthorSlugs() {
   'use cache'
   cacheTag('authors')

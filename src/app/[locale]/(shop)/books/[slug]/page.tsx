@@ -25,7 +25,10 @@ import { RatingStars } from '@/features/reviews/components/rating-stars'
 import { ReviewList, ReviewListSkeleton } from '@/features/reviews/components/review-list'
 import { localeAlternates } from '@/i18n/alternates'
 import { Link } from '@/i18n/navigation'
+import { localizedSlugPath } from '@/i18n/paths'
 import { localize } from '@/lib/i18n-db'
+import { bookJsonLd, serializeJsonLd } from '@/lib/json-ld'
+import { siteUrl } from '@/lib/site-url'
 
 type Props = PageProps<'/[locale]/books/[slug]'>
 
@@ -45,15 +48,31 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const [book, locale, t] = await Promise.all([getBookBySlug(slug), getLocale(), getTranslations('book')])
+  const [book, locale, t, tCommon] = await Promise.all([
+    getBookBySlug(slug),
+    getLocale(),
+    getTranslations('book'),
+    getTranslations('common'),
+  ])
   if (!book) return {}
-  const description = localize(book, 'description', locale)
+  const localized = localize(book, 'description', locale)
+  const description = localized
+    ? truncateText(localized, META_DESCRIPTION_LENGTH)
+    : t('metaDescription', { title: book.title })
   return {
     title: book.title,
-    description: description
-      ? truncateText(description, META_DESCRIPTION_LENGTH)
-      : t('metaDescription', { title: book.title }),
+    description,
     alternates: localeAlternates({ pathname: '/books/[slug]', params: { slug } }, locale),
+    // Ghi đè cả openGraph của layout (Next không gộp sâu): ảnh chia sẻ là bìa sách (WebP 600px trong Storage)
+    openGraph: {
+      type: 'book',
+      siteName: tCommon('siteName'),
+      locale: locale === 'en' ? 'en_US' : 'vi_VN',
+      title: book.title,
+      description,
+      ...(book.isbn && { isbn: book.isbn }),
+      ...(book.cover_url && { images: [{ url: book.cover_url, alt: book.title }] }),
+    },
   }
 }
 
@@ -81,8 +100,41 @@ export default async function BookPage({ params }: Props) {
   )
   crumbs.push({ label: book.title })
 
+  const base = siteUrl()
+  const url = `${base}${localizedSlugPath('/books/[slug]', book.slug, locale)}`
+  const jsonLd = bookJsonLd({
+    url,
+    name: book.title,
+    image: book.cover_url,
+    description: localize(book, 'description', locale),
+    isbn: book.isbn,
+    authors: book.book_authors.flatMap((ba) => (ba.role === 'author' && ba.authors ? [ba.authors.name] : [])),
+    publisher: book.publishers?.name ?? null,
+    pageCount: book.page_count,
+    language: book.language,
+    format: book.format,
+    price: book.price,
+    inStock: book.stock > 0,
+    rating: book.review_count > 0 ? { value: book.avg_rating, count: book.review_count } : null,
+    breadcrumb: [
+      ...[parent, leaf].flatMap((category) =>
+        category
+          ? [
+              {
+                name: localize(category, 'name', locale),
+                url: `${base}${localizedSlugPath('/categories/[slug]', category.slug, locale)}`,
+              },
+            ]
+          : [],
+      ),
+      { name: book.title, url },
+    ],
+  })
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      {/* Dữ liệu có cấu trúc (Book, Offer, BreadcrumbList): JSON đã thoát `<`, không phải JS chạy */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <Breadcrumb items={crumbs} />
 
       <div className="mt-6 grid gap-8 md:mt-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 lg:gap-16">

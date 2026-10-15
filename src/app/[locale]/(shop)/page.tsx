@@ -3,7 +3,10 @@ import { buttonVariants } from '@/components/ui/button'
 import { Shelf } from '@/features/books/components/shelf'
 import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
 import { Link } from '@/i18n/navigation'
+import { localizedPath } from '@/i18n/paths'
 import { localize } from '@/lib/i18n-db'
+import { serializeJsonLd, websiteJsonLd } from '@/lib/json-ld'
+import { siteUrl } from '@/lib/site-url'
 
 const categoryLink =
   'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -22,13 +25,30 @@ function leafIds(categories: Category[], root: Category) {
  * Prerender: mọi query qua 'use cache' + client anon. LCP là chữ hero; ảnh kệ lazy.
  */
 export default async function HomePage() {
-  const [t, locale, categories] = await Promise.all([getTranslations('home'), getLocale(), getCategories()])
+  const [t, tCommon, locale, categories] = await Promise.all([
+    getTranslations('home'),
+    getTranslations('common'),
+    getLocale(),
+    getCategories(),
+  ])
   const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
   const shelves = await getHomeShelves(foreignRoot ? leafIds(categories, foreignRoot) : [])
   const parents = categories.filter((c) => c.parent_id === null)
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(
+            websiteJsonLd({
+              name: tCommon('siteName'),
+              url: `${siteUrl()}${localizedPath('/', locale)}`,
+              searchUrl: `${siteUrl()}${localizedPath('/search', locale)}`,
+            }),
+          ),
+        }}
+      />
       <div className="py-16 md:py-24">
         <figure className="max-w-reading">
           <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>

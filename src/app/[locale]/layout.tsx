@@ -7,6 +7,7 @@ import { ErrorMessagesProvider } from '@/components/layout/error-view'
 import { Header } from '@/components/layout/header'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 import { routing } from '@/i18n/routing'
+import { siteUrl } from '@/lib/site-url'
 import { fontVariables } from '../fonts'
 import '../globals.css'
 
@@ -15,10 +16,14 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [t, tCommon] = await Promise.all([getTranslations('metadata'), getTranslations('common')])
+  const [t, tCommon, locale] = await Promise.all([getTranslations('metadata'), getTranslations('common'), rootLocale()])
   return {
+    // URL tuyệt đối cho og:image, canonical, hreflang (SITE_URL → domain Vercel → localhost)
+    metadataBase: new URL(siteUrl()),
     title: { default: t('title'), template: `%s · ${tCommon('siteName')}` },
     description: t('description'),
+    // Ảnh mặc định: opengraph-image.png cùng thư mục (scripts/og-image.ts); trang sách dùng bìa sách
+    openGraph: { siteName: tCommon('siteName'), type: 'website', locale: locale === 'en' ? 'en_US' : 'vi_VN' },
   }
 }
 

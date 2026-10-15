@@ -3,12 +3,41 @@ import createIntlMiddleware from 'next-intl/middleware'
 import type { Locale } from 'next-intl'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
-import { localizedPath } from '@/i18n/paths'
+import { localizedPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
+import { createSlugGuard } from '@/lib/slug-guard'
+import { createPublicClient } from '@/lib/supabase/public'
 import { supabaseEnv } from '@/lib/supabase/env'
 
 const handleI18nRouting = createIntlMiddleware(routing)
+
+const SLUG_TABLES = { '/books/[slug]': 'books', '/categories/[slug]': 'categories', '/authors/[slug]': 'authors' } as const
+
+// Client anon: RLS chỉ trả sách / danh mục đang hiện → sách ẩn cũng là 404, như trang tự gọi notFound()
+const slugExists = createSlugGuard({
+  async all(kind: SlugPathname) {
+    const { data, error } = await createPublicClient().from(SLUG_TABLES[kind]).select('slug')
+    if (error) throw new Error(error.message)
+    return data.map((row) => row.slug)
+  },
+  async one(kind: SlugPathname, slug: string) {
+    const { data, error } = await createPublicClient().from(SLUG_TABLES[kind]).select('slug').eq('slug', slug).maybeSingle()
+    if (error) throw new Error(error.message)
+    return data !== null
+  },
+})
+
+/**
+ * Trang sách / danh mục / tác giả với slug không tồn tại → rewrite sang một đường dẫn không khớp route nào của locale
+ * đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật + not-found.tsx đúng ngôn ngữ.
+ */
+async function notFoundRewrite(request: NextRequest) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return null
+  const match = matchSlugPath(request.nextUrl.pathname)
+  if (!match || (await slugExists(match.kind, match.slug))) return null
+  return NextResponse.rewrite(new URL(`/${match.locale}/__not-found`, request.url))
+}
 
 const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')
 
@@ -67,7 +96,8 @@ export async function proxy(request: NextRequest) {
     response = allowed ? NextResponse.next({ request }) : NextResponse.redirect(new URL('/', request.url))
   } else {
     // Lớp ngoài; trang tài khoản kiểm tra lại ở server (requireUser)
-    response = authRedirect(request, Boolean(auth?.claims)) ?? handleI18nRouting(request)
+    response =
+      authRedirect(request, Boolean(auth?.claims)) ?? (await notFoundRewrite(request)) ?? handleI18nRouting(request)
   }
 
   // 3. Trả cookie mới về trình duyệt, kèm header chống cache của Supabase (không để CDN cache token)
