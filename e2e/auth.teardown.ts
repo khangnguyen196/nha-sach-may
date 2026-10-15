@@ -7,7 +7,7 @@ import { CREDENTIALS_PATH, readCredentials } from './auth'
 // giỏ). User sót do lần chạy bị ngắt thì setup lần sau dọn.
 teardown('xóa tài khoản e2e', async () => {
   if (!existsSync(CREDENTIALS_PATH)) return
-  const ids = Object.values(readCredentials()).flatMap(({ user, checkout }) => [user.id, checkout.id])
+  const ids = Object.values(readCredentials()).flatMap(({ user, checkout, orders }) => [user.id, checkout.id, orders.id])
   await deleteE2eUsers(ids)
   rmSync(CREDENTIALS_PATH)
 })

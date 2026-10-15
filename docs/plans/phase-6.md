@@ -115,7 +115,7 @@ Trang danh sách: 0 JS thêm (Server Component + link). Trang chi tiết: form h
 - [x] Component `OrderDetails` dùng chung; trang chi tiết; link "Xem đơn hàng" ở trang thành công
 - [x] Hủy đơn + `updateTag`; checkout dùng chung `expireOrderBooks`
 - [x] Messages
-- [ ] e2e `orders.spec.ts` + helper
-- [ ] Trang lỗi: `ErrorView` + context chuỗi, `[locale]/error.tsx`, `(shop)/error.tsx`, `global-error.tsx`, `admin/error.tsx`; tiêm lỗi e2e; `error-page.spec.ts`
+- [x] e2e `orders.spec.ts` + helper
+- [x] Trang lỗi: `ErrorView` + context chuỗi, `[locale]/error.tsx`, `(shop)/error.tsx`, `global-error.tsx`, `admin/error.tsx`; tiêm lỗi e2e; `error-page.spec.ts`
 - [x] CLAUDE.md: lộ trình Phase 9 (không tự hủy đơn đã thanh toán)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo

@@ -8,6 +8,7 @@ import {
   CREDENTIALS_PATH,
   login,
   NO_SESSION,
+  ordersStatePath,
   storageStatePath,
   type Credentials,
 } from './auth'
@@ -20,8 +21,12 @@ setup('tạo tài khoản e2e, đăng nhập sẵn', async ({ browser, baseURL }
 
   const credentials: Credentials = {}
   for (const project of ACCOUNT_PROJECTS) {
-    const [user, checkout] = await Promise.all([createE2eUser(project), createE2eUser(`${project}-checkout`)])
-    credentials[project] = { user, checkout }
+    const [user, checkout, orders] = await Promise.all([
+      createE2eUser(project),
+      createE2eUser(`${project}-checkout`),
+      createE2eUser(`${project}-orders`),
+    ])
+    credentials[project] = { user, checkout, orders }
   }
   // Ghi trước khi đăng nhập: setup lỗi giữa chừng thì teardown vẫn biết user nào cần xóa
   writeFileSync(CREDENTIALS_PATH, JSON.stringify(credentials, null, 2))
@@ -32,6 +37,7 @@ setup('tạo tài khoản e2e, đăng nhập sẵn', async ({ browser, baseURL }
     const sessions = [
       { user: users.user, path: storageStatePath(project) },
       { user: users.checkout, path: checkoutStatePath(project) },
+      { user: users.orders, path: ordersStatePath(project) },
     ]
     for (const { user, path } of sessions) {
       const context = await browser.newContext({ baseURL, storageState: NO_SESSION })

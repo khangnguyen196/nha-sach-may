@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 3100
-// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout.spec.ts
-const ACCOUNT_SPECS = /(account|checkout)\.spec\.ts/
+// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout, orders, error-page
+const ACCOUNT_SPECS = /(account|checkout|orders|error-page)\.spec\.ts/
 
 export default defineConfig({
   testDir: './e2e',
@@ -41,5 +41,7 @@ export default defineConfig({
     // Luôn build + start mới: reuse dễ chạy nhầm trên bản build cũ còn sót ở cổng 3100
     reuseExistingServer: false,
     timeout: 300_000,
+    // Cho phép error-page.spec.ts làm hỏng request Supabase bằng cookie (src/lib/supabase/fault-injection.ts)
+    env: { E2E_FAULT_INJECTION: '1' },
   },
 })

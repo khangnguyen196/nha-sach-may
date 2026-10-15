@@ -243,6 +243,12 @@ export async function cancelAndDeleteOrders(userIds: string[]) {
   if (error) throw new Error(`cancelAndDeleteOrders (delete): ${error.message}`)
 }
 
+/** Admin đổi trạng thái đơn (Phase 7 chưa có UI admin): VD cửa hàng xác nhận đơn trong lúc khách đang mở trang */
+export async function setOrderStatus(orderId: number, status: Database['public']['Enums']['order_status']) {
+  const { error } = await adminClient().from('orders').update({ status }).eq('id', orderId)
+  if (error) throw new Error(`setOrderStatus: ${error.message}`)
+}
+
 const HIDDEN_BOOK_SLUG = 'e2e-hidden-'
 
 /** Sách ẩn (is_active = false) tạm cho test BOOK_UNAVAILABLE: không bao giờ hiện ra catalog công khai */

@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { waitForHydration } from './helpers'
 
-// Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho checkout: trên CI hai project (và các
-// file spec) chạy song song, dùng chung user thì test sổ địa chỉ / giỏ / đặt hàng giẫm lên nhau. Test đặt lại mật khẩu
+// Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho checkout + một user cho đơn hàng: trên CI
+// hai project (và các file spec) chạy song song, dùng chung user thì test sổ địa chỉ / giỏ / đặt hàng / đơn hàng giẫm
+// lên nhau (checkout.spec xóa mọi đơn của user checkout sau mỗi test). Test đặt lại mật khẩu
 // tự tạo user riêng cho mỗi lần chạy (account.spec.ts).
 export const ACCOUNT_PROJECTS = ['desktop-account', 'mobile-account'] as const
 
@@ -13,9 +14,11 @@ export const CREDENTIALS_PATH = `${AUTH_DIR}/credentials.json`
 export const storageStatePath = (project: string) => `${AUTH_DIR}/${project}.json`
 /** Phiên đăng nhập sẵn của user checkout */
 export const checkoutStatePath = (project: string) => `${AUTH_DIR}/${project}-checkout.json`
+/** Phiên đăng nhập sẵn của user đơn hàng (orders.spec.ts) */
+export const ordersStatePath = (project: string) => `${AUTH_DIR}/${project}-orders.json`
 
 const userSchema = z.object({ id: z.string(), email: z.string(), password: z.string(), fullName: z.string() })
-const credentialsSchema = z.record(z.string(), z.object({ user: userSchema, checkout: userSchema }))
+const credentialsSchema = z.record(z.string(), z.object({ user: userSchema, checkout: userSchema, orders: userSchema }))
 
 export type Credentials = z.infer<typeof credentialsSchema>
 export type ProjectUsers = Credentials[string]
