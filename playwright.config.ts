@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = 3100
-// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout, orders, error-page
-const ACCOUNT_SPECS = /(account|checkout|orders|error-page)\.spec\.ts$/
+// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout, orders, error-page, reviews
+const ACCOUNT_SPECS = /(account|checkout|orders|error-page|reviews)\.spec\.ts$/
 // Admin (Phase 7): admin-*.spec.ts, user admin riêng mỗi project. Phải loại khỏi ACCOUNT_SPECS (admin-orders.spec.ts
 // khớp cả "orders.spec.ts"). Mobile chỉ chạy smoke.
 const ADMIN_SPECS = /admin-[\w-]+\.spec\.ts$/

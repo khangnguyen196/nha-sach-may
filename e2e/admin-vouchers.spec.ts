@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { createE2eVoucher, deleteE2eVouchers, e2eVoucherCode, voucherRow } from '../scripts/e2e-user'
+import { createE2eVoucher, deleteE2eVouchers, e2eVoucherCode, signedInClient, voucherRow } from '../scripts/e2e-user'
 import { adminTest as test, main } from './admin'
 import { collectErrors, waitForHydration } from './helpers'
 
@@ -110,5 +110,20 @@ test('xóa: voucher đã dùng → chỉ tắt được; chưa dùng → xóa', 
     expect(await voucherRow(unused.code)).toBeNull()
   } finally {
     await deleteE2eVouchers([used.code, unused.code])
+  }
+})
+
+// Chờ migration 20261016020000_payments_email.sql (quyền cột vouchers): trước khi chạy migration test này fail.
+test('admin gọi thẳng PostgREST: không sửa được used_count (do place_order / trigger quản lý)', async ({ admin }) => {
+  const voucher = await createE2eVoucher()
+  try {
+    const client = await signedInClient(admin)
+    const { error } = await client.from('vouchers').update({ used_count: 99 }).eq('id', voucher.id)
+    expect(error?.code).toBe('42501')
+    // Cột của form admin vẫn sửa được
+    const allowed = await client.from('vouchers').update({ is_active: false }).eq('id', voucher.id)
+    expect(allowed.error).toBeNull()
+  } finally {
+    await deleteE2eVouchers([voucher.code])
   }
 })

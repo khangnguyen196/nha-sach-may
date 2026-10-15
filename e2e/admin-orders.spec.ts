@@ -6,6 +6,7 @@ import {
   createE2eCategory,
   createE2eUser,
   deleteE2eUsers,
+  orderRow,
   placeE2eOrder,
   seedAddress,
   setOrderStatus,
@@ -44,8 +45,8 @@ test.afterAll(async () => {
   await cleanupE2eAdminData(slugs)
 })
 
-async function placeOrder(quantity = 1) {
-  return placeE2eOrder(await signedInClient(customer), customer.id, { addressId, bookId: book.id, quantity })
+async function placeOrder(quantity = 1, paymentMethod: 'cod' | 'bank_transfer' = 'cod') {
+  return placeE2eOrder(await signedInClient(customer), customer.id, { addressId, bookId: book.id, quantity, paymentMethod })
 }
 
 /** Mở trang chi tiết đơn của admin, chờ nút xử lý hydrate (lỗi hiện tại chỗ thay vì POST cả trang) */
@@ -174,4 +175,34 @@ test('admin gọi thẳng PostgREST: không mở lại đơn đã hủy, không 
   expect(back.error?.message).toBe('ORDER_INVALID_TRANSITION')
   const skip = await client.from('orders').update({ status: 'delivered' }).eq('id', pending.id)
   expect(skip.error?.message).toBe('ORDER_INVALID_TRANSITION')
+})
+
+test('chuyển khoản: "Đã nhận tiền" → đã thanh toán; hủy đơn đã thanh toán → đã hoàn tiền', async ({ page }) => {
+  test.setTimeout(60_000)
+  const errors = collectErrors(page)
+  const order = await placeOrder(1, 'bank_transfer')
+  await openOrder(page, order.order_code)
+  const paymentStatus = main(page).getByTestId('order-payment-status')
+  await expect(paymentStatus).toHaveText('Chưa thanh toán')
+
+  await main(page).getByRole('button', { name: 'Đã nhận tiền' }).click()
+  await expect(main(page).getByRole('status').filter({ hasText: 'Đã ghi nhận thanh toán.' })).toBeVisible({ timeout: 15_000 })
+  await expect(paymentStatus).toHaveText('Đã thanh toán')
+  await expect(main(page).getByRole('button', { name: 'Đã nhận tiền' })).toHaveCount(0)
+  await expect(main(page).getByTestId('order-refund-note')).toBeVisible()
+  expect(await orderRow(order.id)).toMatchObject({ payment_method: 'bank_transfer', payment_status: 'paid' })
+
+  await main(page).getByText('Hủy đơn', { exact: true }).click()
+  await main(page).getByLabel('Lý do hủy').fill('Hết hàng, hoàn tiền cho khách (e2e)')
+  await main(page).getByRole('button', { name: 'Xác nhận hủy đơn' }).click()
+  await expect(badge(page)).toHaveText('Đã hủy', { timeout: 15_000 })
+  await expect(paymentStatus).toHaveText('Đã hoàn tiền')
+  expect(await orderRow(order.id)).toMatchObject({ status: 'cancelled', payment_status: 'refunded' })
+  expect(errors).toEqual([])
+})
+
+test('COD không có nút "Đã nhận tiền"', async ({ page }) => {
+  const order = await placeOrder()
+  await openOrder(page, order.order_code)
+  await expect(main(page).getByRole('button', { name: 'Đã nhận tiền' })).toHaveCount(0)
 })

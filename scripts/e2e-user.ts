@@ -351,18 +351,69 @@ export async function signedInClient(user: { email: string; password: string }) 
 type SignedInClient = Awaited<ReturnType<typeof signedInClient>>
 
 /**
- * User đặt một đơn COD qua RPC place_order (như trình duyệt của chính user đó): giỏ chỉ có `quantity` cuốn sách
- * `bookId`, giao tới `addressId`. Trả về { id, order_code }.
+ * User đặt một đơn qua RPC place_order (như trình duyệt của chính user đó): giỏ chỉ có `quantity` cuốn sách
+ * `bookId`, giao tới `addressId`, mặc định COD. Trả về dòng đơn.
  */
 export async function placeE2eOrder(
   client: SignedInClient,
   userId: string,
-  { addressId, bookId, quantity }: { addressId: number; bookId: number; quantity: number },
+  {
+    addressId,
+    bookId,
+    quantity,
+    paymentMethod = 'cod',
+  }: { addressId: number; bookId: number; quantity: number; paymentMethod?: Database['public']['Enums']['payment_method'] },
 ) {
   await clearCart(userId)
   await setCartItem(userId, bookId, quantity)
-  const { data, error } = await client.rpc('place_order', { p_address_id: addressId, p_idempotency_key: randomUUID() })
+  const { data, error } = await client.rpc('place_order', {
+    p_address_id: addressId,
+    p_payment_method: paymentMethod,
+    p_idempotency_key: randomUUID(),
+  })
   if (error || !data) throw new Error(`place_order: ${error?.message}`)
+  return data
+}
+
+/** Cửa hàng giao đơn: đi đúng luồng trigger cho phép (pending → confirmed → shipping → delivered) */
+export async function deliverOrder(orderId: number) {
+  for (const status of ['confirmed', 'shipping', 'delivered'] as const) await setOrderStatus(orderId, status)
+}
+
+/** Ghi trạng thái thanh toán bằng service role (giả lập cửa hàng đã đối soát chuyển khoản) */
+export async function setPaymentStatus(orderId: number, status: Database['public']['Enums']['payment_status']) {
+  const { error } = await adminClient().from('orders').update({ payment_status: status }).eq('id', orderId)
+  if (error) throw new Error(`setPaymentStatus: ${error.message}`)
+}
+
+export async function orderRow(orderId: number) {
+  const { data, error } = await adminClient()
+    .from('orders')
+    .select('id, status, payment_method, payment_status, voucher_code, discount, total')
+    .eq('id', orderId)
+    .maybeSingle()
+  if (error) throw new Error(`orderRow: ${error.message}`)
+  return data
+}
+
+/** Đánh giá của một sách (service role); `insertReview` tạo sẵn đánh giá cho test kiểm duyệt (bỏ qua RLS "đã mua") */
+export async function reviewsOf(bookId: number) {
+  const { data, error } = await adminClient()
+    .from('reviews')
+    .select('id, user_id, rating, content')
+    .eq('book_id', bookId)
+    .order('id')
+  if (error) throw new Error(`reviewsOf: ${error.message}`)
+  return data
+}
+
+export async function insertReview(bookId: number, userId: string, rating: number, content: string) {
+  const { data, error } = await adminClient()
+    .from('reviews')
+    .insert({ book_id: bookId, user_id: userId, rating, content })
+    .select('id')
+    .single()
+  if (error) throw new Error(`insertReview: ${error.message}`)
   return data
 }
 
@@ -445,11 +496,20 @@ export async function unlinkAuthor(bookId: number, authorId: number) {
   if (error) throw new Error(`unlinkAuthor: ${error.message}`)
 }
 
-/** Voucher test giảm 10% (service role); `usedCount` > 0 giả lập voucher đã có người dùng */
-export async function createE2eVoucher({ usedCount = 0 }: { usedCount?: number } = {}) {
+/**
+ * Voucher test giảm 10% (service role); `usedCount` > 0 giả lập voucher đã có người dùng, `minOrderValue` để thử
+ * VOUCHER_MIN_ORDER ở checkout.
+ */
+export async function createE2eVoucher({ usedCount = 0, minOrderValue = 0 }: { usedCount?: number; minOrderValue?: number } = {}) {
   const { data, error } = await adminClient()
     .from('vouchers')
-    .insert({ code: e2eVoucherCode(), discount_type: 'percent', discount_value: 10, used_count: usedCount })
+    .insert({
+      code: e2eVoucherCode(),
+      discount_type: 'percent',
+      discount_value: 10,
+      used_count: usedCount,
+      min_order_value: minOrderValue,
+    })
     .select('id, code')
     .single()
   if (error) throw new Error(`createE2eVoucher: ${error.message}`)

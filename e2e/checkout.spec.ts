@@ -5,13 +5,18 @@ import {
   cartQuantities,
   clearAddresses,
   clearCart,
+  createE2eVoucher,
   createHiddenBook,
   deleteAddress,
+  deleteE2eVouchers,
   deleteHiddenBooks,
   findBooksByStockDesc,
+  orderRow,
   ordersOf,
+  placeE2eOrder,
   seedAddress,
   setCartItem,
+  setPaymentStatus,
   signedInClient,
   stockOf,
   type E2eBook,
@@ -441,4 +446,121 @@ test.describe('khách (chưa đăng nhập)', () => {
     await page.goto('/en/checkout')
     await expect(page).toHaveURL(/\/en\/login\?next=%2Fen%2Fcheckout$/)
   })
+})
+
+// ---------- Phase 9: voucher, chuyển khoản VietQR ----------
+
+const main = (page: Page) => page.getByRole('main')
+
+async function applyVoucher(page: Page, code: string) {
+  await main(page).getByLabel('Mã giảm giá').fill(code)
+  await main(page).getByRole('button', { name: 'Áp dụng' }).click()
+}
+
+test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đúng (gõ chữ thường) → giảm 10%, đơn lưu mã', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  const book = pick(regular, projectIndex)
+  const [voucher, highMin] = await Promise.all([createE2eVoucher(), createE2eVoucher({ minOrderValue: 50_000_000 })])
+  try {
+    await seedAddress(users.checkout.id)
+    await setCartItem(users.checkout.id, book.id, 1)
+    await openCheckout(page)
+    const total = main(page).getByTestId('checkout-total')
+    const voucherError = main(page).getByTestId('voucher-error')
+
+    // Form GET: mã nằm trên URL, server tính lại bằng quote_order
+    await applyVoucher(page, 'KHONG-CO-MA-NAY')
+    await expect(page).toHaveURL(/[?&]voucher=KHONG-CO-MA-NAY/)
+    await expect(voucherError).toHaveText('Mã giảm giá không hợp lệ hoặc đã hết hạn.')
+    await expect(total).toHaveText(vnd(totalOf(book.price)))
+
+    await applyVoucher(page, highMin.code)
+    await expect(voucherError).toContainText('50.000.000')
+    await expect(total).toHaveText(vnd(totalOf(book.price)))
+
+    await applyVoucher(page, voucher.code.toLowerCase())
+    await expect(main(page).getByText(`Đã áp dụng mã ${voucher.code}`)).toBeVisible()
+    const discount = Math.floor(book.price / 10)
+    await expect(main(page).getByTestId('checkout-discount')).toHaveText(`−${vnd(discount)}`)
+    const expected = totalOf(book.price) - discount
+    await expect(total).toHaveText(vnd(expected))
+    // Địa chỉ đang chọn được giữ khi áp mã
+    await expect(main(page).getByTestId('checkout-address-option').getByRole('radio')).toBeChecked()
+
+    await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]')
+    await placeButton(page).click()
+    await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+    await expect(main(page).getByTestId('order-discount')).toHaveText(`−${vnd(discount)}`)
+    await expect(main(page).getByTestId('order-total')).toHaveText(vnd(expected))
+    const [order] = await ordersOf(users.checkout.id)
+    expect(order && (await orderRow(order.id))).toMatchObject({ voucher_code: voucher.code, discount, total: expected })
+    expect(errors).toEqual([])
+  } finally {
+    await cancelAndDeleteOrders([users.checkout.id])
+    await deleteE2eVouchers([voucher.code, highMin.code])
+  }
+})
+
+test('chuyển khoản VietQR: trang thành công + chi tiết đơn có mã QR, số tiền, nội dung = mã đơn; đã trả → ẩn QR, không hủy', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  test.setTimeout(60_000)
+  const errors = collectErrors(page)
+  const book = pick(regular, projectIndex)
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, book.id, 1)
+  await openCheckout(page)
+  await main(page).getByLabel('Chuyển khoản ngân hàng (VietQR)').check()
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+
+  const code = (await main(page).getByTestId('order-code').textContent())?.trim() ?? ''
+  const total = vnd(totalOf(book.price))
+  const card = main(page).getByTestId('vietqr')
+  await expect(card.getByRole('img', { name: `Mã VietQR chuyển khoản cho đơn ${code}` })).toBeVisible()
+  await expect(card.getByTestId('vietqr-content')).toHaveText(code)
+  await expect(card.getByTestId('vietqr-amount')).toHaveText(total)
+  // Chưa cấu hình tài khoản thật → luôn có cảnh báo demo
+  await expect(card.getByTestId('vietqr-demo')).toBeVisible()
+  await expect(main(page).getByTestId('order-bank-amount')).toContainText(total)
+  await expect(main(page).getByTestId('order-cod')).toHaveCount(0)
+
+  const [order] = await ordersOf(users.checkout.id)
+  expect(order).toMatchObject({ order_code: code, payment_method: 'bank_transfer', payment_status: 'unpaid' })
+
+  await page.goto(`/tai-khoan/don-hang/${code}`)
+  await expect(main(page).getByTestId('order-payment-method')).toHaveText('Chuyển khoản ngân hàng (VietQR)')
+  await expect(main(page).getByTestId('vietqr').getByTestId('vietqr-content')).toHaveText(code)
+  await expect(main(page).getByText('Hủy đơn', { exact: true })).toBeVisible()
+
+  // Cửa hàng đối soát xong → đã thanh toán: không còn QR, khách không tự hủy được
+  await setPaymentStatus(order?.id ?? 0, 'paid')
+  await page.reload()
+  await expect(main(page).getByTestId('order-payment-status')).toHaveText('Đã thanh toán')
+  await expect(main(page).getByTestId('vietqr')).toHaveCount(0)
+  await expect(main(page).getByText('Hủy đơn', { exact: true })).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+// Chờ migration 20261016020000_payments_email.sql: trước đó cancel_order chưa kiểm tra payment_status → test này fail.
+test('RPC: khách không tự hủy được đơn đã thanh toán (cancel_order chặn ở DB)', async ({ users, projectIndex }) => {
+  const client = await signedInClient(users.checkout)
+  const addressId = await seedAddress(users.checkout.id)
+  const order = await placeE2eOrder(client, users.checkout.id, {
+    addressId,
+    bookId: pick(regular, projectIndex).id,
+    quantity: 1,
+    paymentMethod: 'bank_transfer',
+  })
+  await setPaymentStatus(order.id, 'paid')
+  const { error } = await client.rpc('cancel_order', { p_order_id: order.id })
+  expect(error?.message).toBe('ORDER_NOT_CANCELLABLE')
+  expect(await orderRow(order.id)).toMatchObject({ status: 'pending', payment_status: 'paid' })
 })
