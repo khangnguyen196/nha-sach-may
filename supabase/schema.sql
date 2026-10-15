@@ -463,15 +463,40 @@ create table public.order_items (
 create index order_items_order_idx on public.order_items (order_id);
 create index order_items_book_idx  on public.order_items (book_id);
 
--- Khi đơn chuyển sang 'cancelled' → hoàn lại tồn kho và lượt dùng voucher
+-- Luồng trạng thái đơn (mọi role, kể cả service role): pending → confirmed → shipping → delivered, hủy được từ
+-- pending / confirmed / shipping; delivered và cancelled là trạng thái cuối. App có bản trùng (nextStatuses) → sửa cả hai chỗ.
+create or replace function private.order_status_transition_allowed(
+  p_from public.order_status,
+  p_to   public.order_status
+)
+returns boolean language sql immutable set search_path = '' as $$
+  select case p_from
+    when 'pending'   then p_to in ('confirmed', 'cancelled')
+    when 'confirmed' then p_to in ('shipping', 'cancelled')
+    when 'shipping'  then p_to in ('delivered', 'cancelled')
+    else false
+  end;
+$$;
+
+-- Hủy → hoàn tồn kho và lượt dùng voucher; COD giao xong → đã thanh toán.
 create or replace function public.handle_order_status_change()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if old.status = 'cancelled' and new.status <> 'cancelled' then
+  -- Câu update có cột status nhưng không đổi giá trị: không phải chuyển trạng thái
+  if new.status = old.status then
+    return new;
+  end if;
+
+  if old.status = 'cancelled' then
     raise exception 'ORDER_REOPEN_FORBIDDEN';
   end if;
 
-  if new.status = 'cancelled' and old.status <> 'cancelled' then
+  if not private.order_status_transition_allowed(old.status, new.status) then
+    raise exception 'ORDER_INVALID_TRANSITION'
+      using detail = json_build_object('from', old.status, 'to', new.status)::text;
+  end if;
+
+  if new.status = 'cancelled' then
     update public.books b
        set stock      = b.stock + oi.quantity,
            sold_count = greatest(b.sold_count - oi.quantity, 0)
@@ -483,6 +508,10 @@ begin
          set used_count = greatest(used_count - 1, 0)
        where id = new.voucher_id;
     end if;
+  end if;
+
+  if new.status = 'delivered' and new.payment_method = 'cod' then
+    new.payment_status := 'paid';
   end if;
 
   return new;
@@ -944,6 +973,16 @@ begin
 end;
 $$;
 
+-- Sách: admin chỉ sửa được cột sửa trong admin, không sửa cột do DB quản lý (sold_count, avg_rating, review_count,
+-- search_text, created_at, updated_at). Trigger BEFORE ghi search_text / updated_at vẫn chạy (quyền cột chỉ xét cột
+-- có trong câu UPDATE); các hàm security definer (place_order, *_touch_book*, refresh_book_rating) chạy bằng quyền owner.
+revoke update on public.books from anon, authenticated;
+grant  update (
+  title, slug, subtitle, description, description_en, category_id, publisher_id, isbn,
+  price, original_price, stock, cover_url, page_count, format, language, published_year,
+  weight_grams, dimensions, is_active, is_featured
+) on public.books to authenticated;
+
 -- VOUCHERS: chỉ admin xem/sửa (khách kiểm tra mã qua quote_order / place_order)
 create policy "vouchers_admin_all" on public.vouchers
   for all to authenticated
@@ -957,6 +996,11 @@ create policy "orders_select_own_or_admin" on public.orders
 create policy "orders_admin_update" on public.orders
   for update to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- Quyền cột: admin chỉ sửa được trạng thái đơn, không sửa tiền / địa chỉ / dòng sách. Postgres chỉ xét cột có trong
+-- câu UPDATE: cột do trigger BEFORE ghi (updated_at, payment_status khi giao COD) không bị chặn.
+revoke update on public.orders from anon, authenticated;
+grant  update (status, payment_status, cancelled_reason) on public.orders to authenticated;
 
 create policy "order_items_select_own_or_admin" on public.order_items
   for select to authenticated
@@ -1027,8 +1071,9 @@ revoke execute on function public.generate_order_code() from public, anon, authe
 -- ---------------------------------------------------------------------
 -- 13. STORAGE: nơi lưu ảnh bìa sách (bucket public, chỉ admin upload)
 -- ---------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('book-covers', 'book-covers', true)
+-- Server chỉ upload WebP đã xử lý (rộng 600px ≈ 30–120KB): bucket từ chối mọi thứ khác, kể cả khi gọi thẳng Storage API
+insert into storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
+values ('book-covers', 'book-covers', true, array['image/webp'], 1048576)
 on conflict (id) do nothing;
 
 create policy "book_covers_admin_insert" on storage.objects
@@ -1059,6 +1104,7 @@ create policy "book_covers_admin_delete" on storage.objects
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
 --   AUTH_REQUIRED, INVALID_ADDRESS, BOOK_UNAVAILABLE, OUT_OF_STOCK, CART_EMPTY,
 --   INVALID_VOUCHER, VOUCHER_MIN_ORDER, ORDER_NOT_CANCELLABLE, ORDER_REOPEN_FORBIDDEN,
+--   ORDER_INVALID_TRANSITION (trigger trạng thái đơn; detail: {"from": ..., "to": ...}),
 --   INVALID_INPUT (detail: {"field": ..., "max": ...}),
 --   CART_CHANGED (place_order, p_expected_total khác tổng thật; detail: {"total": ...})
 --

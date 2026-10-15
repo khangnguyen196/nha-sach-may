@@ -157,6 +157,8 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 
 7a:
 - [ ] Migration `admin.sql` (luồng trạng thái đơn, quyền cột `orders` / `books`, giới hạn bucket, COD → paid) + `schema.sql` + types
+  - [x] Viết `supabase/migrations/20261015160000_admin.sql` + cập nhật `schema.sql`
+  - [ ] Bạn kiểm tra trên Postgres local + chạy trên Supabase; sinh lại types (migration không đổi cột / RPC public nên types dự kiến không đổi)
 - [ ] `assertAdmin` + mã `FORBIDDEN` + test tĩnh; layout admin, điều hướng, `AdminLink` + ngoại lệ ESLint; messages `admin` chỉ vi
 - [ ] `lib/slug.ts`, `lib/cover-image.ts` (dùng chung với import) + Vitest
 - [ ] Sách: danh sách, form sửa, tác giả của sách, ẩn / hiện, upload bìa; `catalogTagsFor` + Vitest
