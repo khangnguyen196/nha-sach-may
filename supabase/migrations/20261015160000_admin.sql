@@ -6,7 +6,8 @@
 --   3. Quyền cột: orders chỉ cho sửa status, payment_status, cancelled_reason; books chỉ cho sửa cột admin sửa được
 --      (bỏ cột do DB quản lý). RLS giữ nguyên: policy *_admin_update đã giới hạn dòng cho admin.
 --   4. Bucket book-covers chỉ nhận image/webp ≤ 1MB.
--- Chạy một lần trong SQL Editor. Idempotent (create or replace, revoke / grant, update).
+--   5. Policy select cho admin trên object của book-covers (Storage cần select để xóa ảnh bìa cũ).
+-- Chạy một lần trong SQL Editor. Idempotent (create or replace, revoke / grant, update, drop policy if exists).
 
 begin;
 
@@ -84,5 +85,12 @@ update storage.buckets
    set allowed_mime_types = array['image/webp'],
        file_size_limit    = 1048576
  where id = 'book-covers';
+
+-- 5. Storage API chỉ xóa object mà phiên đọc được (cần cả policy select lẫn delete): thiếu select thì remove() trả về
+-- rỗng, không báo lỗi, ảnh bìa cũ nằm lại bucket. Public URL vẫn đọc được không qua policy (bucket public).
+drop policy if exists "book_covers_admin_select" on storage.objects;
+create policy "book_covers_admin_select" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'book-covers' and (select public.is_admin()));
 
 commit;

@@ -1076,6 +1076,11 @@ insert into storage.buckets (id, name, public, allowed_mime_types, file_size_lim
 values ('book-covers', 'book-covers', true, array['image/webp'], 1048576)
 on conflict (id) do nothing;
 
+-- Storage API chỉ xóa object mà phiên đọc được: thiếu select thì remove() trả về rỗng, không báo lỗi
+create policy "book_covers_admin_select" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'book-covers' and (select public.is_admin()));
+
 create policy "book_covers_admin_insert" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'book-covers' and (select public.is_admin()));
