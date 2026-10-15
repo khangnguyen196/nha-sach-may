@@ -73,6 +73,11 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
 
 - [x] **Tôi (chủ dự án)**: chạy `supabase/seed-foreign-books.sql` trên Supabase TRƯỚC lượt A + D.
 - [x] Lượt A + D (2026-10-15): dry-run → duyệt → `--from-preview` (xem trên).
-- [ ] **Chủ dự án**: thay 5 bìa ở "Bìa cần thay trong admin".
+- [ ] **Chủ dự án**: thay 5 bìa trong admin (`/admin/sach`, tìm theo tên → "Ảnh bìa"):
+  - [ ] The SPEED of Trust (trang lót toàn chữ)
+  - [ ] The 8th Habit (trang lót toàn chữ)
+  - [ ] Contact (trang lót toàn chữ)
+  - [ ] Yuval Noah Harari Box Set (Sapiens, Homo Deus, 21 Lessons…) (bìa của sách khác: hộp "HBR's 10 Must Reads")
+  - [ ] Ngoại ngữ khó đấy, nhưng bạn tự học được (ảnh lạ, không giống bìa)
 - [x] Phase 7: thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" (ảnh JPEG nên bộ lọc PNG < 40KB không bắt được).
 - [x] Lọc tên summary / workbook / study guide / analysis of cho danh mục `en` (`isDerivativeTitle`, commit D).
