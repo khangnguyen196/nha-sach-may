@@ -28,7 +28,245 @@
   },
   "admin": {
     "title": "Quản trị",
-    "placeholder": "Khu vực quản trị sẽ được xây dựng ở giai đoạn sau."
+    "nav": {
+      "label": "Khu quản trị",
+      "dashboard": "Tổng quan",
+      "books": "Sách",
+      "categories": "Danh mục",
+      "authors": "Tác giả",
+      "backToShop": "Về cửa hàng"
+    },
+    "notFound": {
+      "title": "Không tìm thấy",
+      "description": "Mục bạn tìm không tồn tại hoặc đã bị xóa.",
+      "back": "Về trang tổng quan"
+    },
+    "common": {
+      "save": "Lưu thay đổi",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu.",
+      "create": "Tạo",
+      "creating": "Đang tạo…",
+      "cancel": "Hủy",
+      "edit": "Sửa",
+      "none": "Không có",
+      "active": "Đang hiện",
+      "hidden": "Đã ẩn",
+      "yes": "Có",
+      "viewInShop": "Xem trên cửa hàng",
+      "opensInNewTab": "(mở tab mới)",
+      "slugHint": "Để trống: tạo từ tên. Chữ có dấu, khoảng trắng tự đổi thành dạng không dấu, nối bằng gạch ngang.",
+      "slugChangeHint": "Đổi đường dẫn thì link cũ sẽ không còn mở được.",
+      "pagination": {
+        "label": "Phân trang",
+        "previous": "Trang trước",
+        "next": "Trang sau",
+        "status": "Trang {page}/{total}"
+      },
+      "filter": "Lọc",
+      "clearFilters": "Bỏ lọc"
+    },
+    "dashboard": {
+      "title": "Tổng quan",
+      "pendingOrders": "Đơn chờ xác nhận",
+      "lowStock": "Sách sắp hết (còn 1–5 cuốn)",
+      "outOfStock": "Sách hết hàng",
+      "hiddenBooks": "Sách đang ẩn",
+      "view": "Xem danh sách"
+    },
+    "books": {
+      "title": "Sách",
+      "count": "{count} sách",
+      "empty": "Không có sách nào khớp bộ lọc.",
+      "filters": {
+        "label": "Lọc sách",
+        "q": "Tìm theo tên, ISBN, tác giả",
+        "qHint": "Gõ không dấu được.",
+        "category": "Danh mục",
+        "allCategories": "Tất cả danh mục",
+        "status": "Trạng thái",
+        "allStatuses": "Tất cả",
+        "statusActive": "Đang bán",
+        "statusHidden": "Đã ẩn",
+        "stock": "Tồn kho",
+        "allStock": "Tất cả",
+        "stockLow": "Sắp hết (1–5)",
+        "stockOut": "Hết hàng"
+      },
+      "table": {
+        "caption": "Danh sách sách",
+        "cover": "Bìa",
+        "title": "Tên sách",
+        "category": "Danh mục",
+        "price": "Giá",
+        "stock": "Tồn kho",
+        "status": "Trạng thái",
+        "noCategory": "Chưa có danh mục",
+        "featured": "Nổi bật"
+      },
+      "editTitle": "Sửa sách",
+      "sections": {
+        "info": "Thông tin",
+        "pricing": "Giá và tồn kho",
+        "classification": "Phân loại",
+        "details": "Chi tiết",
+        "authors": "Tác giả",
+        "cover": "Ảnh bìa",
+        "visibility": "Hiển thị"
+      },
+      "fields": {
+        "title": "Tên sách",
+        "subtitle": "Phụ đề",
+        "slug": "Đường dẫn (slug)",
+        "description": "Mô tả",
+        "descriptionEn": "Mô tả (tiếng Anh)",
+        "descriptionEnHint": "Để trống: trang tiếng Anh hiện mô tả tiếng Việt. Tên sách không dịch.",
+        "isbn": "ISBN",
+        "price": "Giá bán (₫)",
+        "originalPrice": "Giá gốc (₫)",
+        "originalPriceHint": "Để trống nếu không giảm giá.",
+        "stock": "Tồn kho",
+        "category": "Danh mục",
+        "selectCategory": "Chọn danh mục",
+        "categoryHint": "Sách chỉ gắn vào danh mục lá (không có danh mục con).",
+        "publisher": "Nhà xuất bản",
+        "noPublisher": "Không có",
+        "publishedYear": "Năm xuất bản",
+        "pageCount": "Số trang",
+        "format": "Hình thức",
+        "language": "Ngôn ngữ",
+        "weight": "Khối lượng (gram)",
+        "dimensions": "Kích thước",
+        "dimensionsHint": "VD: 13 x 20.5 cm",
+        "featured": "Nổi bật",
+        "featuredHint": "Hiện ở kệ Nổi bật trên trang chủ."
+      },
+      "formats": {
+        "paperback": "Bìa mềm",
+        "hardcover": "Bìa cứng",
+        "boxset": "Hộp sách"
+      },
+      "languages": {
+        "vi": "Tiếng Việt",
+        "en": "Tiếng Anh"
+      },
+      "authors": {
+        "author": "Tác giả, dòng {n}",
+        "role": "Vai trò, dòng {n}",
+        "noAuthor": "(Bỏ trống)",
+        "addRow": "Thêm dòng",
+        "hint": "Bỏ trống ô tác giả để xóa dòng. Tác giả chưa có trong danh sách thì tạo ở trang Tác giả trước."
+      },
+      "roles": {
+        "author": "Tác giả",
+        "translator": "Dịch giả",
+        "illustrator": "Minh họa"
+      },
+      "cover": {
+        "current": "Ảnh bìa hiện tại của {title}",
+        "none": "Chưa có ảnh bìa",
+        "file": "Ảnh mới",
+        "hint": "JPEG, PNG, WebP hoặc AVIF, tối đa 4MB. Ảnh được thu về WebP rộng 600px.",
+        "upload": "Tải ảnh lên",
+        "uploading": "Đang tải lên…",
+        "uploaded": "Đã cập nhật ảnh bìa."
+      },
+      "visibility": {
+        "active": "Sách đang hiện trên cửa hàng.",
+        "hidden": "Sách đang ẩn: không hiện ở cửa hàng, khách không đặt được.",
+        "hide": "Ẩn sách",
+        "show": "Hiện lại",
+        "hiding": "Đang ẩn…",
+        "showing": "Đang hiện lại…"
+      }
+    },
+    "categories": {
+      "title": "Danh mục",
+      "new": "Thêm danh mục",
+      "newTitle": "Thêm danh mục",
+      "editTitle": "Sửa danh mục",
+      "empty": "Chưa có danh mục nào.",
+      "table": {
+        "caption": "Danh mục, danh mục con nằm ngay dưới danh mục cha",
+        "name": "Tên",
+        "nameEn": "Tên tiếng Anh",
+        "slug": "Slug",
+        "order": "Thứ tự",
+        "books": "Số sách",
+        "status": "Trạng thái"
+      },
+      "fields": {
+        "name": "Tên",
+        "nameEn": "Tên (tiếng Anh)",
+        "nameEnHint": "Để trống: trang tiếng Anh hiện tên tiếng Việt.",
+        "slug": "Đường dẫn (slug)",
+        "description": "Mô tả",
+        "descriptionEn": "Mô tả (tiếng Anh)",
+        "parent": "Danh mục cha",
+        "noParent": "Không có (danh mục gốc)",
+        "parentHint": "Tối đa 2 cấp. Danh mục đang có sách không làm cha được.",
+        "sortOrder": "Thứ tự",
+        "sortOrderHint": "Số nhỏ hiện trước.",
+        "active": "Hiện trên cửa hàng",
+        "activeHint": "Bỏ chọn để ẩn danh mục (sách trong đó vẫn bán, chỉ không có trang danh mục)."
+      }
+    },
+    "authors": {
+      "title": "Tác giả",
+      "new": "Thêm tác giả",
+      "newTitle": "Thêm tác giả",
+      "editTitle": "Sửa tác giả",
+      "count": "{count} tác giả",
+      "empty": "Chưa có tác giả nào.",
+      "emptyFiltered": "Không có tác giả nào khớp từ khóa.",
+      "search": "Tìm theo tên",
+      "searchHint": "Gõ không dấu được.",
+      "table": {
+        "caption": "Danh sách tác giả",
+        "name": "Tên",
+        "slug": "Slug",
+        "books": "Số sách"
+      },
+      "fields": {
+        "name": "Tên",
+        "slug": "Đường dẫn (slug)",
+        "bio": "Tiểu sử",
+        "bioEn": "Tiểu sử (tiếng Anh)",
+        "bioEnHint": "Để trống: trang tiếng Anh hiện tiểu sử tiếng Việt."
+      },
+      "delete": {
+        "title": "Xóa tác giả",
+        "hint": "Chỉ xóa được khi tác giả không còn sách nào.",
+        "hasBooks": "Tác giả đang có {count} sách: bỏ tác giả khỏi các sách đó trước khi xóa.",
+        "submit": "Xóa tác giả",
+        "pending": "Đang xóa…"
+      }
+    },
+    "validation": {
+      "title": "Tên sách cần từ 1 đến 300 ký tự.",
+      "subtitle": "Phụ đề tối đa 300 ký tự.",
+      "name": "Tên cần từ 1 đến 200 ký tự.",
+      "slug": "Đường dẫn cần có chữ cái hoặc chữ số.",
+      "slugTaken": "Đường dẫn này đã được dùng, hãy chọn đường dẫn khác.",
+      "description": "Nội dung quá dài (tối đa 10.000 ký tự).",
+      "isbn": "ISBN gồm 10 hoặc 13 chữ số (ISBN-10 có thể kết thúc bằng X).",
+      "isbnTaken": "ISBN này đã có ở sách khác.",
+      "price": "Giá là số nguyên từ 0 đến 100.000.000.",
+      "originalPrice": "Giá gốc phải lớn hơn hoặc bằng giá bán.",
+      "stock": "Tồn kho là số nguyên từ 0 đến 100.000.",
+      "year": "Năm xuất bản từ 1800 đến 2100.",
+      "positiveInt": "Nhập số nguyên lớn hơn 0.",
+      "dimensions": "Kích thước tối đa 50 ký tự.",
+      "sortOrder": "Thứ tự là số nguyên từ -1.000 đến 1.000.",
+      "category": "Vui lòng chọn danh mục.",
+      "categoryLeaf": "Chỉ chọn được danh mục lá (không có danh mục con).",
+      "categoryDepth": "Danh mục cha phải là danh mục gốc (tối đa 2 cấp).",
+      "categoryHasChildren": "Danh mục đang có danh mục con nên phải là danh mục gốc.",
+      "categoryHasBooks": "Danh mục này đang có sách nên không làm cha được.",
+      "coverRequired": "Vui lòng chọn một ảnh.",
+      "coverTooLarge": "Ảnh tối đa 4MB.",
+      "coverInvalid": "Tệp không phải ảnh JPEG, PNG, WebP hoặc AVIF."
+    }
   },
   "layout": {
     "searchPlaceholder": "Tìm sách, tác giả…",
@@ -404,6 +642,7 @@
     "VOUCHER_MIN_ORDER": "Mã này áp dụng cho đơn từ {min_order_value, number, price}.",
     "ORDER_NOT_CANCELLABLE": "Đơn hàng này không thể hủy.",
     "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",
+    "ORDER_INVALID_TRANSITION": "Không thể chuyển đơn hàng sang trạng thái này.",
     "INVALID_INPUT": "Dữ liệu không hợp lệ.",
     "CART_CHANGED": "Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng.",
     "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
@@ -413,6 +652,12 @@
     "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu cũ.",
     "RATE_LIMITED": "Bạn thao tác quá nhanh. Vui lòng đợi vài phút rồi thử lại.",
     "LINK_EXPIRED": "Liên kết đã hết hạn hoặc đã được dùng. Vui lòng yêu cầu liên kết mới.",
+    "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
+    "SLUG_TAKEN": "Đường dẫn (slug) này đã được dùng.",
+    "COVER_TOO_LARGE": "Ảnh bìa tối đa 4MB.",
+    "COVER_INVALID": "Ảnh bìa phải là ảnh JPEG, PNG, WebP hoặc AVIF.",
+    "CATEGORY_HAS_BOOKS": "Danh mục đang có sách nên không thể làm danh mục cha.",
+    "AUTHOR_HAS_BOOKS": "Tác giả vẫn còn sách nên chưa xóa được.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   }
 }

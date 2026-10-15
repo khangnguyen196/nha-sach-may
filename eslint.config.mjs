@@ -45,6 +45,21 @@ const eslintConfig = defineConfig([
     files: ['src/i18n/navigation.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
+  {
+    // Admin không có [locale] (chỉ tiếng Việt, URL viết thẳng): link qua AdminLink; redirect / useRouter /
+    // usePathname dùng bản của next/navigation
+    files: ['src/app/admin/**', 'src/components/admin/**', 'src/features/admin/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { paths: [{ name: 'next/link', message: 'Dùng AdminLink từ @/components/admin/admin-link.' }] },
+      ],
+    },
+  },
+  {
+    files: ['src/components/admin/admin-link.tsx'],
+    rules: { 'no-restricted-imports': 'off' },
+  },
   globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/types/database.ts', 'playwright-report/**', 'test-results/**']),
 ])
 

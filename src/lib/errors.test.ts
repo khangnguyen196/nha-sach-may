@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../../messages/en.json'
 import vi from '../../messages/vi.json'
-import { ERROR_CODES, invalidInput, toFailure, VALIDATION_KEYS } from './errors'
+import { ADMIN_VALIDATION_KEYS, ERROR_CODES, invalidInput, toFailure, VALIDATION_KEYS } from './errors'
 
 describe('toFailure', () => {
   it('nhận mã lỗi và parse detail JSON', () => {
@@ -39,6 +39,17 @@ describe('VALIDATION_KEYS', () => {
   })
 })
 
+describe('ADMIN_VALIDATION_KEYS', () => {
+  it('mỗi khóa có bản dịch ở admin.validation (chỉ tiếng Việt), không thừa không thiếu', () => {
+    expect(Object.keys(vi.admin.validation).sort()).toEqual([...ADMIN_VALIDATION_KEYS].sort())
+  })
+
+  it('không trùng khóa validation dùng chung', () => {
+    const shared: readonly string[] = VALIDATION_KEYS
+    expect(ADMIN_VALIDATION_KEYS.filter((key) => shared.includes(key))).toEqual([])
+  })
+})
+
 describe('invalidInput', () => {
   it('lấy lỗi đầu tiên của từng ô; message không phải khóa validation → invalid', () => {
     expect(
@@ -50,5 +61,13 @@ describe('invalidInput', () => {
         ],
       }),
     ).toEqual({ ok: false, code: 'INVALID_INPUT', fieldErrors: { email: 'required', phone: 'invalid' } })
+  })
+
+  it('nhận khóa validation của admin', () => {
+    expect(invalidInput({ issues: [{ path: ['price'], message: 'price' }] })).toEqual({
+      ok: false,
+      code: 'INVALID_INPUT',
+      fieldErrors: { price: 'price' },
+    })
   })
 })

@@ -1,5 +1,5 @@
 // Mã lỗi do RPC/trigger trả về (danh sách ở cuối supabase/schema.sql), mã của luồng đăng nhập (map từ
-// AuthError.code trong features/auth/errors.ts) + UNKNOWN.
+// AuthError.code trong features/auth/errors.ts), mã của admin + UNKNOWN.
 // Mỗi mã phải có bản dịch ở messages/*.json → errors.<CODE> (có test kiểm tra).
 export const ERROR_CODES = [
   'AUTH_REQUIRED',
@@ -11,6 +11,7 @@ export const ERROR_CODES = [
   'VOUCHER_MIN_ORDER',
   'ORDER_NOT_CANCELLABLE',
   'ORDER_REOPEN_FORBIDDEN',
+  'ORDER_INVALID_TRANSITION',
   'INVALID_INPUT',
   'CART_CHANGED',
   'INVALID_CREDENTIALS',
@@ -20,6 +21,13 @@ export const ERROR_CODES = [
   'SAME_PASSWORD',
   'RATE_LIMITED',
   'LINK_EXPIRED',
+  // Admin (Phase 7): không có quyền, slug trùng, ảnh bìa, xóa / đổi cha khi còn sách
+  'FORBIDDEN',
+  'SLUG_TAKEN',
+  'COVER_TOO_LARGE',
+  'COVER_INVALID',
+  'CATEGORY_HAS_BOOKS',
+  'AUTHOR_HAS_BOOKS',
   'UNKNOWN',
 ] as const
 
@@ -44,7 +52,34 @@ export const VALIDATION_KEYS = [
   'invalid',
 ] as const
 
-export type ValidationKey = (typeof VALIDATION_KEYS)[number]
+// Lỗi từng ô của form admin: khóa ở messages/vi.json → admin.validation.<KEY> (admin chỉ tiếng Việt, có test)
+export const ADMIN_VALIDATION_KEYS = [
+  'title',
+  'subtitle',
+  'name',
+  'slug',
+  'slugTaken',
+  'description',
+  'isbn',
+  'isbnTaken',
+  'price',
+  'originalPrice',
+  'stock',
+  'year',
+  'positiveInt',
+  'dimensions',
+  'sortOrder',
+  'category',
+  'categoryLeaf',
+  'categoryDepth',
+  'categoryHasChildren',
+  'categoryHasBooks',
+  'coverRequired',
+  'coverTooLarge',
+  'coverInvalid',
+] as const
+
+export type ValidationKey = (typeof VALIDATION_KEYS)[number] | (typeof ADMIN_VALIDATION_KEYS)[number]
 export type FieldErrors = Partial<Record<string, ValidationKey>>
 
 export type Result<T> =
@@ -65,7 +100,7 @@ export function isErrorCode(value: string): value is ErrorCode {
 }
 
 function isValidationKey(value: string): value is ValidationKey {
-  return VALIDATION_KEYS.some((key) => key === value)
+  return VALIDATION_KEYS.some((key) => key === value) || ADMIN_VALIDATION_KEYS.some((key) => key === value)
 }
 
 /** Lỗi zod → INVALID_INPUT kèm lỗi đầu tiên của từng ô (message lạ, VD lỗi kiểu mặc định của zod → `invalid`) */

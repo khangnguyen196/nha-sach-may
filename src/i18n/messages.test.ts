@@ -10,8 +10,11 @@ function keyPaths(value: unknown, prefix = ''): string[] {
 }
 
 describe('messages', () => {
-  it('vi.json và en.json có cùng bộ key', () => {
-    expect(keyPaths(en).sort()).toEqual(keyPaths(vi).sort())
+  it('vi.json và en.json có cùng bộ key (trừ namespace admin, chỉ tiếng Việt)', () => {
+    const { admin, ...shared } = vi
+    expect(keyPaths(en).sort()).toEqual(keyPaths(shared).sort())
+    expect(keyPaths(admin).length).toBeGreaterThan(0)
+    expect(Object.keys(en)).not.toContain('admin')
   })
 
   it('chuỗi của global-error khớp namespace errorPage', () => {

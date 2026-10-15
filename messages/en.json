@@ -26,10 +26,6 @@
     "retry": "Try again",
     "backHome": "Back to home"
   },
-  "admin": {
-    "title": "Admin",
-    "placeholder": "The admin area will be built in a later phase."
-  },
   "layout": {
     "searchPlaceholder": "Search books, authors…",
     "openSearch": "Open search",
@@ -404,6 +400,7 @@
     "VOUCHER_MIN_ORDER": "This code applies to orders from {min_order_value, number, price}.",
     "ORDER_NOT_CANCELLABLE": "This order can no longer be cancelled.",
     "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",
+    "ORDER_INVALID_TRANSITION": "This order cannot be moved to that status.",
     "INVALID_INPUT": "Some of the information is invalid.",
     "CART_CHANGED": "Your cart has just changed. Check the new total, then place your order.",
     "INVALID_CREDENTIALS": "Incorrect email or password.",
@@ -413,6 +410,12 @@
     "SAME_PASSWORD": "Your new password must be different from the old one.",
     "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
     "LINK_EXPIRED": "This link has expired or was already used. Please request a new one.",
+    "FORBIDDEN": "You do not have permission to do this.",
+    "SLUG_TAKEN": "This slug is already in use.",
+    "COVER_TOO_LARGE": "The cover image must be 4MB or smaller.",
+    "COVER_INVALID": "The cover must be a JPEG, PNG, WebP or AVIF image.",
+    "CATEGORY_HAS_BOOKS": "This category has books, so it cannot be a parent category.",
+    "AUTHOR_HAS_BOOKS": "This author still has books and cannot be deleted.",
     "UNKNOWN": "Something went wrong. Please try again."
   }
 }
