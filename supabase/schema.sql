@@ -55,7 +55,7 @@ $$;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
--- Hằng số phí ship: sửa ở đây, place_order và quote_order cùng dùng
+-- Hằng số phí ship: sửa ở đây, place_order, quote_order và quote_items cùng dùng
 create or replace function private.flat_shipping_fee()
 returns int language sql immutable set search_path = '' as $$ select 30000 $$;
 
@@ -601,6 +601,7 @@ $$;
 
 -- Tiền tạm tính cho checkout (không khóa, không tăng used_count).
 -- Giỏ trống → trả về toàn 0 để trang giỏ vẫn hiển thị được mốc freeship.
+-- Chỉ cộng sách đang bán: sách đã ẩn hiện "Ngừng bán" ở trang giỏ, place_order chặn bằng BOOK_UNAVAILABLE.
 create or replace function public.quote_order(p_voucher_code text default null)
 returns table (
   item_count     int,
@@ -626,7 +627,7 @@ begin
   select count(*)::int, coalesce(sum(b.price * c.quantity), 0)::int
     into v_count, v_subtotal
     from public.cart_items c
-    join public.books b on b.id = c.book_id
+    join public.books b on b.id = c.book_id and b.is_active
    where c.user_id = v_user;
 
   if v_count = 0 then
@@ -644,6 +645,51 @@ begin
 
   return query select v_count, v_subtotal, v_shipping, v_discount,
                       v_subtotal + v_shipping - v_discount, private.free_ship_from();
+end;
+$$;
+
+-- Giỏ khách vãng lai: cùng công thức với quote_order, nhận giỏ từ localStorage.
+-- security definer vì anon không có quyền trên schema private (shipping_fee, free_ship_from);
+-- chỉ đọc books và tự lọc is_active nên không lộ thêm dữ liệu.
+create or replace function public.quote_items(p_items jsonb)
+returns table (
+  item_count     int,
+  subtotal       int,
+  shipping_fee   int,
+  total          int,
+  free_ship_from int
+)
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_count     int;
+  v_subtotal  int;
+  v_shipping  int;
+begin
+  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items) > 100 then
+    raise exception 'INVALID_INPUT'
+      using detail = json_build_object('field', 'items', 'max', 100)::text;
+  end if;
+
+  -- Gộp trùng book_id và chặn 99 giống merge_cart, để khách thấy đúng số tiền sẽ có sau khi gộp
+  select count(*)::int, coalesce(sum(b.price * q.quantity), 0)::int
+    into v_count, v_subtotal
+    from (
+      select x.book_id, least(sum(x.quantity), 99)::int as quantity
+        from jsonb_to_recordset(p_items) as x(book_id bigint, quantity int)
+       where x.quantity > 0
+       group by x.book_id
+    ) q
+    join public.books b on b.id = q.book_id and b.is_active;
+
+  if v_count = 0 then
+    return query select 0, 0, 0, 0, private.free_ship_from();
+    return;
+  end if;
+
+  v_shipping := private.shipping_fee(v_subtotal);
+
+  return query select v_count, v_subtotal, v_shipping,
+                      v_subtotal + v_shipping, private.free_ship_from();
 end;
 $$;
 
@@ -932,6 +978,9 @@ grant  execute on function public.cancel_order(bigint, text) to authenticated;
 revoke execute on function public.quote_order(text) from public, anon;
 grant  execute on function public.quote_order(text) to authenticated;
 
+revoke execute on function public.quote_items(jsonb) from public;
+grant  execute on function public.quote_items(jsonb) to anon, authenticated;
+
 revoke execute on function public.set_default_address(bigint) from public, anon;
 grant  execute on function public.set_default_address(bigint) to authenticated;
 
@@ -967,6 +1016,7 @@ create policy "book_covers_admin_delete" on storage.objects
 -- RPC cho app (supabase.rpc):
 --   search_books(q)                         — anon + authenticated
 --   quote_order(p_voucher_code)             — tiền tạm tính ở giỏ / checkout
+--   quote_items(p_items jsonb)              — tạm tính giỏ khách (anon + authenticated)
 --   place_order(p_address_id, p_payment_method, p_voucher_code, p_note)
 --   cancel_order(p_order_id, p_reason)
 --   set_default_address(p_address_id)

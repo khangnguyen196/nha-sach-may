@@ -1,6 +1,6 @@
 # Phase 5a: Giỏ hàng
 
-Trạng thái: **chờ duyệt** (2026-10-15). Chỉ có plan, chưa code.
+Trạng thái: **đã duyệt** (2026-10-15), làm trên nhánh `phase-5a`. Chọn hết các ★; mục 7 có bổ sung (khóa gộp giỏ giữa các tab), xem "Quyết định đã duyệt" ở cuối.
 
 Phạm vi: giỏ khách vãng lai (localStorage), giỏ tài khoản (`cart_items`), gộp giỏ khi đăng nhập (`merge_cart`), badge giỏ ở header, nút "Thêm vào giỏ" ở trang sách, trang giỏ (`/gio-hang`) với tạm tính từ server và mốc freeship. **Không** có checkout COD + trang đặt hàng thành công: đề xuất tách thành Phase 5b, plan riêng (xem Cần chọn 1). Không có voucher (Phase 9).
 
@@ -35,6 +35,7 @@ Phạm vi: giỏ khách vãng lai (localStorage), giỏ tài khoản (`cart_item
 
 7. **Gộp giỏ khi đăng nhập**
    - ★ Client leaf `CartSync` (nằm cạnh `CartBadge` trong header): khi `signedIn` và localStorage có hàng → gọi action `mergeGuestCart` (RPC `merge_cart`) → thành công thì xóa localStorage + `router.refresh()`; lỗi thì giữ nguyên localStorage, lần tải trang sau thử lại. Bao mọi đường vào phiên: form đăng nhập, link xác nhận email, đặt lại mật khẩu.
+     - **Bổ sung khi duyệt — nhiều tab**: mở nhiều tab sau khi đăng nhập thì tab nào cũng thấy localStorage có hàng → `merge_cart` chạy nhiều lần, số lượng cộng dồn gấp đôi. Sửa: bọc bước gộp trong `navigator.locks.request('nsm-cart-merge', …)`; trong lock **đọc lại** localStorage, rỗng thì bỏ qua; gộp thành công thì xóa localStorage **trước khi** nhả lock (tab chờ lock sau đó đọc thấy rỗng). Trình duyệt không có `navigator.locks`: gộp như trên, không khóa. e2e: 2 tab cùng đăng nhập → số lượng không bị nhân đôi.
    - Gửi giỏ kèm form đăng nhập (hidden input) để `signIn` gộp trước khi redirect. Không bao được link xác nhận email / đặt lại mật khẩu.
 
 8. **Số lượng so với tồn kho**
@@ -87,7 +88,7 @@ Phạm vi: giỏ khách vãng lai (localStorage), giỏ tài khoản (`cart_item
 
 - `CartLink` (Server Component trong `<Suspense>` cạnh `AccountLink`, dùng chung `getCurrentUser()` đã `React.cache`): đã đăng nhập → `getCartCount()`; truyền `{ signedIn, count }` cho client leaf `CartBadge`.
 - `CartBadge`: user → số từ server (+ optimistic khi thêm); khách → tổng từ localStorage. Badge nằm tuyệt đối trên icon (không CLS), `aria-label` của link gồm số lượng ("Giỏ hàng, 3 cuốn"). Fallback của Suspense = icon không số (như hiện tại).
-- `CartSync` (cần chọn 7 ★) cùng chỗ.
+- `CartSync` (cần chọn 7 ★, có khóa `navigator.locks` giữa các tab) cùng chỗ.
 
 ## Trang sách
 
@@ -119,6 +120,7 @@ Namespace `cart` (badge, nút thêm, trạng thái đã thêm, trang giỏ, step
   - Khách: thêm sách ở trang sách → badge 1 → `/gio-hang` có dòng, tạm tính + phí ship khớp RPC; tăng số lượng tới khi vượt mốc → "miễn phí giao hàng"; xóa → giỏ rỗng; tải lại trang vẫn giữ giỏ.
   - Hai tab: thêm ở tab A → badge tab B cập nhật (sự kiện `storage`).
   - Gộp: khách thêm 2 sách → đăng nhập → badge = tổng giỏ cũ + giỏ tài khoản, localStorage rỗng; đăng xuất → badge về 0 (giỏ tài khoản vẫn còn khi đăng nhập lại).
+  - Gộp nhiều tab: localStorage có hàng, mở 2 tab cùng phiên đăng nhập → số lượng trong giỏ tài khoản chỉ cộng một lần.
   - User: thêm / đổi số lượng / xóa, tải lại vẫn đúng (DB); sách hết hàng → nút disabled.
   - `/en/cart` hiển thị giá `₫98,000`.
   - Không lỗi console.
@@ -126,11 +128,23 @@ Namespace `cart` (badge, nút thêm, trạng thái đã thêm, trang giỏ, step
 
 ## Việc của chủ dự án
 
-- Chạy migration `quote_items` trên Supabase (SQL Editor), rồi sinh lại types (`npx supabase gen types typescript --project-id <ID> > src/types/database.ts`). Hướng dẫn từng bước sẽ ghi ở đây khi tới bước đó; trong lúc chờ tôi làm phần không phụ thuộc RPC mới.
+Migration: `supabase/migrations/20261015090000_quote_items.sql` (idempotent, chạy lại không sao). Không đổi bảng / RLS.
+
+1. Kiểm tra migration (đã có cùng nội dung trong `schema.sql`).
+2. Supabase Dashboard → SQL Editor → New query → dán toàn bộ file migration → Run. Kết quả mong đợi: "Success. No rows returned".
+3. Kiểm tra nhanh trong SQL Editor (role mặc định là `postgres`; dòng đầu là giỏ rỗng, dòng sau là 2 cuốn của một sách đang bán):
+   ```sql
+   select * from public.quote_items('[]'::jsonb);
+   select * from public.quote_items(jsonb_build_array(jsonb_build_object('book_id', (select id from public.books where is_active limit 1), 'quantity', 2)));
+   ```
+   Dòng đầu: `0 | 0 | 0 | 0 | 300000`. Dòng sau: `item_count = 1`, `subtotal = 2 × giá`, `shipping_fee` 30000 hoặc 0.
+4. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` → `src/types/database.ts` có `quote_items` trong `Functions`.
+5. Báo tôi để làm tiếp phần trang giỏ / `/api/cart/guest`.
 
 ## Tiến độ
 
-- [ ] Migration `quote_items` + `quote_order` lọc `is_active` + `schema.sql` (chờ bạn chạy SQL + sinh types)
+- [x] Migration `quote_items` + `quote_order` lọc `is_active` + `schema.sql`
+- [ ] Bạn chạy SQL + sinh types (xem "Việc của chủ dự án")
 - [ ] Kiểm chứng `getTranslations({ locale })` trong Server Action (cần chọn 10)
 - [ ] `features/cart/{schemas,guest-cart}.ts` + store + Vitest
 - [ ] `features/cart/{queries,actions}.ts`, `/api/cart/guest`
@@ -140,3 +154,9 @@ Namespace `cart` (badge, nút thêm, trạng thái đã thêm, trang giỏ, step
 - [ ] Messages `cart` vi/en
 - [ ] e2e `cart.spec.ts`
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách trong ngân sách
+
+## Quyết định đã duyệt
+
+Chọn hết các ★ (1–10). Bổ sung mục 7: gộp giỏ trong `navigator.locks.request('nsm-cart-merge')`, đọc lại localStorage trong lock, xóa trước khi nhả lock; không có `navigator.locks` thì gộp không khóa; e2e 2 tab không nhân đôi số lượng.
+
+Thứ tự: migration trước (commit + push, dừng phần DB chờ bạn kiểm tra và chạy) → trong lúc chờ làm phần không phụ thuộc `quote_items` → bạn báo đã chạy SQL + sinh types thì làm tiếp.
