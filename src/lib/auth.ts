@@ -1,4 +1,5 @@
 import 'server-only'
+import { io } from 'next/cache'
 import type { Locale } from 'next-intl'
 import { cache } from 'react'
 import { getPathname, redirect, type Href } from '@/i18n/navigation'
@@ -12,6 +13,9 @@ export type CurrentUser = { id: string; email: string; fullName: string | null }
  * getClaims() xác thực chữ ký JWT; không dùng getSession() ở server (đọc cookie mà không xác thực).
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  // getClaims so hạn token với Date.now(): prerender theo phiên (prefetch App Shell) gặp nó sẽ báo lỗi
+  // "unstable value Date.now()". io() dừng prerender ở đây; lúc có request thật thì resolve ngay.
+  await io()
   const supabase = await createClient()
   const { data, error } = await supabase.auth.getClaims()
   const claims = data?.claims

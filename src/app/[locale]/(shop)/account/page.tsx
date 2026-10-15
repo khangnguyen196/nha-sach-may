@@ -61,7 +61,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
         <ChevronRightIcon aria-hidden className="size-4 text-muted-foreground" />
       </Link>
 
-      <section className="mt-4 rounded-lg border bg-surface p-5" aria-label={t('emailLocale')}>
+      <section className="mt-4 rounded-lg border bg-surface p-5">
         <EmailLocaleForm
           action={updateEmailLocale}
           messages={messages}

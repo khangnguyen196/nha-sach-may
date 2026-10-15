@@ -17,8 +17,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    // Tạo user test (admin API, cần SUPABASE_SERVICE_ROLE_KEY trong .env.local) + đăng nhập sẵn; teardown xóa user
+    { name: 'setup', testMatch: /auth\.setup\.ts/, teardown: 'teardown' },
+    { name: 'teardown', testMatch: /auth\.teardown\.ts/ },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'] },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, dependencies: ['setup'] },
   ],
   // Chạy trên bản build production: e2e phải phản ánh đúng prerender / cache
   webServer: {

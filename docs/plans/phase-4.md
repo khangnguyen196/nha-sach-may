@@ -143,7 +143,7 @@ Ghi chú về template:
 - [x] Header: trạng thái đăng nhập (Server Component trong `<Suspense>`); trang tài khoản + đăng xuất + ô chọn ngôn ngữ email (`profiles.locale`)
 - [x] Sổ địa chỉ: queries, actions (tạo / sửa / xóa / đặt mặc định), `/api/divisions/[province]`, trang danh sách / thêm / sửa
 - [x] Đặt lại mật khẩu: `updatePassword` + `signOut({ scope: 'others' })`
-- [ ] e2e: global setup + teardown (`scripts/e2e-user.ts`, gồm user riêng cho test đặt lại mật khẩu + helper `generateLink` / kiểm tra refresh token), `storageState`, `e2e/account.spec.ts`
+- [x] e2e: global setup + teardown (`scripts/e2e-user.ts`, gồm user riêng cho test đặt lại mật khẩu + helper `generateLink` / kiểm tra refresh token), `storageState`, `e2e/account.spec.ts`
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách không tăng
 
 ---
