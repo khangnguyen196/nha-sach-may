@@ -6,9 +6,8 @@ import type { Result } from '@/lib/errors'
 import type { CartActionData } from '../actions'
 import type { CartLine, CartQuote } from '../queries'
 import { setUserCartCount } from '../store'
+import { QUANTITY_DEBOUNCE_MS } from '../utils'
 import { CartView, type CartViewLabels } from './cart-view'
-
-export const QUANTITY_DEBOUNCE_MS = 300
 
 type Change = { bookId: number; quantity: number | 'remove' }
 

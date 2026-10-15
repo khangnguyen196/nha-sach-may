@@ -2,6 +2,9 @@ import { expect, type Page } from '@playwright/test'
 import type { E2eBook } from '../scripts/e2e-user'
 import { waitForHydration } from './helpers'
 
+export const vnd = (value: number, locale: 'vi' | 'en' = 'vi') =>
+  new Intl.NumberFormat(locale, { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
+
 export const badge = (page: Page) => page.getByRole('banner').getByTestId('cart-count')
 
 export async function readGuestCart(page: Page) {

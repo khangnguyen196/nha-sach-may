@@ -144,15 +144,15 @@ Migration: `supabase/migrations/20261015090000_quote_items.sql` (idempotent, ch�
 ## Tiến độ
 
 - [x] Migration `quote_items` + `quote_order` lọc `is_active` + `schema.sql`
-- [ ] Bạn chạy SQL + sinh types (xem "Việc của chủ dự án")
+- [x] Bạn chạy SQL (2026-10-15); types sinh lại có `quote_items`
 - [x] Kiểm chứng `getTranslations({ locale })` trong Server Action (cần chọn 10): chạy được, e2e "vượt tồn kho" kiểm tra cả vi và en
 - [x] `features/cart/{schemas,guest-cart}.ts` + store + Vitest
-- [ ] `features/cart/{queries,actions}.ts`, `/api/cart/guest`
+- [x] `features/cart/{queries,actions}.ts`, `/api/cart/guest`
 - [x] Header: `CartLink` / `CartBadge` / `CartSync` (khóa `navigator.locks`)
 - [x] Trang sách: nút "Thêm vào giỏ"
-- [ ] Trang giỏ: `CartView`, tóm tắt, freeship, trạng thái rỗng / lỗi
-- [ ] Messages `cart` vi/en
-- [ ] e2e `cart.spec.ts` (xong phần khách ở trang sách, 2 tab; `cart-account.spec.ts`: giỏ tài khoản, gộp, gộp nhiều tab, `/en/cart`) — còn trang giỏ khách
+- [x] Trang giỏ: `CartView`, tóm tắt, freeship, trạng thái rỗng / lỗi
+- [x] Messages `cart` vi/en
+- [x] e2e `cart.spec.ts` (khách: trang sách, 2 tab, tồn kho, trang giỏ, `/api/cart/guest`) + `cart-account.spec.ts` (giỏ tài khoản, gộp, gộp nhiều tab, lỗi theo locale, `/en/cart`)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js` trang sách trong ngân sách
 
 ## Quyết định đã duyệt

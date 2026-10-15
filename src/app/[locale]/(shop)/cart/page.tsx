@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { EmptyState } from '@/features/books/components/empty-state'
 import { removeFromCart, setCartQuantity } from '@/features/cart/actions'
 import { CartSkeleton } from '@/features/cart/components/cart-skeleton'
+import { GuestCart } from '@/features/cart/components/guest-cart'
 import { UserCart } from '@/features/cart/components/user-cart'
 import { getCartViewLabels } from '@/features/cart/labels'
 import { getCart, getCartQuote } from '@/features/cart/queries'
@@ -59,7 +60,16 @@ async function CartContent() {
     </div>
   )
 
-  if (!user) return empty
+  if (!user) {
+    return (
+      <GuestCart
+        labels={labels}
+        errorLabels={{ message: t('loadError'), retry: t('retry'), storage: t('storageErrorUpdate') }}
+        locale={locale}
+        empty={empty}
+      />
+    )
+  }
 
   const [lines, quote] = await Promise.all([getCart(), getCartQuote()])
   return (

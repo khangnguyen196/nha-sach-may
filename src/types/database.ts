@@ -716,6 +716,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      quote_items: {
+        Args: { p_items: Json }
+        Returns: {
+          free_ship_from: number
+          item_count: number
+          shipping_fee: number
+          subtotal: number
+          total: number
+        }[]
+      }
       quote_order: {
         Args: { p_voucher_code?: string }
         Returns: {

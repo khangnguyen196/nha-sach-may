@@ -2,7 +2,7 @@ import { test as base, expect, type BrowserContext } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { cartQuantities, clearCart, findBooksByStock, type E2eBook } from '../scripts/e2e-user'
 import { login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
-import { addFromBookPage, badge, readGuestCart } from './cart'
+import { addFromBookPage, badge, readGuestCart, vnd } from './cart'
 import { collectErrors, waitForHydration } from './helpers'
 
 // Giỏ tài khoản + gộp giỏ khi đăng nhập. Mặc định dùng phiên đăng nhập sẵn của project (auth.setup.ts).
@@ -17,9 +17,6 @@ const test = base.extend<{ users: ProjectUsers }>({
 
 // Cùng một giỏ tài khoản cho cả file → chạy tuần tự, mỗi test bắt đầu từ giỏ rỗng
 test.describe.configure({ mode: 'serial' })
-
-const vnd = (value: number, locale: 'vi' | 'en' = 'vi') =>
-  new Intl.NumberFormat(locale, { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value)
 
 let books: E2eBook[]
 

@@ -151,6 +151,7 @@
     "maxPerBook": "Mỗi sách đặt tối đa {max} cuốn.",
     "cartFull": "Giỏ hàng đã đủ {max} đầu sách. Hãy bớt sách khác trước khi thêm.",
     "storageError": "Trình duyệt đang chặn lưu dữ liệu nên chưa thêm được vào giỏ. Hãy đăng nhập để dùng giỏ hàng.",
+    "storageErrorUpdate": "Trình duyệt đang chặn lưu dữ liệu nên chưa đổi được giỏ hàng.",
     "unavailableMessage": "Sách này hiện không còn bán.",
     "emptyTitle": "Giỏ hàng đang trống",
     "emptyDescription": "Chọn vài cuốn sách cho những giờ đọc sắp tới.",

@@ -151,6 +151,7 @@
     "maxPerBook": "You can order up to {max} copies of each book.",
     "cartFull": "Your cart already has {max} different books. Remove one before adding another.",
     "storageError": "Your browser is blocking site storage, so the book was not added. Sign in to use the cart.",
+    "storageErrorUpdate": "Your browser is blocking site storage, so the cart was not updated.",
     "unavailableMessage": "This book is no longer available.",
     "emptyTitle": "Your cart is empty",
     "emptyDescription": "Pick a few books for your next quiet reading hours.",
