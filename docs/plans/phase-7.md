@@ -16,7 +16,7 @@ Trạng thái: **7a xong, migration đã chạy, chờ duyệt trước khi merg
 
 **Migration**: `supabase/migrations/20261015160000_admin.sql` (bản có mục 5, policy `book_covers_admin_select`: Storage chỉ xóa được object mà phiên đọc được, thiếu policy select thì `remove()` trả về rỗng, không báo lỗi) đã chạy trên Supabase sau khi bạn kiểm tra trên Postgres local. Types sinh lại: không có diff.
 
-**Việc của bạn**: thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" bằng admin (`docs/plans/data.md`).
+**Việc của bạn**: không còn. Bạn đã test tay 7a (tìm không dấu, sửa tồn kho → trang công khai cập nhật ngay, danh mục, tác giả) và thay bìa trang lót của "100 câu hỏi về lịch sử chữ Quốc ngữ" bằng admin.
 
 **Lỗi có sẵn đã sửa (ngoài phạm vi admin nhưng admin làm lộ ra)**: trang sách / danh mục / tác giả có slug không nằm trong `generateStaticParams` (tạo hoặc đổi slug sau lần build, kể cả sách import giữa hai lần deploy) trả **HTTP 500**. Với Partial Prefetching, Next dựng App Shell cho tham số chưa biết; page đọc `params` và header đọc `useParams` ngoài `<Suspense>` nên dựng shell thất bại. Đã thêm `export const instant = false` cho 3 trang đó (như trang địa chỉ / đơn hàng): slug mới render theo request, slug đã prerender giữ nguyên. Cách triệt để (đọc params trong `<Suspense>`, header không chặn shell) đụng mọi trang công khai → ghi vào Lộ trình Phase 10 trong CLAUDE.md.
 
