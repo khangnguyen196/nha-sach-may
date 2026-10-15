@@ -3,13 +3,15 @@ import {
   addItem,
   cartLimit,
   countItems,
+  MAX_LINES,
+  normalizeCartItems,
   parseGuestCart,
   parseItemsParam,
   removeItem,
   serializeItemsParam,
   setItemQuantity,
 } from './guest-cart'
-import { MAX_LINES } from './schemas'
+import { cartItemsSchema } from './schemas'
 
 const lines = (count: number) => Array.from({ length: count }, (_, i) => ({ book_id: i + 1, quantity: 1 }))
 
@@ -138,5 +140,31 @@ describe('items param của /api/cart/guest', () => {
   it('quá 100 dòng → null', () => {
     expect(parseItemsParam(serializeItemsParam(lines(MAX_LINES)))).toHaveLength(MAX_LINES)
     expect(parseItemsParam(serializeItemsParam(lines(MAX_LINES + 1)))).toBeNull()
+  })
+})
+
+describe('normalizeCartItems (client) khớp cartItemsSchema (server)', () => {
+  it.each([
+    ['hợp lệ', [{ book_id: 3, quantity: 2 }]],
+    ['gộp trùng', [{ book_id: 3, quantity: 60 }, { book_id: 3, quantity: 60 }, { book_id: 1, quantity: 1 }]],
+    ['rỗng', []],
+    ['thừa field', [{ book_id: 3, quantity: 2, price: 1 }]],
+    ['không phải mảng', { book_id: 3, quantity: 1 }],
+    ['null', null],
+    ['phần tử null', [null]],
+    ['phần tử là mảng', [[3, 1]]],
+    ['book_id chuỗi', [{ book_id: '3', quantity: 1 }]],
+    ['book_id 0', [{ book_id: 0, quantity: 1 }]],
+    ['book_id lẻ', [{ book_id: 1.5, quantity: 1 }]],
+    ['book_id vượt safe integer', [{ book_id: 2 ** 53, quantity: 1 }]],
+    ['quantity 0', [{ book_id: 3, quantity: 0 }]],
+    ['quantity 100', [{ book_id: 3, quantity: 100 }]],
+    ['thiếu quantity', [{ book_id: 3 }]],
+    ['NaN', [{ book_id: Number.NaN, quantity: 1 }]],
+    ['100 dòng', lines(MAX_LINES)],
+    ['101 dòng', lines(MAX_LINES + 1)],
+  ])('%s', (_, input) => {
+    const parsed = cartItemsSchema.safeParse(input)
+    expect(normalizeCartItems(input)).toEqual(parsed.success ? parsed.data : null)
   })
 })

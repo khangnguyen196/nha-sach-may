@@ -1,13 +1,46 @@
-import { cartItemsSchema, MAX_LINES, MAX_QUANTITY, type CartItem } from './schemas'
+// Hàm thuần cho giỏ khách vãng lai, chạy ở cả client. KHÔNG import zod: zod vào bundle client tốn ~30KB gzip
+// (ngân sách JS trang sách, CLAUDE.md). Server Action parse bằng schemas.ts (zod); guest-cart.test.ts kiểm tra
+// normalizeCartItems và cartItemsSchema cho cùng kết quả. Đọc/ghi localStorage nằm ở store.ts.
 
-// Hàm thuần cho giỏ khách vãng lai. Đọc/ghi localStorage nằm ở store.ts (chỉ chạy ở client).
+// Cùng giới hạn với merge_cart / quote_items (supabase/schema.sql)
+export const MAX_QUANTITY = 99
+export const MAX_LINES = 100
+
+export type CartItem = { book_id: number; quantity: number }
+
+/** Gộp dòng trùng book_id (cộng dồn, chặn MAX_QUANTITY), giữ thứ tự xuất hiện đầu tiên */
+export function mergeDuplicates(items: readonly CartItem[]): CartItem[] {
+  const merged = new Map<number, number>()
+  for (const item of items) {
+    merged.set(item.book_id, Math.min((merged.get(item.book_id) ?? 0) + item.quantity, MAX_QUANTITY))
+  }
+  return [...merged].map(([book_id, quantity]) => ({ book_id, quantity }))
+}
+
+const isBookId = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) > 0
+const isQuantity = (value: unknown): value is number =>
+  Number.isSafeInteger(value) && Number(value) >= 1 && Number(value) <= MAX_QUANTITY
+
+/** Giỏ hợp lệ (mảng ≤ MAX_LINES, book_id nguyên dương, quantity 1–99) → đã gộp trùng; sai một chỗ → null */
+export function normalizeCartItems(value: unknown): CartItem[] | null {
+  if (!Array.isArray(value) || value.length > MAX_LINES) return null
+  const entries: unknown[] = value
+  const items: CartItem[] = []
+  for (const entry of entries) {
+    if (typeof entry !== 'object' || entry === null) return null
+    const bookId: unknown = Reflect.get(entry, 'book_id')
+    const quantity: unknown = Reflect.get(entry, 'quantity')
+    if (!isBookId(bookId) || !isQuantity(quantity)) return null
+    items.push({ book_id: bookId, quantity })
+  }
+  return mergeDuplicates(items)
+}
 
 /** JSON hỏng / sai dạng → giỏ rỗng (lần lưu sau ghi đè) */
 export function parseGuestCart(raw: string | null): CartItem[] {
   if (!raw) return []
   try {
-    const parsed = cartItemsSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data : []
+    return normalizeCartItems(JSON.parse(raw)) ?? []
   } catch {
     return []
   }
@@ -69,6 +102,5 @@ export function parseItemsParam(value: string | null): CartItem[] | null {
     if (!match) return null
     items.push({ book_id: Number(match[1]), quantity: Number(match[2]) })
   }
-  const parsed = cartItemsSchema.safeParse(items)
-  return parsed.success ? parsed.data : null
+  return normalizeCartItems(items)
 }

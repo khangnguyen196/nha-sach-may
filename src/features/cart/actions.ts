@@ -10,9 +10,9 @@ import { withMessage } from '@/lib/error-message'
 import { toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
-import { cartLimit } from './guest-cart'
+import { cartLimit, MAX_QUANTITY } from './guest-cart'
 import { getCartCount } from './queries'
-import { bookIdSchema, cartItemsSchema, MAX_QUANTITY, quantitySchema } from './schemas'
+import { bookIdSchema, cartItemsSchema, quantitySchema } from './schemas'
 
 // locale do page bind sẵn (Server Action không đọc được next/root-params); tham số bind đi qua client nên parse lại.
 // user_id lấy từ phiên, không nhận từ client; RLS cart_items_own chặn thêm một lớp.

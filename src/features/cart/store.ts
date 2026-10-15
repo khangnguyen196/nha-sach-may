@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { countItems, parseGuestCart } from './guest-cart'
-import type { CartItem } from './schemas'
+import { countItems, parseGuestCart, type CartItem } from './guest-cart'
 
 // Trạng thái giỏ phía client, không thư viện (useSyncExternalStore). Chỉ import từ client component.
 // - Giỏ khách: localStorage, đồng bộ giữa các tab qua sự kiện `storage`, trong tab qua sự kiện nội bộ.
