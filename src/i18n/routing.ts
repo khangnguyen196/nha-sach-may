@@ -21,6 +21,8 @@ export const routing = defineRouting({
     '/account/addresses': { vi: '/tai-khoan/dia-chi', en: '/account/addresses' },
     '/account/addresses/new': { vi: '/tai-khoan/dia-chi/moi', en: '/account/addresses/new' },
     '/account/addresses/[id]': { vi: '/tai-khoan/dia-chi/[id]', en: '/account/addresses/[id]' },
+    '/account/orders': { vi: '/tai-khoan/don-hang', en: '/account/orders' },
+    '/account/orders/[code]': { vi: '/tai-khoan/don-hang/[code]', en: '/account/orders/[code]' },
     '/login': { vi: '/dang-nhap', en: '/login' },
     '/register': { vi: '/dang-ky', en: '/register' },
     '/forgot-password': { vi: '/quen-mat-khau', en: '/forgot-password' },

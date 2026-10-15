@@ -110,7 +110,7 @@ Trang danh sách: 0 JS thêm (Server Component + link). Trang chi tiết: form h
 ## Tiến độ
 
 - [ ] Routing `/account/orders`, `/account/orders/[code]`; thẻ "Đơn hàng của tôi" ở trang tài khoản
-- [ ] `features/orders/{queries,params,schemas,actions,cache}.ts` + Vitest
+- [x] `features/orders/{queries,params,schemas,actions,cache,utils}.ts` + Vitest
 - [ ] Trang danh sách (lọc, phân trang, rỗng, skeleton)
 - [ ] Component `OrderDetails` dùng chung; trang chi tiết; link "Xem đơn hàng" ở trang thành công
 - [ ] Hủy đơn + `updateTag`; checkout dùng chung `expireOrderBooks`

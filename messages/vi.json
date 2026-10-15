@@ -20,6 +20,12 @@
     "description": "Trang bạn tìm không tồn tại hoặc đã được chuyển đi.",
     "backHome": "Về trang chủ"
   },
+  "errorPage": {
+    "title": "Không tải được trang",
+    "description": "Đã có lỗi khi tải nội dung. Có thể kết nối đang chập chờn, bạn thử lại sau ít phút nhé.",
+    "retry": "Thử lại",
+    "backHome": "Về trang chủ"
+  },
   "admin": {
     "title": "Quản trị",
     "placeholder": "Khu vực quản trị sẽ được xây dựng ở giai đoạn sau."
@@ -219,7 +225,52 @@
     "note": "Ghi chú",
     "items": "Sách đã đặt",
     "quantity": "Số lượng: {quantity}",
-    "continueShopping": "Tiếp tục mua sắm"
+    "continueShopping": "Tiếp tục mua sắm",
+    "viewOrder": "Xem đơn hàng",
+    "cod": "Thanh toán khi nhận hàng (COD)",
+    "payment": "Thanh toán",
+    "status": {
+      "pending": "Chờ xác nhận",
+      "confirmed": "Đã xác nhận",
+      "shipping": "Đang giao",
+      "delivered": "Đã giao",
+      "cancelled": "Đã hủy"
+    }
+  },
+  "orders": {
+    "title": "Đơn hàng của tôi",
+    "detailTitle": "Đơn hàng {code}",
+    "filtersLabel": "Lọc theo trạng thái",
+    "filters": {
+      "all": "Tất cả",
+      "pending": "Chờ xác nhận",
+      "processing": "Đang xử lý",
+      "delivered": "Đã giao",
+      "cancelled": "Đã hủy"
+    },
+    "emptyTitle": "Bạn chưa có đơn hàng nào",
+    "empty": "Đơn hàng bạn đặt sẽ hiện ở đây.",
+    "browse": "Khám phá sách",
+    "emptyFilteredTitle": "Không có đơn nào ở mục này",
+    "emptyFiltered": "Thử xem tất cả đơn hàng.",
+    "showAll": "Xem tất cả đơn",
+    "moreBooks": "và {count} sách khác",
+    "explain": {
+      "pending": "Cửa hàng đang xác nhận đơn hàng.",
+      "confirmed": "Cửa hàng đã xác nhận và đang chuẩn bị sách.",
+      "shipping": "Đơn hàng đang được giao tới bạn.",
+      "delivered": "Đơn hàng đã giao thành công. Cảm ơn bạn!",
+      "cancelled": "Đơn hàng đã được hủy."
+    },
+    "cancelledReason": "Lý do hủy",
+    "cancel": "Hủy đơn hàng",
+    "cancelHint": "Bạn có thể hủy khi cửa hàng chưa xác nhận đơn.",
+    "reasonLabel": "Lý do hủy",
+    "reasonHint": "Không bắt buộc.",
+    "reasonCount": "{count}/{max} ký tự",
+    "confirmCancel": "Xác nhận hủy",
+    "cancelling": "Đang hủy…",
+    "cancelDone": "Đã hủy đơn hàng."
   },
   "author": {
     "books": "Sách của tác giả",
@@ -249,7 +300,8 @@
     "street": "Số nhà, tên đường cần từ 1 đến 200 ký tự.",
     "address": "Vui lòng chọn địa chỉ giao hàng.",
     "note": "Ghi chú tối đa 500 ký tự.",
-    "invalid": "Giá trị không hợp lệ."
+    "invalid": "Giá trị không hợp lệ.",
+    "reason": "Lý do hủy tối đa 500 ký tự."
   },
   "auth": {
     "email": "Email",
@@ -310,7 +362,9 @@
     },
     "save": "Lưu",
     "saved": "Đã lưu.",
-    "signedInAs": "Tài khoản của {name}"
+    "signedInAs": "Tài khoản của {name}",
+    "orders": "Đơn hàng của tôi",
+    "ordersDescription": "Theo dõi và hủy đơn hàng."
   },
   "address": {
     "title": "Sổ địa chỉ",

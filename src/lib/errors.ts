@@ -40,6 +40,7 @@ export const VALIDATION_KEYS = [
   'street',
   'address',
   'note',
+  'reason',
   'invalid',
 ] as const
 

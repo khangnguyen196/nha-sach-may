@@ -1,15 +1,16 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { FILTER_STATUSES, ORDERS_PAGE_SIZE, type OrderListParams } from './params'
 
 // Dữ liệu theo user: client theo phiên (cookies), không cache chung. RLS chỉ trả đơn của người đang đăng nhập
 // (admin xem được mọi đơn). Chỉ gọi trong <Suspense>.
 
-const ORDER_COLUMNS = `id, order_code, status, payment_method, recipient_name, phone, province, ward, street, note,
-  subtotal, shipping_fee, discount, total, created_at,
+const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
+  street, note, subtotal, shipping_fee, discount, total, cancelled_reason, created_at,
   order_items(id, title, cover_url, unit_price, quantity, line_total)`
 
 // Mã đơn do generate_order_code() sinh: NS + YYMMDD + số thứ tự (≥ 5 chữ số)
-const ORDER_CODE = /^NS\d{11,16}$/
+export const ORDER_CODE = /^NS\d{11,16}$/
 
 export async function getOrderByCode(code: string) {
   if (!ORDER_CODE.test(code)) return null
@@ -23,3 +24,33 @@ export async function getOrderByCode(code: string) {
   if (error) throw new Error(`getOrderByCode: ${error.message}`)
   return data
 }
+
+export type OrderDetail = NonNullable<Awaited<ReturnType<typeof getOrderByCode>>>
+
+const RANGE_NOT_SATISFIABLE = 'PGRST103'
+
+/**
+ * Đơn của tôi, mới nhất trước, kèm dòng sách (tên, bìa cho ảnh nhỏ ở danh sách) trong cùng một query.
+ * count 'exact': đơn của một người ít, đếm chính xác rẻ. Không dùng order_items(count): aggregate của PostgREST
+ * đang tắt trên Supabase.
+ */
+export async function listOrders({ status, page }: OrderListParams) {
+  const supabase = await createClient()
+  let query = supabase
+    .from('orders')
+    .select('id, order_code, status, total, created_at, order_items(id, title, cover_url, quantity)', { count: 'exact' })
+  if (status) query = query.in('status', FILTER_STATUSES[status])
+
+  const from = (page - 1) * ORDERS_PAGE_SIZE
+  const { data, count, error } = await query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .order('id', { referencedTable: 'order_items' })
+    .range(from, from + ORDERS_PAGE_SIZE - 1)
+  // Offset vượt quá số dòng: PostgREST trả 416 thay vì mảng rỗng → trang rỗng (page gọi notFound)
+  if (error?.code === RANGE_NOT_SATISFIABLE) return { orders: [], total: count ?? 0 }
+  if (error) throw new Error(`listOrders: ${error.message}`)
+  return { orders: data, total: count ?? data.length }
+}
+
+export type OrderListItem = Awaited<ReturnType<typeof listOrders>>['orders'][number]

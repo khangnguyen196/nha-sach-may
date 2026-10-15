@@ -9,30 +9,18 @@ import { withMessage } from '@/lib/error-message'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
+import { expireOrderBooks } from '@/features/orders/cache'
 import { checkoutSchema } from './schemas'
 
 // locale do page bind sẵn (Server Action không đọc được next/root-params); tham số bind đi qua client nên parse lại.
 // Client chỉ gửi địa chỉ, ghi chú, idempotency key và tổng đang hiển thị (để place_order so sánh); giá, phí ship,
 // tổng tiền đều do place_order tính.
 
-type Supabase = Awaited<ReturnType<typeof createClient>>
-
 function redirectToLogin(locale: Locale): never {
   return redirect({
     href: { pathname: '/login', query: { next: getPathname({ href: '/checkout', locale }) } },
     locale,
   })
-}
-
-/** Tồn kho / sold_count của các sách trong đơn vừa đổi → làm mới trang sách và các danh sách đang chứa chúng */
-async function expireOrderBooks(supabase: Supabase, orderId: number) {
-  const { data, error } = await supabase.from('order_items').select('book_id').eq('order_id', orderId)
-  if (error) {
-    // Đơn đã tạo: không báo lỗi cho người dùng, cache tự hết hạn sau `hours`
-    console.error('placeOrder → order_items:', error.message)
-    return
-  }
-  for (const { book_id } of data) if (book_id !== null) updateTag(`book:${book_id}`)
 }
 
 async function failed(locale: Locale, failure: Failure): Promise<Failure> {

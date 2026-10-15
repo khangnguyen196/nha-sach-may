@@ -20,6 +20,12 @@
     "description": "The page you are looking for does not exist or has been moved.",
     "backHome": "Back to home"
   },
+  "errorPage": {
+    "title": "This page could not be loaded",
+    "description": "Something went wrong while loading this page. The connection may be unstable, so please try again in a moment.",
+    "retry": "Try again",
+    "backHome": "Back to home"
+  },
   "admin": {
     "title": "Admin",
     "placeholder": "The admin area will be built in a later phase."
@@ -219,7 +225,52 @@
     "note": "Note",
     "items": "Books ordered",
     "quantity": "Qty: {quantity}",
-    "continueShopping": "Continue shopping"
+    "continueShopping": "Continue shopping",
+    "viewOrder": "View order",
+    "cod": "Cash on delivery (COD)",
+    "payment": "Payment",
+    "status": {
+      "pending": "Awaiting confirmation",
+      "confirmed": "Confirmed",
+      "shipping": "Shipping",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  },
+  "orders": {
+    "title": "My orders",
+    "detailTitle": "Order {code}",
+    "filtersLabel": "Filter by status",
+    "filters": {
+      "all": "All",
+      "pending": "Awaiting confirmation",
+      "processing": "In progress",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "emptyTitle": "You have no orders yet",
+    "empty": "Orders you place will show up here.",
+    "browse": "Browse books",
+    "emptyFilteredTitle": "No orders here",
+    "emptyFiltered": "Try viewing all of your orders.",
+    "showAll": "View all orders",
+    "moreBooks": "and {count, plural, one {# other book} other {# other books}}",
+    "explain": {
+      "pending": "The store is confirming your order.",
+      "confirmed": "The store has confirmed your order and is preparing your books.",
+      "shipping": "Your order is on its way.",
+      "delivered": "Your order has been delivered. Thank you!",
+      "cancelled": "This order has been cancelled."
+    },
+    "cancelledReason": "Reason",
+    "cancel": "Cancel order",
+    "cancelHint": "You can cancel until the store confirms your order.",
+    "reasonLabel": "Reason for cancelling",
+    "reasonHint": "Optional.",
+    "reasonCount": "{count}/{max} characters",
+    "confirmCancel": "Confirm cancellation",
+    "cancelling": "Cancelling…",
+    "cancelDone": "Your order has been cancelled."
   },
   "author": {
     "books": "Books by this author",
@@ -249,7 +300,8 @@
     "street": "Street address must be 1 to 200 characters.",
     "address": "Please choose a shipping address.",
     "note": "Notes can be at most 500 characters.",
-    "invalid": "Invalid value."
+    "invalid": "Invalid value.",
+    "reason": "The reason can be at most 500 characters."
   },
   "auth": {
     "email": "Email",
@@ -310,7 +362,9 @@
     },
     "save": "Save",
     "saved": "Saved.",
-    "signedInAs": "{name}'s account"
+    "signedInAs": "{name}'s account",
+    "orders": "My orders",
+    "ordersDescription": "Track and cancel your orders."
   },
   "address": {
     "title": "Address book",
