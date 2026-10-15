@@ -1,4 +1,12 @@
-import { BookOpenIcon, FolderTreeIcon, LayoutDashboardIcon, PenLineIcon, StoreIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  FolderTreeIcon,
+  LayoutDashboardIcon,
+  PackageIcon,
+  PenLineIcon,
+  StoreIcon,
+  TicketPercentIcon,
+} from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
@@ -20,6 +28,8 @@ export async function AdminShell({ children }: { children: ReactNode }) {
     { href: '/admin/sach', label: t('nav.books'), icon: <BookOpenIcon aria-hidden /> },
     { href: '/admin/danh-muc', label: t('nav.categories'), icon: <FolderTreeIcon aria-hidden /> },
     { href: '/admin/tac-gia', label: t('nav.authors'), icon: <PenLineIcon aria-hidden /> },
+    { href: '/admin/don-hang', label: t('nav.orders'), icon: <PackageIcon aria-hidden /> },
+    { href: '/admin/voucher', label: t('nav.vouchers'), icon: <TicketPercentIcon aria-hidden /> },
   ]
   const themeToggle = <ThemeToggle labels={{ toLight: tLayout('toLightTheme'), toDark: tLayout('toDarkTheme') }} />
 

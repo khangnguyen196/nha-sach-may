@@ -73,6 +73,13 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
           highlight={
             <p className="-mt-2 text-sm text-muted-foreground">
               {tOrder('payment')}: <span className="text-foreground">{tOrder('cod')}</span>
+              {' · '}
+              <span
+                className={order.payment_status === 'paid' ? 'text-success' : 'text-foreground'}
+                data-testid="order-payment-status"
+              >
+                {tOrder(`paymentStatus.${order.payment_status}`)}
+              </span>
             </p>
           }
         />

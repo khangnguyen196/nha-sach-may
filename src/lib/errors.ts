@@ -28,6 +28,10 @@ export const ERROR_CODES = [
   'COVER_INVALID',
   'CATEGORY_HAS_BOOKS',
   'AUTHOR_HAS_BOOKS',
+  // Admin 7b: đơn vừa đổi trạng thái ở nơi khác (update có điều kiện khớp 0 dòng), voucher trùng mã / đã có đơn dùng
+  'ORDER_STATUS_CHANGED',
+  'VOUCHER_CODE_TAKEN',
+  'VOUCHER_IN_USE',
   'UNKNOWN',
 ] as const
 
@@ -77,6 +81,16 @@ export const ADMIN_VALIDATION_KEYS = [
   'coverRequired',
   'coverTooLarge',
   'coverInvalid',
+  'cancelReason',
+  'voucherCode',
+  'voucherCodeTaken',
+  'voucherDescription',
+  'discountType',
+  'discountValue',
+  'discountPercent',
+  'minOrder',
+  'dateTime',
+  'endsAfterStarts',
 ] as const
 
 export type ValidationKey = (typeof VALIDATION_KEYS)[number] | (typeof ADMIN_VALIDATION_KEYS)[number]

@@ -34,6 +34,8 @@
       "books": "Sách",
       "categories": "Danh mục",
       "authors": "Tác giả",
+      "orders": "Đơn hàng",
+      "vouchers": "Voucher",
       "backToShop": "Về cửa hàng"
     },
     "notFound": {
@@ -72,7 +74,8 @@
       "lowStock": "Sách sắp hết (còn 1–5 cuốn)",
       "outOfStock": "Sách hết hàng",
       "hiddenBooks": "Sách đang ẩn",
-      "view": "Xem danh sách"
+      "view": "Xem danh sách",
+      "viewOrders": "Xem đơn chờ xác nhận"
     },
     "books": {
       "title": "Sách",
@@ -242,6 +245,143 @@
         "pending": "Đang xóa…"
       }
     },
+    "orders": {
+      "title": "Đơn hàng",
+      "detailTitle": "Chi tiết đơn hàng",
+      "count": "{count} đơn",
+      "empty": "Chưa có đơn hàng nào.",
+      "emptyFiltered": "Không có đơn nào khớp bộ lọc.",
+      "filters": {
+        "label": "Lọc đơn hàng",
+        "q": "Tìm theo mã đơn, SĐT, tên người nhận",
+        "qHint": "VD: NS2610150001 hoặc 0901234567",
+        "status": "Trạng thái",
+        "allStatuses": "Tất cả"
+      },
+      "table": {
+        "caption": "Danh sách đơn hàng, mới nhất trước",
+        "code": "Mã đơn",
+        "date": "Ngày đặt",
+        "recipient": "Người nhận",
+        "total": "Tổng tiền",
+        "status": "Trạng thái",
+        "payment": "Thanh toán"
+      },
+      "cancelledReason": "Lý do hủy",
+      "updatedAt": "Cập nhật lúc",
+      "process": {
+        "title": "Xử lý đơn",
+        "hint": {
+          "pending": "Kiểm tra tồn kho, địa chỉ rồi xác nhận đơn. Sau khi xác nhận, khách không tự hủy được nữa.",
+          "confirmed": "Đóng gói xong thì chuyển sang đang giao.",
+          "shipping": "Khách nhận hàng thì đánh dấu đã giao. Đơn COD tự chuyển sang đã thanh toán.",
+          "delivered": "Đơn đã giao xong, không còn bước nào.",
+          "cancelled": "Đơn đã hủy, tồn kho đã được hoàn lại. Không mở lại được."
+        },
+        "forward": {
+          "confirmed": "Xác nhận đơn",
+          "shipping": "Chuyển sang đang giao",
+          "delivered": "Đánh dấu đã giao"
+        },
+        "pending": "Đang cập nhật…",
+        "done": "Đã cập nhật trạng thái đơn."
+      },
+      "cancel": {
+        "open": "Hủy đơn",
+        "hint": "Hủy được khi đơn chưa giao xong. Tồn kho được hoàn lại; khách thấy lý do ở trang chi tiết đơn.",
+        "reason": "Lý do hủy",
+        "reasonHint": "Bắt buộc. Khách đọc được lý do này.",
+        "reasonCount": "{count}/{max} ký tự",
+        "confirm": "Xác nhận hủy đơn",
+        "pending": "Đang hủy…",
+        "done": "Đã hủy đơn hàng."
+      },
+      "payment": {
+        "method": "Phương thức",
+        "bankTransfer": "Chuyển khoản",
+        "status": "Trạng thái",
+        "voucher": "Mã giảm giá"
+      },
+      "customer": {
+        "title": "Khách hàng",
+        "account": "Tài khoản đặt",
+        "noName": "(chưa đặt tên)",
+        "deleted": "Tài khoản đã bị xóa"
+      }
+    },
+    "vouchers": {
+      "title": "Voucher",
+      "new": "Thêm voucher",
+      "newTitle": "Thêm voucher",
+      "editTitle": "Sửa voucher",
+      "count": "{count} voucher",
+      "empty": "Chưa có voucher nào.",
+      "emptyFiltered": "Không có voucher nào khớp từ khóa.",
+      "search": "Tìm theo mã",
+      "table": {
+        "caption": "Danh sách voucher",
+        "code": "Mã",
+        "discount": "Giảm",
+        "minOrder": "Đơn tối thiểu",
+        "usage": "Đã dùng",
+        "period": "Thời gian",
+        "status": "Trạng thái"
+      },
+      "discount": {
+        "percent": "{value}%",
+        "percentCapped": "{value}%, tối đa {max}"
+      },
+      "usage": {
+        "limited": "{used}/{limit}",
+        "unlimited": "{used} (không giới hạn)"
+      },
+      "period": {
+        "always": "Không giới hạn",
+        "from": "Từ {start}",
+        "until": "Đến {end}",
+        "range": "{start} – {end}"
+      },
+      "states": {
+        "active": "Đang chạy",
+        "inactive": "Đã tắt",
+        "scheduled": "Chưa bắt đầu",
+        "expired": "Hết hạn",
+        "exhausted": "Hết lượt"
+      },
+      "fields": {
+        "code": "Mã",
+        "codeHint": "Tự viết HOA. Chữ không dấu, số, gạch ngang hoặc gạch dưới, 3–30 ký tự.",
+        "description": "Mô tả",
+        "descriptionEn": "Mô tả (tiếng Anh)",
+        "descriptionEnHint": "Để trống: trang tiếng Anh hiện mô tả tiếng Việt.",
+        "discountType": "Loại giảm",
+        "discountValue": "Mức giảm",
+        "discountValueHint": "Theo %: từ 1 đến 100. Số tiền cố định: tính bằng ₫.",
+        "maxDiscount": "Giảm tối đa (₫)",
+        "maxDiscountHint": "Chỉ dùng cho giảm theo %. Để trống: không giới hạn.",
+        "minOrder": "Đơn tối thiểu (₫)",
+        "minOrderHint": "Tạm tính của đơn (chưa gồm phí ship) phải từ mức này. Để trống: 0.",
+        "usageLimit": "Số lượt dùng tối đa",
+        "usageLimitHint": "Để trống: không giới hạn.",
+        "startsAt": "Bắt đầu",
+        "endsAt": "Kết thúc",
+        "periodHint": "Giờ Việt Nam. Để trống: không giới hạn.",
+        "active": "Đang bật",
+        "activeHint": "Bỏ chọn để tắt: khách không dùng được mã này nữa."
+      },
+      "types": {
+        "percent": "Theo phần trăm (%)",
+        "fixed": "Số tiền cố định (₫)"
+      },
+      "used": "Đã dùng {count} lượt.",
+      "delete": {
+        "title": "Xóa voucher",
+        "hint": "Chỉ xóa được voucher chưa có đơn nào dùng.",
+        "inUse": "Voucher đã có đơn dùng: tắt đi thay vì xóa.",
+        "submit": "Xóa voucher",
+        "pending": "Đang xóa…"
+      }
+    },
     "validation": {
       "title": "Tên sách cần từ 1 đến 300 ký tự.",
       "subtitle": "Phụ đề tối đa 300 ký tự.",
@@ -265,7 +405,17 @@
       "categoryHasBooks": "Danh mục này đang có sách nên không làm cha được.",
       "coverRequired": "Vui lòng chọn một ảnh.",
       "coverTooLarge": "Ảnh tối đa 4MB.",
-      "coverInvalid": "Tệp không phải ảnh JPEG, PNG, WebP hoặc AVIF."
+      "coverInvalid": "Tệp không phải ảnh JPEG, PNG, WebP hoặc AVIF.",
+      "cancelReason": "Nhập lý do hủy (tối đa 500 ký tự).",
+      "voucherCode": "Mã gồm 3–30 ký tự: chữ không dấu, số, gạch ngang hoặc gạch dưới.",
+      "voucherCodeTaken": "Mã này đã có voucher khác dùng.",
+      "voucherDescription": "Mô tả tối đa 300 ký tự.",
+      "discountType": "Vui lòng chọn loại giảm.",
+      "discountValue": "Mức giảm là số nguyên từ 1 đến 100.000.000.",
+      "discountPercent": "Giảm theo % chỉ từ 1 đến 100.",
+      "minOrder": "Đơn tối thiểu là số nguyên từ 0 đến 100.000.000.",
+      "dateTime": "Thời gian không hợp lệ.",
+      "endsAfterStarts": "Thời điểm kết thúc phải sau thời điểm bắt đầu."
     }
   },
   "layout": {
@@ -279,7 +429,8 @@
     "account": "Tài khoản",
     "footerBrowse": "Khám phá",
     "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books; giá bán chỉ để minh họa.",
-    "copyright": "© Nhà Sách Mây"
+    "copyright": "© Nhà Sách Mây",
+    "admin": "Quản trị"
   },
   "search": {
     "title": "Tìm kiếm sách",
@@ -473,6 +624,11 @@
       "shipping": "Đang giao",
       "delivered": "Đã giao",
       "cancelled": "Đã hủy"
+    },
+    "paymentStatus": {
+      "unpaid": "Chưa thanh toán",
+      "paid": "Đã thanh toán",
+      "refunded": "Đã hoàn tiền"
     }
   },
   "orders": {
@@ -602,7 +758,9 @@
     "saved": "Đã lưu.",
     "signedInAs": "Tài khoản của {name}",
     "orders": "Đơn hàng của tôi",
-    "ordersDescription": "Theo dõi và hủy đơn hàng."
+    "ordersDescription": "Theo dõi và hủy đơn hàng.",
+    "admin": "Quản trị cửa hàng",
+    "adminDescription": "Sách, đơn hàng, voucher (chỉ có tiếng Việt)."
   },
   "address": {
     "title": "Sổ địa chỉ",
@@ -658,6 +816,9 @@
     "COVER_INVALID": "Ảnh bìa phải là ảnh JPEG, PNG, WebP hoặc AVIF.",
     "CATEGORY_HAS_BOOKS": "Danh mục đang có sách nên không thể làm danh mục cha.",
     "AUTHOR_HAS_BOOKS": "Tác giả vẫn còn sách nên chưa xóa được.",
+    "ORDER_STATUS_CHANGED": "Đơn hàng vừa đổi trạng thái ở nơi khác. Trang đã cập nhật trạng thái mới.",
+    "VOUCHER_CODE_TAKEN": "Mã voucher này đã tồn tại.",
+    "VOUCHER_IN_USE": "Voucher đã có đơn hàng dùng nên chỉ tắt được, không xóa được.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   }
 }

@@ -37,7 +37,8 @@
     "account": "Account",
     "footerBrowse": "Browse",
     "footerAbout": "A non-commercial learning project. Book data comes from Google Books; prices are for illustration only.",
-    "copyright": "© Nhà Sách Mây"
+    "copyright": "© Nhà Sách Mây",
+    "admin": "Admin"
   },
   "search": {
     "title": "Search books",
@@ -231,6 +232,11 @@
       "shipping": "Shipping",
       "delivered": "Delivered",
       "cancelled": "Cancelled"
+    },
+    "paymentStatus": {
+      "unpaid": "Not paid yet",
+      "paid": "Paid",
+      "refunded": "Refunded"
     }
   },
   "orders": {
@@ -360,7 +366,9 @@
     "saved": "Saved.",
     "signedInAs": "{name}'s account",
     "orders": "My orders",
-    "ordersDescription": "Track and cancel your orders."
+    "ordersDescription": "Track and cancel your orders.",
+    "admin": "Store admin",
+    "adminDescription": "Books, orders and vouchers (Vietnamese only)."
   },
   "address": {
     "title": "Address book",
@@ -416,6 +424,9 @@
     "COVER_INVALID": "The cover must be a JPEG, PNG, WebP or AVIF image.",
     "CATEGORY_HAS_BOOKS": "This category has books, so it cannot be a parent category.",
     "AUTHOR_HAS_BOOKS": "This author still has books and cannot be deleted.",
+    "ORDER_STATUS_CHANGED": "This order’s status just changed elsewhere. The page now shows the latest status.",
+    "VOUCHER_CODE_TAKEN": "This voucher code already exists.",
+    "VOUCHER_IN_USE": "This voucher has been used in orders, so it can only be turned off, not deleted.",
     "UNKNOWN": "Something went wrong. Please try again."
   }
 }

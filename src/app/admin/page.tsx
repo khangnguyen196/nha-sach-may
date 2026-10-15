@@ -25,7 +25,7 @@ const grid = 'grid gap-4 sm:grid-cols-2 xl:grid-cols-4'
 async function Stats() {
   const [t, counts] = await Promise.all([getTranslations('admin.dashboard'), getDashboardCounts()])
   const stats: { label: string; value: number; href?: AdminHref }[] = [
-    { label: t('pendingOrders'), value: counts.pendingOrders },
+    { label: t('pendingOrders'), value: counts.pendingOrders, href: '/admin/don-hang?status=pending' },
     { label: t('lowStock'), value: counts.lowStock, href: '/admin/sach?status=active&stock=low' },
     { label: t('outOfStock'), value: counts.outOfStock, href: '/admin/sach?status=active&stock=out' },
     { label: t('hiddenBooks'), value: counts.hiddenBooks, href: '/admin/sach?status=hidden' },
