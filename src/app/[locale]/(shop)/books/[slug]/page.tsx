@@ -29,6 +29,11 @@ const META_DESCRIPTION_LENGTH = 160
 // Dưới mức này coi là sắp hết; chỉ để hiện "Chỉ còn N cuốn"
 const LOW_STOCK = 5
 
+// Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
+// dựng App Shell cho tham số chưa biết, mà page đọc params và header (LocaleSwitcher đọc useParams) nằm ngoài
+// <Suspense> → không dựng được → HTTP 500. Cho phép route chặn: slug mới render theo request, slug đã prerender giữ nguyên.
+export const instant = false
+
 export async function generateStaticParams() {
   const slugs = await getAllBookSlugs()
   return slugs.map((slug) => ({ slug }))

@@ -14,6 +14,11 @@ import { localize } from '@/lib/i18n-db'
 
 type Props = PageProps<'/[locale]/authors/[slug]'>
 
+// Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
+// dựng App Shell cho tham số chưa biết, mà page đọc params và header (LocaleSwitcher đọc useParams) nằm ngoài
+// <Suspense> → không dựng được → HTTP 500. Cho phép route chặn: slug mới render theo request, slug đã prerender giữ nguyên.
+export const instant = false
+
 export async function generateStaticParams() {
   const slugs = await getAllAuthorSlugs()
   return slugs.map((slug) => ({ slug }))
