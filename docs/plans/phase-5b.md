@@ -1,6 +1,6 @@
 # Phase 5b: Checkout COD + trang đặt hàng thành công
 
-Trạng thái: **đã xong trên nhánh `phase-5b`, chưa merge** (2026-10-15). Plan đã duyệt: chọn hết các ★, sửa 2 điểm (xem "Sửa khi duyệt").
+Trạng thái: **đã xong, đã merge vào `main`** (2026-10-15). Plan đã duyệt: chọn hết các ★, sửa 2 điểm (xem "Sửa khi duyệt").
 
 ## Báo cáo (2026-10-15)
 
@@ -25,10 +25,11 @@ Trạng thái: **đã xong trên nhánh `phase-5b`, chưa merge** (2026-10-15). 
 - `useFormAction`: lỗi mạng → `UNKNOWN` trong khối lỗi của form (không lên error boundary); e2e chặn request / mất phản hồi → bấm lại cùng key → 1 đơn.
 - **Bug badge**: `CartBadge` chỉ đồng bộ store khi *giá trị* prop đổi, trong khi store còn được ghi thẳng (thêm vào giỏ, gộp giỏ). Tải trang lúc giỏ 0 → thêm 1 (store 1, prop 0) → điều hướng client sang checkout (layout giữ nguyên) → đặt hàng → header render lại với 0 = prop cũ → effect không chạy → badge giữ 1. Sửa: effect phụ thuộc object `session` (mỗi lần server render là object mới). e2e tái hiện: fail 2/2 trước khi sửa, qua 4/4 sau khi sửa. Lần fail của luồng mua COD (mobile) ở lượt e2e thứ 3 thì khác: badge lấy số từ lần gộp giỏ + `refresh` nên prop đổi 1 → 0 và effect có chạy; fail ở đó là do header stream về sau 5s (cả lượt chậm gấp đôi bình thường), không phải bug này.
 
+**Kiểm tra cuối** (sau các sửa đổi trên): Vitest 173/173; test badge `--repeat-each=5` 10/10; `test:e2e` toàn bộ lần 1: 113 qua, 2 fail do mạng (trang `/gio-hang` lỗi server khi query Supabase hỏng; action "Thêm" chờ quá 5s), lần 2 (cách 3 phút): **122/122**.
+
 **Giới hạn / rủi ro đã biết**:
 - Gộp giỏ khách lỗi thì localStorage vẫn còn hàng, nút "Đặt hàng" khóa ở "Đang cập nhật giỏ hàng…" tới lần tải trang sau.
 - Hủy đơn (admin, e2e dọn dẹp) hoàn kho ở DB nhưng không làm mới cache: trang sách hiện tồn kho cũ tới khi hết `hours`. Phase 6 (`cancel_order`) nên `updateTag('book:{id}')`.
-- Server Action lỗi mạng hẳn (request không tới được server) thì `useActionState` ném lỗi lên error boundary chứ không hiện khối lỗi. Bấm lại vẫn an toàn nhờ idempotency key, nhưng trang lỗi mặc định khá thô. Chưa xử lý.
 - Ảnh `7-empty` của lần xem tay chụp lúc skeleton còn hiện; trạng thái rỗng thật đã có e2e `CART_EMPTY` kiểm tra.
 
 **Kết quả kiểm tra**:
@@ -230,4 +231,4 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 - [x] Trang thành công (`features/orders/queries.ts → getOrderByCode`)
 - [x] Messages `checkout`, `order`, `errors.CART_CHANGED`, `validation.{address,note}`
 - [x] e2e `checkout.spec.ts` + helper `scripts/e2e-user.ts`, dọn đơn trong teardown (13 test × 2 project, user checkout riêng)
-- [x] typecheck / lint / build / test sạch; e2e checkout 26/26, toàn bộ 117/118 (1 lỗi mạng, xem Báo cáo); `measure:js`; báo cáo
+- [x] typecheck / lint / build / test sạch; e2e toàn bộ 122/122 (sau các sửa đổi, 2026-10-15); `measure:js`; báo cáo
