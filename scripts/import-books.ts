@@ -30,8 +30,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import sharp from 'sharp'
 import { z } from 'zod'
+import { toCoverWebp } from '../src/lib/cover-image'
+import { slugify } from '../src/lib/slug'
 import type { Database } from '../src/types/database'
 
 // ---------- Types ----------
@@ -98,19 +99,6 @@ type IdSlug = { id: number; slug: string }
 type DbResult<T> = { data: T | null; error: { message: string } | null }
 
 // ---------- Helpers ----------
-export function slugify(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
-    .replace(/-+$/, '')
-}
-
 const stripHtml = (s: string) =>
   s.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim()
 
@@ -572,7 +560,6 @@ async function ensureNamed(db: SupabaseClient, table: 'authors' | 'publishers', 
 
 // ---------- Ảnh bìa: tải về → WebP 600px → Supabase Storage (không hotlink Google) ----------
 const COVER_BUCKET = 'book-covers'
-const COVER_WIDTH = 600
 const PLACEHOLDER_PNG_MAX_BYTES = 40_000
 
 type Image = { bytes: Buffer; type: string }
@@ -592,14 +579,8 @@ export function isLikelyPlaceholder(img: Image) {
   return img.type.includes('png') && img.bytes.length < PLACEHOLDER_PNG_MAX_BYTES
 }
 
-async function toWebp(img: Image): Promise<Buffer | null> {
-  try {
-    // withoutEnlargement: ảnh nhỏ (~128px) giữ nguyên cỡ, phóng lên 600px chỉ nặng hơn chứ không nét hơn
-    return await sharp(img.bytes).resize({ width: COVER_WIDTH, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
-  } catch {
-    return null
-  }
-}
+/** WebP rộng 600px (src/lib/cover-image.ts, dùng chung với upload bìa ở admin); null nếu không decode được */
+const toWebp = (img: Image) => toCoverWebp(img.bytes)
 
 /** Ưu tiên ảnh lớn; lỗi tải / nghi trang lót / không decode được → ảnh nhỏ. Trả về null nếu cả hai hỏng. */
 async function prepareCover(book: BookInput): Promise<{ webp: Buffer; source: 'large' | 'small' } | null> {
