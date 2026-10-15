@@ -1,8 +1,7 @@
 'use client'
 
 import { ErrorView, useErrorMessages } from '@/components/layout/error-view'
-import { localizedPath } from '@/i18n/paths'
-import { routing } from '@/i18n/routing'
+import { GLOBAL_ERROR_MESSAGES } from '@/i18n/global-error-messages'
 
 // Admin chỉ tiếng Việt; chuỗi do admin/layout.tsx đặt vào context.
 export default function AdminErrorPage({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
@@ -15,7 +14,7 @@ export default function AdminErrorPage({ retry }: { error: Error & { digest?: st
         homeLink={(className) => (
           // Admin nằm ngoài [locale] (không có Link của next-intl); về cửa hàng là tải lại cả trang
           // eslint-disable-next-line no-restricted-syntax
-          <a href={localizedPath('/', routing.defaultLocale)} className={className}>
+          <a href={GLOBAL_ERROR_MESSAGES.vi.homeHref} className={className}>
             {messages.backHome}
           </a>
         )}

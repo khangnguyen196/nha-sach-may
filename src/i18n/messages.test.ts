@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import en from '../../messages/en.json'
 import vi from '../../messages/vi.json'
 import { GLOBAL_ERROR_MESSAGES } from './global-error-messages'
+import { localizedPath } from './paths'
 
 function keyPaths(value: unknown, prefix = ''): string[] {
   if (typeof value !== 'object' || value === null) return [prefix]
@@ -14,7 +15,11 @@ describe('messages', () => {
   })
 
   it('chuỗi của global-error khớp namespace errorPage', () => {
-    expect(GLOBAL_ERROR_MESSAGES).toEqual({ vi: vi.errorPage, en: en.errorPage })
+    for (const [locale, messages] of [['vi', vi], ['en', en]] as const) {
+      const { homeHref, ...strings } = GLOBAL_ERROR_MESSAGES[locale]
+      expect(strings).toEqual(messages.errorPage)
+      expect(homeHref).toBe(localizedPath('/', locale))
+    }
   })
 
   it('không có chuỗi rỗng', () => {
