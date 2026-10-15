@@ -22,7 +22,7 @@ Thêm dependency mới phải có lý do rõ ràng (kích thước bundle, có c
 npm run dev | build | lint | typecheck | test | test:e2e
 npm run check:env                                         # kiểm tra .env.local, không in giá trị bí mật
 npm run measure:js -- <route>                             # sau build: JS gzip của route prerender (vi, en, vi/books/<slug>)
-npx supabase gen types typescript --project-id <ID> > src/types/database.ts
+npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts   # Supabase CLI đã đăng nhập trên máy dev
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
@@ -30,6 +30,12 @@ npx playwright test --project=desktop --project=mobile    # e2e catalog/layout, 
 ```
 
 `test:e2e` đầy đủ gồm cả project `desktop-account` / `mobile-account`: setup tạo user test bằng admin API (`scripts/e2e-user.ts`) nên **cần `SUPABASE_SERVICE_ROLE_KEY`** trong `.env.local`.
+
+Quy ước e2e:
+- Spec cần user khớp `ACCOUNT_SPECS` trong `playwright.config.ts` (`(account|checkout).spec.ts`); spec mới cần user thì thêm vào regex. Mỗi project có user chính + user checkout riêng (không giẫm giỏ / đơn của nhau khi chạy song song).
+- Test làm đổi trạng thái không quay lại được (đổi mật khẩu…) tự tạo user riêng cho mỗi lần chạy và xóa ở `finally`: retry trên CI / `--repeat-each` phải qua.
+- Locator đặt trong `<main>` (`page.getByRole('main')…`) khi trang có Suspense stream: ngay sau hydrate, React có thể còn giữ bản sao ẩn của boundary (`<div hidden id="S:…">` cuối body).
+- Đặt hàng thật trên sách thật: dọn bằng `cancelAndDeleteOrders` (hủy trước để trigger hoàn kho, rồi mới xóa) trước khi xóa user.
 
 Trước khi báo xong: `typecheck`, `lint`, `build` phải sạch. Có đụng logic giỏ hàng/đặt hàng thì chạy thêm test liên quan.
 
@@ -86,6 +92,9 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 - Action trả về `Result<T>` = `{ ok: true, data } | { ok: false, code }`. Không throw ra UI. `code` là mã lỗi có bản dịch trong `messages/*.json → errors`.
 - Giỏ hàng dùng `useOptimistic`, rollback khi lỗi.
 - Đặt hàng/hủy đơn chỉ qua RPC `place_order` / `cancel_order`. Client không gửi giá hay tổng tiền.
+  - `place_order` nhận `p_idempotency_key` (gửi lại cùng key → trả đúng đơn đã tạo) và `p_expected_total` (tổng đang hiển thị, **chỉ để so**; lệch → mã `CART_CHANGED` của DB). Key sinh trong phần động của trang (sau khi đọc phiên), không ở static shell: giá trị ngẫu nhiên / theo thời gian trong phần prerender bị đóng băng vào HTML dùng chung.
+  - Đổi tồn kho (đặt / hủy đơn) → `updateTag('book:{id}')` từng sách; các cache danh sách đã gắn tag theo từng sách trả về.
+- Form gửi Server Action dùng `useFormAction` (`lib/use-form-action.ts`): giữ progressive enhancement, bỏ qua submit khi đang gửi, lỗi mạng → `UNKNOWN` trong khối lỗi của form (không lên error boundary).
 - Tiền tạm tính ở giỏ/checkout (subtotal, ship, giảm giá, mốc freeship) lấy từ RPC `quote_order` (giỏ khách: `quote_items`), không tự tính ở client.
 
 **State**
