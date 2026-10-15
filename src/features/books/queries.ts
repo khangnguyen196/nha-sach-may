@@ -28,6 +28,14 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
   return categories.find((category) => category.slug === slug) ?? null
 }
 
+/**
+ * Gắn tag `book:{id}` của từng sách trả về vào cache danh sách: đặt hàng (trừ tồn kho) chỉ làm mới các danh sách
+ * đang chứa sách đó, không làm mới cả catalog. Tối đa 128 tag / lần gọi; danh sách dài nhất là PAGE_SIZE (24).
+ */
+function tagBooks(books: readonly { id: number }[]) {
+  if (books.length > 0) cacheTag(...books.map((book) => `book:${book.id}`))
+}
+
 // Cột của BookCard, dùng chung cho lưới, kệ, trang chủ. Kiểu BookCard derive từ query bên dưới.
 const BOOK_CARD_COLUMNS = 'id, slug, title, cover_url, price, original_price, stock, book_authors(role, authors(name))'
 
@@ -44,6 +52,7 @@ export async function getNewBooks(limit = 12) {
     .order('id', { ascending: false })
     .limit(limit)
   if (error) throw new Error(`getNewBooks: ${error.message}`)
+  tagBooks(data)
   return data
 }
 
@@ -114,6 +123,7 @@ export async function listBooks(input: ListBooksInput): Promise<{ books: BookCar
   // Offset vượt quá số dòng: PostgREST trả 416 thay vì mảng rỗng → coi là trang rỗng (trang gọi notFound)
   if (error?.code === RANGE_NOT_SATISFIABLE) return { books: [], total: count ?? 0 }
   if (error) throw new Error(`listBooks: ${error.message}`)
+  tagBooks(data)
   return { books: data, total: count ?? data.length }
 }
 
@@ -157,6 +167,7 @@ export async function getRelatedBooks(bookId: number, categoryId: number, limit 
     .order('id')
     .limit(limit)
   if (error) throw new Error(`getRelatedBooks: ${error.message}`)
+  tagBooks(data)
   return data
 }
 

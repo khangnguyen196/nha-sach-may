@@ -10,6 +10,7 @@ import { routing } from '@/i18n/routing'
 type Pathname = keyof typeof routing.pathnames
 type SlugPathname = Extract<Pathname, `${string}[slug]`>
 type IdPathname = Extract<Pathname, `${string}[id]`>
+type CodePathname = Extract<Pathname, `${string}[code]`>
 type Query = Record<string, string[]>
 type Labels = { short: string; full: string }
 
@@ -33,7 +34,7 @@ function LocaleLinkWithQuery({ labels }: { labels: Labels }) {
 function LocaleLink({ labels, query }: { labels: Labels; query?: Query }) {
   const locale = useLocale()
   const pathname = usePathname()
-  const { slug, id } = useParams()
+  const { slug, id, code } = useParams()
   const target = routing.locales.find((l) => l !== locale) ?? routing.defaultLocale
 
   return (
@@ -41,7 +42,7 @@ function LocaleLink({ labels, query }: { labels: Labels; query?: Query }) {
       // Ngoại lệ (CLAUDE.md → Song ngữ): Link có prop `locale` luôn ép prefix nên en→vi ra `/vi?…` và client nav
       // giữ nguyên URL không canonical đó. getPathname không ép prefix → `/?…`; đổi ngôn ngữ thì tải lại cả trang.
       // eslint-disable-next-line no-restricted-syntax
-      href={getPathname({ href: currentHref(pathname, { slug, id }, query), locale: target })}
+      href={getPathname({ href: currentHref(pathname, { slug, id, code }, query), locale: target })}
       hrefLang={target}
       className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })}
     >
@@ -59,11 +60,15 @@ function isIdPathname(pathname: Pathname): pathname is IdPathname {
   return pathname.endsWith('[id]')
 }
 
-type Params = Record<'slug' | 'id', string | string[] | undefined>
+function isCodePathname(pathname: Pathname): pathname is CodePathname {
+  return pathname.endsWith('[code]')
+}
+
+type Params = Record<'slug' | 'id' | 'code', string | string[] | undefined>
 
 // useParams() trả kiểu chung chung, còn Link đòi đúng params theo từng pathname → thu hẹp kiểu ở đây.
-// Route động mới có param khác `slug` / `id` thì thêm nhánh tương ứng.
-function currentHref(pathname: Pathname, { slug, id }: Params, query: Query | undefined) {
+// Route động mới có param khác `slug` / `id` / `code` thì thêm nhánh tương ứng.
+function currentHref(pathname: Pathname, { slug, id, code }: Params, query: Query | undefined) {
   if (isSlugPathname(pathname)) {
     if (typeof slug !== 'string') return { pathname: '/' as const }
     return { pathname, params: { slug }, query }
@@ -71,6 +76,10 @@ function currentHref(pathname: Pathname, { slug, id }: Params, query: Query | un
   if (isIdPathname(pathname)) {
     if (typeof id !== 'string') return { pathname: '/' as const }
     return { pathname, params: { id }, query }
+  }
+  if (isCodePathname(pathname)) {
+    if (typeof code !== 'string') return { pathname: '/' as const }
+    return { pathname, params: { code }, query }
   }
   return { pathname, query }
 }

@@ -22,11 +22,11 @@ function matchLocalized(pathname: string, hrefs: Parameters<typeof localizedPath
   }
 }
 
-/** Chưa đăng nhập vào khu tài khoản → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới */
+/** Chưa đăng nhập vào khu tài khoản / thanh toán → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới */
 function authRedirect(request: NextRequest, signedIn: boolean) {
   const { pathname, search, searchParams } = request.nextUrl
   if (!signedIn) {
-    const locale = matchLocalized(pathname, ['/account'])
+    const locale = matchLocalized(pathname, ['/account', '/checkout'])
     if (!locale) return null
     const login = localizedPath('/login', locale, { next: `${pathname}${search}` })
     return NextResponse.redirect(new URL(login, request.url))

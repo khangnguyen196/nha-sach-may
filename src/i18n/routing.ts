@@ -16,6 +16,7 @@ export const routing = defineRouting({
     '/search': { vi: '/tim-kiem', en: '/search' },
     '/cart': { vi: '/gio-hang', en: '/cart' },
     '/checkout': { vi: '/thanh-toan', en: '/checkout' },
+    '/checkout/success/[code]': { vi: '/thanh-toan/thanh-cong/[code]', en: '/checkout/success/[code]' },
     '/account': { vi: '/tai-khoan', en: '/account' },
     '/account/addresses': { vi: '/tai-khoan/dia-chi', en: '/account/addresses' },
     '/account/addresses/new': { vi: '/tai-khoan/dia-chi/moi', en: '/account/addresses/new' },
