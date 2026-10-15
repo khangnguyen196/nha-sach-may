@@ -1,6 +1,57 @@
 # Phase 6: Tài khoản: đơn hàng
 
-Trạng thái: **đã duyệt, đang làm** trên nhánh `phase-6` (2026-10-15). Chọn hết các ★, bổ sung 2 điểm (xem "Bổ sung khi duyệt").
+Trạng thái: **xong, chờ duyệt để merge** (nhánh `phase-6`, 2026-10-15). Plan đã duyệt: chọn hết các ★, bổ sung 2 điểm (xem "Bổ sung khi duyệt").
+
+## Báo cáo (2026-10-15)
+
+**Đã xong**: toàn bộ Phase 6 + 2 điểm bổ sung.
+- `/tai-khoan/don-hang` (`/en/account/orders`): lọc theo trạng thái bằng link (`?status=pending|processing|delivered|cancelled`), phân trang 10 đơn (`?page=`, vượt quá → 404), rỗng theo từng bộ lọc, mỗi dòng là một link (mã, nhãn trạng thái, tối đa 3 bìa, tên sách đầu + "và N sách khác", ngày, tổng).
+- `/tai-khoan/don-hang/[code]`: nhãn + câu giải thích theo trạng thái, lý do hủy, `OrderDetails` dùng chung với trang thành công; khối hủy `<details>` + lý do (≤ 500, bộ đếm) chạy được không cần JS. Hủy xong `updateTag('book:{id}')` từng sách + `refresh()`. Cửa hàng xác nhận trong lúc đang mở trang → "Đơn hàng này không thể hủy.", trang hiện trạng thái mới.
+- Trang thành công có thêm "Xem đơn hàng"; trang tài khoản có thẻ "Đơn hàng của tôi"; checkout dùng chung `expireOrderBooks`.
+- Nút hủy chỉ hiện khi `canCancel` (`pending` và chưa `paid`); lộ trình Phase 9 trong CLAUDE.md ghi migration `cancel_order`.
+- Trang lỗi song ngữ: `[locale]/error.tsx`, `(shop)/error.tsx` (giữ header + footer), `global-error.tsx`, `admin/error.tsx`. Nút "Thử lại" (`retry()`), link về trang chủ, focus vào tiêu đề, không lộ chi tiết lỗi; Next log ở server (`⨯ Error: listOrders: … digest: '…'`).
+
+**Việc của bạn**: không có migration. Chỉ lưu ý: **không đặt `E2E_FAULT_INJECTION` trên Vercel** (xem rủi ro 2).
+
+**Quyết định tự chọn / lệch plan**:
+1. e2e có **user thứ ba** mỗi project (`orders`, phiên ở `e2e/.auth/<project>-orders.json`) thay vì dùng user checkout: `checkout.spec` hủy + xóa mọi đơn của user checkout sau mỗi test, chạy song song trên CI sẽ xóa đơn của `orders.spec`.
+2. `cancelOrder(locale, orderId, code, …)`: bind thêm mã đơn để phiên hết hạn thì chuyển đăng nhập với `next` là đúng trang chi tiết (mã sai định dạng → danh sách).
+3. `CancelOrderForm` luôn render ở cùng vị trí trong cây (kể cả khi `cancellable = false`): sau `refresh()` component không bị gỡ nên thông báo kết quả ("Đã hủy đơn hàng." / "Đơn hàng này không thể hủy.") vẫn hiện.
+4. Tiêu đề (metadata) trang chi tiết lấy mã từ URL, không query → bỏ `React.cache` cho `getOrderByCode` (không còn lời gọi thứ hai).
+5. `optionalMultilineText` (`lib/text-schema.ts`: CRLF → LF, trim, ≤ max, rỗng → null) dùng chung ghi chú checkout và lý do hủy (2 chỗ dùng thật).
+6. Phương thức thanh toán ở trang chi tiết luôn là COD (chỉ có COD tới Phase 9).
+7. Breadcrumb trang chi tiết dừng ở "Đơn hàng của tôi" (mã đơn đã nằm ở h1, đọc mã ở shell sẽ phải chờ params).
+8. **Bundle (phát hiện khi đo)**: Turbopack tải `global-error` ở mọi trang dưới dạng một nhóm chunk riêng và **chép lại** mọi module nó import thay vì dùng chung với layout. Bản đầu (import `hasLocale` của next-intl, `Button` → radix Slot, `ThemeProvider` → next-themes, routing, lucide) đưa trang chủ từ +35.4KB lên **+56.7KB** (vượt ngân sách 50KB). Sửa: `ErrorView` chỉ dùng thẻ thường + SVG inline (cùng path lucide), `global-error` tự đọc `localStorage.theme` thay vì `ThemeProvider`, đường dẫn trang chủ chép cạnh chuỗi (Vitest khớp với `localizedPath`). Còn +38.0KB.
+
+**Giới hạn / rủi ro đã biết**:
+1. Test hủy đơn đưa tồn kho một cuốn (6–98) xuống 3 trong vài giây; trên CI chạy song song, nếu `checkout.spec` chọn sách tồn kho 2–5 đúng lúc đó thì có thể trùng sách. Local (1 worker) không bị.
+2. Tiêm lỗi e2e nằm trong `src/` (`lib/supabase/fault-injection.ts`), chỉ bật khi `E2E_FAULT_INJECTION=1`. Đặt biến này ở production thì ai cũng tự làm hỏng trang của chính mình bằng cookie (không ảnh hưởng người khác, nhưng không nên).
+3. Trang lỗi trả HTTP 200 (Cache Components stream trước khi lỗi), cùng vấn đề với 404 ghi ở Phase 10.
+4. `global-error` áp theme sáng sau khi hydrate (`useLayoutEffect`): lỗi root layout lúc SSR ở light mode có thể nháy nền tối một khung. Lỗi root layout gần như không xảy ra (header đã nuốt lỗi của giỏ / phiên).
+
+**Kết quả kiểm tra**:
+- `typecheck`, `lint`, `build`: sạch.
+- `test` (Vitest): 209/209 (thêm tham số `?status=` / `?page=`, `canCancel`, `cancelOrderSchema` trim / rỗng / 500 / 501 / CRLF, `orderIdSchema`, chuỗi `global-error` khớp `errorPage` + `homeHref` khớp `localizedPath`).
+- `test:e2e` toàn bộ lần 1: 143/144, fail `layout.spec` palette "từ khóa vô nghĩa" (dừng ở "Searching…" quá 5s: `/api/search` → Supabase chậm, không liên quan Phase 6). Lần 2 (sau ~15 phút, trên code cuối): **144/144**.
+- e2e mới: `orders.spec.ts` 8 test × 2 project, `error-page.spec.ts` 3 test × 2 project.
+- Xem tay (spec Playwright tạm, không commit; bản build production; desktop + mobile, dark + light): danh sách (sửa dòng đơn trên mobile cho gọn, cột chữ thẳng hàng, skeleton theo số đo 138 / 116px), chi tiết đang chờ (mở khối hủy), đơn đã hủy kèm lý do, `/en` lọc "In progress", trang tài khoản, trang lỗi `(shop)`, `global-error` vi / en (ép lỗi tạm ở header) + "Try again" tải lại được.
+
+**Số đo JS** (`measure:js`, gzip, baseline 170KB):
+
+| Route | Tổng | Ngoài baseline | 5b |
+|---|---|---|---|
+| `vi` | 208.0KB | 38.0KB | 35.4KB |
+| `en` | 208.0KB | 38.0KB | |
+| `vi/books/<slug>` | 208.7KB | 38.7KB | 36.1KB |
+| `vi/cart` | 212.2KB | 42.2KB | 39.6KB |
+| `vi/checkout` | 210.2KB | 40.2KB | 37.5KB |
+
++2.6KB đều trên mọi trang = chunk `global-error` + context chuỗi lỗi + `LocaleError`. Trang đơn hàng không prerender theo user nên không đo.
+
+**Đề xuất cập nhật CLAUDE.md** (chưa làm, chờ duyệt):
+- Trang lỗi: chuỗi `errorPage` đi qua `ErrorMessagesProvider` (layout) → `error.tsx`; `global-error` dùng bản chép `i18n/global-error-messages.ts` (có test khớp).
+- `global-error.tsx` và `ErrorView` không import thư viện dùng chung (next-intl, radix, next-themes, lucide): Turbopack chép lại cho nhóm chunk của `global-error`. Đổi file đặc biệt của Next (`error`, `global-error`, `not-found`…) thì chạy `measure:js`.
+- e2e: mỗi project 3 user (chính / checkout / orders); `ACCOUNT_SPECS` = `(account|checkout|orders|error-page)\.spec\.ts`. Ép lỗi Supabase bằng cookie `e2e-fault=rest` (server e2e chạy với `E2E_FAULT_INJECTION=1`); không đặt biến này ngoài e2e.
 
 Phạm vi: danh sách đơn của tôi, chi tiết đơn, hủy đơn khi còn `pending` (RPC `cancel_order` có sẵn, trigger hoàn kho có sẵn), làm mới cache tồn kho khi hủy, link "Xem đơn hàng" từ trang đặt hàng thành công. **Không** có: đánh giá sách đã nhận (Phase 9), email báo hủy (Phase 9), admin đổi trạng thái đơn (Phase 7), mua lại đơn cũ.
 
@@ -118,4 +169,4 @@ Trang danh sách: 0 JS thêm (Server Component + link). Trang chi tiết: form h
 - [x] e2e `orders.spec.ts` + helper
 - [x] Trang lỗi: `ErrorView` + context chuỗi, `[locale]/error.tsx`, `(shop)/error.tsx`, `global-error.tsx`, `admin/error.tsx`; tiêm lỗi e2e; `error-page.spec.ts`
 - [x] CLAUDE.md: lộ trình Phase 9 (không tự hủy đơn đã thanh toán)
-- [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo
+- [x] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo
