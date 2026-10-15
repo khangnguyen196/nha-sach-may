@@ -1,6 +1,42 @@
 # Phase 7: Admin
 
-Trạng thái: **7a xong, đã merge vào `main`** (2026-10-15); `test:e2e` đầy đủ 160/160 qua trước khi merge. Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). 7b chưa bắt đầu.
+Trạng thái: **7a xong, đã merge vào `main`** (2026-10-15); `test:e2e` đầy đủ 160/160 qua trước khi merge. Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). **7b xong trên nhánh `phase-7b`, chờ duyệt merge** (2026-10-16).
+
+## Báo cáo 7b (2026-10-16)
+
+**Đã xong**
+- `/admin/don-hang`: lọc trạng thái, tìm theo mã đơn / SĐT (bỏ khoảng trắng) / tên người nhận (một `.or()`, giá trị quote + escape), 25 dòng / trang. Tổng quan: "Đơn chờ xác nhận" link sang danh sách đã lọc.
+- `/admin/don-hang/[code]`: dùng lại `OrderDetails` của khách + khối "Xử lý đơn" (nút bước kế tiếp, hủy kèm lý do bắt buộc), thanh toán (phương thức, trạng thái, voucher), khách hàng (tài khoản đặt, thời điểm cập nhật).
+- `advanceOrder` / `cancelOrderAsAdmin`: update có điều kiện `status = <trạng thái admin đang thấy>`; 0 dòng → `ORDER_STATUS_CHANGED` + `refresh()`. Hủy → `expireOrderBooks` (trigger hoàn kho). `nextStatuses` trùng bảng DB (Vitest đọc `private.order_status_transition_allowed` trong `schema.sql`).
+- Trang chi tiết đơn của khách hiện trạng thái thanh toán (COD giao xong → "Đã thanh toán").
+- `/admin/voucher`: danh sách (tìm theo mã, trạng thái tính sẵn: đang chạy / đã tắt / chưa bắt đầu / hết hạn / hết lượt, cùng thứ tự kiểm tra với `voucher_discount`), tạo, sửa, xóa.
+- Bổ sung khi duyệt: link "Quản trị" chỉ admin thấy, ở trang tài khoản (thẻ "Quản trị cửa hàng") và cạnh icon tài khoản ở header. Quyền kiểm ở server (`isAdmin()`, `React.cache`), không thêm client component.
+
+**Migration**: không cần. Mọi ràng buộc 7b đã có từ `20261015160000_admin.sql`.
+
+**Quyết định tự chọn / lệch plan**
+1. Header: icon quản trị chỉ hiện từ `sm` (640px). Nút thứ 6 làm header tràn ngang 16px ở 360–390px (e2e đo); điện thoại dùng thẻ ở trang tài khoản (một chạm từ avatar). Icon nằm trong `<Suspense>` riêng: icon tài khoản không phải chờ thêm một RPC `is_admin`.
+2. Link vào admin dùng `AdminLink` (`prefetch={false}`) thay vì `<a>`: ESLint `no-html-link-for-pages` chặn `<a href="/admin">`, và `next/link` đã có sẵn trong bundle nên không thêm JS; sang root layout khác Next tự tải lại cả trang.
+3. Hủy đơn ở admin dùng lại `CancelOrderForm` của khách (nhãn khác, lý do bắt buộc ở server: khóa `admin.validation.cancelReason`). Nút bước kế tiếp là component luôn render ở cùng vị trí (như `CancelOrderForm`) để thông báo còn sau `refresh()` khi đơn đã tới trạng thái cuối.
+4. Bật / tắt voucher là ô "Đang bật" trong form sửa (như danh mục), không có nút riêng.
+5. Xóa voucher bị chặn (`VOUCHER_IN_USE`) khi `used_count > 0` **hoặc** còn đơn gắn `voucher_id` (đơn đã hủy làm `used_count` giảm nhưng vẫn trỏ tới voucher).
+6. Ô thời gian voucher: `datetime-local` theo giờ Việt Nam, đổi sang `timestamptz` bằng offset +07:00 cố định (server Vercel chạy UTC). Kiểm ngày giờ không có thật (31/02, 24:00) + kết thúc phải sau bắt đầu.
+7. Mã lỗi mới (vi + en): `ORDER_STATUS_CHANGED`, `VOUCHER_CODE_TAKEN`, `VOUCHER_IN_USE`; khóa mới `order.paymentStatus.*` (vi + en), `layout.admin`, `account.admin*`.
+8. e2e: `placeE2eOrder` (dùng chung `admin-cleanup` + `admin-orders`), `createE2eVoucher` / `deleteE2eVouchers(codes)` trong `scripts/e2e-user.ts`.
+
+**Kiểm tra**
+- `typecheck`, `lint`, `build`: sạch. Vitest: 35 file / 309 test qua (mới: `status`, `datetime`, `state`, schema voucher).
+- `test:e2e` đầy đủ: **170/170 qua ở lượt đầu** (10.0 phút; 160 cũ + 10 mới: 5 `admin-orders`, 3 `admin-vouchers`, 2 `admin-smoke` link quản trị desktop / mobile; `account.spec` thêm kiểm tra user thường không thấy link).
+- `measure:js`: trang chủ = baseline + 38.5KB, trang sách (`vi/books/lam-ban-voi-bau-troi`, `vi/books/sapiens`) + 39.2KB: bằng đúng số của `main` sau 7a.
+- Soát giao diện bằng ảnh chụp (desktop): danh sách / chi tiết đơn, danh sách / form voucher, trang tài khoản. Sửa: hàng 2 cột của form voucher lệch dọc khi một ô có gợi ý (`items-start`).
+
+**Giới hạn / rủi ro**
+- `vouchers.used_count` không có quyền cột: admin gọi thẳng PostgREST sửa được (app không ghi cột này). Muốn chặn cần migration `grant update (…)` như `books` / `orders`.
+- Header gọi thêm RPC `is_admin` cho mỗi trang của user đã đăng nhập (stream riêng, không chặn nội dung).
+- Trang chi tiết đơn admin hiện mã đơn hai lần (tiêu đề + khối `OrderDetails` dùng chung).
+- Ô `datetime-local` hiển thị theo locale trình duyệt (mm/dd/yyyy trên trình duyệt tiếng Anh).
+
+**Việc của bạn**: duyệt merge `phase-7b`; thay 5 bìa trong `docs/plans/data.md` → "Bìa cần thay trong admin".
 
 ## Báo cáo 7a (2026-10-15)
 
@@ -219,6 +255,6 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 - [x] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
 - [x] Voucher: danh sách, tạo / sửa, bật / tắt / xóa
 - [x] (Bổ sung khi duyệt 7b) Link "Quản trị" chỉ admin thấy: trang tài khoản + cạnh icon tài khoản ở header
-- [ ] e2e: admin thấy link, khách thường không thấy
-- [ ] e2e `admin-orders`, `admin-vouchers`
-- [ ] typecheck / lint / build / test / e2e sạch; báo cáo
+- [x] e2e: admin thấy link, khách thường không thấy
+- [x] e2e `admin-orders`, `admin-vouchers`
+- [x] typecheck / lint / build / test / e2e sạch (170/170); `measure:js` không đổi; báo cáo
