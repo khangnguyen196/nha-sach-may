@@ -56,7 +56,9 @@
 - `d2ea54e` fix(cart): stale header count after early add or cross-tab merge
 - commit cuối: docs (báo cáo này)
 
-**Đề xuất cập nhật CLAUDE.md** (chờ duyệt):
+**Sau duyệt (2026-10-15)**: duyệt cả 10 điểm lệch plan và 3 đề xuất dưới đây (đã cập nhật CLAUDE.md). Merge vào `main`.
+
+**Đề xuất cập nhật CLAUDE.md** (đã làm):
 - Mục Hiệu năng: module chạy ở client không import zod (≈30KB gzip). Dữ liệu client tự đọc (localStorage) thì kiểm tra bằng tay, kèm test khớp với schema zod của server.
 - Mục i18n: chuỗi có giá trị chỉ biết ở client dùng `placeholder()` + `fillTemplate` (`lib/template.ts`). Lỗi có tham số ICU từ Server Action dùng `withMessage(locale, failure)`, client hiện `failure.message`.
 - Mục Database: thêm vào phần Phí ship rằng giỏ khách tạm tính qua `quote_items` (anon).
