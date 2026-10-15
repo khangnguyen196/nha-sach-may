@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { waitForHydration } from './helpers'
 
-// Mỗi project thiết bị (desktop, mobile) một user chính + một user cho test đặt lại mật khẩu: trên CI hai project
-// chạy song song, dùng chung user thì test sổ địa chỉ / đổi mật khẩu giẫm lên nhau.
-export const DEVICE_PROJECTS = ['desktop', 'mobile'] as const
+// Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho test đặt lại mật khẩu: trên CI hai
+// project chạy song song, dùng chung user thì test sổ địa chỉ / đổi mật khẩu giẫm lên nhau.
+export const ACCOUNT_PROJECTS = ['desktop-account', 'mobile-account'] as const
 
 const AUTH_DIR = 'e2e/.auth'
 export const CREDENTIALS_PATH = `${AUTH_DIR}/credentials.json`

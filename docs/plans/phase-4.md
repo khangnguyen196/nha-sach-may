@@ -52,7 +52,12 @@
 - `9b96d01` test(e2e): account flows with per-project test users
 - commit cuối: docs (báo cáo này)
 
-**Đề xuất cập nhật CLAUDE.md** (chưa sửa, chờ bạn): thêm `npm run build:divisions` vào mục Lệnh; ghi 3 quy tắc mới: Server Action không đọc `next/root-params` (bind locale), proxy / Route Handler dùng `localizedPath` thay `getPathname`, e2e cần `SUPABASE_SERVICE_ROLE_KEY`.
+**Sau duyệt (2026-10-15)**: duyệt cả 12 điểm + cập nhật CLAUDE.md. Sửa thêm trước khi merge:
+- **Open redirect trong `safeNextPath`**: chặn `//` trước khi URL() chuẩn hóa nên `/..//evil.com`, `/a/..//evil.com`, `/%2e%2e//evil.com` thành `//evil.com`. Giờ kiểm tra lại kết quả sau chuẩn hóa; 3 ca có trong test. Đã rà: mọi redirect bằng giá trị từ URL (proxy, `/api/auth/confirm`, `signIn`) đều qua `safeNextPath`.
+- e2e tách project: `desktop` / `mobile` (catalog, layout) không phụ thuộc setup, chạy được không cần `SUPABASE_SERVICE_ROLE_KEY`; `desktop-account` / `mobile-account` phụ thuộc setup.
+- Lộ trình Phase 9: trang trung gian có nút "Xác nhận" (POST) cho link email.
+
+**Đề xuất cập nhật CLAUDE.md** (đã làm sau duyệt): thêm `npm run build:divisions` vào mục Lệnh; ghi 3 quy tắc mới: Server Action không đọc `next/root-params` (bind locale), proxy / Route Handler dùng `localizedPath` thay `getPathname`, e2e cần `SUPABASE_SERVICE_ROLE_KEY`.
 
 ---
 

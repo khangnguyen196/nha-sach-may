@@ -25,7 +25,11 @@ npm run measure:js -- <route>                             # sau build: JS gzip c
 npx supabase gen types typescript --project-id <ID> > src/types/database.ts
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
+npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
+npx playwright test --project=desktop --project=mobile    # e2e catalog/layout, không cần SUPABASE_SERVICE_ROLE_KEY
 ```
+
+`test:e2e` đầy đủ gồm cả project `desktop-account` / `mobile-account`: setup tạo user test bằng admin API (`scripts/e2e-user.ts`) nên **cần `SUPABASE_SERVICE_ROLE_KEY`** trong `.env.local`.
 
 Trước khi báo xong: `typecheck`, `lint`, `build` phải sạch. Có đụng logic giỏ hàng/đặt hàng thì chạy thêm test liên quan.
 
@@ -55,6 +59,9 @@ e2e/                   # Playwright
 
 - `lib/supabase/server.ts`: client theo phiên (đọc cookies) → chỉ dùng trong `<Suspense>`. `lib/supabase/public.ts`: client anon không cookies → dùng cho query catalog trong `'use cache'`.
 - Locale ở server lấy từ `next/root-params` (`i18n/request.ts`), API ổn định từ Next 16.3, không cần cờ experimental. Nhờ vậy không cần `setRequestLocale`, trang vẫn prerender được, và `getTranslations()` gọi được trong `'use cache'` (locale tự vào cache key). `/admin` không có `[locale]` → mặc định `vi`.
+- **Server Action không đọc được `next/root-params`** → không gọi `getLocale()`/`getTranslations()` trong action. Page bind locale sẵn (`action.bind(null, locale)`), action parse lại bằng `parseLocale` (tham số bind đi qua client). Action trả mã lỗi; chuỗi đã dịch xuống form qua props (`getFormMessages`).
+- **Proxy và Route Handler** không import `i18n/navigation.ts` (`getPathname` kéo theo `i18n/request.ts` → `next/root-params`, không build được ở đó): dùng `localizedPath` trong `i18n/paths.ts`.
+- Đọc phiên: `getCurrentUser()` (`lib/auth.ts`, `getClaims()` + `await io()` trước đó vì Supabase so hạn token bằng `Date.now()`), luôn trong `<Suspense>`. Trang cần đăng nhập dùng `requireUser(locale, href)`. Redirect bằng giá trị lấy từ URL (`?next=`) phải qua `safeNextPath`.
 - Pathname nội bộ (thư mục trong `app/[locale]`) bằng tiếng Anh; URL tiếng Việt map trong `i18n/routing.ts`. Trong code luôn viết `<Link href="/books/...">`.
 
 Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
@@ -244,5 +251,5 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 6. Tài khoản: đơn hàng, chi tiết, hủy đơn
 7. Admin: sách (upload bìa, nhập `*_en`), danh mục, tác giả, đơn hàng, voucher
 8. Trang chủ hoàn chỉnh với các kệ
-9. Đánh giá, voucher ở checkout, VietQR, email theo locale
+9. Đánh giá, voucher ở checkout, VietQR, email theo locale; link trong email (xác nhận, đặt lại mật khẩu) trỏ tới trang trung gian có nút "Xác nhận" (POST) thay vì GET `/api/auth/confirm` tiêu thụ token ngay, chống trình quét link (Outlook Safe Links…) dùng mất token
 10. SEO (sitemap, hreflang, OG image, JSON-LD), 404 thật cho slug không tồn tại / `page` vượt quá (hiện trả UI 404 + `noindex` nhưng HTTP 200 vì Cache Components stream trước khi `notFound()` chạy; hướng xử lý: kiểm tra trong `proxy.ts`), test e2e luồng mua hàng, đo Lighthouse, deploy

@@ -17,11 +17,20 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    // Tạo user test (admin API, cần SUPABASE_SERVICE_ROLE_KEY trong .env.local) + đăng nhập sẵn; teardown xóa user
+    // Catalog / layout: không cần tài khoản → chạy được không có SUPABASE_SERVICE_ROLE_KEY
+    //   npx playwright test --project=desktop --project=mobile
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: /account\.spec\.ts/ },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: /account\.spec\.ts/ },
+    // Tài khoản: setup tạo user test (admin API, cần SUPABASE_SERVICE_ROLE_KEY) + đăng nhập sẵn; teardown xóa user
     { name: 'setup', testMatch: /auth\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /auth\.teardown\.ts/ },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'] },
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, dependencies: ['setup'] },
+    {
+      name: 'desktop-account',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /account\.spec\.ts/,
+      dependencies: ['setup'],
+    },
+    { name: 'mobile-account', use: { ...devices['Pixel 7'] }, testMatch: /account\.spec\.ts/, dependencies: ['setup'] },
   ],
   // Chạy trên bản build production: e2e phải phản ánh đúng prerender / cache
   webServer: {

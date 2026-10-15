@@ -6,9 +6,12 @@ const BASE = 'http://internal.invalid'
 export function safeNextPath(value: unknown, fallback: string): string {
   if (typeof value !== 'string' || value.length === 0 || value.length > 2048) return fallback
   if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return fallback
-  if (/[\u0000- \u007f]/.test(value)) return fallback
+  if (/[\x00-\x20\x7f]/.test(value)) return fallback
 
   const url = new URL(value, BASE)
   if (url.origin !== BASE) return fallback
-  return `${url.pathname}${url.search}`
+  // Kiểm tra lại SAU khi URL() chuẩn hóa: `/..//evil.com`, `/%2e%2e//evil.com` thành `//evil.com`
+  // (protocol-relative → redirect ra ngoài) dù đầu vào không bắt đầu bằng `//`
+  const path = `${url.pathname}${url.search}`
+  return path.startsWith('//') ? fallback : path
 }
