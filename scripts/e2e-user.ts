@@ -10,7 +10,7 @@
  * (user còn sót khi lần chạy trước bị ngắt).
  */
 import { createClient } from '@supabase/supabase-js'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import type { Database } from '../src/types/database'
 
 export type E2eUser = { id: string; email: string; password: string; fullName: string }
@@ -348,6 +348,24 @@ export async function signedInClient(user: { email: string; password: string }) 
   return client
 }
 
+type SignedInClient = Awaited<ReturnType<typeof signedInClient>>
+
+/**
+ * User đặt một đơn COD qua RPC place_order (như trình duyệt của chính user đó): giỏ chỉ có `quantity` cuốn sách
+ * `bookId`, giao tới `addressId`. Trả về { id, order_code }.
+ */
+export async function placeE2eOrder(
+  client: SignedInClient,
+  userId: string,
+  { addressId, bookId, quantity }: { addressId: number; bookId: number; quantity: number },
+) {
+  await clearCart(userId)
+  await setCartItem(userId, bookId, quantity)
+  const { data, error } = await client.rpc('place_order', { p_address_id: addressId, p_idempotency_key: randomUUID() })
+  if (error || !data) throw new Error(`place_order: ${error?.message}`)
+  return data
+}
+
 // ---------- Admin (Phase 7) ----------
 
 /** Tiền tố slug của mọi sách / danh mục / tác giả do test admin tạo; cleanupE2eAdminData dọn theo tiền tố này */
@@ -357,6 +375,8 @@ export const E2E_ADMIN_VOUCHER = 'E2E-ADMIN-'
 const COVER_BUCKET = 'book-covers'
 
 export const e2eAdminSlug = () => `${E2E_ADMIN_SLUG}${random()}`
+/** Mã voucher test (≤ 30 ký tự, đúng dạng mã của form admin) */
+export const e2eVoucherCode = () => `${E2E_ADMIN_VOUCHER}${random().toUpperCase()}`
 
 export async function makeAdmin(userId: string) {
   const { error } = await adminClient().from('profiles').update({ role: 'admin' }).eq('id', userId)
@@ -423,6 +443,34 @@ export async function linkAuthor(bookId: number, authorId: number) {
 export async function unlinkAuthor(bookId: number, authorId: number) {
   const { error } = await adminClient().from('book_authors').delete().eq('book_id', bookId).eq('author_id', authorId)
   if (error) throw new Error(`unlinkAuthor: ${error.message}`)
+}
+
+/** Voucher test giảm 10% (service role); `usedCount` > 0 giả lập voucher đã có người dùng */
+export async function createE2eVoucher({ usedCount = 0 }: { usedCount?: number } = {}) {
+  const { data, error } = await adminClient()
+    .from('vouchers')
+    .insert({ code: e2eVoucherCode(), discount_type: 'percent', discount_value: 10, used_count: usedCount })
+    .select('id, code')
+    .single()
+  if (error) throw new Error(`createE2eVoucher: ${error.message}`)
+  return data
+}
+
+export async function voucherRow(code: string) {
+  const { data, error } = await adminClient()
+    .from('vouchers')
+    .select('id, code, discount_type, discount_value, max_discount, min_order_value, starts_at, ends_at, is_active')
+    .eq('code', code)
+    .maybeSingle()
+  if (error) throw new Error(`voucherRow: ${error.message}`)
+  return data
+}
+
+/** Xóa đúng các voucher test của spec (teardown không tham số của cleanupE2eAdminData xóa mọi E2E-ADMIN-…) */
+export async function deleteE2eVouchers(codes: string[]) {
+  if (codes.length === 0) return
+  const { error } = await adminClient().from('vouchers').delete().in('code', codes)
+  if (error) throw new Error(`deleteE2eVouchers: ${error.message}`)
 }
 
 /** Dòng sách đọc bằng service role (thấy cả sách ẩn) */

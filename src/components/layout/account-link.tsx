@@ -7,6 +7,7 @@ import { initialOf } from '@/features/account/utils'
 import { isAdmin } from '@/features/admin/auth'
 import { Link } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
+import { cn } from '@/lib/utils'
 
 const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-muted-foreground' })
 
@@ -51,12 +52,20 @@ async function AccountStatus() {
   )
 }
 
-/** Link sang khu quản trị (không có [locale], root layout khác: Next tải lại cả trang). Quyền kiểm ở server. */
+/**
+ * Link sang khu quản trị (không có [locale], root layout khác: Next tải lại cả trang). Quyền kiểm ở server.
+ * Dưới `sm` header không đủ chỗ cho nút thứ 6 (tràn ngang ở 360–390px) → điện thoại dùng link ở trang tài khoản.
+ */
 async function AdminIconLink() {
   if (!(await isAdmin())) return null
   const t = await getTranslations('layout')
   return (
-    <AdminLink href="/admin" prefetch={false} className={iconLink} data-testid="header-admin-link">
+    <AdminLink
+      href="/admin"
+      prefetch={false}
+      className={cn(iconLink, 'hidden sm:inline-flex')}
+      data-testid="header-admin-link"
+    >
       <LayoutDashboardIcon aria-hidden />
       <span className="sr-only">{t('admin')}</span>
     </AdminLink>

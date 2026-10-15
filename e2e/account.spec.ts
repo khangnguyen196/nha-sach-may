@@ -152,6 +152,11 @@ test.describe('đã đăng nhập', () => {
     await link.click()
     await expect(page).toHaveURL(/\/tai-khoan$/)
     await expect(page.getByRole('main').getByText(users.user.email)).toBeVisible()
+    // Link quản trị chỉ render khi server xác nhận admin. goto chờ load = mọi Suspense đã stream xong.
+    await page.goto('/tai-khoan')
+    await expect(page.getByRole('main').getByText(users.user.email)).toBeVisible()
+    await expect(page.getByRole('link', { name: /Quản trị/ })).toHaveCount(0)
+    await expect(page.getByTestId('header-admin-link')).toHaveCount(0)
     expect(errors).toEqual([])
   })
 

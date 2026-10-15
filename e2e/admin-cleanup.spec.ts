@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import { randomUUID } from 'node:crypto'
 import {
   bookRow,
   cancelAndDeleteOrders,
@@ -9,8 +8,8 @@ import {
   createE2eUser,
   deleteE2eUsers,
   ordersOf,
+  placeE2eOrder,
   seedAddress,
-  setCartItem,
   setOrderStatus,
   signedInClient,
   type E2eUser,
@@ -33,16 +32,8 @@ test('cancelAndDeleteOrders: đơn đã giao và đơn đang chờ đều bị x
     const addressId = await seedAddress(user.id)
     const client = await signedInClient(user)
 
-    async function placeOrder(quantity: number) {
-      if (!user) throw new Error('Thiếu user')
-      await setCartItem(user.id, book.id, quantity)
-      const { data, error } = await client.rpc('place_order', { p_address_id: addressId, p_idempotency_key: randomUUID() })
-      if (error || !data) throw new Error(`place_order: ${error?.message}`)
-      return data.id
-    }
-
-    const delivered = await placeOrder(2)
-    await placeOrder(1)
+    const delivered = (await placeE2eOrder(client, user.id, { addressId, bookId: book.id, quantity: 2 })).id
+    await placeE2eOrder(client, user.id, { addressId, bookId: book.id, quantity: 1 })
     // Đi đúng luồng: trigger chặn nhảy cóc pending → delivered
     for (const status of ['confirmed', 'shipping', 'delivered'] as const) await setOrderStatus(delivered, status)
 

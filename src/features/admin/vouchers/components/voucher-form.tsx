@@ -79,7 +79,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
         className="font-mono uppercase"
         error={fieldError('code')}
       />
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-start gap-5 sm:grid-cols-2">
         <TextField
           name="description"
           label={labels.description}
@@ -97,7 +97,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
           error={fieldError('description_en')}
         />
       </div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-start gap-5 sm:grid-cols-2">
         <SelectField
           name="discount_type"
           label={labels.discountType}
@@ -117,7 +117,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
           {...numberInput}
         />
       </div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-start gap-5 sm:grid-cols-2">
         <TextField
           name="max_discount"
           label={labels.maxDiscount}
@@ -143,7 +143,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
         error={fieldError('usage_limit')}
         {...numberInput}
       />
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-start gap-5 sm:grid-cols-2">
         <TextField
           name="starts_at"
           type="datetime-local"
