@@ -1,22 +1,35 @@
 'use client'
 
+import { unstable_rethrow } from 'next/navigation'
 import { startTransition, useActionState, useEffect, useRef, type FormEvent } from 'react'
-import type { Result } from './errors'
+import type { Failure, Result } from './errors'
 import type { FormMessages } from './form-messages'
+
+type FormAction<T> = (prev: Result<T> | null, formData: FormData) => Promise<Result<T>>
+
+const NETWORK_FAILURE: Failure = { ok: false, code: 'UNKNOWN' }
 
 /**
  * useActionState cho form gửi Server Action, giữ progressive enhancement:
- * - Không JS: `action` là URL của Server Action, trình duyệt POST, server render lại kèm state.
- * - Có JS: onSubmit tự dispatch để React KHÔNG reset form sau khi action chạy xong (mặc định của `<form action>`),
- *   nhờ vậy lỗi hiện tại chỗ mà người dùng không mất những gì đã nhập.
+ * - Không JS: `formProps.action` là chính Server Action (React render thành URL), trình duyệt POST, server render
+ *   lại kèm state. Hook này phải nhận đúng server reference, bọc lại thì mất progressive enhancement.
+ * - Có JS: onSubmit tự dispatch (React KHÔNG reset form như mặc định của `<form action>`) qua bản bọc của action:
+ *   request không tới / không về được server (mất mạng) thì action ném lỗi → đổi thành UNKNOWN, hiện trong khối
+ *   lỗi của form thay vì ném lên error boundary. Lỗi điều hướng của Next (redirect, notFound) vẫn ném tiếp.
  * - Đang gửi thì bỏ qua lần submit mới (double click / Enter lặp). useActionState xếp hàng các lần dispatch
  *   chứ không bỏ, và lần bấm thứ hai có thể tới trước khi nút kịp render `disabled`.
  */
-export function useFormAction<T>(
-  action: (prev: Result<T> | null, formData: FormData) => Promise<Result<T>>,
-  messages: FormMessages,
-) {
-  const [state, dispatch, pending] = useActionState(action, null)
+export function useFormAction<T>(action: FormAction<T>, messages: FormMessages) {
+  const [serverState, formAction] = useActionState(action, null)
+  const [clientState, dispatch, pending] = useActionState<Result<T> | null, FormData>(async (prev, formData) => {
+    try {
+      return await action(prev, formData)
+    } catch (error) {
+      unstable_rethrow(error)
+      console.error('useFormAction:', error)
+      return NETWORK_FAILURE
+    }
+  }, null)
   const submitting = useRef(false)
 
   useEffect(() => {
@@ -32,13 +45,14 @@ export function useFormAction<T>(
     startTransition(() => dispatch(formData))
   }
 
+  const state = clientState ?? serverState
   const failure = state && !state.ok ? state : null
   const fieldKeys = failure?.fieldErrors
 
   return {
     state,
     pending,
-    formProps: { action: dispatch, onSubmit },
+    formProps: { action: formAction, onSubmit },
     /** Lỗi chung; với lỗi nhập liệu thì `quiet` (lỗi đã hiện ở từng ô) */
     formError: failure ? (messages.errors[failure.code] ?? messages.errors.UNKNOWN) : undefined,
     quietError: failure?.code === 'INVALID_INPUT' && fieldKeys !== undefined && Object.keys(fieldKeys).length > 0,

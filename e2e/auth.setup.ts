@@ -20,12 +20,8 @@ setup('tạo tài khoản e2e, đăng nhập sẵn', async ({ browser, baseURL }
 
   const credentials: Credentials = {}
   for (const project of ACCOUNT_PROJECTS) {
-    const [user, reset, checkout] = await Promise.all([
-      createE2eUser(project),
-      createE2eUser(`${project}-reset`),
-      createE2eUser(`${project}-checkout`),
-    ])
-    credentials[project] = { user, reset, checkout }
+    const [user, checkout] = await Promise.all([createE2eUser(project), createE2eUser(`${project}-checkout`)])
+    credentials[project] = { user, checkout }
   }
   // Ghi trước khi đăng nhập: setup lỗi giữa chừng thì teardown vẫn biết user nào cần xóa
   writeFileSync(CREDENTIALS_PATH, JSON.stringify(credentials, null, 2))

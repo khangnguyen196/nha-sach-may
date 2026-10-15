@@ -1,5 +1,13 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
-import { canRefresh, canSignIn, clearAddresses, recoveryTokenHash, refreshTokenFromCookies } from '../scripts/e2e-user'
+import {
+  canRefresh,
+  canSignIn,
+  clearAddresses,
+  createE2eUser,
+  deleteE2eUsers,
+  recoveryTokenHash,
+  refreshTokenFromCookies,
+} from '../scripts/e2e-user'
 import { fillLogin, login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
 import { collectErrors, fillAddress, waitForHydration } from './helpers'
 
@@ -95,38 +103,43 @@ test.describe('khách (chưa đăng nhập)', () => {
     await expect(page.getByRole('main').getByRole('alert')).toContainText('Liên kết đã hết hạn')
   })
 
-  test('đặt lại mật khẩu thu hồi phiên khác, giữ phiên hiện tại', async ({ browser, baseURL, users }) => {
+  test('đặt lại mật khẩu thu hồi phiên khác, giữ phiên hiện tại', async ({ browser, baseURL }, testInfo) => {
     test.setTimeout(90_000)
-    const { reset } = users
+    // User riêng cho mỗi lần chạy: test đổi mật khẩu, dùng lại user thì lần chạy sau (retry, --repeat-each) đăng nhập
+    // bằng mật khẩu cũ và fail. Xóa ở finally; sót (lần chạy bị ngắt) thì setup lần sau dọn.
+    const reset = await createE2eUser(`${testInfo.project.name}-reset`)
     const contextA = await browser.newContext({ baseURL, storageState: NO_SESSION })
     const contextB = await browser.newContext({ baseURL, storageState: NO_SESSION })
     const pageA = await contextA.newPage()
     const pageB = await contextB.newPage()
     const errors = collectErrors(pageA)
 
-    await login(pageA, reset)
-    await login(pageB, reset)
-    const tokenB = refreshTokenFromCookies(await contextB.cookies())
+    try {
+      await login(pageA, reset)
+      await login(pageB, reset)
+      const tokenB = refreshTokenFromCookies(await contextB.cookies())
 
-    // Link trong email đặt lại mật khẩu, lấy bằng admin API thay vì gửi thư
-    const tokenHash = await recoveryTokenHash(reset.email)
-    await pageA.goto(`/api/auth/confirm?token_hash=${tokenHash}&type=recovery&next=%2Fdat-lai-mat-khau`)
-    await expect(pageA).toHaveURL(/\/dat-lai-mat-khau$/)
+      // Link trong email đặt lại mật khẩu, lấy bằng admin API thay vì gửi thư
+      const tokenHash = await recoveryTokenHash(reset.email)
+      await pageA.goto(`/api/auth/confirm?token_hash=${tokenHash}&type=recovery&next=%2Fdat-lai-mat-khau`)
+      await expect(pageA).toHaveURL(/\/dat-lai-mat-khau$/)
 
-    const newPassword = `${reset.password}-moi`
-    await waitForHydration(pageA, 'main form button[type="submit"]')
-    await pageA.getByRole('main').getByLabel('Mật khẩu mới').fill(newPassword)
-    await pageA.getByRole('button', { name: 'Lưu mật khẩu mới' }).click()
-    await expect(pageA.getByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeVisible()
+      const newPassword = `${reset.password}-moi`
+      await waitForHydration(pageA, 'main form button[type="submit"]')
+      await pageA.getByRole('main').getByLabel('Mật khẩu mới').fill(newPassword)
+      await pageA.getByRole('button', { name: 'Lưu mật khẩu mới' }).click()
+      await expect(pageA.getByRole('heading', { name: 'Đã đổi mật khẩu' })).toBeVisible()
 
-    const tokenA = refreshTokenFromCookies(await contextA.cookies())
-    expect(await canRefresh(tokenB)).toBe(false)
-    expect(await canRefresh(tokenA)).toBe(true)
-    expect(await canSignIn(reset.email, reset.password)).toBe(false)
-    expect(await canSignIn(reset.email, newPassword)).toBe(true)
-    expect(errors).toEqual([])
-
-    await Promise.all([contextA.close(), contextB.close()])
+      const tokenA = refreshTokenFromCookies(await contextA.cookies())
+      expect(await canRefresh(tokenB)).toBe(false)
+      expect(await canRefresh(tokenA)).toBe(true)
+      expect(await canSignIn(reset.email, reset.password)).toBe(false)
+      expect(await canSignIn(reset.email, newPassword)).toBe(true)
+      expect(errors).toEqual([])
+    } finally {
+      await Promise.all([contextA.close(), contextB.close()])
+      await deleteE2eUsers([reset.id])
+    }
   })
 })
 

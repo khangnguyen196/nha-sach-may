@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { waitForHydration } from './helpers'
 
-// Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho test đặt lại mật khẩu + một user cho
-// checkout: trên CI hai project (và các file spec) chạy song song, dùng chung user thì test sổ địa chỉ / đổi mật khẩu /
-// giỏ / đặt hàng giẫm lên nhau.
+// Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho checkout: trên CI hai project (và các
+// file spec) chạy song song, dùng chung user thì test sổ địa chỉ / giỏ / đặt hàng giẫm lên nhau. Test đặt lại mật khẩu
+// tự tạo user riêng cho mỗi lần chạy (account.spec.ts).
 export const ACCOUNT_PROJECTS = ['desktop-account', 'mobile-account'] as const
 
 const AUTH_DIR = 'e2e/.auth'
@@ -15,7 +15,7 @@ export const storageStatePath = (project: string) => `${AUTH_DIR}/${project}.jso
 export const checkoutStatePath = (project: string) => `${AUTH_DIR}/${project}-checkout.json`
 
 const userSchema = z.object({ id: z.string(), email: z.string(), password: z.string(), fullName: z.string() })
-const credentialsSchema = z.record(z.string(), z.object({ user: userSchema, reset: userSchema, checkout: userSchema }))
+const credentialsSchema = z.record(z.string(), z.object({ user: userSchema, checkout: userSchema }))
 
 export type Credentials = z.infer<typeof credentialsSchema>
 export type ProjectUsers = Credentials[string]

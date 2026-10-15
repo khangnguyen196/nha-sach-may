@@ -190,6 +190,50 @@ test('bấm "Đặt hàng" 2 lần liên tiếp → đúng 1 đơn, tới trang 
   await expect(checkoutError(page)).toHaveCount(0)
 })
 
+test('mất mạng khi đặt hàng → khối lỗi trong form; bấm lại cùng key → đúng 1 đơn', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, pick(regular, projectIndex).id, 1)
+  await openCheckout(page)
+
+  // Server Action POST về chính URL trang, header `next-action`
+  let mode: 'block' | 'drop-response' = 'block'
+  await page.route('**/thanh-toan', async (route) => {
+    const request = route.request()
+    if (request.method() !== 'POST' || !request.headers()['next-action']) return route.continue()
+    // drop-response: request tới server (đơn đã tạo) nhưng phản hồi không về được trình duyệt
+    if (mode === 'drop-response') await route.fetch()
+    await route.abort('internetdisconnected')
+  })
+
+  // 1. Request không tới server
+  await placeButton(page).click()
+  await expect(checkoutError(page)).toContainText('Đã có lỗi xảy ra. Vui lòng thử lại.')
+  await expect(checkoutError(page)).toBeFocused()
+  await expect(page).toHaveURL(/\/thanh-toan$/)
+  expect(await ordersOf(users.checkout.id)).toHaveLength(0)
+
+  // 2. Đơn đã tạo nhưng mất phản hồi: vẫn là khối lỗi, trang giữ nguyên (cùng idempotency key)
+  mode = 'drop-response'
+  await placeButton(page).click()
+  await expect.poll(async () => (await ordersOf(users.checkout.id)).length).toBe(1)
+  await expect(placeButton(page)).toBeEnabled()
+  await expect(checkoutError(page)).toContainText('Đã có lỗi xảy ra. Vui lòng thử lại.')
+  await expect(page).toHaveURL(/\/thanh-toan$/)
+  const [created, ...others] = await ordersOf(users.checkout.id)
+  expect(others).toEqual([])
+
+  // 3. Có mạng lại, bấm lại → place_order trả đúng đơn đã tạo, không đơn thứ hai, không CART_EMPTY
+  await page.unrouteAll()
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+  await expect(page.getByRole('main').getByTestId('order-code')).toHaveText(created?.order_code ?? '')
+  expect(await ordersOf(users.checkout.id)).toHaveLength(1)
+})
+
 test('vượt tồn kho: mở trang thì chặn sớm; tồn kho giảm sau khi mở trang → lỗi + link về giỏ', async ({
   page,
   users,
