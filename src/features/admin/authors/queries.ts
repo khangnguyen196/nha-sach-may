@@ -1,6 +1,6 @@
 import 'server-only'
-import { slugContainsPatterns } from '@/lib/like'
-import { createClient } from '@/lib/supabase/server'
+import { nameOrSlugFilters } from '@/lib/like'
+import { createAdminQueryClient } from '../supabase'
 import { ADMIN_PAGE_SIZE } from '../params'
 import type { AuthorListParams } from './params'
 
@@ -8,11 +8,11 @@ import type { AuthorListParams } from './params'
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 
-/** Danh sách tác giả, 25 dòng / trang, kèm số sách (đếm ở DB). Tìm trên slug (đã bỏ dấu), từ khóa đã escape. */
+/** Danh sách tác giả, 25 dòng / trang, kèm số sách (đếm ở DB). Tìm theo tên hoặc slug (gõ không dấu), từ khóa đã escape. */
 export async function listAdminAuthors(params: AuthorListParams) {
-  const supabase = await createClient()
+  const supabase = await createAdminQueryClient()
   let query = supabase.from('authors').select('id, name, slug, book_authors(count)', { count: 'exact' })
-  for (const pattern of slugContainsPatterns(params.q ?? '')) query = query.ilike('slug', pattern)
+  for (const filter of nameOrSlugFilters(params.q ?? '')) query = query.or(filter)
 
   const from = ((params.page ?? 1) - 1) * ADMIN_PAGE_SIZE
   const { data, count, error } = await query.order('name').order('id').range(from, from + ADMIN_PAGE_SIZE - 1)
@@ -26,7 +26,7 @@ export async function listAdminAuthors(params: AuthorListParams) {
 
 /** Tác giả + các sách của tác giả (một người có thể vừa là tác giả vừa là dịch giả của cùng một cuốn) */
 export async function getAdminAuthor(id: number) {
-  const supabase = await createClient()
+  const supabase = await createAdminQueryClient()
   const { data, error } = await supabase
     .from('authors')
     .select('id, name, slug, bio, bio_en, book_authors(role, books(id, title))')

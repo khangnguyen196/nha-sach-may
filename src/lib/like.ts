@@ -33,14 +33,26 @@ export function containsPatterns(query: string, maxTerms = 8): string[] {
 }
 
 /**
- * Như containsPatterns nhưng để tìm trên cột `slug` (bảng không có `search_text`, VD tác giả): mỗi từ qua slugify
- * ("O'Brien" → "o-brien") nên gõ có dấu / không dấu đều khớp slug.
+ * Giá trị trong bộ lọc logic của PostgREST (`.or(...)`): bọc nháy kép để dấu phẩy / ngoặc không phá cú pháp, escape
+ * `\` và `"` (PostgREST bỏ một lớp `\` bên trong nháy, nên `\` của mẫu LIKE phải nhân đôi).
  */
-export function slugContainsPatterns(query: string, maxTerms = 8): string[] {
+export function quoteFilterValue(value: string): string {
+  return `"${value.replace(/[\\"]/g, '\\$&')}"`
+}
+
+/**
+ * Bảng không có `search_text` (VD tác giả): mỗi từ một bộ lọc `.or()` "tên chứa từ (có dấu, không phân biệt hoa
+ * thường) HOẶC slug chứa từ đã slugify (gõ không dấu)". Gọi `.or()` cho từng phần tử → mọi từ đều phải khớp.
+ */
+export function nameOrSlugFilters(query: string, maxTerms = 8): string[] {
   return query
     .split(/\s+/)
-    .map(slugify)
     .filter(Boolean)
     .slice(0, maxTerms)
-    .map((term) => `%${escapeLike(term)}%`)
+    .map((term) => {
+      const conditions = [`name.ilike.${quoteFilterValue(`%${escapeLike(term)}%`)}`]
+      const slug = slugify(term)
+      if (slug) conditions.push(`slug.ilike.${quoteFilterValue(`%${escapeLike(slug)}%`)}`)
+      return conditions.join(',')
+    })
 }

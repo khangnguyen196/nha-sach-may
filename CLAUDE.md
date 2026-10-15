@@ -27,15 +27,17 @@ npm run import:books -- --dry-run [--hires-covers]       # xem trước → scri
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
 npx playwright test --project=desktop --project=mobile    # e2e catalog/layout, không cần SUPABASE_SERVICE_ROLE_KEY
+npx playwright test --project=desktop-admin --project=mobile-admin   # e2e admin (cần SUPABASE_SERVICE_ROLE_KEY)
 ```
 
 `test:e2e` đầy đủ gồm cả project `desktop-account` / `mobile-account`: setup tạo user test bằng admin API (`scripts/e2e-user.ts`) nên **cần `SUPABASE_SERVICE_ROLE_KEY`** trong `.env.local`.
 
 Quy ước e2e:
-- Spec cần user khớp `ACCOUNT_SPECS` trong `playwright.config.ts` (`(account|checkout|orders|error-page).spec.ts`); spec mới cần user thì thêm vào regex. Mỗi project có 3 user riêng: chính, checkout, orders (không giẫm giỏ / đơn của nhau khi chạy song song: `checkout.spec` xóa mọi đơn của user checkout sau mỗi test).
+- Spec cần user khớp `ACCOUNT_SPECS` trong `playwright.config.ts` (`(account|checkout|orders|error-page).spec.ts`); spec mới cần user thì thêm vào regex. Spec admin là `admin-*.spec.ts` (`ADMIN_SPECS`, loại khỏi mọi project khác; `admin-orders.spec.ts` khớp cả `orders.spec.ts`), chạy ở `desktop-admin` (mobile chỉ `admin-smoke`), phiên admin qua `adminTest` (`e2e/admin.ts`); user admin do cùng setup tạo (`makeAdmin`). Mỗi project có 3 user riêng: chính, checkout, orders (không giẫm giỏ / đơn của nhau khi chạy song song: `checkout.spec` xóa mọi đơn của user checkout sau mỗi test).
 - Test làm đổi trạng thái không quay lại được (đổi mật khẩu…) tự tạo user riêng cho mỗi lần chạy và xóa ở `finally`: retry trên CI / `--repeat-each` phải qua.
 - Locator đặt trong `<main>` (`page.getByRole('main')…`) khi trang có Suspense stream: ngay sau hydrate, React có thể còn giữ bản sao ẩn của boundary (`<div hidden id="S:…">` cuối body).
-- Đặt hàng thật trên sách thật: dọn bằng `cancelAndDeleteOrders` (hủy trước để trigger hoàn kho, rồi mới xóa) trước khi xóa user.
+- Đặt hàng thật trên sách thật: dọn bằng `cancelAndDeleteOrders` trước khi xóa user. Đơn chưa giao: hủy để trigger hoàn kho rồi xóa; đơn `delivered`: tự hoàn kho rồi xóa (trigger chặn `delivered → cancelled` với mọi role, kể cả service role).
+- Dữ liệu test admin: sách / danh mục / tác giả slug `e2e-admin-…` (voucher `E2E-ADMIN-…`), tạo bằng service role, không sửa dữ liệu thật. Spec dọn bằng `cleanupE2eAdminData(slugs)` đúng slug của mình (bản không tham số xóa mọi dữ liệu e2e-admin, chỉ setup / teardown gọi: spec khác chạy song song). Danh mục test: gốc ẩn + con đang hiện (có trang danh mục, không lên menu). Danh mục tạo bằng service role không làm mới cache danh mục của Next → lưu lại một danh mục qua admin trước khi mở trang danh mục công khai. `findBooksByStock*` bỏ sách slug `e2e-…`.
 - Ép Supabase lỗi (trang lỗi): cookie `e2e-fault=rest` làm mọi request REST của client theo phiên ném lỗi mạng (`lib/supabase/fault-injection.ts`). Chỉ có tác dụng khi server chạy với `E2E_FAULT_INJECTION=1` (`webServer.env` của Playwright đặt sẵn); `VERCEL_ENV=production` luôn tắt. Không đặt biến này ngoài e2e.
 
 Trước khi báo xong: `typecheck`, `lint`, `build` phải sạch. Có đụng logic giỏ hàng/đặt hàng thì chạy thêm test liên quan.
@@ -55,6 +57,7 @@ src/
       components/  actions.ts  queries.ts  schemas.ts  types.ts
   components/ui/       # shadcn primitives
   components/layout/   # Header, Footer, LocaleSwitcher, ThemeToggle
+  components/admin/    # AdminLink, khung admin, ShopLink, bảng / form dùng chung của admin
   lib/                 # supabase/{server,client,public,env}.ts, i18n-db.ts, errors.ts, utils.ts
   types/database.ts
   proxy.ts             # (Next 16, thay middleware.ts) — refresh session Supabase rồi next-intl; /admin bỏ qua next-intl
@@ -140,7 +143,8 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 
   Slug của sách, danh mục, tác giả dùng chung cho cả hai ngôn ngữ.
 - Luôn dùng `Link`, `redirect`, `useRouter`, `usePathname` từ `i18n/navigation.ts`, không import từ `next/link` hay các hàm tương ứng của `next/navigation` (ESLint chặn). Hàm next-intl không bọc (`notFound`, `useParams`, `useSearchParams`) thì import từ `next/navigation` bình thường.
-- **Ngoại lệ — `LocaleSwitcher`** dùng `<a>` thường với `href` tính bằng `getPathname` (từ `i18n/navigation.ts`), không dùng `Link`: `Link` có prop `locale` luôn ép prefix kể cả locale mặc định, nên en→vi ra `/vi?x=1` và client nav giữ nguyên URL không canonical đó (proxy không kịp chuyển về `/?x=1`). `getPathname` không ép prefix. Đổi ngôn ngữ vì vậy là tải lại cả trang, chấp nhận được vì mọi nội dung đều đổi. Chỗ này có `eslint-disable-next-line no-restricted-syntax` kèm comment; ngoài ra không chỗ nào khác được dùng `<a href={…}>` cho link nội bộ.
+- **Ngoại lệ — `LocaleSwitcher`** dùng `<a>` thường với `href` tính bằng `getPathname` (từ `i18n/navigation.ts`), không dùng `Link`: `Link` có prop `locale` luôn ép prefix kể cả locale mặc định, nên en→vi ra `/vi?x=1` và client nav giữ nguyên URL không canonical đó (proxy không kịp chuyển về `/?x=1`). `getPathname` không ép prefix. Đổi ngôn ngữ vì vậy là tải lại cả trang, chấp nhận được vì mọi nội dung đều đổi. Chỗ này có `eslint-disable-next-line no-restricted-syntax` kèm comment; ngoài ra không chỗ nào khác được dùng `<a href={…}>` cho link nội bộ, trừ admin trỏ ra cửa hàng (`ShopLink`, link "Về cửa hàng", `admin/error.tsx`: admin là root layout khác, không có provider của next-intl).
+- **Admin** (`app/admin`, không có `[locale]`, URL tiếng Việt viết thẳng): link nội bộ qua `AdminLink` (`components/admin/admin-link.tsx`, kiểu `AdminHref` chỉ nhận `/admin…`), `redirect` / `usePathname` lấy từ `next/navigation` (ESLint cho phép trong `app/admin`, `components/admin`, `features/admin`).
 - `messages/vi.json` và `en.json` chia namespace theo feature (`common`, `book`, `cart`, `checkout`, `account`, `errors`…). Bật type-safe cho message keys. Hai file phải luôn **cùng bộ key**: có test so sánh, thiếu key thì fail. **Ngoại lệ**: namespace `admin` chỉ có trong `vi.json` (admin chỉ tiếng Việt, không có `[locale]`); test so key bỏ qua namespace này, kiểu message key vẫn lấy từ `vi.json`. Mã lỗi (`errors`) dùng chung `ERROR_CODES` nên mã mới của admin vẫn phải có ở cả hai file.
 - Messages được biên dịch lúc build (`experimental.messages.precompile` của plugin next-intl trong `next.config.ts`) → client không kéo `intl-messageformat` (~9KB gzip). Đây là API **experimental**: mỗi lần nâng next-intl phải kiểm tra lại (changelog, build, `measure:js`, e2e). Client leaf nhận chuỗi đã dịch qua props; chỉ palette (tải lười) dùng `useTranslations`, nên `NextIntlClientProvider` chỉ truyền namespace `search`.
 - Trang lỗi: `error.tsx` là client component và không nhận props từ server → layout (`[locale]/layout.tsx`, `admin/layout.tsx`) dịch sẵn namespace `errorPage` và truyền qua `ErrorMessagesProvider`; `error.tsx` đọc bằng `useErrorMessages()`. `global-error.tsx` thay cả root layout nên dùng bản chép `i18n/global-error-messages.ts` (Vitest kiểm tra khớp `errorPage` và `localizedPath('/')`): sửa chuỗi ở `messages/*.json` thì chép sang. UI lỗi không hiện `error.message` / `digest`; Next log lỗi ở server.
@@ -158,6 +162,9 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 - Tiền là `integer` VND.
 - RLS bật cho mọi bảng. Không tắt RLS, không dùng service role trong app.
 - Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
+- Quyền cột (migration `admin.sql`): `orders` chỉ update được `status`, `payment_status`, `cancelled_reason`; `books` không update được cột do DB quản lý. Admin thêm ô sửa cột mới của `books` → thêm cột vào `grant update (…)`.
+- Luồng trạng thái đơn chặn ở trigger `handle_order_status_change` (mọi role, kể cả service role; bảng chuyển trong `private.order_status_transition_allowed`): `pending → confirmed → shipping → delivered`, hủy được từ 3 trạng thái đầu; `delivered`, `cancelled` là trạng thái cuối (`ORDER_INVALID_TRANSITION`, `ORDER_REOPEN_FORBIDDEN`). COD chuyển `delivered` → `payment_status = 'paid'`.
+- Bucket `book-covers` chỉ nhận `image/webp` ≤ 1MB. Ảnh bìa qua `toCoverWebp` (`lib/cover-image.ts`, dùng chung import và admin); admin lưu tên mới mỗi lần (`<book_id>-<8 hex>.webp`, ảnh cũ bị CDN cache 1 năm), chỉ xóa ảnh cũ khi không đơn nào còn trỏ tới (`order_items.cover_url`).
 - RPC cho app: `search_books`, `quote_order`, `quote_items`, `place_order`, `cancel_order`, `set_default_address`, `merge_cart` (danh sách + mã lỗi ở cuối `schema.sql`). Hàm nội bộ nằm trong schema `private`, không lộ ra API.
 - Tìm kiếm qua RPC `search_books(q)`: gõ không dấu, khớp từng từ không cần đúng thứ tự. Phân trang bằng `.range()` + `count: 'exact'` (`estimated` trên RPC không chính xác).
 - Sách chỉ gắn vào danh mục lá. Trang danh mục cha lọc `category_id in (<id các danh mục con>)`.
@@ -242,7 +249,7 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 - **Claude KHÔNG mở, đọc hay sửa `.env.local`**, kể cả khi nghi nó sai. Thay vào đó chạy `npm run check:env` (`scripts/check-env.mjs`, chỉ báo biến thiếu/sai định dạng, không in giá trị) rồi báo để tôi tự sửa.
 - Chỉ dùng `npm run check:env` để kiểm tra env. **Không** viết script nào khác đọc env (kể cả script tạm/debug rồi xóa, kể cả qua `loadEnvConfig` của `@next/env`). Script của dự án cần env (`import:books`, `scripts/e2e-user.ts` ở Phase 4) chỉ được viết khi đã có trong plan đã duyệt (ngoại lệ này đã được duyệt).
 - `.env.local` không commit. Client chỉ được dùng URL và anon/publishable key. `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng trong `scripts/` chạy local, **không bao giờ** import vào `src/`.
-- `/admin` kiểm tra `role = 'admin'` ở server (proxy và layout), không chỉ ẩn ở UI.
+- `/admin` kiểm tra `role = 'admin'` ở server (proxy và layout), không chỉ ẩn ở UI. Mọi Server Action admin tự kiểm tra ở hai câu đầu: `const denied = await assertAdmin(); if (denied) return denied` (Server Action gọi thẳng được bằng action ID, không qua layout / proxy; test tĩnh `features/admin/actions.test.ts`).
 - Validate mọi input ở server, kể cả khi client đã validate.
 - Tên và logo là của riêng dự án, không mượn nhận diện của nhà sách có thật. Một trang có form thanh toán mà trông giống thương hiệu thật rất dễ bị trình duyệt hoặc Vercel gắn cờ phishing khi deploy.
 

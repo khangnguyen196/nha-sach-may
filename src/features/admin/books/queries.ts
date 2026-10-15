@@ -1,6 +1,6 @@
 import 'server-only'
 import { containsPatterns } from '@/lib/like'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminQueryClient } from '../supabase'
 import { ADMIN_PAGE_SIZE } from '../params'
 import { LOW_STOCK, type BookListParams } from './params'
 
@@ -16,7 +16,7 @@ const LIST_COLUMNS = 'id, slug, title, cover_url, price, stock, is_active, is_fe
  * index trigram), mỗi từ một `ilike` đã escape: gõ `%` / `_` không khớp mọi sách.
  */
 export async function listAdminBooks(params: BookListParams) {
-  const supabase = await createClient()
+  const supabase = await createAdminQueryClient()
   let query = supabase.from('books').select(LIST_COLUMNS, { count: 'exact' })
   for (const pattern of containsPatterns(params.q ?? '')) query = query.ilike('search_text', pattern)
   if (params.category) query = query.eq('category_id', params.category)
@@ -42,7 +42,7 @@ const BOOK_COLUMNS = `id, title, slug, subtitle, description, description_en, is
   is_featured, book_authors(author_id, role)`
 
 export async function getAdminBook(id: number) {
-  const supabase = await createClient()
+  const supabase = await createAdminQueryClient()
   const { data, error } = await supabase.from('books').select(BOOK_COLUMNS).eq('id', id).maybeSingle()
   if (error) throw new Error(`getAdminBook: ${error.message}`)
   return data
@@ -52,7 +52,7 @@ export type AdminBook = NonNullable<Awaited<ReturnType<typeof getAdminBook>>>
 
 /** NXB và tác giả cho các ô chọn của form sách (danh mục: getAdminCategories) */
 export async function getBookFormOptions() {
-  const supabase = await createClient()
+  const supabase = await createAdminQueryClient()
   const [publishers, authors] = await Promise.all([
     supabase.from('publishers').select('id, name').order('name'),
     supabase.from('authors').select('id, name').order('name'),

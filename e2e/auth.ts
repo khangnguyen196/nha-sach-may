@@ -27,6 +27,19 @@ export function readCredentials(): Credentials {
   return credentialsSchema.parse(JSON.parse(readFileSync(CREDENTIALS_PATH, 'utf8')))
 }
 
+// Admin (Phase 7): mỗi project admin một user có role = 'admin', file riêng để không đổi dạng credentials.json
+export const ADMIN_PROJECTS = ['desktop-admin', 'mobile-admin'] as const
+export const ADMIN_CREDENTIALS_PATH = `${AUTH_DIR}/admin-credentials.json`
+export const adminStatePath = (project: string) => `${AUTH_DIR}/${project}-admin.json`
+
+const adminCredentialsSchema = z.record(z.string(), userSchema)
+
+export type AdminCredentials = z.infer<typeof adminCredentialsSchema>
+
+export function readAdminCredentials(): AdminCredentials {
+  return adminCredentialsSchema.parse(JSON.parse(readFileSync(ADMIN_CREDENTIALS_PATH, 'utf8')))
+}
+
 export const NO_SESSION = { cookies: [], origins: [] }
 
 /** Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang) */

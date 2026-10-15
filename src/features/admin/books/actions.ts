@@ -207,6 +207,8 @@ async function removeOldCover(supabase: Supabase, oldUrl: string | null, publicB
     if (error) console.error('uploadCover (order_items):', error.message)
     return
   }
-  const { error: removeError } = await supabase.storage.from(COVER_BUCKET).remove([oldPath])
+  const { data, error: removeError } = await supabase.storage.from(COVER_BUCKET).remove([oldPath])
   if (removeError) console.error('uploadCover (remove old):', removeError.message)
+  // Storage không báo lỗi khi phiên không đọc được object (thiếu policy select): trả về danh sách rỗng
+  else if (data.length === 0) console.error('uploadCover (remove old): không xóa được', oldPath)
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containsPatterns, escapeLike, normalizeSearch, slugContainsPatterns } from './like'
+import { containsPatterns, escapeLike, nameOrSlugFilters, normalizeSearch, quoteFilterValue } from './like'
 
 describe('escapeLike', () => {
   it('escape \\ trước rồi tới % và _', () => {
@@ -42,13 +42,25 @@ describe('containsPatterns', () => {
   })
 })
 
-describe('slugContainsPatterns', () => {
-  it('mỗi từ qua slugify: bỏ dấu, ký tự lạ thành gạch ngang', () => {
-    expect(slugContainsPatterns('Nguyễn  Nhật')).toEqual(['%nguyen%', '%nhat%'])
-    expect(slugContainsPatterns("O'Brien")).toEqual(['%o-brien%'])
+describe('quoteFilterValue', () => {
+  it('bọc nháy kép, escape \\ và "', () => {
+    expect(quoteFilterValue('a,b(c)')).toBe('"a,b(c)"')
+    expect(quoteFilterValue('say "hi"')).toBe('"say \\"hi\\""')
+    expect(quoteFilterValue('%50\\%%')).toBe('"%50\\\\%%"')
+  })
+})
+
+describe('nameOrSlugFilters', () => {
+  it('mỗi từ: tên chứa từ gốc HOẶC slug chứa từ đã slugify', () => {
+    expect(nameOrSlugFilters('Nguyễn  Nhật')).toEqual([
+      'name.ilike."%Nguyễn%",slug.ilike."%nguyen%"',
+      'name.ilike."%Nhật%",slug.ilike."%nhat%"',
+    ])
+    expect(nameOrSlugFilters("O'Brien")).toEqual([`name.ilike."%O'Brien%",slug.ilike."%o-brien%"`])
   })
 
-  it('từ chỉ có ký tự đặc biệt (%, _) → bỏ, không thành mẫu khớp mọi dòng', () => {
-    expect(slugContainsPatterns('% _')).toEqual([])
+  it('ký tự đại diện / ký tự của cú pháp lọc được escape trong nháy', () => {
+    expect(nameOrSlugFilters('%')).toEqual(['name.ilike."%\\\\%%"'])
+    expect(nameOrSlugFilters('a,b')).toEqual(['name.ilike."%a,b%",slug.ilike."%a-b%"'])
   })
 })

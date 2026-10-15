@@ -159,11 +159,11 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 - [ ] Migration `admin.sql` (luồng trạng thái đơn, quyền cột `orders` / `books`, giới hạn bucket, COD → paid) + `schema.sql` + types
   - [x] Viết `supabase/migrations/20261015160000_admin.sql` + cập nhật `schema.sql`
   - [ ] Bạn kiểm tra trên Postgres local + chạy trên Supabase; sinh lại types (migration không đổi cột / RPC public nên types dự kiến không đổi)
-- [ ] `assertAdmin` + mã `FORBIDDEN` + test tĩnh; layout admin, điều hướng, `AdminLink` + ngoại lệ ESLint; messages `admin` chỉ vi
-- [ ] `lib/slug.ts`, `lib/cover-image.ts` (dùng chung với import) + Vitest
-- [ ] Sách: danh sách, form sửa, tác giả của sách, ẩn / hiện, upload bìa; `catalogTagsFor` + Vitest
-- [ ] Danh mục, tác giả
-- [ ] e2e: user admin, dọn dữ liệu `e2e-admin-`, `admin-security`, `admin-books`, `admin-catalog`
+- [x] `assertAdmin` + mã `FORBIDDEN` + test tĩnh; layout admin, điều hướng, `AdminLink` + ngoại lệ ESLint; messages `admin` chỉ vi
+- [x] `lib/slug.ts`, `lib/cover-image.ts` (dùng chung với import), `lib/like.ts` (escape `ilike`) + Vitest
+- [x] Sách: danh sách, form sửa, tác giả của sách, ẩn / hiện, upload bìa; `catalogTagsFor` + Vitest
+- [x] Danh mục, tác giả
+- [x] e2e: user admin, dọn dữ liệu `e2e-admin-`, `cancelAndDeleteOrders` cho đơn delivered + `admin-cleanup`, `admin-security`, `admin-books`, `admin-catalog`, `admin-smoke` (desktop + mobile)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js` (trang công khai không đổi); báo cáo
 
 7b:
