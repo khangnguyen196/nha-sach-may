@@ -1,6 +1,6 @@
 # Phase 7: Admin
 
-Trạng thái: **7a xong, migration đã chạy, chờ duyệt trước khi merge** (nhánh `phase-7a`, 2026-10-15). Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). 7b chưa bắt đầu.
+Trạng thái: **7a xong, đã merge vào `main`** (2026-10-15); `test:e2e` đầy đủ 160/160 qua trước khi merge. Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt"). 7b chưa bắt đầu.
 
 ## Báo cáo 7a (2026-10-15)
 
@@ -40,6 +40,7 @@ Trạng thái: **7a xong, migration đã chạy, chờ duyệt trước khi merg
   - Project admin (desktop-admin + mobile-admin, 16 test): sau sửa 15/16 qua, `admin-smoke` desktop hết 5s chờ bảng stream về; chạy riêng lại thì qua cả desktop lẫn mobile.
   - `test:e2e` đầy đủ (160 test), 3 lượt cách nhau 3 phút, không nới timeout, đều chạy trước khi sửa upload bìa: lượt 1 hỏng ở setup (`listUsers: fetch failed`, 100 test không chạy); lượt 2: 135 qua, 7 fail (`fetch failed` khi tạo dữ liệu test, timeout ở `cart-account`, `checkout`, `error-page`, `admin-catalog`); lượt 3: 142 qua, 3 fail (`clearCart: fetch failed`, `checkout` mobile timeout, bìa admin). Test cửa hàng fail mỗi lượt một chỗ khác nhau, kèm `fetch failed` tới Supabase → do mạng; chưa có lượt nào cửa hàng sạch hoàn toàn, nên chạy lại khi mạng ổn.
 - `e2e/orders.spec.ts`: test "12 đơn" chuyển đơn qua `confirmed → shipping → delivered` thay vì nhảy thẳng `pending → delivered` (trigger mới chặn). Thay đổi này có sẵn trong working tree, không do tôi viết; đúng nên gộp vào commit.
+- `test:e2e` đầy đủ sau khi sửa upload bìa (trước khi merge): **160/160 qua** ở lượt đầu (10.1 phút).
 - Trước migration (lượt trước): 146 / 143 / 143 qua, chỉ 2 test admin chờ migration fail ở phần admin.
 - `measure:js` (so với build của `main`): mọi chunk app ở trang chủ / trang sách giữ nguyên kích thước. Chỉ runtime Turbopack (`turbopack-*.js`, chứa danh sách chunk của cả app) tăng 3.8 → 4.3KB gzip vì app có thêm route admin. Trang chủ = baseline + 38.5KB (main: 38.1), trang sách + 39.2KB (main: 38.7).
 
@@ -212,7 +213,7 @@ Namespace `admin` (chỉ `vi.json`, cần chọn 3): điều hướng, tiêu đ�
 - [x] Danh mục, tác giả
 - [x] e2e: user admin, dọn dữ liệu `e2e-admin-`, `cancelAndDeleteOrders` cho đơn delivered + `admin-cleanup`, `admin-security`, `admin-books`, `admin-catalog`, `admin-smoke` (desktop + mobile)
 - [x] typecheck / lint / build / test sạch; `measure:js` (app không đổi, runtime Turbopack +0.5KB); báo cáo
-- [ ] e2e sạch: admin qua sau migration; `test:e2e` đầy đủ còn test cửa hàng fail lẻ tẻ do mạng ở cả 3 lượt
+- [x] e2e sạch: `test:e2e` đầy đủ 160/160
 
 7b:
 - [ ] Đơn hàng: danh sách, chi tiết, chuyển trạng thái, hủy kèm lý do; `nextStatuses` + Vitest
