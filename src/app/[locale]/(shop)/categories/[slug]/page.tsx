@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { resolveSort } from '@/features/books/catalog-params'
-import { CatalogSkeleton } from '@/features/books/components/book-grid-skeleton'
+import { CatalogSkeleton, PageHeaderSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { Breadcrumb, type Crumb } from '@/features/books/components/breadcrumb'
 import { CatalogView } from '@/features/books/components/catalog-view'
 import { getCategories, getCategoryBySlug, listBooks, type Category } from '@/features/books/queries'
@@ -15,9 +15,8 @@ import { localize } from '@/lib/i18n-db'
 type Props = PageProps<'/[locale]/categories/[slug]'>
 
 // Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
-// dựng App Shell cho tham số chưa biết, mà page đọc params và header (LocaleSwitcher đọc useParams) nằm ngoài
-// <Suspense> → không dựng được → HTTP 500. Cho phép route chặn: slug mới render theo request, slug đã prerender giữ nguyên.
-export const instant = false
+// dựng App Shell cho tham số chưa biết. Page chỉ đọc `params` bên trong <Suspense> (và LocaleSwitcher đọc useParams
+// trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn là HTML tĩnh đầy đủ.
 
 export async function generateStaticParams() {
   const categories = await getCategories()
@@ -36,7 +35,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CategoryPage({ params, searchParams }: Props) {
+export default function CategoryPage({ params, searchParams }: Props) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      <Suspense fallback={<PageHeaderSkeleton />}>
+        <CategoryContent params={params} searchParams={searchParams} />
+      </Suspense>
+    </div>
+  )
+}
+
+async function CategoryContent({ params, searchParams }: Pick<Props, 'params' | 'searchParams'>) {
   const { slug } = await params
   const [categories, locale] = await Promise.all([getCategories(), getLocale()])
   const category = categories.find((c) => c.slug === slug)
@@ -52,7 +61,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   crumbs.push({ label: name })
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+    <>
       <Breadcrumb items={crumbs} />
       <header className="mt-6 mb-8 md:mb-10">
         <h1 className="font-serif text-3xl font-medium md:text-4xl">{name}</h1>
@@ -68,7 +77,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           searchParams={searchParams}
         />
       </Suspense>
-    </div>
+    </>
   )
 }
 

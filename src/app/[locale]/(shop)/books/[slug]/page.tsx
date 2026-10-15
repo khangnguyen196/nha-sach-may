@@ -37,9 +37,8 @@ const META_DESCRIPTION_LENGTH = 160
 const LOW_STOCK = 5
 
 // Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
-// dựng App Shell cho tham số chưa biết, mà page đọc params và header (LocaleSwitcher đọc useParams) nằm ngoài
-// <Suspense> → không dựng được → HTTP 500. Cho phép route chặn: slug mới render theo request, slug đã prerender giữ nguyên.
-export const instant = false
+// dựng App Shell cho tham số chưa biết. Page chỉ đọc `params` bên trong <Suspense> (và LocaleSwitcher đọc useParams
+// trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn là HTML tĩnh đầy đủ.
 
 export async function generateStaticParams() {
   const slugs = await getAllBookSlugs()
@@ -76,7 +75,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function BookPage({ params }: Props) {
+export default function BookPage({ params }: Props) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      <Suspense fallback={<BookPageSkeleton />}>
+        <BookContent params={params} />
+      </Suspense>
+    </div>
+  )
+}
+
+function BookPageSkeleton() {
+  return (
+    <div aria-hidden className="animate-pulse motion-reduce:animate-none">
+      <div className="h-5 w-48 rounded-sm bg-surface-raised" />
+      <div className="mt-6 grid gap-8 md:mt-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 lg:gap-16">
+        <div className="mx-auto aspect-[2/3] w-full max-w-xs rounded-cover bg-surface-raised md:max-w-none" />
+        <div className="space-y-4">
+          <div className="h-10 w-3/4 rounded-sm bg-surface-raised" />
+          <div className="h-5 w-1/2 rounded-sm bg-surface-raised" />
+          <div className="mt-8 h-24 rounded-md bg-surface-raised" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+async function BookContent({ params }: { params: Props['params'] }) {
   const { slug } = await params
   const [book, categories, locale, t] = await Promise.all([
     getBookBySlug(slug),
@@ -132,7 +157,7 @@ export default async function BookPage({ params }: Props) {
   })
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+    <>
       {/* Dữ liệu có cấu trúc (Book, Offer, BreadcrumbList): JSON đã thoát `<`, không phải JS chạy */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       <Breadcrumb items={crumbs} />
@@ -179,7 +204,7 @@ export default async function BookPage({ params }: Props) {
           </Suspense>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

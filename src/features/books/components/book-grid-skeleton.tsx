@@ -52,3 +52,14 @@ export function CatalogSkeleton({ withChips = false }: { withChips?: boolean }) 
     </div>
   )
 }
+
+/** Đường dẫn + tiêu đề + lưới: fallback của trang danh mục / tác giả khi slug chưa prerender (stream theo request) */
+export function PageHeaderSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="h-5 w-40 animate-pulse rounded-sm bg-surface-raised" />
+      <div className="mt-6 mb-8 h-10 w-64 max-w-full animate-pulse rounded-sm bg-surface-raised md:mb-10" />
+      <CatalogSkeleton />
+    </div>
+  )
+}

@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { resolveSort } from '@/features/books/catalog-params'
-import { CatalogSkeleton } from '@/features/books/components/book-grid-skeleton'
+import { CatalogSkeleton, PageHeaderSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { CatalogView } from '@/features/books/components/catalog-view'
 import { getAllAuthorSlugs, getAuthorBySlug, listBooks } from '@/features/books/queries'
@@ -15,9 +15,8 @@ import { localize } from '@/lib/i18n-db'
 type Props = PageProps<'/[locale]/authors/[slug]'>
 
 // Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
-// dựng App Shell cho tham số chưa biết, mà page đọc params và header (LocaleSwitcher đọc useParams) nằm ngoài
-// <Suspense> → không dựng được → HTTP 500. Cho phép route chặn: slug mới render theo request, slug đã prerender giữ nguyên.
-export const instant = false
+// dựng App Shell cho tham số chưa biết. Page chỉ đọc `params` bên trong <Suspense> (và LocaleSwitcher đọc useParams
+// trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn là HTML tĩnh đầy đủ.
 
 export async function generateStaticParams() {
   const slugs = await getAllAuthorSlugs()
@@ -37,14 +36,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // Ảnh tác giả (photo_url) chưa hiện: dữ liệu hiện toàn null và remotePatterns chỉ cho bucket book-covers.
-export default async function AuthorPage({ params, searchParams }: Props) {
+export default function AuthorPage({ params, searchParams }: Props) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      <Suspense fallback={<PageHeaderSkeleton />}>
+        <AuthorContent params={params} searchParams={searchParams} />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AuthorContent({ params, searchParams }: Pick<Props, 'params' | 'searchParams'>) {
   const { slug } = await params
   const [author, locale, t] = await Promise.all([getAuthorBySlug(slug), getLocale(), getTranslations('author')])
   if (!author) notFound()
   const bio = splitParagraphs(localize(author, 'bio', locale))
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+    <>
       <Breadcrumb items={[{ label: author.name }]} />
       <header className="mt-6 mb-8 md:mb-10">
         <h1 className="font-serif text-3xl font-medium md:text-4xl">{author.name}</h1>
@@ -65,7 +74,7 @@ export default async function AuthorPage({ params, searchParams }: Props) {
           <AuthorResults slug={author.slug} bookIds={author.bookIds} searchParams={searchParams} />
         </Suspense>
       </section>
-    </div>
+    </>
   )
 }
 
