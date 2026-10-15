@@ -686,6 +686,13 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       merge_cart: { Args: { p_items: Json }; Returns: undefined }
       normalize_vi: { Args: { txt: string }; Returns: string }
+      order_contact: {
+        Args: { p_order_id: number }
+        Returns: {
+          email: string
+          locale: string
+        }[]
+      }
       place_order: {
         Args: {
           p_address_id: number

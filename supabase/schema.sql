@@ -756,7 +756,8 @@ begin
 end;
 $$;
 
--- Khách tự hủy đơn (chỉ khi đơn còn 'pending')
+-- Khách tự hủy đơn: chỉ khi đơn còn 'pending' và chưa thanh toán (đơn chuyển khoản đã trả phải qua cửa hàng:
+-- chưa có quy trình hoàn tiền). Đơn COD luôn 'unpaid' tới khi giao.
 create or replace function public.cancel_order(p_order_id bigint, p_reason text default null)
 returns public.orders
 language plpgsql security definer set search_path = '' as $$
@@ -775,6 +776,7 @@ begin
    where id = p_order_id
      and user_id = auth.uid()
      and status = 'pending'
+     and payment_status <> 'paid'
   returning * into v_order;
 
   if not found then
@@ -836,6 +838,20 @@ begin
   on conflict (user_id, book_id)
   do update set quantity = least(public.cart_items.quantity + excluded.quantity, 99);
 end;
+$$;
+
+
+-- Email + ngôn ngữ email của người đặt (email báo trạng thái đơn). security definer: đọc auth.users.
+-- Chỉ trả khi đơn của chính user hoặc người gọi là admin; ngược lại 0 dòng.
+create or replace function public.order_contact(p_order_id bigint)
+returns table (email text, locale text)
+language sql stable security definer set search_path = '' as $$
+  select u.email::text, p.locale
+    from public.orders o
+    join auth.users u on u.id = o.user_id
+    join public.profiles p on p.id = o.user_id
+   where o.id = p_order_id
+     and (o.user_id = (select auth.uid()) or (select public.is_admin()));
 $$;
 
 
@@ -989,6 +1005,13 @@ create policy "vouchers_admin_all" on public.vouchers
   for all to authenticated
   using ((select public.is_admin())) with check ((select public.is_admin()));
 
+-- Quyền cột: admin chỉ sửa cột của form admin; used_count do place_order / trigger hủy đơn quản lý (security definer)
+revoke update on public.vouchers from anon, authenticated;
+grant  update (
+  code, description, description_en, discount_type, discount_value, max_discount,
+  min_order_value, usage_limit, starts_at, ends_at, is_active
+) on public.vouchers to authenticated;
+
 -- ORDERS: khách xem đơn của mình; chỉ admin cập nhật. Tạo đơn qua place_order().
 create policy "orders_select_own_or_admin" on public.orders
   for select to authenticated
@@ -1065,6 +1088,9 @@ grant  execute on function public.set_default_address(bigint) to authenticated;
 revoke execute on function public.merge_cart(jsonb) from public, anon;
 grant  execute on function public.merge_cart(jsonb) to authenticated;
 
+revoke execute on function public.order_contact(bigint) from public, anon;
+grant  execute on function public.order_contact(bigint) to authenticated;
+
 -- Chỉ dùng làm default của orders.order_code; gọi qua RPC sẽ đốt số thứ tự đơn
 revoke execute on function public.generate_order_code() from public, anon, authenticated;
 
@@ -1106,6 +1132,7 @@ create policy "book_covers_admin_delete" on storage.objects
 --   cancel_order(p_order_id, p_reason)
 --   set_default_address(p_address_id)
 --   merge_cart(p_items jsonb)               — gộp giỏ localStorage khi đăng nhập
+--   order_contact(p_order_id)               — email + locale người đặt (chủ đơn hoặc admin), dùng gửi email
 --
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
 --   AUTH_REQUIRED, INVALID_ADDRESS, BOOK_UNAVAILABLE, OUT_OF_STOCK, CART_EMPTY,
