@@ -42,7 +42,7 @@
 
 ---
 
-Trạng thái: **đã xong** (2026-10-15) trên nhánh `phase-3`, chờ review rồi merge. Duyệt: chọn hết các ★, kèm 5 bổ sung (mục "Bổ sung khi duyệt").
+Trạng thái: **đã xong và đã merge** vào `main` (2026-10-15). Duyệt: chọn hết các ★, kèm 5 bổ sung (mục "Bổ sung khi duyệt").
 
 Phạm vi: trang danh mục, trang sách, trang tác giả, trang tìm kiếm, filter/sort/phân trang qua URL. Không có giỏ hàng (Phase 5), đánh giá (Phase 9), sitemap/OG/JSON-LD (Phase 10).
 
@@ -167,6 +167,8 @@ Namespace mới: `catalog` (sort, filter, pagination, empty, kết quả), `book
 - [x] Rà lại: nhóm filter render hai nơi (hàng desktop + sheet) → bỏ `id`/`aria-labelledby`, dùng `aria-label` để không trùng id
 
 ## Quyết định tự chọn, cần duyệt
+
+**Đã duyệt cả 8** (2026-10-15). Nhánh `phase-3` đã merge vào `main` (fast-forward) và xóa.
 
 1. **Bật `experimental.messages.precompile` của next-intl** (bổ sung 4). Lý do: −9KB gzip ở mọi trang, không thêm dependency, e2e (26) vẫn xanh, plural/format `price` trong message chạy đúng. Rủi ro: API `experimental`, có thể đổi ở bản next-intl sau; messages bị biến thành AST nên `t.raw()` trả AST (hiện không dùng). Phương án khác: bỏ precompile, chỉ bọc `NextIntlClientProvider` quanh palette (cần sửa `useLocale`/`Link` không phụ thuộc context, phức tạp hơn mà vẫn kéo `use-intl` vào chunk palette).
 2. **Slug không tồn tại và `?page=999` trả HTTP 200 + UI 404 + `noindex`, không phải 404 thật.** Với Cache Components, trang có static shell nên stream bắt đầu trước khi `notFound()` chạy → status đã chốt 200 (docs Next: "After streaming starts, the status code remains 200"). `dynamicParams = false` không dùng được khi bật Cache Components. Google coi là soft 404, `noindex` giữ trang khỏi chỉ mục. e2e kiểm tra UI 404 + meta `noindex`, không kiểm tra status. Phương án khác: kiểm tra slug trong `proxy.ts` rồi rewrite sang 404 (thêm 1 query DB mỗi request, hoặc cache danh sách slug) → đề xuất để Phase 10 (SEO) nếu cần status thật.

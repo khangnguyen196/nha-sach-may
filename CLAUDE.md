@@ -97,7 +97,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 **Hiệu năng (mục tiêu trên mobile 4G)**
 - LCP < 2.5s, CLS < 0.1, INP < 200ms.
 - JS client: phần app thêm vào **ngoài framework ≤ 50KB gzip ở trang sách**. Baseline framework (app Next 16.4 + React 19.3 trống) ≈ 170KB gzip / ~147KB brotli, nên con số tuyệt đối < 100KB là bất khả thi.
-  Cách đo (`scripts/measure-js.mjs`): lấy mọi `<script src>` trong HTML prerender `.next/server/app/<route>.html`, gzip level 9 từng file, cộng lại, trừ 170KB. Đường dẫn là đường dẫn nội bộ (`vi/books/<slug>`, không phải `/sach/...`). Mốc 2026-10-15: trang chủ 212.4KB gzip = baseline + 42.4KB (chủ yếu `intl-messageformat` của client `useTranslations` ~16KB, lucide + radix + cva + cn ~15KB).
+  Cách đo (`scripts/measure-js.mjs`): lấy mọi `<script src>` trong HTML prerender `.next/server/app/<route>.html`, gzip level 9 từng file, cộng lại, trừ 170KB. Đường dẫn là đường dẫn nội bộ (`vi/books/<slug>`, không phải `/sach/...`). Mốc 2026-10-15: trang chủ 212.4KB gzip = baseline + 42.4KB (chủ yếu `intl-messageformat` của client `useTranslations` ~16KB, lucide + radix + cva + cn ~15KB). Sau Phase 3 (precompile messages, client leaf nhận chuỗi qua props): trang chủ và trang sách = baseline + 33.2KB.
 - `next/image` với `sizes` đúng; ảnh bìa đầu trang (LCP) có `preload` (Next 16 bỏ `priority`). Font qua `next/font` (subset `latin` + `vietnamese`, `display: swap`).
 - Component nặng/ít dùng (gallery zoom, rich editor admin) dùng `next/dynamic`.
 
@@ -123,6 +123,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 - Luôn dùng `Link`, `redirect`, `useRouter`, `usePathname` từ `i18n/navigation.ts`, không import từ `next/link` hay các hàm tương ứng của `next/navigation` (ESLint chặn). Hàm next-intl không bọc (`notFound`, `useParams`, `useSearchParams`) thì import từ `next/navigation` bình thường.
 - **Ngoại lệ — `LocaleSwitcher`** dùng `<a>` thường với `href` tính bằng `getPathname` (từ `i18n/navigation.ts`), không dùng `Link`: `Link` có prop `locale` luôn ép prefix kể cả locale mặc định, nên en→vi ra `/vi?x=1` và client nav giữ nguyên URL không canonical đó (proxy không kịp chuyển về `/?x=1`). `getPathname` không ép prefix. Đổi ngôn ngữ vì vậy là tải lại cả trang, chấp nhận được vì mọi nội dung đều đổi. Chỗ này có `eslint-disable-next-line no-restricted-syntax` kèm comment; ngoài ra không chỗ nào khác được dùng `<a href={…}>` cho link nội bộ.
 - `messages/vi.json` và `en.json` chia namespace theo feature (`common`, `book`, `cart`, `checkout`, `account`, `errors`…). Bật type-safe cho message keys. Hai file phải luôn **cùng bộ key**: có test so sánh, thiếu key thì fail.
+- Messages được biên dịch lúc build (`experimental.messages.precompile` của plugin next-intl trong `next.config.ts`) → client không kéo `intl-messageformat` (~9KB gzip). Đây là API **experimental**: mỗi lần nâng next-intl phải kiểm tra lại (changelog, build, `measure:js`, e2e). Client leaf nhận chuỗi đã dịch qua props; chỉ palette (tải lười) dùng `useTranslations`, nên `NextIntlClientProvider` chỉ truyền namespace `search`.
 - **Dữ liệu DB**: cột gốc là tiếng Việt, cột `*_en` là tiếng Anh (`name_en`, `description_en`, `bio_en`…). Dùng một helper duy nhất `localize(row, 'name', locale)` trong `lib/i18n-db.ts` để fallback `*_en` → cột gốc khi null. **Tên sách không dịch.**
 - Giá luôn tính bằng VND ở cả hai ngôn ngữ, format qua formatter của next-intl theo locale (vi: `98.000 ₫`, en: `₫98,000`). Ngày tháng cũng format qua formatter.
 - Lỗi từ DB/RPC là **mã** (`OUT_OF_STOCK`, `INVALID_VOUCHER`…, danh sách ở cuối `schema.sql`). `lib/errors.ts` map mã sang `errors.<CODE>`; thông tin chi tiết lấy từ `error.details` (JSON).
@@ -218,6 +219,7 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 ## Bảo mật
 
 - **Claude KHÔNG mở, đọc hay sửa `.env.local`**, kể cả khi nghi nó sai. Thay vào đó chạy `npm run check:env` (`scripts/check-env.mjs`, chỉ báo biến thiếu/sai định dạng, không in giá trị) rồi báo để tôi tự sửa.
+- Chỉ dùng `npm run check:env` để kiểm tra env. **Không** viết script nào khác đọc env (kể cả script tạm/debug rồi xóa, kể cả qua `loadEnvConfig` của `@next/env`). Script của dự án cần env (`import:books`, `scripts/e2e-user.ts` ở Phase 4) chỉ được viết khi đã có trong plan đã duyệt.
 - `.env.local` không commit. Client chỉ được dùng URL và anon/publishable key. `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng trong `scripts/` chạy local, **không bao giờ** import vào `src/`.
 - `/admin` kiểm tra `role = 'admin'` ở server (proxy và layout), không chỉ ẩn ở UI.
 - Validate mọi input ở server, kể cả khi client đã validate.
@@ -243,4 +245,4 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 7. Admin: sách (upload bìa, nhập `*_en`), danh mục, tác giả, đơn hàng, voucher
 8. Trang chủ hoàn chỉnh với các kệ
 9. Đánh giá, voucher ở checkout, VietQR, email theo locale
-10. SEO (sitemap, hreflang, OG image), test e2e luồng mua hàng, đo Lighthouse, deploy
+10. SEO (sitemap, hreflang, OG image, JSON-LD), 404 thật cho slug không tồn tại / `page` vượt quá (hiện trả UI 404 + `noindex` nhưng HTTP 200 vì Cache Components stream trước khi `notFound()` chạy; hướng xử lý: kiểm tra trong `proxy.ts`), test e2e luồng mua hàng, đo Lighthouse, deploy
