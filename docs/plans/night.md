@@ -48,8 +48,8 @@ Chủ dự án ngủ, sáng mới xem. Làm liền một mạch, **không dừng
 - [x] Báo cáo trong `phase-8.md`, tick tiến độ, cập nhật CLAUDE.md → push
 
 ### Phase 9 (nhánh `phase-9`, merge `phase-8` trước)
-- [ ] Theo checklist trong `phase-9.md`
-- [ ] Kiểm tra đủ bộ → báo cáo → push
+- [x] Theo checklist trong `phase-9.md`
+- [x] Kiểm tra đủ bộ → báo cáo → push
 
 ### Phase 10 (nhánh `phase-10`, merge `phase-9` trước)
 - [ ] Theo checklist trong `phase-10.md`

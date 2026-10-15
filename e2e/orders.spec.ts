@@ -190,8 +190,8 @@ test('đặt qua checkout → "Xem đơn hàng" → hủy kèm lý do: Đã hủ
   await setCartItem(users.orders.id, book.id, stockBefore - 3)
 
   await page.goto('/thanh-toan')
-  const place = main(page).getByTestId('checkout-summary').locator('button[type="submit"]')
-  await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]')
+  const place = main(page).getByTestId('checkout-summary').locator('button[type="submit"]:not([form])')
+  await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]:not([form])')
   await place.click()
   await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
   const code = (await main(page).getByTestId('order-code').textContent())?.trim() ?? ''

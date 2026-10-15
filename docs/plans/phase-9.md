@@ -1,6 +1,25 @@
 # Phase 9: Đánh giá, voucher ở checkout, VietQR, email theo locale
 
-Trạng thái: **plan tự duyệt trong đêm 2026-10-16** (chủ dự án vắng, xem `night.md`). Chọn hết ★; mọi lựa chọn không có trong Lộ trình nằm ở "Quyết định tự chọn — duyệt cuối".
+Trạng thái: **xong trên nhánh `phase-9`, chờ migration + duyệt** (đêm 2026-10-16, chủ dự án vắng: plan tự duyệt, chọn hết ★; lựa chọn ngoài Lộ trình ở "Quyết định tự chọn — duyệt cuối").
+
+## Báo cáo (2026-10-16)
+
+**Đã xong**: voucher ở checkout (URL), chuyển khoản VietQR (QR vẽ ở server, thông tin demo + cảnh báo), admin "Đã nhận tiền" + hủy đơn đã trả → hoàn tiền, email đơn hàng theo `profiles.locale` (chỉ log khi chưa có Resend), trang trung gian `/xac-nhan` cho link email auth + 2 template song ngữ, ô "Ngôn ngữ email" ghi cả `user_metadata.locale`, đánh giá (danh sách, viết / sửa / xóa, điểm trung bình ở trang sách), kiểm duyệt `/admin/danh-gia`.
+
+**Chờ migration** (`supabase/migrations/20261016020000_payments_email.sql`):
+- e2e `checkout.spec` "RPC: khách không tự hủy được đơn đã thanh toán" (desktop + mobile) và `admin-vouchers.spec` "không sửa được used_count": **fail cho tới khi chạy migration** (đúng dự kiến). UI đã ẩn nút hủy đơn đã trả từ Phase 6.
+- Email khi admin đổi trạng thái / xác nhận tiền: cần RPC `order_contact`; trước migration chỉ ghi log lỗi `[email] … order_contact`, không ảnh hưởng thao tác.
+- (Từ Phase 8) admin upload bìa ghi `cover_width`.
+
+**Kiểm tra**
+- `typecheck`, `lint`, `build`: sạch. Vitest: 44 file / 355 test.
+- e2e đầy đủ lượt 1: 150 qua, 8 fail, 40 không chạy (serial). Sửa: locator nút "Đặt hàng" trong test cũ (nút "Áp dụng" của ô mã giờ cũng nằm trong khối tóm tắt → `button[type="submit"]:not([form])`), test đánh giá bấm vào nhãn sao (radio ẩn), nhãn "Hủy đơn hàng". Lượt 2 (`desktop-account`, `mobile-account`): 92 qua; lượt 3 (`checkout` + `reviews`): 40 qua, 2 fail **chờ migration**. Admin (lượt 1): mọi test mới qua; 2 fail **chờ migration** (upload bìa `cover_width`, quyền cột `vouchers`).
+- `measure:js`: trang chủ + 39.1KB (không đổi), trang sách + **41.8KB** (trước 39.7: +2.1KB do chunk form đánh giá được Next liệt kê trong HTML của trang dù form nằm trong Suspense theo phiên). Trong ngân sách 50KB.
+
+**Việc của bạn**: `owner-todo.md` (migration, 2 template email, Resend / VietQR tùy chọn).
+
+---
+
 
 Phạm vi (Lộ trình CLAUDE.md): đánh giá sách đã nhận, voucher ở checkout, thanh toán chuyển khoản VietQR (khách không tự hủy đơn đã thanh toán; quyền cột `vouchers`), email theo locale, trang trung gian "Xác nhận" cho link trong email auth.
 
@@ -99,14 +118,34 @@ Xem `owner-todo.md`: chạy migration, dán 2 template email auth, (tùy chọn)
 
 ## Quyết định tự chọn — duyệt cuối
 
-(Bổ sung trong lúc làm; xem cuối file.)
+| # | Lựa chọn | Lý do | Phương án khác |
+|---|---|---|---|
+| 1 | Chọn hết ★ (1–10) ở trên | theo `night.md` | |
+| 2 | Voucher qua URL `?voucher=` + form GET riêng; ô và nút nằm trong cột tóm tắt (bên trong form đặt hàng) và gắn vào form GET bằng thuộc tính `form="checkout-voucher"` | form lồng nhau không hợp lệ; giữ bố cục (ô mã ngay trên nút đặt hàng) mà vẫn chạy không cần JS | đặt form mã ở ngoài cột tóm tắt (dưới cùng trang); hoặc Server Action + client state |
+| 3 | Áp mã giữ `?address=` (địa chỉ server đang chọn), không giữ radio vừa đổi mà chưa đặt hàng | form GET không đọc được radio của form khác khi không có JS | JS đồng bộ radio vào form GET |
+| 4 | Regex mã voucher dùng chung `features/checkout/voucher.ts` (admin import lại) | một nguồn cho cùng một ràng buộc DB | để hai bản |
+| 5 | **Dependency mới `uqr` 0.1.3** (MIT, 0 dependency, ~79KB unpacked) chỉ ở server; QR vẽ bằng JSX từ ma trận `encode()` (không `dangerouslySetInnerHTML`) | 0KB JS client; không gửi số tài khoản / số tiền sang dịch vụ ngoài | `img.vietqr.io` (hotlink, lộ dữ liệu đơn), tự viết bộ mã hóa QR |
+| 6 | Tài khoản demo: Vietcombank (BIN 970436), STK `0000000000`, tên `NHA SACH MAY DEMO`, luôn có khung cảnh báo; đủ 4 biến `VIETQR_*` mới dùng thông tin thật (thiếu một biến → demo cả nhóm) | số tài khoản toàn số 0 không tồn tại → quét nhầm cũng không chuyển được tiền | số tài khoản ngẫu nhiên (có thể là tài khoản thật của người khác) |
+| 7 | Admin "Đã nhận tiền" dùng lại `AdvanceOrderForm` (luôn render, nhãn `null` khi không còn bấm được) | thông báo kết quả còn sau `refresh()` | component riêng |
+| 8 | Admin hủy đơn đã thanh toán → hai câu update (hủy có điều kiện, rồi `paid → refunded`); câu thứ hai lỗi chỉ log | PostgREST không đặt cột theo điều kiện trong một câu; hiếm khi lỗi | RPC `cancel_order_admin` (thêm migration) |
+| 9 | Email: Resend REST qua `fetch` (không SDK), thiếu env → chỉ log; gửi trong `after()` | 0 dependency; dự án chạy được không cần dịch vụ | nodemailer + SMTP; Supabase Edge Function |
+| 10 | Người nhận email: khách tự đặt / tự hủy → email trong phiên + `profiles.locale` (chạy được trước migration); admin đổi trạng thái → RPC `order_contact` (**chờ migration**, trước đó chỉ log lỗi) | không cần service role trong app | cột `orders.email` chụp lúc đặt (phải viết lại `place_order`) |
+| 11 | Gửi lại cùng idempotency key (đơn đã có) vẫn gửi email "đã nhận đơn" lần nữa | `place_order` không báo đơn mới hay cũ; hiếm (bấm hai lần đã bị chặn ở client) | so `created_at` với thời điểm gọi |
+| 12 | Màu email là hằng `EMAIL_COLORS` trong `email-template.ts` (theo bảng light) | trình đọc thư không hiểu CSS variables | |
+| 13 | Email đơn chuyển khoản kèm thông tin chuyển khoản dạng chữ, không kèm ảnh QR | nhiều trình đọc thư chặn ảnh inline / data URI | ảnh QR PNG đính kèm (cần thư viện vẽ PNG) |
+| 14 | `POST /api/auth/confirm` kiểm header `Origin` (khác origin → coi như link hỏng) | chặn trang khác tự POST token của kẻ tấn công (login CSRF) | token CSRF trong form |
+| 15 | Template email auth song ngữ (Go template `if eq .Data.locale "en"`), vẫn trỏ `/api/auth/confirm` | template cũ đang dán vẫn chạy (GET giờ chỉ chuyển trang) | trỏ thẳng `/xac-nhan` (phải chọn đường dẫn theo locale trong template) |
+| 16 | Đánh giá: 20 mới nhất, không phân trang; form ngay ở trang sách; chọn sao bằng 5 radio (sao + số, sao được chọn tô màu) | 0 JS cho phần chọn sao; catalog chưa có đánh giá | trang "viết đánh giá" riêng từ đơn đã giao; tô dần các sao (cần JS / CSS phức tạp) |
+| 17 | Không thêm cột / bảng cho đánh giá; `display_name` vẫn chỉ điền lúc tạo (đổi tên sau không cập nhật) | trigger có sẵn | trigger update theo profile |
+| 18 | Token màu mới `qr`, `qr-background` (giống nhau ở hai theme) | QR phải tối trên nền sáng để quét được | |
+| 19 | Đổi tên migration theo ngày thật (`20261016020000_payments_email.sql`) | | |
 
 ## Tiến độ
 
-- [ ] Migration + `schema.sql` + types
-- [ ] Voucher ở checkout
-- [ ] VietQR: chọn phương thức, payload + QR, thẻ ở trang thành công / chi tiết, admin "Đã nhận tiền"
-- [ ] Email: `lib/email.ts`, email đơn hàng, `order_contact`
-- [ ] Trang trung gian xác nhận + template email auth + `user_metadata.locale`
-- [ ] Đánh giá: hiển thị, viết / sửa / xóa, admin
-- [ ] e2e; typecheck / lint / build / test / e2e; `measure:js`; báo cáo
+- [x] Migration + `schema.sql` + types (sửa tay; **chưa chạy**)
+- [x] Voucher ở checkout
+- [x] VietQR: chọn phương thức, payload + QR, thẻ ở trang thành công / chi tiết, admin "Đã nhận tiền"
+- [x] Email: `lib/email.ts`, email đơn hàng, `order_contact` (chờ migration)
+- [x] Trang trung gian xác nhận + template email auth + `user_metadata.locale`
+- [x] Đánh giá: hiển thị, viết / sửa / xóa, admin
+- [x] e2e; typecheck / lint / build / test / e2e (trừ 4 test chờ migration); `measure:js`; báo cáo

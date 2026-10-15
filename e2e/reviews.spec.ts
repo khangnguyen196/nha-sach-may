@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
   cleanupE2eAdminData,
   createE2eBook,
@@ -46,6 +46,10 @@ test.afterAll(async () => {
   await cleanupE2eAdminData(slugs)
 })
 
+/** Radio sao ẩn (sr-only) trong nhãn có icon: bấm vào nhãn như người dùng */
+const star = (form: Locator, label: string) =>
+  form.locator('label').filter({ has: form.page().getByRole('radio', { name: label }) })
+
 const reviews = (page: Page) => page.getByRole('main').getByRole('region', { name: 'Đánh giá', exact: true })
 
 async function openBook(page: Page) {
@@ -86,7 +90,8 @@ test('đã nhận sách: viết → hiện trong danh sách + điểm trung bìn
   await waitForHydration(page, 'main [data-testid="review-form"] button[type="submit"]')
 
   // Thiếu số sao → trình duyệt chặn (required); chọn 5 sao + nhận xét → lưu
-  await form.getByRole('radio', { name: '5 sao' }).check()
+  await star(form, '5 sao').click()
+  await expect(form.getByRole('radio', { name: '5 sao' })).toBeChecked()
   await form.getByLabel('Nhận xét').fill('Sách hay, giao nhanh (e2e)')
   await form.getByRole('button', { name: 'Gửi đánh giá' }).click()
   await expect(reviews(page).getByRole('status').filter({ hasText: 'Đã lưu đánh giá.' })).toBeVisible({ timeout: 15_000 })
@@ -101,7 +106,7 @@ test('đã nhận sách: viết → hiện trong danh sách + điểm trung bìn
   // Sửa: form hiện sẵn đánh giá của mình
   await expect(reviews(page).getByRole('heading', { name: 'Đánh giá của bạn' })).toBeVisible()
   await expect(form.getByRole('radio', { name: '5 sao' })).toBeChecked()
-  await form.getByRole('radio', { name: '3 sao' }).check()
+  await star(form, '3 sao').click()
   await form.getByRole('button', { name: 'Lưu thay đổi' }).click()
   await expect(page.getByTestId('rating-summary')).toContainText('3', { timeout: 15_000 })
   expect(await reviewsOf(book.id)).toMatchObject([{ rating: 3 }])

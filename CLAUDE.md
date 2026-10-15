@@ -74,6 +74,7 @@ e2e/                   # Playwright
 - **Server Action không đọc được `next/root-params`** → không gọi `getLocale()` hay `getTranslations()` không kèm locale trong action. Page bind locale sẵn (`action.bind(null, locale)`), action parse lại bằng `parseLocale` (tham số bind đi qua client). Action trả mã lỗi; chuỗi đã dịch xuống form qua props (`getFormMessages`). Lỗi có tham số ICU (`OUT_OF_STOCK`: title, stock) thì action dịch sẵn bằng `withMessage(locale, failure)` (`lib/error-message.ts`, dùng `getTranslations({ locale })` — chạy được trong action) và client hiện `failure.message`.
 - **Proxy và Route Handler** không import `i18n/navigation.ts` (`getPathname` kéo theo `i18n/request.ts` → `next/root-params`, không build được ở đó): dùng `localizedPath` trong `i18n/paths.ts`.
 - Đọc phiên: `getCurrentUser()` (`lib/auth.ts`, `getClaims()` + `await io()` trước đó vì Supabase so hạn token bằng `Date.now()`), luôn trong `<Suspense>`. Trang cần đăng nhập dùng `requireUser(locale, href)`. Redirect bằng giá trị lấy từ URL (`?next=`) phải qua `safeNextPath`.
+- Link trong email auth: `GET /api/auth/confirm` **không** tiêu thụ token, chỉ chuyển sang trang trung gian `/xac-nhan` (`/en/confirm`) có nút "Xác nhận" → form POST về `/api/auth/confirm` (kiểm `Origin`) mới gọi `verifyOtp`. Template email (song ngữ theo `{{ .Data.locale }}`) ở `supabase/templates/`, dán vào Dashboard. Ô "Ngôn ngữ email" ghi cả `profiles.locale` lẫn `user_metadata.locale`.
 - Pathname nội bộ (thư mục trong `app/[locale]`) bằng tiếng Anh; URL tiếng Việt map trong `i18n/routing.ts`. Trong code luôn viết `<Link href="/books/...">`.
 
 Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
@@ -102,6 +103,10 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
   - Đổi tồn kho (đặt / hủy đơn) → `updateTag('book:{id}')` từng sách; các cache danh sách đã gắn tag theo từng sách trả về.
 - Form gửi Server Action dùng `useFormAction` (`lib/use-form-action.ts`): giữ progressive enhancement, bỏ qua submit khi đang gửi, lỗi mạng → `UNKNOWN` trong khối lỗi của form (không lên error boundary).
 - Tiền tạm tính ở giỏ/checkout (subtotal, ship, giảm giá, mốc freeship) lấy từ RPC `quote_order` (giỏ khách: `quote_items`), không tự tính ở client.
+- Voucher ở checkout nằm trên URL (`/thanh-toan?voucher=…`, `normalizeVoucherCode`): form GET riêng (ô + nút trong form đặt hàng, gắn bằng thuộc tính `form`), `getCheckoutQuote` tính lại; mã sai / chưa đủ tối thiểu → lỗi dưới ô, tổng không giảm. Mã hợp lệ đi vào form đặt hàng qua hidden `voucher_code`.
+- Thanh toán: COD hoặc chuyển khoản VietQR. Payload EMVCo tự dựng (`features/payments/vietqr.ts`), QR vẽ SVG ở server bằng `uqr` (0KB client). Tài khoản nhận `getBankAccount()`: đủ 4 biến `VIETQR_*` thì thật, thiếu → **demo** + luôn cảnh báo "đừng chuyển tiền". Admin bấm "Đã nhận tiền" (update có điều kiện `payment_status = 'unpaid'`); hủy đơn đã thanh toán → `refunded` (hoàn tiền ngoài hệ thống).
+- Email đơn hàng: `notifyOrder` (`features/orders/emails.ts`) gọi trong `after()`, không throw. `lib/email.ts`: Resend REST qua `fetch` khi có `RESEND_API_KEY` + `EMAIL_FROM`, thiếu → chỉ log (địa chỉ che `n***@…`). Ngôn ngữ = `profiles.locale` của người đặt; người nhận: khách tự đặt / hủy lấy từ phiên, admin đổi trạng thái lấy qua RPC `order_contact`. Màu trong HTML email là hằng `EMAIL_COLORS` (ngoại lệ "không hard-code màu": trình đọc thư không hiểu CSS variables).
+- Đánh giá: danh sách công khai `getBookReviews` (cache, tag `book:{id}`), phần theo phiên (`MyReview`) trong `<Suspense>` riêng; ghi / sửa / xóa → `updateTag('book:{id}')`. Chưa nhận sách → RLS chặn insert (`42501` → `REVIEW_NOT_ALLOWED`). Admin gỡ ở `/admin/danh-gia`.
 
 **State**
 - Filter, sort, page, query tìm kiếm nằm trên **URL searchParams**, không ở `useState`. Link chia sẻ được, back/forward đúng, render được ở server.
@@ -165,10 +170,10 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 - Tiền là `integer` VND.
 - RLS bật cho mọi bảng. Không tắt RLS, không dùng service role trong app.
 - Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
-- Quyền cột (migration `admin.sql`): `orders` chỉ update được `status`, `payment_status`, `cancelled_reason`; `books` không update được cột do DB quản lý. Admin thêm ô sửa cột mới của `books` → thêm cột vào `grant update (…)`.
+- Quyền cột (migration `admin.sql`, `payments_email.sql`): `orders` chỉ update được `status`, `payment_status`, `cancelled_reason`; `books` không update được cột do DB quản lý; `vouchers` không update được `used_count`, `created_at`. `cancel_order` không hủy đơn `payment_status = 'paid'`. Admin thêm ô sửa cột mới của `books` → thêm cột vào `grant update (…)`.
 - Luồng trạng thái đơn chặn ở trigger `handle_order_status_change` (mọi role, kể cả service role; bảng chuyển trong `private.order_status_transition_allowed`): `pending → confirmed → shipping → delivered`, hủy được từ 3 trạng thái đầu; `delivered`, `cancelled` là trạng thái cuối (`ORDER_INVALID_TRANSITION`, `ORDER_REOPEN_FORBIDDEN`). COD chuyển `delivered` → `payment_status = 'paid'`. App có bản trùng `nextStatuses` (`features/admin/orders/status.ts`, Vitest đọc bảng trong `schema.sql`): sửa luồng thì sửa cả hai. Admin đổi trạng thái bằng update có điều kiện `status = <trạng thái đang hiển thị>`: 0 dòng (khách vừa tự hủy…) → `ORDER_STATUS_CHANGED` + `refresh()`.
 - Bucket `book-covers` chỉ nhận `image/webp` ≤ 1MB. Ảnh bìa qua `toCoverWebp` (`lib/cover-image.ts`, dùng chung import và admin); admin lưu tên mới mỗi lần (`<book_id>-<8 hex>.webp`, ảnh cũ bị CDN cache 1 năm), chỉ xóa ảnh cũ khi không đơn nào còn trỏ tới (`order_items.cover_url`). `toCoverWebp` trả kèm chiều rộng thật → import, admin upload, `scripts/covers.ts` ghi `books.cover_width` (kệ trang chủ ưu tiên bìa ≥ `SHARP_COVER_WIDTH` = 300px; null = chưa đo).
-- RPC cho app: `search_books`, `quote_order`, `quote_items`, `place_order`, `cancel_order`, `set_default_address`, `merge_cart` (danh sách + mã lỗi ở cuối `schema.sql`). Hàm nội bộ nằm trong schema `private`, không lộ ra API.
+- RPC cho app: `search_books`, `quote_order`, `quote_items`, `place_order`, `cancel_order`, `set_default_address`, `merge_cart`, `order_contact` (danh sách + mã lỗi ở cuối `schema.sql`). Hàm nội bộ nằm trong schema `private`, không lộ ra API.
 - Tìm kiếm qua RPC `search_books(q)`: gõ không dấu, khớp từng từ không cần đúng thứ tự. Phân trang bằng `.range()` + `count: 'exact'` (`estimated` trên RPC không chính xác).
 - Sách chỉ gắn vào danh mục lá. Trang danh mục cha lọc `category_id in (<id các danh mục con>)`.
 - Địa chỉ 2 cấp: Tỉnh/Thành phố → Phường/Xã. Đổi địa chỉ mặc định qua RPC `set_default_address`.
@@ -214,6 +219,7 @@ Tên token theo **quy ước shadcn** để thêm component không phải sửa 
 | `success` | `#4ADE80` | `#15803D` | trạng thái thành công |
 | `border` | `rgb(255 255 255 / 0.08)` | `rgb(0 0 0 / 0.10)` | viền 1px |
 | `input` | `rgb(255 255 255 / 0.14)` | `rgb(0 0 0 / 0.16)` | viền ô nhập |
+| `qr`, `qr-background` | `#000000`, `#FFFFFF` | như dark | mã VietQR (app ngân hàng cần module tối trên nền sáng) |
 
 Alias (không có giá trị riêng, trỏ về token ở trên):
 

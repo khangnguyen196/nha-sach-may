@@ -72,7 +72,7 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
             {labels.ratingOptions.map((label, index) => (
               <label
                 key={label}
-                className="group flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+                className="group relative flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
               >
                 <input
                   type="radio"

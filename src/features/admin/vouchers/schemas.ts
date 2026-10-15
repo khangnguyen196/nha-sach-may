@@ -1,10 +1,9 @@
 import { z } from 'zod'
+import { VOUCHER_CODE } from '@/features/checkout/voucher'
 import { Constants } from '@/types/database'
 import { checkbox, integer, optionalInteger, optionalText } from '../schemas'
 import { vnInputToIso } from './datetime'
 
-/** Mã: chữ không dấu, số, gạch ngang, gạch dưới; cột `code` có check `code = upper(code)` → viết HOA trước khi lưu */
-export const VOUCHER_CODE = /^[A-Z0-9_-]{3,30}$/
 const MONEY_MAX = 100_000_000
 
 /** Ô `datetime-local` (giờ VN) không bắt buộc: rỗng → null, có giá trị → ISO UTC */

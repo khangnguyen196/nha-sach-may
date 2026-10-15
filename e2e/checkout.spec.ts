@@ -78,14 +78,15 @@ test.afterEach(async ({ users }) => {
   }
 })
 
+// Nút "Đặt hàng" (nút "Áp dụng" của ô mã giảm giá cũng nằm trong khối tóm tắt nhưng thuộc form GET riêng: form="…").
 // Luôn tìm trong <main>: lúc trang vừa hydrate, React có thể còn giữ một bản sao ẩn của boundary đang stream
 // (`<div hidden id="S:…">` cuối body) → locator theo test id ngoài <main> khớp 2 phần tử
-const placeButton = (page: Page) => page.getByRole('main').getByTestId('checkout-summary').locator('button[type="submit"]')
+const placeButton = (page: Page) => page.getByRole('main').getByTestId('checkout-summary').locator('button[type="submit"]:not([form])')
 const checkoutError = (page: Page) => page.getByRole('main').getByTestId('checkout-error')
 
 async function openCheckout(page: Page, path = '/thanh-toan') {
   await page.goto(path)
-  await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]')
+  await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]:not([form])')
 }
 
 test('luồng mua COD: khách thêm sách → đăng nhập → đặt hàng → trang thành công, tồn kho mới', async ({
@@ -492,7 +493,7 @@ test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đ�
     // Địa chỉ đang chọn được giữ khi áp mã
     await expect(main(page).getByTestId('checkout-address-option').getByRole('radio')).toBeChecked()
 
-    await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]')
+    await waitForHydration(page, 'main [data-testid="checkout-summary"] button[type="submit"]:not([form])')
     await placeButton(page).click()
     await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
     await expect(main(page).getByTestId('order-discount')).toHaveText(`−${vnd(discount)}`)
@@ -538,14 +539,14 @@ test('chuyển khoản VietQR: trang thành công + chi tiết đơn có mã QR,
   await page.goto(`/tai-khoan/don-hang/${code}`)
   await expect(main(page).getByTestId('order-payment-method')).toHaveText('Chuyển khoản ngân hàng (VietQR)')
   await expect(main(page).getByTestId('vietqr').getByTestId('vietqr-content')).toHaveText(code)
-  await expect(main(page).getByText('Hủy đơn', { exact: true })).toBeVisible()
+  await expect(main(page).getByText('Hủy đơn hàng', { exact: true })).toBeVisible()
 
   // Cửa hàng đối soát xong → đã thanh toán: không còn QR, khách không tự hủy được
   await setPaymentStatus(order?.id ?? 0, 'paid')
   await page.reload()
   await expect(main(page).getByTestId('order-payment-status')).toHaveText('Đã thanh toán')
   await expect(main(page).getByTestId('vietqr')).toHaveCount(0)
-  await expect(main(page).getByText('Hủy đơn', { exact: true })).toHaveCount(0)
+  await expect(main(page).getByText('Hủy đơn hàng', { exact: true })).toHaveCount(0)
   expect(errors).toEqual([])
 })
 
