@@ -94,8 +94,8 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
 - [x] `i18n/routing.ts`: pathname auth + tài khoản + sổ địa chỉ
 - [x] `lib/errors.ts` + `messages/*.json → errors`: mã lỗi auth; namespace `auth`, `account`, `address`
 - [x] `lib/auth.ts` (`getCurrentUser`), `features/auth/{schemas,actions}.ts`, `safeNextPath` + Vitest (schema, map `AuthError.code`)
-- [ ] Trang `(auth)`: đăng nhập, đăng ký, quên mật khẩu, đặt lại mật khẩu; `/api/auth/confirm`
-- [ ] `proxy.ts`: chặn `/tai-khoan/*` khi chưa đăng nhập, chuyển người đã đăng nhập khỏi trang đăng nhập/đăng ký
+- [x] Trang `(auth)`: đăng nhập, đăng ký, quên mật khẩu, đặt lại mật khẩu; `/api/auth/confirm`
+- [x] `proxy.ts`: chặn `/tai-khoan/*` khi chưa đăng nhập, chuyển người đã đăng nhập khỏi trang đăng nhập/đăng ký
 - [ ] Header: trạng thái đăng nhập (Server Component trong `<Suspense>`); trang tài khoản + đăng xuất + ô chọn ngôn ngữ email (`profiles.locale`)
 - [ ] Sổ địa chỉ: queries, actions (tạo / sửa / xóa / đặt mặc định), `/api/divisions/[province]`, trang danh sách / thêm / sửa
 - [ ] Đặt lại mật khẩu: `updatePassword` + `signOut({ scope: 'others' })`

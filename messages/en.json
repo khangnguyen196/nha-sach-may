@@ -189,14 +189,14 @@
       "hasAccount": "Already have an account?",
       "loginLink": "Sign in",
       "checkInboxTitle": "Check your inbox",
-      "checkInbox": "If {email} isn't registered yet, we've sent a confirmation link to it. Open the link to activate your account."
+      "checkInbox": "If the email below isn't registered yet, we've sent it a confirmation link. Open the link to activate your account."
     },
     "forgot": {
       "title": "Forgot password",
       "description": "Enter the email you registered with and we'll send you a link to reset your password.",
       "submit": "Send link",
       "sentTitle": "Check your inbox",
-      "sent": "If {email} has an account, a password reset link has been sent to it. The link can only be used once.",
+      "sent": "If the email below has an account, a password reset link has been sent to it. The link can only be used once.",
       "backToLogin": "Back to sign in"
     },
     "reset": {

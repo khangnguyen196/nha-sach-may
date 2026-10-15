@@ -3,7 +3,6 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locale as rootLocale } from 'next/root-params'
-import { Footer } from '@/components/layout/footer'
 import { Header } from '@/components/layout/header'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 import { routing } from '@/i18n/routing'
@@ -42,10 +41,8 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
               chuỗi đã dịch qua props → không gửi cả file messages xuống, không kéo intl-messageformat vào bundle đầu. */}
           <NextIntlClientProvider messages={{ search: messages.search }}>
             <Header />
-            <main id="main" className="flex-1">
-              {children}
-            </main>
-            <Footer />
+            {/* <main> + footer do layout của từng route group dựng: (shop) có footer đầy đủ, (auth) chỉ dòng bản quyền */}
+            {children}
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

@@ -189,14 +189,14 @@
       "hasAccount": "Đã có tài khoản?",
       "loginLink": "Đăng nhập",
       "checkInboxTitle": "Kiểm tra hộp thư của bạn",
-      "checkInbox": "Nếu email {email} chưa được đăng ký, chúng tôi đã gửi một liên kết xác nhận tới đó. Mở liên kết để kích hoạt tài khoản."
+      "checkInbox": "Nếu email dưới đây chưa được đăng ký, chúng tôi đã gửi tới đó một liên kết xác nhận. Mở liên kết để kích hoạt tài khoản."
     },
     "forgot": {
       "title": "Quên mật khẩu",
       "description": "Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
       "submit": "Gửi liên kết",
       "sentTitle": "Kiểm tra hộp thư của bạn",
-      "sent": "Nếu {email} có tài khoản, liên kết đặt lại mật khẩu đã được gửi tới đó. Liên kết chỉ dùng được một lần.",
+      "sent": "Nếu email dưới đây có tài khoản, liên kết đặt lại mật khẩu đã được gửi tới đó. Liên kết chỉ dùng được một lần.",
       "backToLogin": "Quay lại đăng nhập"
     },
     "reset": {

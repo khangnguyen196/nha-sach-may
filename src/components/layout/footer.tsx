@@ -40,8 +40,22 @@ export async function Footer() {
         )}
       </div>
       <div className="border-t">
-        <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-subtle sm:px-6">{t('copyright')}</p>
+        <Copyright text={t('copyright')} />
       </div>
     </footer>
   )
+}
+
+/** Footer tối giản cho trang đăng nhập / đăng ký: chỉ dòng bản quyền, không danh mục */
+export async function CompactFooter() {
+  const t = await getTranslations('layout')
+  return (
+    <footer className="border-t">
+      <Copyright text={t('copyright')} />
+    </footer>
+  )
+}
+
+function Copyright({ text }: { text: string }) {
+  return <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-subtle sm:px-6">{text}</p>
 }
