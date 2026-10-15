@@ -1,10 +1,18 @@
 # Phase 7: Admin
 
-Trạng thái: **chờ duyệt** (2026-10-15). Chỉ có plan, chưa code.
+Trạng thái: **đã duyệt, đang làm 7a** trên nhánh `phase-7a` (2026-10-15). Chọn hết các ★ (mục 3: chuỗi admin chỉ tiếng Việt, ngoại lệ ghi vào CLAUDE.md), bổ sung 2 điểm (xem "Bổ sung khi duyệt").
 
 Phạm vi (lộ trình): quản trị sách (sửa thông tin, `*_en`, giá, tồn kho, ẩn / hiện, upload bìa), danh mục, tác giả, đơn hàng (đổi trạng thái, hủy), voucher. Chỉ tiếng Việt, dưới `/admin` (không có `[locale]`).
 
 **Không** có: nhập sách mới từ Google Books trong admin (vẫn dùng `npm run import:books`), ảnh phụ (`book_images`), sửa NXB (chỉ chọn NXB có sẵn), quản lý user / phân quyền (đặt admin vẫn bằng SQL), báo cáo doanh thu, email báo trạng thái đơn (Phase 9), rich editor (mô tả là textarea).
+
+## Bổ sung khi duyệt
+
+1. **Dọn dữ liệu e2e sau migration.** Trigger mới chặn `delivered → cancelled` với **mọi** role, kể cả service role. `cancelAndDeleteOrders` (`scripts/e2e-user.ts`) đang hủy đơn để trigger hoàn kho → sẽ lỗi với đơn test đã tới `delivered` (7b), cả câu `update` hỏng, sót đơn và không hoàn kho sách test.
+   - Sửa: đơn `delivered` thì đọc `order_items`, xóa đơn, rồi tự cộng lại `stock` và trừ `sold_count` (không âm) bằng service role, giảm `used_count` của voucher nếu có (như trigger làm khi hủy). Đơn ở trạng thái khác giữ cách cũ (hủy → trigger hoàn kho → xóa).
+   - Thứ tự "đọc → xóa → hoàn kho": lỗi giữa chừng thì thiếu hoàn kho chứ không hoàn hai lần khi chạy lại.
+   - Test (`e2e/admin-cleanup.spec.ts`, không mở trình duyệt): user e2e đặt sách e2e qua RPC, service role đưa đơn `pending → confirmed → shipping → delivered`, gọi `cancelAndDeleteOrders` → đơn bị xóa, `stock` / `sold_count` về như trước khi đặt.
+2. **Tìm sách trong admin bằng `ilike`** trên `search_text` (tên + phụ đề + ISBN + tác giả, đã bỏ dấu, có index trigram) thay vì `title` / `isbn`: gõ không dấu vẫn ra, một cột nên không cần `.or()` (giá trị trong `.or()` phải quote thêm một lớp). Từ khóa bỏ dấu ở app giống `normalize_vi`, tách theo khoảng trắng, mọi từ phải khớp (như `search_books`). Mỗi từ escape `\`, `%`, `_`; `*` đổi thành `_` vì PostgREST coi `*` trong mẫu like là `%`. Hàm thuần trong `src/lib/like.ts` + Vitest.
 
 ## Có cần migration không
 
