@@ -45,7 +45,14 @@ export type FieldErrors = Partial<Record<string, ValidationKey>>
 
 export type Result<T> =
   | { ok: true; data: T }
-  | { ok: false; code: ErrorCode; details?: ErrorDetails; fieldErrors?: FieldErrors }
+  | {
+      ok: false
+      code: ErrorCode
+      details?: ErrorDetails
+      fieldErrors?: FieldErrors
+      /** Chuỗi đã dịch, cho lỗi có tham số ICU hiện ở client leaf (lib/error-message.ts) */
+      message?: string
+    }
 
 export type Failure = Extract<Result<never>, { ok: false }>
 

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Fragment, Suspense } from 'react'
+import { Button } from '@/components/ui/button'
 import { Breadcrumb, type Crumb } from '@/features/books/components/breadcrumb'
 import { Shelf, ShelfSkeleton } from '@/features/books/components/shelf'
 import {
@@ -15,6 +16,10 @@ import {
   type Category,
 } from '@/features/books/queries'
 import { discountPercent, splitParagraphs, truncateText } from '@/features/books/utils'
+import { addToCart, addToCartFromForm } from '@/features/cart/actions'
+import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
+import { cartLimit } from '@/features/cart/guest-cart'
+import { MAX_LINES } from '@/features/cart/schemas'
 import { localeAlternates } from '@/i18n/alternates'
 import { Link } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
@@ -173,9 +178,47 @@ async function PriceBlock({ book }: { book: BookDetail }) {
       <p className={book.stock > 0 ? 'mt-2 text-sm text-success' : 'mt-2 text-sm text-muted-foreground'}>
         {stockLabel}
       </p>
-      {/* Chỗ của nút "Thêm vào giỏ" (Phase 5): giữ sẵn chiều cao để thêm nút sau không đẩy nội dung bên dưới */}
-      <div aria-hidden className="mt-6 h-11" />
+      <div className="mt-6">
+        <AddToCart book={book} />
+      </div>
     </div>
+  )
+}
+
+/** CTA primary duy nhất của trang. Hết hàng → nút disabled, không cần JS. */
+async function AddToCart({ book }: { book: BookDetail }) {
+  const [t, tCart, tErrors, locale] = await Promise.all([
+    getTranslations('book'),
+    getTranslations('cart'),
+    getTranslations('errors'),
+    getLocale(),
+  ])
+  const limit = cartLimit(book.stock)
+  if (limit === 0) {
+    return (
+      <Button size="lg" className="h-11 w-full px-6 text-base sm:w-auto" disabled>
+        {t('outOfStock')}
+      </Button>
+    )
+  }
+
+  return (
+    <AddToCartButton
+      bookId={book.id}
+      limit={limit}
+      add={addToCart.bind(null, locale, book.id)}
+      formAction={addToCartFromForm.bind(null, locale, book.id, book.slug)}
+      labels={{
+        add: tCart('add'),
+        adding: tCart('adding'),
+        added: tCart('added'),
+        viewCart: tCart('viewCart'),
+        limitReached: tCart('limitReached', { max: limit }),
+        cartFull: tCart('cartFull', { max: MAX_LINES }),
+        storageError: tCart('storageError'),
+        error: tErrors('UNKNOWN'),
+      }}
+    />
   )
 }
 

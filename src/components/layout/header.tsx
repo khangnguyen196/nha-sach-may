@@ -1,13 +1,10 @@
-import { ShoppingBagIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { buttonVariants } from '@/components/ui/button'
 import { SearchTrigger } from '@/features/books/components/search-trigger'
+import { CartLink } from '@/features/cart/components/cart-link'
 import { Link } from '@/i18n/navigation'
 import { AccountLink } from './account-link'
 import { LocaleSwitcher } from './locale-switcher'
 import { ThemeToggle } from './theme-toggle'
-
-const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-muted-foreground' })
 
 export async function Header() {
   const [t, tCommon] = await Promise.all([getTranslations('layout'), getTranslations('common')])
@@ -31,10 +28,7 @@ export async function Header() {
         <div className="flex items-center sm:gap-0.5">
           <LocaleSwitcher labels={{ short: t('switchLocaleShort'), full: t('switchLocale') }} />
           <ThemeToggle labels={{ toLight: t('toLightTheme'), toDark: t('toDarkTheme') }} />
-          <Link href="/cart" className={iconLink}>
-            <ShoppingBagIcon aria-hidden />
-            <span className="sr-only">{t('cart')}</span>
-          </Link>
+          <CartLink />
           <AccountLink />
         </div>
       </div>

@@ -146,10 +146,10 @@ Migration: `supabase/migrations/20261015090000_quote_items.sql` (idempotent, ch�
 - [x] Migration `quote_items` + `quote_order` lọc `is_active` + `schema.sql`
 - [ ] Bạn chạy SQL + sinh types (xem "Việc của chủ dự án")
 - [ ] Kiểm chứng `getTranslations({ locale })` trong Server Action (cần chọn 10)
-- [ ] `features/cart/{schemas,guest-cart}.ts` + store + Vitest
+- [x] `features/cart/{schemas,guest-cart}.ts` + store + Vitest
 - [ ] `features/cart/{queries,actions}.ts`, `/api/cart/guest`
-- [ ] Header: `CartLink` / `CartBadge` / `CartSync`
-- [ ] Trang sách: nút "Thêm vào giỏ"
+- [x] Header: `CartLink` / `CartBadge` / `CartSync` (khóa `navigator.locks`)
+- [x] Trang sách: nút "Thêm vào giỏ"
 - [ ] Trang giỏ: `CartView`, tóm tắt, freeship, trạng thái rỗng / lỗi
 - [ ] Messages `cart` vi/en
 - [ ] e2e `cart.spec.ts`
