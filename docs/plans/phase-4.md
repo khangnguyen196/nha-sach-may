@@ -83,9 +83,53 @@ Namespace mới: `auth` (form, nhãn, thông báo "Kiểm tra hộp thư", đặ
 
 ## Việc của chủ dự án (Supabase Dashboard, Claude không làm được)
 
-- Authentication → URL Configuration: Site URL + Redirect URLs (`http://localhost:3000/**`, domain Vercel sau này).
-- Email Templates "Confirm signup" và "Reset password": link đổi sang `{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=...` (`type=recovery` cho đặt lại mật khẩu).
-- SMTP mặc định của Supabase giới hạn vài email/giờ: đủ để thử tay; e2e không gửi email (tài khoản test tạo bằng admin API).
+Tóm tắt: URL Configuration, bật xác nhận email, sửa 2 email template. Hướng dẫn từng bước ngay bên dưới. e2e **không** phụ thuộc mấy bước này (tài khoản test tạo bằng admin API, link đặt lại mật khẩu lấy bằng `generateLink`, không gửi email); chúng cần cho đăng ký / quên mật khẩu bằng tay.
+
+### Hướng dẫn từng bước
+
+**1. URL Configuration**
+1. Supabase Dashboard → chọn project → **Authentication** → **URL Configuration**.
+2. **Site URL**: `http://localhost:3000` → **Save**. (Deploy Vercel ở Phase 10 thì đổi thành domain thật.)
+3. **Redirect URLs** → **Add URL**: `http://localhost:3000/**` → **Save**. (Sau này thêm `https://<domain-vercel>/**`.)
+
+**2. Bật xác nhận email** (quyết định 2)
+1. **Authentication** → **Sign In / Providers** → **Email**.
+2. Bật **Confirm email** → **Save**.
+3. Cùng trang: **Minimum password length** để 8 cho khớp form (form đã chặn < 8; để thấp hơn cũng không sao).
+
+**3. Email template "Confirm signup"**
+1. **Authentication** → **Emails** (hoặc **Email Templates**) → tab **Confirm signup**.
+2. Thay toàn bộ ô **Message body** bằng:
+   ```html
+   <h2>Xác nhận email / Confirm your email</h2>
+   <p>Bấm vào liên kết dưới đây để kích hoạt tài khoản Nhà Sách Mây.<br>Click the link below to activate your Nhà Sách Mây account.</p>
+   <p><a href="{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=email&locale={{ .Data.locale }}">Xác nhận email / Confirm email</a></p>
+   ```
+3. **Save changes**.
+
+**4. Email template "Reset password"**
+1. Cùng chỗ → tab **Reset password** (hoặc **Reset Password**).
+2. Thay **Message body** bằng:
+   ```html
+   <h2>Đặt lại mật khẩu / Reset your password</h2>
+   <p>Bấm vào liên kết dưới đây để đặt mật khẩu mới. Liên kết chỉ dùng được một lần.<br>Click the link below to choose a new password. The link can only be used once.</p>
+   <p><a href="{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&locale={{ .Data.locale }}">Đặt lại mật khẩu / Reset password</a></p>
+   ```
+3. **Save changes**.
+
+Ghi chú về template:
+- Link trỏ `/api/auth/confirm` (không dùng `{{ .ConfirmationURL }}`): route gọi `verifyOtp({ token_hash, type })`, ghi cookie phiên rồi chuyển tới `/tai-khoan` (xác nhận đăng ký) hoặc `/dat-lai-mat-khau` (đặt lại mật khẩu). `{{ .Data.locale }}` là `user_metadata.locale` ghi lúc đăng ký (`vi`/`en`) → trang đích đúng ngôn ngữ; trống hoặc lạ thì về tiếng Việt. Không cần `next=` trong template (route tự chọn trang đích theo `type`); `next` chỉ dùng ở e2e.
+- Link hỏng / hết hạn / đã dùng → `/dang-nhap?error=LINK_EXPIRED` (đăng ký) hoặc `/quen-mat-khau?error=LINK_EXPIRED` (đặt lại mật khẩu), có thông báo.
+- Email theo `profiles.locale` (một ngôn ngữ) để Phase 9.
+
+**5. Giới hạn SMTP mặc định của Supabase** (không phải cấu hình, chỉ cần biết khi thử tay)
+- Chỉ gửi được tới email của **thành viên trong organization Supabase** (Organization → Team). Email khác: Supabase trả `email_address_not_authorized`, app hiện "Đã có lỗi xảy ra". Thử tay đăng ký bằng email của chính bạn, hoặc cấu hình SMTP riêng (Authentication → Emails → SMTP Settings) nếu cần.
+- Giới hạn vài email/giờ (Authentication → Rate Limits). Vượt → app hiện "Bạn thao tác quá nhanh…".
+
+**6. (Tùy chọn) Rút ngắn thời gian phiên cũ còn hiệu lực sau khi đổi mật khẩu**
+- Project Settings → **JWT Keys** (hoặc Authentication → Sessions) → **Access token expiry** (mặc định 3600 giây). Giảm (VD 600) thì phiên trên thiết bị khác hết hạn sớm hơn sau khi bị thu hồi (xem mục Auth → Giới hạn). Không bắt buộc.
+
+**Kiểm tra sau khi làm xong**: `npm run dev` → `/dang-ky` bằng email của bạn → mở thư → bấm link → về `/tai-khoan` đã đăng nhập. Rồi đăng xuất → `/quen-mat-khau` → mở thư → bấm link → `/dat-lai-mat-khau` → đặt mật khẩu mới → đăng nhập bằng mật khẩu mới.
 
 ## Tiến độ
 
