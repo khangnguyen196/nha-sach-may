@@ -97,8 +97,11 @@ test.describe('khách (chưa đăng nhập)', () => {
     await expect(page).toHaveURL(/\/tai-khoan$/)
   })
 
-  test('link xác nhận hỏng → trang đăng nhập báo link hết hạn', async ({ page }) => {
+  test('link xác nhận hỏng → trang trung gian → bấm xác nhận → trang đăng nhập báo link hết hạn', async ({ page }) => {
     await page.goto('/api/auth/confirm?token_hash=khong-hop-le&type=email')
+    // GET không tiêu thụ token: chỉ chuyển sang trang có nút "Xác nhận" (POST)
+    await expect(page).toHaveURL(/\/xac-nhan\?token_hash=khong-hop-le&type=email$/)
+    await page.getByRole('button', { name: 'Xác nhận email' }).click()
     await expect(page).toHaveURL(/\/dang-nhap\?error=LINK_EXPIRED$/)
     await expect(page.getByRole('main').getByRole('alert')).toContainText('Liên kết đã hết hạn')
   })
@@ -121,7 +124,12 @@ test.describe('khách (chưa đăng nhập)', () => {
 
       // Link trong email đặt lại mật khẩu, lấy bằng admin API thay vì gửi thư
       const tokenHash = await recoveryTokenHash(reset.email)
-      await pageA.goto(`/api/auth/confirm?token_hash=${tokenHash}&type=recovery&next=%2Fdat-lai-mat-khau`)
+      const link = `/api/auth/confirm?token_hash=${tokenHash}&type=recovery&next=%2Fdat-lai-mat-khau`
+      // Trình quét link trong hộp thư mở link trước (GET, theo chuyển hướng): token vẫn còn dùng được
+      expect((await pageA.request.get(link)).ok()).toBe(true)
+      await pageA.goto(link)
+      await expect(pageA).toHaveURL(/\/xac-nhan\?/)
+      await pageA.getByRole('button', { name: 'Tiếp tục' }).click()
       await expect(pageA).toHaveURL(/\/dat-lai-mat-khau$/)
 
       const newPassword = `${reset.password}-moi`

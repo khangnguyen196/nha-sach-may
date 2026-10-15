@@ -363,6 +363,19 @@
       "noSessionTitle": "This link is no longer valid",
       "noSession": "Open the link in your password reset email again, or request a new one.",
       "requestNew": "Request a new link"
+    },
+    "confirm": {
+      "title": "Confirm",
+      "emailTitle": "Confirm your email",
+      "emailLead": "Press the button below to activate your Nhà Sách Mây account.",
+      "emailSubmit": "Confirm email",
+      "recoveryTitle": "Reset your password",
+      "recoveryLead": "Press the button below to continue and choose a new password.",
+      "recoverySubmit": "Continue",
+      "why": "The link works only once. This extra step stops link scanners in your mailbox from using it up before you do.",
+      "invalidTitle": "Invalid link",
+      "invalid": "This link is missing information. Open the link in your email again or request a new one.",
+      "backToLogin": "Back to sign in"
     }
   },
   "account": {

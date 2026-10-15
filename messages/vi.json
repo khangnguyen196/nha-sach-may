@@ -760,6 +760,19 @@
       "noSessionTitle": "Liên kết không còn hiệu lực",
       "noSession": "Hãy mở lại liên kết trong email đặt lại mật khẩu, hoặc yêu cầu một liên kết mới.",
       "requestNew": "Yêu cầu liên kết mới"
+    },
+    "confirm": {
+      "title": "Xác nhận",
+      "emailTitle": "Xác nhận email",
+      "emailLead": "Bấm nút bên dưới để kích hoạt tài khoản Nhà Sách Mây.",
+      "emailSubmit": "Xác nhận email",
+      "recoveryTitle": "Đặt lại mật khẩu",
+      "recoveryLead": "Bấm nút bên dưới để tiếp tục đặt mật khẩu mới.",
+      "recoverySubmit": "Tiếp tục",
+      "why": "Liên kết chỉ dùng được một lần. Bước bấm nút này giúp các trình quét link trong hộp thư không dùng mất liên kết trước bạn.",
+      "invalidTitle": "Liên kết không hợp lệ",
+      "invalid": "Liên kết thiếu thông tin. Hãy mở lại liên kết trong email hoặc yêu cầu một liên kết mới.",
+      "backToLogin": "Về trang đăng nhập"
     }
   },
   "account": {

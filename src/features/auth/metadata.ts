@@ -3,13 +3,14 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { localeAlternates } from '@/i18n/alternates'
 import type { Href } from '@/i18n/navigation'
 
-type Page = 'login' | 'register' | 'forgot' | 'reset'
+type Page = 'login' | 'register' | 'forgot' | 'reset' | 'confirm'
 
 const HREFS = {
   login: '/login',
   register: '/register',
   forgot: '/forgot-password',
   reset: '/reset-password',
+  confirm: '/confirm',
 } satisfies Record<Page, Href>
 
 /** Trang đăng nhập / tài khoản không cần vào chỉ mục tìm kiếm */

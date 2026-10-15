@@ -1,0 +1,17 @@
+{{/*
+  Supabase Dashboard → Authentication → Emails → "Confirm signup" → Message body (dán toàn bộ file).
+  Subject gợi ý: {{ if eq .Data.locale "en" }}Confirm your Nhà Sách Mây account{{ else }}Xác nhận tài khoản Nhà Sách Mây{{ end }}
+  Link trỏ /api/auth/confirm (GET chỉ chuyển sang trang trung gian có nút "Xác nhận", không tiêu thụ token).
+  .Data.locale = user_metadata.locale (ghi lúc đăng ký, đổi ở trang tài khoản → "Ngôn ngữ email").
+*/}}
+{{ if eq .Data.locale "en" }}
+<h2>Confirm your email</h2>
+<p>Thanks for signing up at Nhà Sách Mây. Open the link below, then press <strong>Confirm email</strong> to activate your account.</p>
+<p><a href="{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=email&locale=en">Confirm email</a></p>
+<p style="color:#57534e;font-size:12px">Nhà Sách Mây is a non-commercial learning project. If you did not sign up, ignore this email.</p>
+{{ else }}
+<h2>Xác nhận email</h2>
+<p>Cảm ơn bạn đã đăng ký Nhà Sách Mây. Mở liên kết dưới đây rồi bấm <strong>Xác nhận email</strong> để kích hoạt tài khoản.</p>
+<p><a href="{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=email&locale=vi">Xác nhận email</a></p>
+<p style="color:#57534e;font-size:12px">Nhà Sách Mây là dự án học tập, phi thương mại. Nếu bạn không đăng ký, hãy bỏ qua email này.</p>
+{{ end }}

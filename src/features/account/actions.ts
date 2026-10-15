@@ -106,7 +106,10 @@ export async function setDefaultAddress(id: number) {
   refresh()
 }
 
-/** Ngôn ngữ email (profiles.locale), độc lập với ngôn ngữ đang xem trang */
+/**
+ * Ngôn ngữ email, độc lập với ngôn ngữ đang xem trang: profiles.locale (email đơn hàng) + user_metadata.locale (template
+ * email auth của Supabase đọc `{{ .Data.locale }}`). Ghi metadata lỗi chỉ log: email đơn hàng đã đúng ngôn ngữ.
+ */
 export async function updateEmailLocale(_prev: Result<null> | null, formData: FormData): Promise<Result<null>> {
   const parsed = emailLocaleSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return invalidInput(parsed.error)
@@ -116,5 +119,7 @@ export async function updateEmailLocale(_prev: Result<null> | null, formData: Fo
   const supabase = await createClient()
   const { error } = await supabase.from('profiles').update({ locale: parsed.data.locale }).eq('id', user.id)
   if (error) return toFailure(error)
+  const metadata = await supabase.auth.updateUser({ data: { locale: parsed.data.locale } })
+  if (metadata.error) console.error('updateEmailLocale (user_metadata):', metadata.error.message)
   return { ok: true, data: null }
 }

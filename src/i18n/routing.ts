@@ -28,5 +28,6 @@ export const routing = defineRouting({
     '/register': { vi: '/dang-ky', en: '/register' },
     '/forgot-password': { vi: '/quen-mat-khau', en: '/forgot-password' },
     '/reset-password': { vi: '/dat-lai-mat-khau', en: '/reset-password' },
+    '/confirm': { vi: '/xac-nhan', en: '/confirm' },
   },
 })
