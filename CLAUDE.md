@@ -262,5 +262,5 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 6. Tài khoản: đơn hàng, chi tiết, hủy đơn
 7. Admin: sách (upload bìa, nhập `*_en`), danh mục, tác giả, đơn hàng, voucher
 8. Trang chủ hoàn chỉnh với các kệ
-9. Đánh giá, voucher ở checkout, VietQR, email theo locale; link trong email (xác nhận, đặt lại mật khẩu) trỏ tới trang trung gian có nút "Xác nhận" (POST) thay vì GET `/api/auth/confirm` tiêu thụ token ngay, chống trình quét link (Outlook Safe Links…) dùng mất token
+9. Đánh giá, voucher ở checkout, VietQR (khách **không** tự hủy được đơn đã thanh toán `payment_status = 'paid'` vì chưa có quy trình hoàn tiền: migration cho `cancel_order` kiểm tra `payment_status`; UI đã ẩn nút hủy qua `canCancel` từ Phase 6), email theo locale; link trong email (xác nhận, đặt lại mật khẩu) trỏ tới trang trung gian có nút "Xác nhận" (POST) thay vì GET `/api/auth/confirm` tiêu thụ token ngay, chống trình quét link (Outlook Safe Links…) dùng mất token
 10. SEO (sitemap, hreflang, OG image, JSON-LD), 404 thật cho slug không tồn tại / `page` vượt quá (hiện trả UI 404 + `noindex` nhưng HTTP 200 vì Cache Components stream trước khi `notFound()` chạy; hướng xử lý: kiểm tra trong `proxy.ts`), test e2e luồng mua hàng, đo Lighthouse, deploy

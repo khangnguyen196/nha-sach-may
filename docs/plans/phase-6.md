@@ -1,10 +1,24 @@
 # Phase 6: Tài khoản: đơn hàng
 
-Trạng thái: **chờ duyệt** (2026-10-15). Chỉ có plan, chưa code.
+Trạng thái: **đã duyệt, đang làm** trên nhánh `phase-6` (2026-10-15). Chọn hết các ★, bổ sung 2 điểm (xem "Bổ sung khi duyệt").
 
 Phạm vi: danh sách đơn của tôi, chi tiết đơn, hủy đơn khi còn `pending` (RPC `cancel_order` có sẵn, trigger hoàn kho có sẵn), làm mới cache tồn kho khi hủy, link "Xem đơn hàng" từ trang đặt hàng thành công. **Không** có: đánh giá sách đã nhận (Phase 9), email báo hủy (Phase 9), admin đổi trạng thái đơn (Phase 7), mua lại đơn cũ.
 
 Không cần migration: `cancel_order(p_order_id, p_reason)`, `handle_order_status_change` (hoàn `stock` / `sold_count` / `used_count`), RLS `orders_select_own_or_admin` / `order_items_select_own_or_admin` đã đủ.
+
+## Bổ sung khi duyệt
+
+1. **Hủy đơn đã thanh toán (Phase 9, VietQR).** Khách **không** được tự hủy đơn `payment_status = 'paid'`: chưa có quy trình hoàn tiền.
+   - Phase 9: migration cho `cancel_order` kiểm tra thêm `payment_status <> 'paid'` (cùng câu `update`, lỗi `ORDER_NOT_CANCELLABLE`). Ghi vào lộ trình Phase 9 trong CLAUDE.md.
+   - Phase 6 làm luôn phần UI (rẻ, không đổi hành vi với COD vì đơn COD luôn `unpaid`): khối hủy chỉ hiện khi `status = 'pending'` **và** `payment_status <> 'paid'`; điều kiện đặt trong một hàm thuần `canCancel(order)` (Vitest), để Phase 9 chỉ còn việc ở DB.
+2. **Trang lỗi.** Chưa có `error.tsx` nào: Supabase chập chờn → trang lỗi mặc định tiếng Anh của Next (e2e 5b gặp ở `/gio-hang`).
+   - `app/[locale]/error.tsx`: bắt lỗi của layout nhóm `(shop)` / `(auth)` và mọi trang không có boundary gần hơn; tự dựng `<main id="main">` (như `not-found.tsx`), không có footer (footer đọc danh mục từ Supabase, có thể chính nó là chỗ lỗi).
+   - `app/[locale]/(shop)/error.tsx`: nằm trong `<main>` + footer của layout `(shop)`, nên trang lỗi giữ nguyên khung trang. Cả hai dùng chung một component `ErrorView`: biểu tượng, tiêu đề (Lora), một câu giải thích, nút "Thử lại" (`retry()` của Next 16.3: tải lại dữ liệu server của segment rồi render lại; `reset()` chỉ render lại nên lỗi server vẫn còn), link "Về trang chủ". Token màu, focus ring, `prefers-reduced-motion` như phần còn lại. Focus chuyển vào tiêu đề khi trang lỗi hiện (trình đọc màn hình biết trang đã đổi).
+   - **Chuỗi dịch**: `error.tsx` bắt buộc là client component và Next không truyền props từ server vào. Không dùng `useTranslations` (kéo runtime dịch của next-intl vào bundle đầu mọi trang; hiện chỉ palette tải lười dùng). Cách chọn: `[locale]/layout.tsx` dịch sẵn namespace `errorPage` (4 chuỗi thuần, không tham số ICU) rồi truyền xuống một context client nhỏ (`ErrorPageMessages`) bọc `children`; `error.tsx` đọc context. Đúng quy ước "client leaf nhận chuỗi đã dịch từ server", chỉ khác là qua context thay vì props vì boundary không nhận props. Chi phí ≈ vài trăm byte.
+   - `app/global-error.tsx` (lỗi ở root layout `[locale]/layout.tsx` hoặc `admin/layout.tsx`): thay cả `<html>`, không còn layout nên không còn chuỗi từ server. Chuỗi lấy từ `src/i18n/global-error-messages.ts` (`Record<Locale, …>`, type bắt đủ 2 ngôn ngữ), Vitest so khớp với `errorPage` trong `messages/*.json` để chỉ có một bản nội dung. Không import `messages/*.json` vào đây: `global-error` nằm trong bundle đầu của mọi trang, import file messages là thêm ~30KB. Locale lấy từ `useParams().locale` (không có → `vi`, VD `/admin`). Link về trang chủ là `<a>` thường (không còn provider của next-intl; tải lại cả trang là đúng ý sau lỗi root layout). Tự import `globals.css`, font, `ThemeProvider`.
+   - `app/admin/error.tsx`: chỉ tiếng Việt, cùng `ErrorView`; `admin/layout.tsx` cấp context với chuỗi `vi`. Phase 7 admin có nhiều query, nên làm luôn.
+   - **Không lộ chi tiết lỗi**: UI không hiện `error.message` / `digest`. Lỗi Server Component Next đã tự log ở server (kèm digest); production gửi xuống client một thông báo chung. Kiểm tra lại log khi chạy e2e.
+   - **e2e**: Playwright không chặn được request từ server Next tới Supabase. Cách làm: tiêm lỗi chỉ khi server chạy với `E2E_FAULT_INJECTION=1` (đặt trong `webServer.env` của `playwright.config.ts`, production không bao giờ đặt): client Supabase theo phiên (`lib/supabase/server.ts`) dùng `fetch` bọc lại, request REST (`/rest/v1/`) ném `TypeError('fetch failed')` khi request có cookie `e2e-fault=rest`. Auth (`/auth/v1/`) không bị chặn để phiên vẫn đọc được (giống sự cố 5b: đã đăng nhập, query hỏng). Spec `error-page.spec.ts` (user chính của project, thêm vào `ACCOUNT_SPECS`): đặt cookie → `/tai-khoan/don-hang` hiện trang lỗi tiếng Việt (tiêu đề, nút, link), không có chi tiết lỗi, header vẫn còn → xóa cookie → "Thử lại" → danh sách đơn hiện ra; tương tự `/en/account/orders` bằng tiếng Anh. `global-error` không có đường tự nhiên để ép lỗi (header đã nuốt lỗi của giỏ / phiên) → xem tay bằng thay đổi tạm, không commit.
 
 ## Cần chọn
 
@@ -102,4 +116,6 @@ Trang danh sách: 0 JS thêm (Server Component + link). Trang chi tiết: form h
 - [ ] Hủy đơn + `updateTag`; checkout dùng chung `expireOrderBooks`
 - [ ] Messages
 - [ ] e2e `orders.spec.ts` + helper
+- [ ] Trang lỗi: `ErrorView` + context chuỗi, `[locale]/error.tsx`, `(shop)/error.tsx`, `global-error.tsx`, `admin/error.tsx`; tiêm lỗi e2e; `error-page.spec.ts`
+- [x] CLAUDE.md: lộ trình Phase 9 (không tự hủy đơn đã thanh toán)
 - [ ] typecheck / lint / build / test / e2e sạch; `measure:js`; báo cáo
