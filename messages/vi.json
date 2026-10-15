@@ -159,7 +159,6 @@
     "unavailable": "Ngừng bán",
     "unavailableTitle": "Sách không còn bán",
     "unavailableHint": "Không tính vào tạm tính. Xóa khỏi giỏ để tiếp tục thanh toán.",
-    "remove": "Xóa",
     "removeLabel": "Xóa “{title}” khỏi giỏ",
     "removeUnavailableLabel": "Xóa sách không còn bán khỏi giỏ",
     "decreaseLabel": "Giảm số lượng “{title}”",

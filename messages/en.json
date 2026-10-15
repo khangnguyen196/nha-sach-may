@@ -159,7 +159,6 @@
     "unavailable": "Unavailable",
     "unavailableTitle": "Book no longer available",
     "unavailableHint": "Not included in the subtotal. Remove it to continue to checkout.",
-    "remove": "Remove",
     "removeLabel": "Remove “{title}” from cart",
     "removeUnavailableLabel": "Remove unavailable book from cart",
     "decreaseLabel": "Decrease quantity of “{title}”",
