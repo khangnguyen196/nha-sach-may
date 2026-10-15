@@ -140,13 +140,15 @@ async function OrderRow({ order }: { order: OrderListItem }) {
     <li data-testid="order-row">
       <Link
         href={{ pathname: '/account/orders/[code]', params: { code: order.order_code } }}
-        className="flex flex-col gap-4 rounded-lg border bg-surface p-4 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:p-5"
+        className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 rounded-lg border bg-surface p-4 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-5"
       >
-        <div className="flex shrink-0 -space-x-3">
+        {/* Khối bìa rộng cố định (3 bìa chồng nhau) để cột chữ thẳng hàng giữa các dòng. Mobile: tổng tiền xuống dưới
+            thông tin; từ sm: cột phải */}
+        <div className="row-span-2 flex w-24 -space-x-3 self-start sm:row-span-1 sm:self-center">
           {order.order_items.slice(0, COVERS_SHOWN).map((item) => (
             <div
               key={item.id}
-              className="relative aspect-[2/3] w-10 overflow-hidden rounded-cover border border-surface bg-surface-raised"
+              className="relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-cover border border-surface bg-surface-raised"
             >
               {item.cover_url ? (
                 <Image src={item.cover_url} alt="" fill sizes="40px" className="object-cover" />
@@ -158,7 +160,7 @@ async function OrderRow({ order }: { order: OrderListItem }) {
             </div>
           ))}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="font-mono text-sm font-semibold tracking-wide" data-testid="order-row-code">
               {order.order_code}
@@ -173,7 +175,7 @@ async function OrderRow({ order }: { order: OrderListItem }) {
           )}
           <p className="mt-0.5 text-sm text-muted-foreground">{format.dateTime(new Date(order.created_at), 'short')}</p>
         </div>
-        <p className="shrink-0 font-semibold text-primary tabular-nums" data-testid="order-row-total">
+        <p className="col-start-2 font-semibold text-primary tabular-nums sm:col-start-3 sm:row-start-1" data-testid="order-row-total">
           {format.number(order.total, 'price')}
         </p>
       </Link>
@@ -191,7 +193,7 @@ function OrdersSkeleton() {
       </div>
       <div className="mt-6 grid gap-3">
         {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className="h-[166px] rounded-lg bg-surface-raised sm:h-[102px]" />
+          <div key={index} className="h-[138px] rounded-lg bg-surface-raised sm:h-[116px]" />
         ))}
       </div>
     </div>
