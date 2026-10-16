@@ -36,20 +36,20 @@ test('thêm / đổi số lượng / xóa, tải lại vẫn đúng', async ({ p
 
   await addFromBookPage(page, book)
   await page.goto('/gio-hang')
-  const line = page.getByTestId('cart-line')
+  const line = page.getByRole('main').getByTestId('cart-line')
   await expect(line).toHaveCount(1)
   await expect(line.getByRole('link', { name: book.title })).toBeVisible()
-  await expect(page.getByTestId('cart-subtotal')).toHaveText(vnd(book.price))
+  await expect(page.getByRole('main').getByTestId('cart-subtotal')).toHaveText(vnd(book.price))
 
   await waitForHydration(page, 'main [data-testid="cart-line"] button')
   await line.getByRole('button', { name: `Tăng số lượng “${book.title}”` }).click()
   await expect(line.getByRole('spinbutton')).toHaveValue('2')
-  await expect(page.getByTestId('cart-subtotal')).toHaveText(vnd(book.price * 2))
+  await expect(page.getByRole('main').getByTestId('cart-subtotal')).toHaveText(vnd(book.price * 2))
   await expect(badge(page)).toHaveText('2')
-  await expect(page.getByTestId('cart-shipping')).toHaveText(book.price * 2 >= 300_000 ? 'Miễn phí' : vnd(30_000))
+  await expect(page.getByRole('main').getByTestId('cart-shipping')).toHaveText(book.price * 2 >= 300_000 ? 'Miễn phí' : vnd(30_000))
 
   await page.reload()
-  await expect(page.getByTestId('cart-line').getByRole('spinbutton')).toHaveValue('2')
+  await expect(page.getByRole('main').getByTestId('cart-line').getByRole('spinbutton')).toHaveValue('2')
   await expect(badge(page)).toHaveText('2')
 
   await waitForHydration(page, 'main [data-testid="cart-line"] button')
@@ -88,7 +88,7 @@ test('/en/cart hiện giá theo locale en', async ({ page }) => {
   await addFromBookPage(page, book)
   await page.goto('/en/cart')
   await expect(page.getByRole('heading', { level: 1, name: 'Cart' })).toBeVisible()
-  await expect(page.getByTestId('cart-subtotal')).toHaveText(vnd(book.price, 'en'))
+  await expect(page.getByRole('main').getByTestId('cart-subtotal')).toHaveText(vnd(book.price, 'en'))
   expect(vnd(book.price, 'en')).toMatch(/^₫[\d,]+$/)
 })
 

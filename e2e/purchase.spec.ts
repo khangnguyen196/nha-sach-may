@@ -65,6 +65,10 @@ test('khách → đăng nhập → địa chỉ → voucher → VietQR → chi t
 
   // 2. Đăng nhập → quay lại thanh toán, giỏ khách gộp vào giỏ tài khoản
   await expect(page).toHaveURL(/\/dang-nhap\?next=%2Fthanh-toan$/)
+  // Điều hướng phía client (Thanh toán → proxy chuyển sang đăng nhập): URL đổi trước khi trang mới render xong; điền
+  // sớm thì form được dựng lại và mất email. Chờ ô email của trang đăng nhập hydrate + mạng yên như openPalette.
+  await waitForHydration(page, 'main form input[name="email"]')
+  await page.waitForLoadState('networkidle')
   await fillLogin(page, buyer)
   await expect(page).toHaveURL(/\/thanh-toan$/, { timeout: 20_000 })
   await expect(main(page).getByTestId('checkout-line')).toHaveCount(2, { timeout: 15_000 })
