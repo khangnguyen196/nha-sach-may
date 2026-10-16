@@ -67,13 +67,21 @@ function Form({ locale, ...props }: FormProps) {
 }
 
 async function FormWithParams({ searchParams, ...form }: FormProps & { searchParams: Props['searchParams'] }) {
-  const { next, error } = await searchParams
+  const [{ next, error, confirmed }, t] = await Promise.all([searchParams, getTranslations('auth')])
   const safeNext = safeNextPath(Array.isArray(next) ? next[0] : next, '')
   return (
-    <Form
-      {...form}
-      next={safeNext || undefined}
-      initialError={error === 'LINK_EXPIRED' ? form.messages.errors.LINK_EXPIRED : undefined}
-    />
+    <>
+      {/* /api/auth/confirm: Supabase đã xác nhận email nhưng link được mở ở trình duyệt khác → đăng nhập bằng tay */}
+      {confirmed === '1' && (
+        <p role="status" className="mb-5 rounded-md border border-success/40 bg-success/10 px-3 py-2.5 text-sm text-success">
+          {t('login.emailConfirmed')}
+        </p>
+      )}
+      <Form
+        {...form}
+        next={safeNext || undefined}
+        initialError={error === 'LINK_EXPIRED' ? form.messages.errors.LINK_EXPIRED : undefined}
+      />
+    </>
   )
 }

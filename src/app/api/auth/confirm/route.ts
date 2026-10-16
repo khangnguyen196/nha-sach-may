@@ -1,30 +1,46 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { parseConfirmLink } from '@/features/auth/confirm-link'
 import { toOtpType, toTokenHash } from '@/features/auth/otp'
 import { safeNextPath } from '@/features/auth/next-path'
 import { parseLocale } from '@/features/auth/schemas'
 import { localizedPath } from '@/i18n/paths'
 import { createClient } from '@/lib/supabase/server'
 
-// Link trong email xác nhận đăng ký / đặt lại mật khẩu (template Supabase, supabase/templates/*.html):
-//   /api/auth/confirm?token_hash=…&type=email|recovery&locale=vi|en[&next=/duong-dan]
-// GET KHÔNG tiêu thụ token: trình quét link trong hộp thư (Outlook Safe Links…) mở link trước người dùng sẽ dùng mất
-// token một lần. GET chỉ chuyển sang trang trung gian /xac-nhan (/en/confirm) có nút "Xác nhận"; nút gửi POST về
-// đây mới gọi verifyOtp. Nằm dưới /api: proxy bỏ qua /api nên next-intl không rewrite sang /vi/… .
+// Link trong email xác nhận đăng ký / đặt lại mật khẩu, hai dạng (features/auth/confirm-link.ts):
+// - Template riêng (supabase/templates/*.html): /api/auth/confirm?token_hash=…&type=email|recovery&locale=vi|en[&next=…]
+//   GET KHÔNG tiêu thụ token: trình quét link trong hộp thư (Outlook Safe Links…) mở link trước người dùng sẽ dùng mất
+//   token một lần. GET chỉ chuyển sang trang trung gian /xac-nhan (/en/confirm) có nút "Xác nhận"; nút gửi POST về
+//   đây mới gọi verifyOtp.
+// - Template mặc định của Supabase ({{ .ConfirmationURL }}): Supabase đã xác thực token ở /auth/v1/verify rồi chuyển về
+//   `redirectTo` của app (authCallbackUrl) kèm ?code= → GET đổi code lấy phiên ngay (code chỉ dùng được với code
+//   verifier PKCE trong cookie của trình duyệt đã yêu cầu link, trình quét link không có).
+// Nằm dưới /api: proxy bỏ qua /api nên next-intl không rewrite sang /vi/… .
 
 function retryUrl(request: NextRequest, recovery: boolean, locale: ReturnType<typeof parseLocale>) {
   // Link hỏng / hết hạn / đã dùng → trang yêu cầu lại kèm thông báo
   return new URL(localizedPath(recovery ? '/forgot-password' : '/login', locale, { error: 'LINK_EXPIRED' }), request.url)
 }
 
-export function GET(request: NextRequest) {
-  const params = request.nextUrl.searchParams
-  const locale = parseLocale(params.get('locale'))
-  const query: Record<string, string> = {}
-  for (const key of ['token_hash', 'type', 'next']) {
-    const value = params.get(key)
-    if (value) query[key] = value
+export async function GET(request: NextRequest) {
+  const link = parseConfirmLink(request.nextUrl.searchParams)
+  if (link.kind === 'token') {
+    return NextResponse.redirect(new URL(localizedPath('/confirm', link.locale, link.query), request.url))
   }
-  return NextResponse.redirect(new URL(localizedPath('/confirm', locale, query), request.url))
+  if (link.kind === 'error') return NextResponse.redirect(retryUrl(request, link.recovery, link.locale))
+
+  const supabase = await createClient()
+  // exchangeCodeForSession tạo phiên; cookie ghi qua cookies() được Next gắn vào response chuyển hướng
+  const { error } = await supabase.auth.exchangeCodeForSession(link.code)
+  if (error) {
+    // Có ?code= nghĩa là Supabase đã xác thực link; lỗi thường do mở link ở trình duyệt khác với lúc yêu cầu (thiếu
+    // code verifier). Đăng ký: email đã xác nhận → đăng nhập bằng tay. Đặt lại mật khẩu: cần phiên → yêu cầu link mới.
+    if (!link.recovery && error.code === 'pkce_code_verifier_not_found') {
+      return NextResponse.redirect(new URL(localizedPath('/login', link.locale, { confirmed: '1' }), request.url))
+    }
+    return NextResponse.redirect(retryUrl(request, link.recovery, link.locale))
+  }
+  const fallback = localizedPath(link.recovery ? '/reset-password' : '/account', link.locale)
+  return NextResponse.redirect(new URL(safeNextPath(link.next, fallback), request.url))
 }
 
 /** Form chỉ gửi từ trang của chính site: chặn trang khác tự POST token của kẻ tấn công (đăng nhập người dùng vào tài khoản lạ) */

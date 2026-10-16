@@ -1,4 +1,5 @@
-import { getTranslations } from 'next-intl/server'
+import type { Locale } from 'next-intl'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { requestPasswordReset } from '@/features/auth/actions'
 import { AuthPage, authLinkClass } from '@/features/auth/components/auth-page'
@@ -14,8 +15,13 @@ export function generateMetadata() {
 }
 
 export default async function ForgotPasswordPage({ searchParams }: Props) {
-  const [t, messages] = await Promise.all([getTranslations('auth'), getFormMessages(['RATE_LIMITED', 'LINK_EXPIRED'])])
+  const [t, locale, messages] = await Promise.all([
+    getTranslations('auth'),
+    getLocale(),
+    getFormMessages(['RATE_LIMITED', 'LINK_EXPIRED']),
+  ])
   const form = {
+    locale,
     messages,
     labels: {
       email: t('email'),
@@ -37,7 +43,9 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
       }
     >
       {/* ?error=LINK_EXPIRED khi link đặt lại mật khẩu đã hết hạn (từ /api/auth/confirm) */}
-      <Suspense fallback={<ForgotPasswordForm action={requestPasswordReset} {...form} />}>
+      <Suspense
+        fallback={<ForgotPasswordForm action={requestPasswordReset.bind(null, locale)} messages={messages} labels={form.labels} />}
+      >
         <FormWithError {...form} searchParams={searchParams} />
       </Suspense>
     </AuthPage>
@@ -46,17 +54,20 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
 
 async function FormWithError({
   searchParams,
+  locale,
   messages,
   labels,
 }: {
   searchParams: Props['searchParams']
+  locale: Locale
   messages: FormMessages
   labels: Parameters<typeof ForgotPasswordForm>[0]['labels']
 }) {
   const { error } = await searchParams
   return (
     <ForgotPasswordForm
-      action={requestPasswordReset}
+      // locale bind sẵn: link trong email (template mặc định) quay về trang đặt mật khẩu đúng ngôn ngữ
+      action={requestPasswordReset.bind(null, locale)}
       messages={messages}
       labels={labels}
       initialError={error === 'LINK_EXPIRED' ? messages.errors.LINK_EXPIRED : undefined}

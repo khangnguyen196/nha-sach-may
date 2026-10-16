@@ -336,7 +336,8 @@
       "submit": "Sign in",
       "forgot": "Forgot password?",
       "noAccount": "Don't have an account?",
-      "registerLink": "Create one"
+      "registerLink": "Create one",
+      "emailConfirmed": "Your email is confirmed. Sign in to continue (the link was opened in a different browser, so you were not signed in automatically)."
     },
     "register": {
       "title": "Create an account",

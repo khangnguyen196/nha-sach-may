@@ -57,8 +57,9 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 
 | # | Làm gì | Kết quả đúng |
 |---|---|---|
-| B1 | `/dang-ky` bằng email thật của bạn | "Kiểm tra hộp thư"; email song ngữ theo ngôn ngữ đăng ký (sau khi dán template) |
-| B2 | Bấm link trong email | Trang "Xác nhận email" có nút; bấm → `/tai-khoan` đã đăng nhập |
+| B1 | `/dang-ky` bằng email thành viên organization Supabase (SMTP mặc định chỉ gửi cho họ) | "Kiểm tra hộp thư"; nhận email xác nhận (template mặc định, tiếng Anh) |
+| B2 | Bấm link trong email **trên cùng trình duyệt** đã đăng ký | Về `/tai-khoan` đã đăng nhập (template riêng + custom SMTP: trang "Xác nhận email" có nút, bấm → `/tai-khoan`) |
+| B2b | Mở link xác nhận ở trình duyệt khác | Trang đăng nhập có thông báo "Email đã được xác nhận…"; đăng nhập được bằng mật khẩu vừa đặt |
 | B3 | Đăng nhập khi đang có giỏ khách (A10) | Giỏ khách gộp vào giỏ tài khoản; badge đúng tổng |
 | B4 | `/tai-khoan/dia-chi` → thêm địa chỉ (Hà Nội → Phường Ba Đình), đặt mặc định | Địa chỉ hiện trong sổ, nhãn "Mặc định"; SĐT sai (`123`) báo lỗi tại ô |
 | B5 | `/thanh-toan` | Địa chỉ mặc định được chọn; tóm tắt đơn có tạm tính, phí ship, tổng |
@@ -75,7 +76,7 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 | B16 | Sửa đánh giá (đổi số sao) rồi "Xóa đánh giá" | Điểm cập nhật; xóa xong về "Chưa có đánh giá nào." |
 | B17 | Mở trang một sách chưa mua | "Bạn có thể đánh giá sau khi đã nhận cuốn sách này." (không có form) |
 | B18 | Trang tài khoản → đổi "Ngôn ngữ email" sang English | Lưu thành công; email sau đó (đơn hàng, đặt lại mật khẩu) bằng tiếng Anh |
-| B19 | Đăng xuất → `/quen-mat-khau` → email → link → "Tiếp tục" → mật khẩu mới | Đổi được; đăng nhập bằng mật khẩu cũ thất bại |
+| B19 | Đăng xuất → `/quen-mat-khau` → email → link (cùng trình duyệt) → mật khẩu mới | Link về `/dat-lai-mat-khau` (template riêng: qua nút "Tiếp tục"); đổi được; đăng nhập bằng mật khẩu cũ thất bại |
 | B20 | Thử ở `/en` (thanh toán, đơn hàng) | Toàn bộ chữ tiếng Anh, URL `/en/checkout`, `/en/account/orders` |
 
 ### C. Admin (tài khoản `role = 'admin'`, đặt bằng SQL)
@@ -98,7 +99,7 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 
 **Bắt buộc trước khi deploy**
 1. ✅ Chạy 2 migration (`cover_width`, `payments_email`), sinh lại types, `covers --measure` — đã xong 2026-10-16.
-2. Dán 2 template email auth (`supabase/templates/confirm-signup.html`, `reset-password.html`) vào Supabase → Authentication → Emails (`owner-todo.md` mục 2).
+2. Supabase → URL Configuration → Redirect URLs: thêm `https://nha-sach-may.vercel.app/api/auth/confirm**` và `http://localhost:3000/api/auth/confirm**` (`owner-todo.md` mục 2.0). Template riêng (`supabase/templates/`) chỉ dán được khi đã có custom SMTP (mục 2.1, tùy chọn).
 3. Tạo project Vercel, đặt env `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SITE_URL`; **không** đặt `SUPABASE_SERVICE_ROLE_KEY`, `E2E_FAULT_INJECTION`; chọn region gần Supabase (mục 6.1).
 4. Supabase → URL Configuration: Site URL + Redirect URLs của domain Vercel (mục 6.2).
 5. GitHub → Secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` để job CI `check` build được (mục 6.3).

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import {
   canRefresh,
@@ -104,6 +105,26 @@ test.describe('khách (chưa đăng nhập)', () => {
     await page.getByRole('button', { name: 'Xác nhận email' }).click()
     await expect(page).toHaveURL(/\/dang-nhap\?error=LINK_EXPIRED$/)
     await expect(page.getByRole('main').getByRole('alert')).toContainText('Liên kết đã hết hạn')
+  })
+
+  // Template email mặc định của Supabase: /auth/v1/verify chuyển về redirectTo của app kèm ?code= (PKCE). Mã thật chỉ
+  // có khi Supabase gửi email (admin generateLink cho link implicit, token sau #), nên ở đây kiểm tra các nhánh lỗi;
+  // nhánh đổi code thành công có Vitest (src/app/api/auth/confirm/route.test.ts).
+  test('link ?code= mở ở trình duyệt không có code verifier: đặt lại mật khẩu → yêu cầu link mới', async ({ page }) => {
+    await page.goto(`/api/auth/confirm?code=${randomUUID()}&type=recovery&locale=vi&next=%2Fdat-lai-mat-khau`)
+    await expect(page).toHaveURL(/\/quen-mat-khau\?error=LINK_EXPIRED$/)
+    await expect(page.getByRole('main').getByRole('alert')).toContainText('Liên kết đã hết hạn')
+  })
+
+  test('link ?code= xác nhận đăng ký mở ở trình duyệt khác → đăng nhập kèm thông báo đã xác nhận', async ({ page }) => {
+    await page.goto(`/api/auth/confirm?code=${randomUUID()}&type=signup&locale=en&next=%2Fen%2Faccount`)
+    await expect(page).toHaveURL(/\/en\/login\?confirmed=1$/)
+    await expect(page.getByRole('main').getByRole('status')).toContainText('Your email is confirmed')
+  })
+
+  test('Supabase báo link hết hạn (?error_code=otp_expired) → trang yêu cầu link mới đúng ngôn ngữ', async ({ page }) => {
+    await page.goto('/api/auth/confirm?error=access_denied&error_code=otp_expired&type=recovery&locale=en')
+    await expect(page).toHaveURL(/\/en\/forgot-password\?error=LINK_EXPIRED$/)
   })
 
   test('đặt lại mật khẩu thu hồi phiên khác, giữ phiên hiện tại', async ({ browser, baseURL }, testInfo) => {

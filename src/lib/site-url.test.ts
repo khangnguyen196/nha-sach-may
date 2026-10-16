@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { siteUrl } from './site-url'
+import { requestOrigin, siteUrl } from './site-url'
 
 describe('siteUrl', () => {
   it('SITE_URL trước, bỏ / cuối', () => {
@@ -15,5 +15,19 @@ describe('siteUrl', () => {
   it('không có gì → máy dev', () => {
     expect(siteUrl({})).toBe('http://localhost:3000')
     expect(siteUrl({ SITE_URL: '  ' })).toBe('http://localhost:3000')
+  })
+})
+
+describe('requestOrigin', () => {
+  it('header Origin hợp lệ → origin (bỏ đường dẫn)', () => {
+    expect(requestOrigin('https://nha-sach-may.vercel.app', {})).toBe('https://nha-sach-may.vercel.app')
+    expect(requestOrigin('http://localhost:3100', {})).toBe('http://localhost:3100')
+  })
+
+  it('không có / không hợp lệ / giao thức lạ → siteUrl', () => {
+    const env = { SITE_URL: 'https://example.com' }
+    expect(requestOrigin(null, env)).toBe('https://example.com')
+    expect(requestOrigin('null', env)).toBe('https://example.com')
+    expect(requestOrigin('javascript:alert(1)', env)).toBe('https://example.com')
   })
 })

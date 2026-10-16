@@ -4,11 +4,14 @@
 // redirect của next-intl được; safeNextPath đảm bảo nó là đường dẫn nội bộ.
 // eslint-disable-next-line no-restricted-imports
 import { redirect as redirectToPath } from 'next/navigation'
+import { headers } from 'next/headers'
 import type { Locale } from 'next-intl'
 import { getPathname, redirect } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { invalidInput, type Result } from '@/lib/errors'
+import { requestOrigin } from '@/lib/site-url'
 import { createClient } from '@/lib/supabase/server'
+import { authCallbackUrl, type ConfirmPurpose } from './confirm-link'
 import { authErrorCode } from './errors'
 import { safeNextPath } from './next-path'
 import {
@@ -21,6 +24,11 @@ import {
 
 // Server Action không đọc được next/root-params → locale do page bind sẵn (`signIn.bind(null, locale)`)
 // và được parse lại (parseLocale) vì tham số bind đi qua client.
+
+/** Link trong email theo template mặc định của Supabase quay về /api/auth/confirm (?code=, xem confirm-link.ts) */
+async function callbackUrl(locale: Locale, purpose: ConfirmPurpose) {
+  return authCallbackUrl(requestOrigin((await headers()).get('origin')), locale, purpose)
+}
 
 export async function signIn(locale: Locale, _prev: Result<null> | null, formData: FormData): Promise<Result<null>> {
   const parsed = signInSchema.safeParse(Object.fromEntries(formData))
@@ -49,8 +57,11 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    // trigger handle_new_user tạo profiles từ metadata này (locale dùng cho email sau này)
-    options: { data: { full_name: parsed.data.full_name, locale: target } },
+    options: {
+      // trigger handle_new_user tạo profiles từ metadata này (locale dùng cho email sau này)
+      data: { full_name: parsed.data.full_name, locale: target },
+      emailRedirectTo: await callbackUrl(target, 'signup'),
+    },
   })
   // Email đã có: trả lời y như đăng ký mới để không lộ email nào đã có tài khoản
   if (error && authErrorCode(error) !== 'EMAIL_TAKEN') return { ok: false, code: authErrorCode(error) }
@@ -61,6 +72,7 @@ export async function signUp(
 }
 
 export async function requestPasswordReset(
+  locale: Locale,
   _prev: Result<{ email: string }> | null,
   formData: FormData,
 ): Promise<Result<{ email: string }>> {
@@ -68,8 +80,10 @@ export async function requestPasswordReset(
   if (!parsed.success) return invalidInput(parsed.error)
 
   const supabase = await createClient()
-  // Link trong email do template "Reset password" dựng (→ /api/auth/confirm), không cần redirectTo
-  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email)
+  // Template riêng dựng link token_hash; template mặc định dùng redirectTo này (→ trang đặt mật khẩu mới đúng ngôn ngữ)
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: await callbackUrl(parseLocale(locale), 'recovery'),
+  })
   if (error) {
     const code = authErrorCode(error)
     // Chỉ báo lỗi giới hạn tần suất; lỗi khác vẫn hiện "đã gửi" để không lộ email nào có tài khoản

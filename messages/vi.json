@@ -748,7 +748,8 @@
       "submit": "Đăng nhập",
       "forgot": "Quên mật khẩu?",
       "noAccount": "Chưa có tài khoản?",
-      "registerLink": "Đăng ký"
+      "registerLink": "Đăng ký",
+      "emailConfirmed": "Email đã được xác nhận. Đăng nhập để tiếp tục (liên kết được mở trên một trình duyệt khác nên chưa tự đăng nhập)."
     },
     "register": {
       "title": "Tạo tài khoản",

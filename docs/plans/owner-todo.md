@@ -27,7 +27,26 @@ npm run covers -- --measure
 
 Cuối cùng chạy lại `npm run test:e2e` (các test ghi "chờ migration" trong `morning-report.md`).
 
-## 2. Template email auth (Phase 9)
+## 2. Email auth: Redirect URLs (bắt buộc) + template riêng (tùy chọn, cần custom SMTP)
+
+**2.0 Redirect URLs — bắt buộc, kể cả khi giữ template mặc định của Supabase**
+
+Template mặc định (`{{ .ConfirmationURL }}`): Supabase xác thực link ở `/auth/v1/verify` rồi chuyển về `redirectTo` mà app gửi lúc đăng ký / quên mật khẩu (`<domain>/api/auth/confirm?locale=…&type=signup|recovery&next=…`) kèm `?code=`; app đổi code lấy phiên (xác nhận đăng ký → `/tai-khoan` đã đăng nhập, quên mật khẩu → trang đặt mật khẩu mới). Supabase **chỉ** chuyển về URL nằm trong Redirect URLs; thiếu thì về Site URL (trang chủ) và link không dùng được.
+
+Supabase Dashboard → Authentication → URL Configuration:
+1. **Site URL**: `https://nha-sach-may.vercel.app` (đang đặt; đổi theo domain thật nếu có).
+2. **Redirect URLs** → Add URL, mỗi dòng một mục:
+   - `https://nha-sach-may.vercel.app/api/auth/confirm**` (production)
+   - `http://localhost:3000/api/auth/confirm**` (dev, `npm run dev` / `npm start`)
+   - (Tùy chọn, preview Vercel) `https://nha-sach-may-*.vercel.app/api/auth/confirm**`
+   Đã có `…/**` của cùng domain thì cũng khớp, không cần thêm. e2e (cổng 3100) không gửi email nên không cần.
+3. Save.
+
+Giới hạn của template mặc định: link phải mở **trên cùng trình duyệt** đã bấm đăng ký / quên mật khẩu (PKCE: code verifier nằm trong cookie của trình duyệt đó). Mở ở trình duyệt khác: xác nhận đăng ký vẫn thành công (trang đăng nhập báo "Email đã được xác nhận", đăng nhập bằng tay); đặt lại mật khẩu báo link hết hạn → yêu cầu lại. Trình quét link trong hộp thư (Outlook Safe Links…) có thể dùng mất link vì Supabase tiêu thụ token ngay ở `/auth/v1/verify` — chỉ template riêng (2.1) tránh được.
+
+Kiểm tra: `/dang-ky` bằng email thành viên organization Supabase (SMTP mặc định chỉ gửi cho họ) → thư → bấm link → `/tai-khoan` đã đăng nhập. Đăng xuất → `/quen-mat-khau` → thư → link → `/dat-lai-mat-khau` → đặt mật khẩu mới.
+
+**2.1 Template riêng (song ngữ, chống trình quét link) — chỉ khi đã có custom SMTP** (Supabase bắt buộc custom SMTP mới cho sửa template; xem 6.2 mục 3)
 
 Supabase Dashboard → Authentication → Emails:
 1. Tab **Confirm signup** → ô Message body: dán toàn bộ `supabase/templates/confirm-signup.html`. Subject: dòng "Subject gợi ý" ở đầu file.

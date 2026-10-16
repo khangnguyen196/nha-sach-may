@@ -9,3 +9,20 @@ export function siteUrl(env: Record<string, string | undefined> = process.env): 
   if (vercel) return `https://${vercel.replace(/\/+$/, '')}`
   return 'http://localhost:3000'
 }
+
+/**
+ * Origin của request (header `Origin` mà trình duyệt gửi kèm POST của Server Action): link trong email quay về đúng
+ * domain đang dùng (localhost, preview Vercel, production). Không có / không hợp lệ → siteUrl(). Supabase vẫn chỉ nhận
+ * redirect nằm trong Redirect URLs của project, nên header giả cũng không đưa được người dùng ra domain lạ.
+ */
+export function requestOrigin(origin: string | null, env: Record<string, string | undefined> = process.env): string {
+  if (origin) {
+    try {
+      const url = new URL(origin)
+      if (url.protocol === 'https:' || url.protocol === 'http:') return url.origin
+    } catch {
+      /* header lạ → dùng siteUrl */
+    }
+  }
+  return siteUrl(env)
+}
