@@ -44,8 +44,6 @@ const BOOK_CARD_COLUMNS = 'id, slug, title, cover_url, price, original_price, st
 const SHELF_SIZE = 12
 /** Ẩn cả kệ (kể cả tiêu đề) khi ít sách hơn mức này; kệ khác luôn hiện */
 const SHELF_MIN = { featured: 4, bestselling: 6 }
-/** Postgres: cột không tồn tại */
-const UNDEFINED_COLUMN = '42703'
 
 function bookCards() {
   return createPublicClient().from('books').select(BOOK_CARD_COLUMNS)
@@ -62,15 +60,6 @@ const sharpOnly = (query: BookCardQuery) => query.gte('cover_width', SHARP_COVER
 function rows({ data, error }: BookCardResult, context: string) {
   if (error) throw new Error(`getHomeShelves (${context}): ${error.message}`)
   return data
-}
-
-/**
- * Sách bìa nét của một kệ. Trước khi chạy migration 20261016010000_cover_width.sql cột chưa có → coi như chưa đo bìa
- * nào, kệ theo thứ tự thường (trang chủ vẫn prerender được). Bỏ nhánh 42703 sau khi migration đã chạy.
- */
-function sharpRows(result: BookCardResult, context: string) {
-  if (result.error?.code === UNDEFINED_COLUMN) return []
-  return rows(result, context)
 }
 
 /**
@@ -102,13 +91,13 @@ export async function getHomeShelves(foreignCategoryIds: number[]) {
     newestFirst(foreign()),
   ])
 
-  const featuredBooks = fillShelf(sharpRows(featuredSharp, 'featured'), rows(featuredAll, 'featured'), SHELF_SIZE)
+  const featuredBooks = fillShelf(rows(featuredSharp, 'featured'), rows(featuredAll, 'featured'), SHELF_SIZE)
   const bestsellingBooks = rows(bestselling, 'bestselling')
   const shelves = {
     featured: featuredBooks.length >= SHELF_MIN.featured ? featuredBooks : [],
     bestselling: bestsellingBooks.length >= SHELF_MIN.bestselling ? bestsellingBooks : [],
-    newArrivals: fillShelf(sharpRows(newSharp, 'new'), rows(newAll, 'new'), SHELF_SIZE),
-    foreign: fillShelf(sharpRows(foreignSharp, 'foreign'), rows(foreignAll, 'foreign'), SHELF_SIZE),
+    newArrivals: fillShelf(rows(newSharp, 'new'), rows(newAll, 'new'), SHELF_SIZE),
+    foreign: fillShelf(rows(foreignSharp, 'foreign'), rows(foreignAll, 'foreign'), SHELF_SIZE),
   }
   tagBooks(Object.values(shelves).flat())
   return shelves
