@@ -169,3 +169,20 @@ Không test nào bị xóa / skip / nới timeout. Test mới: `home` (6 × 2), 
 - Kệ Nổi bật và Bán chạy đang **ẩn** (chưa chọn sách nổi bật, chưa có đơn thật).
 - Header `Link` hreflang của trang prerender mang host lúc build (vô hại khi chỉ có một domain; xem `phase-10.md`).
 - `MaxListenersExceededWarning` trong log server khi chạy e2e có từ trước đêm nay.
+
+## 8. Sau migration (2026-10-16, chủ dự án đã chạy 2 migration)
+
+- Types sinh lại (`npx supabase gen types …`): **trùng khớp** bản sửa tay, không diff.
+- `npm run covers -- --measure`: đo 189 bìa → ≥ 600px **104**, 300–599px **20**, < 300px **65**.
+- Đã xóa nhánh dự phòng `42703` trong `getHomeShelves`; `typecheck`, `lint` sạch.
+- `test:e2e` đầy đủ trên `phase-10`: **212 qua**, 2 fail không liên quan migration (`purchase` desktop: ô email bị xóa trước khi bấm đăng nhập — race lúc hydrate; `cart-account` mobile: locator `cart-subtotal` trùng bản sao ẩn của Suspense), 4 không chạy (serial). Chạy lại 2 spec đó: **14 / 14 qua**. **Cả 5 test chờ migration đều qua**: `checkout` "khách không tự hủy đơn đã thanh toán" (desktop + mobile), `admin-vouchers` "không sửa được used_count", `admin-books` "upload bìa" + 2 test sau nó.
+- Bìa < 300px trước / sau Open Library:
+
+  | | Sách | < 300px trước | < 300px sau | ≥ 300px sau |
+  |---|---:|---:|---:|---:|
+  | Tiếng Việt | 72 | 30 | 30 | 42 |
+  | Tiếng Anh | 117 | 47 | 35 | 82 |
+  | **Tổng** | **189** | **77** | **65** | **124** (104 ≥ 600px + 20 cỡ 300–599px) |
+
+  Tổng sau đo bằng `--measure`; tách theo ngôn ngữ từ dry-run (12 bìa thay đều là sách tiếng Anh, Open Library không có bìa nào cho 29 sách Việt).
+- `owner-todo.md` mục 6.5: tạo project Supabase thứ hai riêng cho e2e / CI sau khi deploy (sách e2e đang bán lộ qua tìm kiếm khi test chạy trên DB thật).

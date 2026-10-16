@@ -94,6 +94,8 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
 
 **Loại tự động (10)**: rộng < 300px: A Moveable Feast (299px), The Complete Khaled Hosseini Box Set (223px), Dr. Seuss's 1 2 3 (159px), The Grand Design (260px); tỉ lệ ngoài 1.2–1.8 (sách tranh khổ vuông / ngang, ảnh hộp): Dr. Seuss Discovers: The Human Body, Dr. Seuss's Sleep Softly Book, Eric Carle's Very Little Library, Eric Carle's How Things Grow, The Very Hungry Caterpillar's Favorite Words, The Very Eric Carle Treasury.
 
+**Đo sau migration** (`npm run covers -- --measure`, 2026-10-16, 189 bìa): ≥ 600px **104**, 300–599px **20**, < 300px **65** (khớp bảng trên).
+
 **Còn lại**: 65 bìa < 300px (30 sách Việt, 35 sách Anh) chỉ thay được bằng tay trong admin. Kệ trang chủ ưu tiên bìa nét (`cover_width`) nên ít lộ ra ở trang chủ.
 
 **Làm mới cache**: script chạy ngoài Next nên không gọi được `updateTag`. Chạy `covers` **trước** khi build / deploy: lần build kế tiếp prerender lại với bìa mới (`next start` local: cache `hours` tự hết hoặc khởi động lại).

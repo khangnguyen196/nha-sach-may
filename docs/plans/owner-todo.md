@@ -2,7 +2,7 @@
 
 Claude không làm được các việc dưới đây (cần tài khoản, khóa bí mật, hoặc chạy SQL lên Supabase). Theo thứ tự nên làm.
 
-## 1. Chạy migration (bắt buộc, theo đúng thứ tự)
+## 1. Chạy migration (bắt buộc, theo đúng thứ tự) — ✅ đã chạy 2026-10-16, types sinh lại khớp, `covers --measure` đã chạy
 
 Supabase Dashboard → SQL Editor → dán toàn bộ file → Run. Mỗi file chạy lại được (idempotent). Cuối mỗi file có câu SQL kiểm tra.
 
@@ -64,7 +64,7 @@ VIETQR_ACCOUNT_NAME=NGUYEN VAN A   # viết HOA không dấu, đúng tên chủ 
 Ba nhánh xếp chồng: `phase-8` ← `phase-9` ← `phase-10` (mỗi nhánh chứa nhánh trước). Claude không merge / push `main`.
 1. Đọc `docs/plans/morning-report.md`, chạy migration (mục 1), chạy lại `npm run test:e2e` trên `phase-10`.
 2. Duyệt từng nhánh (hoặc chỉ `phase-10` nếu đồng ý cả ba), merge vào `main` theo thứ tự 8 → 9 → 10.
-3. Sau migration: xóa nhánh dự phòng `42703` trong `getHomeShelves` (`src/features/books/queries.ts`, hàm `sharpRows`) — hoặc nhờ Claude làm.
+3. ✅ Đã xóa nhánh dự phòng `42703` (khi chưa có `cover_width`) trong `getHomeShelves`.
 
 ## 6. Deploy lên Vercel (Phase 10)
 
@@ -88,6 +88,12 @@ Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`,
 **6.3 GitHub Actions (CI)**
 1. Repo → Settings → Secrets and variables → Actions → **Secrets**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (job `check`: typecheck, lint, Vitest, build).
 2. e2e trên CI (tùy chọn): thêm secret `SUPABASE_SERVICE_ROLE_KEY` + **Variables** `RUN_E2E = true`. e2e tạo / xóa user, đơn, sách test thật → **nên dùng một project Supabase riêng cho CI** (chạy `schema.sql`, `seed.sql`, migration, import sách), không dùng chung DB production.
+
+**6.5 Sau khi deploy: tạo project Supabase thứ hai riêng cho e2e / CI** (nên làm trước khi chạy e2e lần nữa)
+- Lý do: sách e2e (`e2e-shop-…`, `e2e-admin-…`) là sách **đang bán** (danh mục gốc ẩn nhưng sách `is_active`) trên chính DB production trong lúc test chạy. Chúng không lên menu, sitemap hay kệ "Mới về", nhưng **vẫn lộ qua tìm kiếm** (`search_books`, ô ⌘K, `/tim-kiem`), trang Tất cả sách `/sach` và link trực tiếp; khách thật có thể thêm vào giỏ / đặt hàng. e2e cũng tạo user, đơn, voucher `E2E-ADMIN-…` thật (dọn khi xong, sót lại nếu lần chạy bị ngắt).
+- Cách làm: Supabase → New project (free tier, cùng region) → SQL Editor chạy `schema.sql`, `seed.sql`, `seed-foreign-books.sql`, toàn bộ `supabase/migrations/` theo thứ tự → `import:books -- --from-preview` các file đã duyệt (hoặc một tập nhỏ) với env trỏ project mới.
+- Trỏ e2e vào project mới: `.env.local` máy dev giữ project production; chạy e2e bằng file env riêng (VD `.env.e2e.local`, do bạn tạo và nạp trước khi chạy) hoặc chỉ chạy e2e trên CI với secret của project mới (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Muốn Claude hỗ trợ chọn file env khi chạy e2e thì nói, đó là thay đổi cấu hình cần duyệt (quy tắc "chỉ `check:env` đọc env").
+- Sau khi tách: không chạy `npm run test:e2e` trên DB production nữa.
 
 **6.4 Kiểm tra sau deploy**
 - `https://<domain>/`, `/en`, `/sach/sapiens`, `/sitemap.xml`, `/robots.txt`; slug lạ `/sach/khong-co` → 404.

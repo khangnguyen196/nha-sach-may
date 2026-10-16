@@ -12,7 +12,7 @@ Trạng thái: **xong trên nhánh `phase-8`, chờ migration + duyệt** (đêm
 - `toCoverWebp` trả kèm chiều rộng; admin upload bìa + import ghi `cover_width`.
 
 **Chờ migration** (`supabase/migrations/20261016010000_cover_width.sql`)
-- Trước migration: kệ không biết bìa nào nét → `sharpRows` coi lỗi `42703` (cột không tồn tại) là "chưa đo", kệ theo thứ tự thường (để `build` / e2e chạy được). **Sau migration: xóa nhánh `42703` trong `getHomeShelves`.**
+- Trước migration: kệ không biết bìa nào nét → `sharpRows` coi lỗi `42703` (cột không tồn tại) là "chưa đo", kệ theo thứ tự thường (để `build` / e2e chạy được). **Đã xóa** sau khi chủ dự án chạy migration (2026-10-16).
 - Admin upload bìa ghi `cover_width` → **lỗi trước migration** (e2e `admin-books` "bìa: JPEG lớn → WebP 600px…" fail đúng chỗ này; 2 test sau nó trong cùng file `serial` chạy riêng thì qua). Import cũng ghi cột này: chạy migration trước khi import tiếp.
 - Sau migration: `npm run covers -- --measure` (đo 189 bìa), rồi chạy lại e2e.
 
