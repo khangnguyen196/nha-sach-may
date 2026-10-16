@@ -7,7 +7,8 @@
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`). Không còn nhánh tính năng nào đang mở.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build). Job `e2e` tắt tới khi bật biến `RUN_E2E`.
 - Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
-- Chưa deploy hoàn chỉnh: Supabase Site URL đã là `https://nha-sach-may.vercel.app`, các bước còn lại nằm trong `owner-todo.md`.
+- **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
+- Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
 
 ## Đọc gì trước
 
@@ -24,7 +25,8 @@
 
 ## Việc mở (chưa ai làm)
 
-- Chủ dự án: thêm Redirect URLs `…/api/auth/confirm**` (`owner-todo.md` mục 2.0), rồi test tay đăng ký + quên mật khẩu bằng email thật (nhánh `?code=` chỉ có Vitest).
+- Chủ dự án đang test tay theo checklist (`final-report.md` mục 2) trên bản deploy; lỗi sẽ gửi thành **một đợt**, sửa chung một nhánh.
+- Lỗi đã biết, sửa cùng đợt đó: với template mặc định, link đặt lại mật khẩu lỗi (hết hạn / đã dùng) thì `/xac-nhan` hiện "Về trang đăng nhập" thay vì "Yêu cầu liên kết mới", vì Supabase gắn lỗi sau dấu `#` nên server không đọc được.
 - Đề xuất, chưa duyệt: tạo project Supabase riêng cho e2e / CI (`owner-todo.md` mục 6.5); kéo LCP mobile xuống < 2.5 s (đo trên domain thật trước; ý tưởng ở báo cáo `phase-10.md`); captcha (mục 7).
 
 Mở đầu phiên mới: tóm tắt trạng thái trong vài dòng rồi chờ giao việc.

@@ -1,6 +1,6 @@
 # Báo cáo cuối: Nhà Sách Mây sau Phase 1 → 10
 
-Trạng thái: Phase 1–10 đã merge vào `main` (2026-10-16). Chưa deploy. Dự án học tập, phi thương mại.
+Trạng thái: Phase 1–10 đã merge vào `main` (2026-10-16). Đã deploy `https://nha-sach-may.vercel.app` (tự deploy từ `main`). Dự án học tập, phi thương mại.
 
 ## 1. Tính năng đã có
 
@@ -99,15 +99,15 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 
 **Bắt buộc trước khi deploy**
 1. ✅ Chạy 2 migration (`cover_width`, `payments_email`), sinh lại types, `covers --measure` — đã xong 2026-10-16.
-2. Supabase → URL Configuration → Redirect URLs: thêm `https://nha-sach-may.vercel.app/api/auth/confirm**` và `http://localhost:3000/api/auth/confirm**` (`owner-todo.md` mục 2.0). Template riêng (`supabase/templates/`) chỉ dán được khi đã có custom SMTP (mục 2.1, tùy chọn).
-3. Tạo project Vercel, đặt env `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SITE_URL`; **không** đặt `SUPABASE_SERVICE_ROLE_KEY`, `E2E_FAULT_INJECTION`; chọn region gần Supabase (mục 6.1).
-4. Supabase → URL Configuration: Site URL + Redirect URLs của domain Vercel (mục 6.2).
-5. GitHub → Secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` để job CI `check` build được (mục 6.3).
+2. ✅ Supabase → URL Configuration → Redirect URLs: thêm `https://nha-sach-may.vercel.app/api/auth/confirm**` và `http://localhost:3000/api/auth/confirm**` (`owner-todo.md` mục 2.0). Template riêng (`supabase/templates/`) chỉ dán được khi đã có custom SMTP (mục 2.1, tùy chọn). — Đã thêm cả hai, thử bằng link giả về đúng `/xac-nhan`; 2 template song ngữ đã dán.
+3. ✅ Tạo project Vercel, đặt env `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SITE_URL`; **không** đặt `SUPABASE_SERVICE_ROLE_KEY`, `E2E_FAULT_INJECTION`; chọn region gần Supabase (mục 6.1). — Đã deploy `nha-sach-may.vercel.app`, tự deploy từ `main`, region `sin1`; chưa đặt `SITE_URL` (dùng domain Vercel).
+4. ✅ Supabase → URL Configuration: Site URL + Redirect URLs của domain Vercel (mục 6.2).
+5. ✅ GitHub → Secrets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` để job CI `check` build được (mục 6.3). — CI xanh.
 
 **Nên làm ngay sau deploy**
 6. Tạo project Supabase thứ hai cho e2e / CI, không chạy e2e trên DB production nữa (mục 6.5).
-7. SMTP riêng cho Supabase Auth (SMTP mặc định chỉ gửi tới thành viên organization) (mục 6.2).
-8. Chạy checklist test tay ở mục 2 trên bản deploy.
+7. ✅ SMTP riêng cho Supabase Auth (SMTP mặc định chỉ gửi tới thành viên organization) (mục 6.2). — SMTP Gmail.
+8. Chạy checklist test tay ở mục 2 trên bản deploy. — Đang làm; lỗi gửi thành một đợt.
 9. Chọn ~12 sách nổi bật trong admin (kệ "Nổi bật" đang ẩn).
 
 **Tùy chọn**

@@ -29,7 +29,7 @@ Cuối cùng chạy lại `npm run test:e2e` (các test ghi "chờ migration" tr
 
 ## 2. Email auth: Redirect URLs (bắt buộc) + template riêng (tùy chọn, cần custom SMTP)
 
-**2.0 Redirect URLs — bắt buộc, kể cả khi giữ template mặc định của Supabase**
+**2.0 Redirect URLs — bắt buộc, kể cả khi giữ template mặc định của Supabase** — ✅ đã thêm `…/api/auth/confirm**` cho production + localhost; thử bằng link giả về đúng `/xac-nhan`
 
 Template mặc định (`{{ .ConfirmationURL }}`): Supabase xác thực link ở `/auth/v1/verify` rồi chuyển về `redirectTo` mà app gửi lúc đăng ký / quên mật khẩu (`<domain>/api/auth/confirm?locale=…&type=signup|recovery&next=…`) kèm `?code=`; app đổi code lấy phiên (xác nhận đăng ký → `/tai-khoan` đã đăng nhập, quên mật khẩu → trang đặt mật khẩu mới). Supabase **chỉ** chuyển về URL nằm trong Redirect URLs; thiếu thì về Site URL (trang chủ) và link không dùng được.
 
@@ -46,7 +46,7 @@ Giới hạn của template mặc định: link phải mở **trên cùng trình
 
 Kiểm tra: `/dang-ky` bằng email thành viên organization Supabase (SMTP mặc định chỉ gửi cho họ) → thư → bấm link → `/tai-khoan` đã đăng nhập. Đăng xuất → `/quen-mat-khau` → thư → link → `/dat-lai-mat-khau` → đặt mật khẩu mới.
 
-**2.1 Template riêng (song ngữ, chống trình quét link) — chỉ khi đã có custom SMTP** (Supabase bắt buộc custom SMTP mới cho sửa template; xem 6.2 mục 3)
+**2.1 Template riêng (song ngữ, chống trình quét link) — chỉ khi đã có custom SMTP** (Supabase bắt buộc custom SMTP mới cho sửa template; xem 6.2 mục 3) — ✅ đã dán cả 2 template (SMTP Gmail, 6.2)
 
 Supabase Dashboard → Authentication → Emails:
 1. Tab **Confirm signup** → ô Message body: dán toàn bộ `supabase/templates/confirm-signup.html`. Subject: dòng "Subject gợi ý" ở đầu file.
@@ -89,7 +89,7 @@ Ba nhánh xếp chồng: `phase-8` ← `phase-9` ← `phase-10` (mỗi nhánh ch
 
 Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`, CI `.github/workflows/ci.yml`, `.env.example`), **không** tự deploy, không tạo tài khoản.
 
-**6.1 Vercel**
+**6.1 Vercel** — ✅ đã deploy `https://nha-sach-may.vercel.app`, tự deploy từ `main`, region `sin1`, env 2 biến `NEXT_PUBLIC_SUPABASE_*`; **chưa** đặt `SITE_URL` (app dùng `VERCEL_PROJECT_PRODUCTION_URL` = domain Vercel)
 1. vercel.com → đăng nhập bằng GitHub → **Add New… → Project** → chọn repo `nha-sach-may` → Framework: Next.js (tự nhận), Root: `./`, Build / Install command: để mặc định.
 2. **Environment Variables** (Production + Preview):
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: như `.env.local`.
@@ -99,22 +99,22 @@ Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`,
 3. **Settings → Functions → Region**: chọn gần project Supabase (Supabase Dashboard → Project Settings → General → Region; VD Singapore `sin1`).
 4. **Deploy**. Build prerender catalog từ Supabase nên chạy `npm run covers -- --measure` (sau migration) **trước** khi deploy để kệ trang chủ dùng đúng bìa.
 
-**6.2 Supabase sau khi có domain**
-1. Authentication → URL Configuration → **Site URL** = domain Vercel; **Redirect URLs** thêm `https://<domain>/**` (giữ `http://localhost:3000/**` để dev).
+**6.2 Supabase sau khi có domain** — ✅ Site URL + Redirect URLs (2.0), SMTP riêng qua Gmail
+1. Authentication → URL Configuration → **Site URL** = domain Vercel; **Redirect URLs** thêm `https://<domain>/**` (giữ `http://localhost:3000/**` để dev). `…/api/auth/confirm**` (2.0) là đủ.
 2. Template email (mục 2) dùng `{{ .SiteURL }}` → tự trỏ domain mới.
 3. (Khuyên dùng) SMTP riêng (Authentication → Emails → SMTP Settings, VD SMTP của Resend): SMTP mặc định của Supabase chỉ gửi tới thành viên organization.
 
-**6.3 GitHub Actions (CI)**
+**6.3 GitHub Actions (CI)** — ✅ bước 1 (2 secret `NEXT_PUBLIC_SUPABASE_*`, CI xanh); bước 2 chưa bật
 1. Repo → Settings → Secrets and variables → Actions → **Secrets**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (job `check`: typecheck, lint, Vitest, build).
 2. e2e trên CI (tùy chọn): thêm secret `SUPABASE_SERVICE_ROLE_KEY` + **Variables** `RUN_E2E = true`. e2e tạo / xóa user, đơn, sách test thật → **nên dùng một project Supabase riêng cho CI** (chạy `schema.sql`, `seed.sql`, migration, import sách), không dùng chung DB production.
 
-**6.5 Sau khi deploy: tạo project Supabase thứ hai riêng cho e2e / CI** (nên làm trước khi chạy e2e lần nữa)
+**6.5 Sau khi deploy: tạo project Supabase thứ hai riêng cho e2e / CI** (nên làm trước khi chạy e2e lần nữa) — chưa làm
 - Lý do: sách e2e (`e2e-shop-…`, `e2e-admin-…`) là sách **đang bán** (danh mục gốc ẩn nhưng sách `is_active`) trên chính DB production trong lúc test chạy. Chúng không lên menu, sitemap hay kệ "Mới về", nhưng **vẫn lộ qua tìm kiếm** (`search_books`, ô ⌘K, `/tim-kiem`), trang Tất cả sách `/sach` và link trực tiếp; khách thật có thể thêm vào giỏ / đặt hàng. e2e cũng tạo user, đơn, voucher `E2E-ADMIN-…` thật (dọn khi xong, sót lại nếu lần chạy bị ngắt).
 - Cách làm: Supabase → New project (free tier, cùng region) → SQL Editor chạy `schema.sql`, `seed.sql`, `seed-foreign-books.sql`, toàn bộ `supabase/migrations/` theo thứ tự → `import:books -- --from-preview` các file đã duyệt (hoặc một tập nhỏ) với env trỏ project mới.
 - Trỏ e2e vào project mới: `.env.local` máy dev giữ project production; chạy e2e bằng file env riêng (VD `.env.e2e.local`, do bạn tạo và nạp trước khi chạy) hoặc chỉ chạy e2e trên CI với secret của project mới (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Muốn Claude hỗ trợ chọn file env khi chạy e2e thì nói, đó là thay đổi cấu hình cần duyệt (quy tắc "chỉ `check:env` đọc env").
 - Sau khi tách: không chạy `npm run test:e2e` trên DB production nữa.
 
-**6.4 Kiểm tra sau deploy**
+**6.4 Kiểm tra sau deploy** — đang làm (theo checklist `final-report.md` mục 2, lỗi gửi thành một đợt)
 - `https://<domain>/`, `/en`, `/sach/sapiens`, `/sitemap.xml`, `/robots.txt`; slug lạ `/sach/khong-co` → 404.
 - Đăng ký → email xác nhận → trang "Xác nhận email" → bấm nút.
 - Đặt một đơn COD + một đơn chuyển khoản (thông tin demo), hủy cả hai.
