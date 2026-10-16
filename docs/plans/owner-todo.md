@@ -78,7 +78,7 @@ VIETQR_ACCOUNT_NAME=NGUYEN VAN A   # viết HOA không dấu, đúng tên chủ 
 ```
 Đối soát vẫn bằng tay: admin xem sao kê rồi bấm "Đã nhận tiền" ở chi tiết đơn.
 
-## 5. Duyệt và merge (theo thứ tự)
+## 5. Duyệt và merge (theo thứ tự) — ✅ `phase-8` → `phase-10` đã merge vào `main`
 
 Ba nhánh xếp chồng: `phase-8` ← `phase-9` ← `phase-10` (mỗi nhánh chứa nhánh trước). Claude không merge / push `main`.
 1. Đọc `docs/plans/morning-report.md`, chạy migration (mục 1), chạy lại `npm run test:e2e` trên `phase-10`.

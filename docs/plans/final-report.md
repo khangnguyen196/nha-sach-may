@@ -57,9 +57,9 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 
 | # | Làm gì | Kết quả đúng |
 |---|---|---|
-| B1 | `/dang-ky` bằng email thành viên organization Supabase (SMTP mặc định chỉ gửi cho họ) | "Kiểm tra hộp thư"; nhận email xác nhận (template mặc định, tiếng Anh) |
-| B2 | Bấm link trong email **trên cùng trình duyệt** đã đăng ký | Về `/tai-khoan` đã đăng nhập (template riêng + custom SMTP: trang "Xác nhận email" có nút, bấm → `/tai-khoan`) |
-| B2b | Mở link xác nhận ở trình duyệt khác | Trang đăng nhập có thông báo "Email đã được xác nhận…"; đăng nhập được bằng mật khẩu vừa đặt |
+| B1 | `/dang-ky` bằng email bất kỳ (SMTP Gmail gửi được mọi địa chỉ); làm lại một lần ở `/en/register` bằng email khác | "Kiểm tra hộp thư"; email "Xác nhận email" bằng tiếng Việt (đăng ký ở `/en`: "Confirm your email", tiếng Anh) — ngôn ngữ theo `user_metadata.locale` ghi lúc đăng ký. Link trong email trỏ `{{ .SiteURL }}` (domain Vercel) kể cả khi đăng ký từ localhost |
+| B2 | Bấm link trong email | Trang trung gian "Xác nhận email" có nút "Xác nhận email" (chưa đăng nhập, link chưa bị dùng); bấm nút → `/tai-khoan` đã đăng nhập |
+| B2b | Mở link xác nhận (chưa dùng) ở trình duyệt khác / cửa sổ ẩn danh → bấm nút; rồi mở lại cùng link và bấm nút lần nữa | Lần đầu: `/tai-khoan` đã đăng nhập **ở trình duyệt đó** (template riêng dùng `token_hash` + `verifyOtp`, không cần PKCE nên không phụ thuộc trình duyệt lúc đăng ký). Lần hai: `/dang-nhap` báo "Liên kết đã hết hạn hoặc đã được dùng…" |
 | B3 | Đăng nhập khi đang có giỏ khách (A10) | Giỏ khách gộp vào giỏ tài khoản; badge đúng tổng |
 | B4 | `/tai-khoan/dia-chi` → thêm địa chỉ (Hà Nội → Phường Ba Đình), đặt mặc định | Địa chỉ hiện trong sổ, nhãn "Mặc định"; SĐT sai (`123`) báo lỗi tại ô |
 | B5 | `/thanh-toan` | Địa chỉ mặc định được chọn; tóm tắt đơn có tạm tính, phí ship, tổng |
@@ -76,7 +76,7 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 | B16 | Sửa đánh giá (đổi số sao) rồi "Xóa đánh giá" | Điểm cập nhật; xóa xong về "Chưa có đánh giá nào." |
 | B17 | Mở trang một sách chưa mua | "Bạn có thể đánh giá sau khi đã nhận cuốn sách này." (không có form) |
 | B18 | Trang tài khoản → đổi "Ngôn ngữ email" sang English | Lưu thành công; email sau đó (đơn hàng, đặt lại mật khẩu) bằng tiếng Anh |
-| B19 | Đăng xuất → `/quen-mat-khau` → email → link (cùng trình duyệt) → mật khẩu mới | Link về `/dat-lai-mat-khau` (template riêng: qua nút "Tiếp tục"); đổi được; đăng nhập bằng mật khẩu cũ thất bại |
+| B19 | Đăng xuất → `/quen-mat-khau` → email "Đặt lại mật khẩu" → bấm link → nút "Tiếp tục" → nhập mật khẩu mới | Email theo "Ngôn ngữ email" (B18); trang trung gian "Đặt lại mật khẩu" có nút "Tiếp tục" → `/dat-lai-mat-khau` → đổi được; đăng nhập bằng mật khẩu cũ thất bại; phiên ở trình duyệt khác bị thu hồi (`signOut({ scope: 'others' })`, trình duyệt đó chỉ thoát khi access token hết hạn, tối đa ~1 giờ). Mở được ở trình duyệt khác với lúc yêu cầu. Bấm lại link đã dùng → `/quen-mat-khau` báo "Liên kết đã hết hạn hoặc đã được dùng…" |
 | B20 | Thử ở `/en` (thanh toán, đơn hàng) | Toàn bộ chữ tiếng Anh, URL `/en/checkout`, `/en/account/orders` |
 
 ### C. Admin (tài khoản `role = 'admin'`, đặt bằng SQL)
