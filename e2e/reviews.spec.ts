@@ -26,6 +26,9 @@ test.use({ storageState: NO_SESSION })
 let buyer: E2eUser
 let other: E2eUser
 let book: E2eAdminBook
+// Đơn đã giao (đánh giá được ngay trên trang đơn) và đơn còn chờ xác nhận (không có nút đánh giá) của buyer
+let deliveredCode = ''
+let pendingCode = ''
 const slugs: string[] = []
 
 test.beforeAll(async () => {
@@ -37,8 +40,11 @@ test.beforeAll(async () => {
   slugs.push(book.slug)
   ;[buyer, other] = await Promise.all([createE2eUser('reviews'), createE2eUser('reviews-other')])
   const addressId = await seedAddress(buyer.id)
-  const order = await placeE2eOrder(await signedInClient(buyer), buyer.id, { addressId, bookId: book.id, quantity: 1 })
+  const client = await signedInClient(buyer)
+  const order = await placeE2eOrder(client, buyer.id, { addressId, bookId: book.id, quantity: 1 })
   await deliverOrder(order.id)
+  deliveredCode = order.order_code
+  pendingCode = (await placeE2eOrder(client, buyer.id, { addressId, bookId: book.id, quantity: 1 })).order_code
 })
 
 test.afterAll(async () => {
@@ -117,4 +123,41 @@ test('đã nhận sách: viết → hiện trong danh sách + điểm trung bìn
   await expect(page.getByTestId('rating-summary')).toHaveCount(0)
   expect(await reviewsOf(book.id)).toEqual([])
   expect(errors).toEqual([])
+})
+
+test('đơn đã giao: đánh giá ngay trên trang đơn → trang sách hiện đánh giá + điểm, cùng một đánh giá', async ({ page }) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  await login(page, buyer)
+  await page.goto(`/tai-khoan/don-hang/${deliveredCode}`)
+  const item = page.getByRole('main').getByTestId('order-item')
+  await expect(item.getByTestId('order-item-link')).toHaveAttribute('href', `/sach/${book.slug}`)
+
+  const block = item.getByTestId('order-item-review')
+  await block.getByText('Đánh giá', { exact: true }).click()
+  const form = block.getByTestId('review-form')
+  await waitForHydration(page, 'main [data-testid="order-item-review"] button[type="submit"]')
+  await star(form, '4 sao').click()
+  await form.getByLabel('Nhận xét').fill('Đánh giá từ trang đơn (e2e)')
+  await form.getByRole('button', { name: 'Gửi đánh giá' }).click()
+  await expect(block.getByRole('status').filter({ hasText: 'Đã lưu đánh giá.' })).toBeVisible({ timeout: 15_000 })
+  await expect(block.getByText('Sửa đánh giá')).toBeVisible()
+  expect(await reviewsOf(book.id)).toMatchObject([{ user_id: buyer.id, rating: 4, content: 'Đánh giá từ trang đơn (e2e)' }])
+
+  // Trang sách: điểm + danh sách đã làm mới; form ở trang sách là cùng đánh giá đó
+  await item.getByTestId('order-item-link').click()
+  await expect(page).toHaveURL(new RegExp(`/sach/${book.slug}$`))
+  await expect(page.getByTestId('rating-summary')).toContainText('4')
+  await expect(reviews(page).getByTestId('review')).toContainText('Đánh giá từ trang đơn (e2e)')
+  await expect(reviews(page).getByRole('heading', { name: 'Đánh giá của bạn' })).toBeVisible()
+  await expect(reviews(page).getByTestId('review-form').getByRole('radio', { name: '4 sao' })).toBeChecked()
+  expect(errors).toEqual([])
+})
+
+test('đơn chưa giao: có link tới trang sách nhưng không có nút đánh giá', async ({ page }) => {
+  await login(page, buyer)
+  await page.goto(`/tai-khoan/don-hang/${pendingCode}`)
+  const item = page.getByRole('main').getByTestId('order-item')
+  await expect(item.getByTestId('order-item-link')).toHaveAttribute('href', `/sach/${book.slug}`)
+  await expect(item.getByTestId('order-item-review')).toHaveCount(0)
 })

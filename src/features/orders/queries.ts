@@ -8,7 +8,7 @@ import { FILTER_STATUSES, ORDERS_PAGE_SIZE, type OrderListParams } from './param
 
 const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
   street, note, subtotal, shipping_fee, discount, voucher_code, total, cancelled_reason, created_at,
-  order_items(id, title, cover_url, unit_price, quantity, line_total)`
+  order_items(id, book_id, title, cover_url, unit_price, quantity, line_total, books(slug, is_active))`
 
 // Mã đơn do generate_order_code() sinh: NS + YYMMDD + số thứ tự (≥ 5 chữ số)
 export const ORDER_CODE = /^NS\d{11,16}$/

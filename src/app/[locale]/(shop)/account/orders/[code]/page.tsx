@@ -12,6 +12,8 @@ import { getOrderByCode } from '@/features/orders/queries'
 import { REASON_MAX } from '@/features/orders/schemas'
 import { awaitingTransfer, canCancel } from '@/features/orders/utils'
 import { VietQrCard } from '@/features/payments/components/vietqr-card'
+import { OrderItemReview } from '@/features/reviews/components/order-item-review'
+import { getMyReviews } from '@/features/reviews/queries'
 import { requireUser } from '@/lib/auth'
 import { getFormMessages } from '@/lib/form-messages'
 import { placeholder } from '@/lib/template'
@@ -46,10 +48,16 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
     getOrderByCode(code, user.id),
     getTranslations('orders'),
     getTranslations('order'),
-    getFormMessages(['ORDER_NOT_CANCELLABLE', 'AUTH_REQUIRED']),
+    getFormMessages(['ORDER_NOT_CANCELLABLE', 'REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED']),
   ])
   // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau
   if (!order) notFound()
+
+  // Đơn đã giao: đánh giá từng cuốn ngay trên trang đơn (sách đã xóa khỏi catalog thì không còn chỗ đánh giá)
+  const delivered = order.status === 'delivered'
+  const bookIds = delivered ? order.order_items.flatMap((item) => (item.book_id === null ? [] : [item.book_id])) : []
+  // Không có sách cần đánh giá → không query
+  const reviews = await getMyReviews(bookIds, user.id)
 
   return (
     <>
@@ -71,6 +79,18 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
         <OrderDetails
           order={order}
           locale={locale}
+          renderItemExtra={
+            delivered
+              ? (item) =>
+                  item.book_id !== null && (
+                    <OrderItemReview
+                      bookId={item.book_id}
+                      review={reviews.get(item.book_id) ?? null}
+                      messages={messages}
+                    />
+                  )
+              : undefined
+          }
           highlight={
             <p className="-mt-2 text-sm text-muted-foreground">
               {tOrder('payment')}:{' '}

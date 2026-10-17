@@ -935,6 +935,8 @@
     "notEligible": "Bạn có thể đánh giá sau khi đã nhận cuốn sách này.",
     "writeTitle": "Viết đánh giá",
     "yourTitle": "Đánh giá của bạn",
+    "rate": "Đánh giá",
+    "edit": "Sửa đánh giá",
     "ratingLabel": "Chấm điểm",
     "ratingOption": "{rating} sao",
     "contentLabel": "Nhận xét",

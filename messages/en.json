@@ -523,6 +523,8 @@
     "notEligible": "You can review this book after you have received it.",
     "writeTitle": "Write a review",
     "yourTitle": "Your review",
+    "rate": "Review this book",
+    "edit": "Edit review",
     "ratingLabel": "Rating",
     "ratingOption": "{rating, plural, one {# star} other {# stars}}",
     "contentLabel": "Review",

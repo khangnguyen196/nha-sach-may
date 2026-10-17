@@ -36,6 +36,8 @@ type Props = {
   labels: ReviewFormLabels
   defaults: { rating: number | null; content: string | null }
   contentMax: number
+  /** Tiền tố id ô nhập: trang đơn có một form / dòng sách */
+  idPrefix?: string
 }
 
 const noop: Action = async () => ({ ok: true, data: null })
@@ -44,7 +46,7 @@ const noop: Action = async () => ({ ok: true, data: null })
  * Viết / sửa / xóa đánh giá của mình. Radio sao gốc (không JS vẫn gửi được, bàn phím dùng mũi tên). Component giữ
  * nguyên vị trí khi server render lại sau refresh() nên thông báo kết quả còn; xóa xong thì reset ô nhập.
  */
-export function ReviewForm({ save, remove, messages, labels, defaults, contentMax }: Props) {
+export function ReviewForm({ save, remove, messages, labels, defaults, contentMax, idPrefix = 'review' }: Props) {
   const saving = useFormAction(save, messages)
   const deleting = useFormAction(remove ?? noop, messages)
   const formRef = useRef<HTMLFormElement>(null)
@@ -94,7 +96,7 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
         </fieldset>
         <TextAreaField
           name="content"
-          idPrefix="review"
+          idPrefix={idPrefix}
           label={labels.contentLabel}
           hint={labels.contentHint}
           labelAside={

@@ -50,3 +50,19 @@ export async function getMyReviewState(bookId: number, userId: string) {
 }
 
 export type MyReview = NonNullable<Awaited<ReturnType<typeof getMyReviewState>>['review']>
+
+/**
+ * Đánh giá của người đang đăng nhập cho nhiều sách trong MỘT query (dòng sách ở trang đơn đã giao), book_id → đánh giá.
+ * Theo phiên, không cache → chỉ gọi trong <Suspense>.
+ */
+export async function getMyReviews(bookIds: number[], userId: string): Promise<Map<number, MyReview>> {
+  if (bookIds.length === 0) return new Map()
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id, book_id, rating, content')
+    .eq('user_id', userId)
+    .in('book_id', bookIds)
+  if (error) throw new Error(`getMyReviews: ${error.message}`)
+  return new Map(data.map(({ book_id, ...review }) => [book_id, review]))
+}
