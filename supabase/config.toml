@@ -1,0 +1,88 @@
+# Supabase local (Docker) CHỈ cho e2e: CI chạy `supabase start` (.github/workflows/e2e.yml), máy dev cần Docker.
+# Không liên quan project cloud: không `supabase link`, không `supabase db push` (sẽ chạy migrations/ lên production).
+# Tham chiếu: https://supabase.com/docs/guides/local-development/cli/config (CLI ghim 2.121.0)
+project_id = "nha-sach-may"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Cùng bản với production (PostgreSQL 17.11)
+major_version = 17
+
+[db.migrations]
+# DB trống dựng từ schema.sql (đã chứa nguyên văn mọi migration, Vitest supabase/migrations.test.ts giữ điều này).
+# Bật migration thì migrations/ chạy trước schema.sql và lỗi vì chưa có bảng.
+enabled = false
+
+[db.seed]
+enabled = true
+sql_paths = ["./schema.sql", "./seed.sql", "./seed-foreign-books.sql"]
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+# Hộp thư giả (Mailpit): Auth gửi thư vào đây, e2e đọc qua API (e2e/mailbox.ts)
+[local_smtp]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+# {{ .SiteURL }} trong template email → server e2e của Playwright
+site_url = "http://localhost:3100"
+additional_redirect_urls = ["http://localhost:3100/**", "http://localhost:3000/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 6
+
+# e2e đăng nhập lại ở nhiều test từ cùng một IP; mặc định local chỉ 2 email / giờ
+[auth.rate_limit]
+email_sent = 1000
+sms_sent = 30
+anonymous_users = 30
+token_refresh = 1000
+sign_in_sign_ups = 1000
+token_verifications = 1000
+web3 = 30
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Như production: đăng ký phải xác nhận email
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1s"
+otp_length = 6
+otp_expiry = 3600
+
+# Template song ngữ như production (subject: dòng "Subject gợi ý" đầu mỗi file)
+[auth.email.template.confirmation]
+subject = "{{ if eq .Data.locale \"en\" }}Confirm your Nhà Sách Mây account{{ else }}Xác nhận tài khoản Nhà Sách Mây{{ end }}"
+content_path = "./supabase/templates/confirm-signup.html"
+
+[auth.email.template.recovery]
+subject = "{{ if eq .Data.locale \"en\" }}Reset your Nhà Sách Mây password{{ else }}Đặt lại mật khẩu Nhà Sách Mây{{ end }}"
+content_path = "./supabase/templates/reset-password.html"
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
