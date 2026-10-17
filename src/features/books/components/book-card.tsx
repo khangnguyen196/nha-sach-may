@@ -15,9 +15,15 @@ type Props = {
   sizes?: string
   /** Hàng đầu của lưới thường nằm trong màn hình đầu → tải ngay, không chờ lazy */
   eager?: boolean
+  /**
+   * Ảnh có thể là LCP (1–2 card đầu lưới): ưu tiên tải cao + preload. Lưới ở trang danh mục / `/sach` / tìm kiếm stream
+   * theo searchParams nên preload tới cùng lúc với thẻ img (React không đưa lên <head>); chỉ fetchPriority có tác dụng
+   * ở đó, preload có tác dụng khi lưới nằm trong phần prerender.
+   */
+  preload?: boolean
 }
 
-export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false }: Props) {
+export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false, preload = false }: Props) {
   const [t, format] = await Promise.all([getTranslations('book'), getFormatter()])
   const authors = book.book_authors.flatMap((ba) => (ba.role === 'author' && ba.authors ? [ba.authors.name] : []))
   const discount = discountPercent(book.price, book.original_price)
@@ -36,7 +42,7 @@ export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false }
             alt=""
             fill
             sizes={sizes}
-            loading={eager ? 'eager' : 'lazy'}
+            {...(preload ? { preload: true, fetchPriority: 'high' } : { loading: eager ? 'eager' : 'lazy' })}
             className={cn('object-cover', soldOut && 'opacity-40')}
           />
         ) : (

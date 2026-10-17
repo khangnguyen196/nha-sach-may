@@ -166,12 +166,13 @@ async function BookContent({ params }: { params: Props['params'] }) {
         <div className="md:sticky md:top-24 md:self-start">
           <div className="relative mx-auto aspect-[2/3] w-full max-w-xs overflow-hidden rounded-cover bg-surface-raised md:max-w-none">
             {book.cover_url ? (
-              // Ảnh đứng một mình → alt là tên sách. Là LCP của trang → preload.
+              // Ảnh đứng một mình → alt là tên sách. Là LCP của trang → preload + ưu tiên cao.
               <Image
                 src={book.cover_url}
                 alt={book.title}
                 fill
                 preload
+                fetchPriority="high"
                 sizes="(min-width: 1152px) 420px, (min-width: 768px) 38vw, 320px"
                 className="object-cover"
               />

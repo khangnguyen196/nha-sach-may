@@ -200,3 +200,12 @@ test('lưới stream vào không gây nhảy layout (CLS < 0.1)', async ({ page 
   }
   expect(errors).toEqual([])
 })
+
+test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), bìa sau không', async ({ page }) => {
+  await page.goto('/danh-muc/van-hoc')
+  const covers = page.getByRole('main').locator('ul img')
+  await expect(covers.nth(0)).toHaveAttribute('fetchpriority', 'high')
+  await expect(covers.nth(1)).toHaveAttribute('fetchpriority', 'high')
+  await expect(covers.nth(2)).not.toHaveAttribute('fetchpriority', 'high')
+  await expect(covers.nth(5)).toHaveAttribute('loading', 'lazy')
+})
