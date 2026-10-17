@@ -82,7 +82,7 @@ Biến thể chưa có trong cache (MISS, đo với `w=3840`): trung vị 884 ms
 
 - Trang thanh toán / đơn hàng: 5 query chạy **song song** (giỏ, địa chỉ, `quote_order`, badge, `is_admin`). Không thấy N+1 hay query tuần tự lẽ ra song song ở catalog.
 - `/admin`, `/admin/don-hang`: **~19 lần `rpc/is_admin` mỗi lần mở trang**. Mỗi `AdminLink` trên màn hình được prefetch; mỗi request prefetch đi qua proxy (`is_admin`) + layout (`is_admin`).
-- Thêm vào giỏ: action 3 nhịp tuần tự (đọc sách + giỏ song song → upsert → đếm giỏ), không `refresh()`. (Bản đầu của báo cáo này ghi nhầm "`refresh()` render lại cả trang, ~10 query": cụm query đó là lượt tải trang của lượt đo kế tiếp.)
+- Thêm vào giỏ: xem mục 4 ở phần "Sửa" (đo lại riêng một lần bấm).
 - Đổi trạng thái đơn (admin): 38 `is_admin` quanh một lần bấm (prefetch lại sau `refresh()`).
 - Tìm kiếm: có index trigram `books_search_idx`; `search_books` lần đầu 2,4 s (kết nối lạnh), các lần sau ~190 ms.
 - Trang có query (`/sach?…`, tìm kiếm) render theo request lần đầu, sau đó dữ liệu nằm trong `"use cache"`.
@@ -98,8 +98,8 @@ Chủ dự án chọn mục 1–7 của báo cáo. Mỗi mục một commit:
 | 3 | Prefetch ở admin | `AdminLink` không prefetch khi hiện trên màn hình; chỉ prefetch khi rê chuột / focus / chạm (Next 16 `prefetch={false}` tắt cả hover nên tự gọi `router.prefetch`) |
 | 6 | Sắp xếp / lọc / sang trang | `CatalogPending`: bấm link cùng trang khác query hoặc đổi ô sắp xếp → lưới mờ, `aria-busy`, "Đang tải kết quả…" (sr-only) tới khi trang mới tới |
 | 7 | Áp dụng voucher | `VoucherPending`: submit form GET → khối tổng tiền mờ + "Đang tính lại tổng tiền…" tới khi trang mới hiện (Back từ bfcache thì bỏ) |
-| 5 | Palette | **Không đổi**: đã tải trước chunk khi rê chuột / focus nút tìm (không tải lúc rảnh); `/api/search` đã có `s-maxage=300, stale-while-revalidate=3600` (CDN: HIT ~0,1 s sau TLS, MISS ~0,33 s). Số đo "mở 0,87 s" là do kịch bản bấm thẳng Ctrl+K, không rê chuột qua nút |
-| 4 | Thêm vào giỏ | **Không đổi**: `addToCart` đã trả số lượng giỏ mới và không `refresh()` (chỉ `router.refresh()` khi chưa biết phiên lúc header chưa stream xong). Báo cáo trước gán nhầm cụm query đánh giá / `is_admin` của lượt tải trang kế tiếp cho thao tác này |
+| 5 | Palette | **Không đổi**, đã có sẵn (xem "Bằng chứng mục 4, 5") |
+| 4 | Thêm vào giỏ | **Không đổi**: action đã trả số lượng giỏ mới, không `refresh()`; còn một `router.refresh()` dự phòng ở client khi bấm lúc chưa biết phiên — bỏ đi có rủi ro lệch badge nên dừng, không sửa (xem "Bằng chứng mục 4, 5") |
 
 `measure:js` sau sửa: trang chủ +39,6 KB, trang sách +42,4 KB (ngân sách 50 KB), danh mục +52,7 KB (vượt từ trước, ngân sách chỉ áp cho trang sách).
 
@@ -170,6 +170,32 @@ npx tsx scripts/perf/measure.ts --out perf-after.json
 | Mỗi lần mở `/admin` | ~15 | 2 (proxy + layout) |
 | Mỗi lần mở `/admin/don-hang` | ~19 | 2 |
 | Mỗi lần đổi trạng thái đơn | ~19 | 5 |
+
+### Bằng chứng mục 4, 5 (không sửa code)
+
+**Mục 4, thêm vào giỏ**
+- `src/features/cart/actions.ts` dòng 60–77 (`addToCart`): không `refresh()` (hai lời gọi `refresh()` ở dòng 101, 114 thuộc `setCartQuantity`, `removeFromCart`). Query: dòng 68 `loadBookAndLine` (2 request song song), dòng 75 upsert, dòng 57 `getCartCount`.
+- `src/features/cart/components/add-to-cart-button.tsx`: đã biết phiên (`mode === 'user'`, header đã gọi `setCartSession`) → dòng 60–62 (badge optimistic, chốt bằng số server trả). Chưa biết phiên (header phần theo phiên chưa stream xong) → dòng 66 `router.refresh()` ("Header có thể stream tới sau với số render trước lúc thêm") → render lại phần động của trang sách.
+- Log fetch phía server (`next start` local), một lần bấm:
+  - đã biết phiên (kịch bản chờ link tài khoản ở header): **4 request**, 3 nhịp tuần tự (`books` + `cart_items` song song 141–150 ms → upsert 568 ms → đếm giỏ 146 ms), 2,5 s sau không có request nào;
+  - bấm ngay khi nút hydrate (như kịch bản đo ban đầu): 4 request của action **+ 6 request** của `router.refresh()` (đếm giỏ, `is_admin`, kệ cùng danh mục, đánh giá của tôi, "đã mua chưa", danh sách đánh giá). Thời gian "server ghi xong" ở bảng trên đo theo cách này, nên gồm cả lượt render lại. Báo cáo đầu (bản ở phần "Trước") đúng về con số ~10 query nhưng sai nguyên nhân (không phải `refresh()` trong action).
+- Không sửa: bỏ `router.refresh()` dự phòng thì header stream tới sau có thể ghi đè badge bằng số cũ → rủi ro lệch đồng bộ (điều kiện "dừng và báo").
+
+**Mục 5, palette + `/api/search`**
+- `src/features/books/components/search-trigger.tsx` dòng 8 `loadPalette = () => import('./search-palette')`, dòng 44–45 `onPointerEnter` / `onFocus` gọi `loadPalette()`; không tải lúc rảnh.
+- `src/app/api/search/route.ts` dòng 6 `CACHE_HIT = 'public, s-maxage=300, stale-while-revalidate=3600'`, dòng 16 gắn vào response (lỗi: `no-store`, dòng 19).
+- Header app gửi (`next start` local): `cache-control: public, s-maxage=300, stale-while-revalidate=3600`.
+- Production (2026-10-17, `/api/search?q=sapiens`): trình duyệt nhận `Cache-Control: public` (Vercel dùng `s-maxage` / `stale-while-revalidate` cho CDN rồi bỏ khỏi response); lần 1 `X-Vercel-Cache: MISS` 3,2 s (0,69 s là TLS), lần 2 `HIT` 0,87 s (0,47 s là TLS).
+- Vì không đổi code, chênh lệch A/B của hai mục này là nhiễu (và cách bấm sớm ở mục 4).
+
+### Kiểm thử trạng thái "Đang tính lại…" (voucher)
+
+Test e2e đầu tiên dùng `click()` + `expect(locator)`: cả hai **chờ điều hướng do cú bấm xong** mới kiểm, lúc đó trang cũ đã bị thay → test fail cả khi có lẫn không có `VoucherPending` (không phân biệt được). Đã viết lại: bấm và đọc chữ ngay trong trang cũ bằng một `evaluate` (thăm dò tối đa 1 s; phản hồi bị làm chậm 1,5 s). Thí nghiệm (không commit bản gỡ):
+
+| | desktop | mobile |
+|---|---|---|
+| Gỡ `VoucherPending` | **fail** đúng chỗ (nhận `null`) | **fail** đúng chỗ |
+| Có `VoucherPending` | kiểm "Đang tính lại…" **qua**; bước sau (lỗi voucher ở trang mới trong 5 s) fail vì trang mới tới chậm (setup lượt đó 58 s) | **qua** |
 
 ### Đọc kết quả
 
