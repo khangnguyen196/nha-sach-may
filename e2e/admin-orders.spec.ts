@@ -206,3 +206,20 @@ test('COD không có nút "Đã nhận tiền"', async ({ page }) => {
   await openOrder(page, order.order_code)
   await expect(main(page).getByRole('button', { name: 'Đã nhận tiền' })).toHaveCount(0)
 })
+
+test('danh sách đơn: không prefetch link khi chỉ hiện trên màn hình; rê chuột vào một đơn mới prefetch', async ({ page }) => {
+  const order = await placeOrder()
+  const prefetches: string[] = []
+  page.on('request', (request) => {
+    if (request.headers()['next-router-prefetch']) prefetches.push(request.url())
+  })
+  await page.goto('/admin/don-hang')
+  const link = main(page).getByRole('link', { name: order.order_code })
+  await expect(link).toBeVisible()
+  await waitForHydration(page, `main a[href="/admin/don-hang/${order.order_code}"]`)
+  await page.waitForTimeout(1_500)
+  expect(prefetches).toEqual([])
+
+  await link.hover()
+  await expect.poll(() => prefetches.some((url) => url.includes(`/admin/don-hang/${order.order_code}`))).toBe(true)
+})
