@@ -16,6 +16,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Fallback lúc font chưa tải (display: swap): font hệ thống chỉnh số đo cho gần font thật → ít xê dịch bố cục.
+   Số đo chép từ next/font/google (trước khi tự host font). */
+@font-face {
+  font-family: 'Be Vietnam Pro Fallback';
+  src: local('Arial');
+  ascent-override: 90.61%;
+  descent-override: 24.01%;
+  line-gap-override: 0%;
+  size-adjust: 110.36%;
+}
+
+@font-face {
+  font-family: 'Lora Fallback';
+  src: local('Times New Roman');
+  ascent-override: 87.33%;
+  descent-override: 23.78%;
+  line-gap-override: 0%;
+  size-adjust: 115.2%;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,9 +63,14 @@
   --color-qr: var(--qr);
   --color-qr-background: var(--qr-background);
 
-  --font-sans: var(--font-be-vietnam-pro);
-  --font-serif: var(--font-lora);
-  --font-heading: var(--font-be-vietnam-pro);
+  /* Font tự host chia theo subset (src/app/fonts.ts): latin → latin-ext → vietnamese, fallback đã chỉnh số đo ở cuối */
+  --font-sans:
+    var(--font-be-vietnam-pro-latin), var(--font-be-vietnam-pro-latin-ext), var(--font-be-vietnam-pro-vietnamese),
+    'Be Vietnam Pro Fallback';
+  --font-serif: var(--font-lora-latin), var(--font-lora-latin-ext), var(--font-lora-vietnamese), 'Lora Fallback';
+  --font-heading:
+    var(--font-be-vietnam-pro-latin), var(--font-be-vietnam-pro-latin-ext), var(--font-be-vietnam-pro-vietnamese),
+    'Be Vietnam Pro Fallback';
 
   /* Radius: sm 6px (input, badge) · lg 10px (card) · xl 14px (modal, sheet) · cover 4px */
   --radius-sm: calc(var(--radius) * 0.6);
