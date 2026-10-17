@@ -104,15 +104,16 @@ Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`,
 2. Template email (mục 2) dùng `{{ .SiteURL }}` → tự trỏ domain mới.
 3. (Khuyên dùng) SMTP riêng (Authentication → Emails → SMTP Settings, VD SMTP của Resend): SMTP mặc định của Supabase chỉ gửi tới thành viên organization.
 
-**6.3 GitHub Actions (CI)** — ✅ bước 1 (2 secret `NEXT_PUBLIC_SUPABASE_*`, CI xanh); bước 2 chưa bật
+**6.3 GitHub Actions (CI)** — ✅ (2 secret `NEXT_PUBLIC_SUPABASE_*`, CI xanh)
 1. Repo → Settings → Secrets and variables → Actions → **Secrets**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (job `check`: typecheck, lint, Vitest, build).
-2. e2e trên CI (tùy chọn): thêm secret `SUPABASE_SERVICE_ROLE_KEY` + **Variables** `RUN_E2E = true`. e2e tạo / xóa user, đơn, sách test thật → **nên dùng một project Supabase riêng cho CI** (chạy `schema.sql`, `seed.sql`, migration, import sách), không dùng chung DB production.
+2. e2e: workflow riêng `.github/workflows/e2e.yml`, **không cần secret nào** (Supabase local, mục 6.5). Chạy ở mọi push (trừ `docs/**`, `*.md`) và chạy tay (Actions → e2e → Run workflow). Tắt tạm: **Variables** `RUN_E2E = false`. **Không** thêm `SUPABASE_SERVICE_ROLE_KEY` lên GitHub.
 
-**6.5 Sau khi deploy: tạo project Supabase thứ hai riêng cho e2e / CI** (nên làm trước khi chạy e2e lần nữa) — chưa làm
-- Lý do: sách e2e (`e2e-shop-…`, `e2e-admin-…`) là sách **đang bán** (danh mục gốc ẩn nhưng sách `is_active`) trên chính DB production trong lúc test chạy. Chúng không lên menu, sitemap hay kệ "Mới về", nhưng **vẫn lộ qua tìm kiếm** (`search_books`, ô ⌘K, `/tim-kiem`), trang Tất cả sách `/sach` và link trực tiếp; khách thật có thể thêm vào giỏ / đặt hàng. e2e cũng tạo user, đơn, voucher `E2E-ADMIN-…` thật (dọn khi xong, sót lại nếu lần chạy bị ngắt).
-- Cách làm: Supabase → New project (free tier, cùng region) → SQL Editor chạy `schema.sql`, `seed.sql`, `seed-foreign-books.sql`, toàn bộ `supabase/migrations/` theo thứ tự → `import:books -- --from-preview` các file đã duyệt (hoặc một tập nhỏ) với env trỏ project mới.
-- Trỏ e2e vào project mới: `.env.local` máy dev giữ project production; chạy e2e bằng file env riêng (VD `.env.e2e.local`, do bạn tạo và nạp trước khi chạy) hoặc chỉ chạy e2e trên CI với secret của project mới (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Muốn Claude hỗ trợ chọn file env khi chạy e2e thì nói, đó là thay đổi cấu hình cần duyệt (quy tắc "chỉ `check:env` đọc env").
-- Sau khi tách: không chạy `npm run test:e2e` trên DB production nữa.
+**6.5 e2e trên Supabase local (thay cho project Supabase thứ hai)** — chờ duyệt merge nhánh `e2e-project`
+- Lý do tách khỏi production: sách e2e (`e2e-shop-…`, `e2e-admin-…`) là sách **đang bán** trong lúc test chạy, lộ qua tìm kiếm / `/sach` / link trực tiếp; e2e còn tạo user, đơn, voucher thật (sót lại nếu lượt chạy bị ngắt). Project cloud thứ hai không làm được (tài khoản đã dùng hết 2 project free).
+- Cách làm: job CI chạy Supabase CLI (`supabase start`, Docker trên runner) → DB trống dựng từ `schema.sql` + `seed.sql` + `seed-foreign-books.sql` (`supabase/config.toml`, migration tắt vì đã nằm trong `schema.sql`) → `scripts/e2e-seed.ts` nạp 48 sách test + bìa giả → Playwright. Auth local: xác nhận email bật, template song ngữ như production, thư vào hộp thư giả Mailpit. Không đụng project production.
+- Việc của bạn: không có gì bắt buộc. Dữ liệu e2e cũ trên production: lần kiểm gần nhất (2026-10-17, `measure.ts --check-leftovers`) 0 sót; sau khi merge script không còn chạm production, muốn kiểm lại thì chạy trong SQL Editor production `select count(*) from auth.users where email like 'e2e+%@example.com'` và `select count(*) from public.books where slug like 'e2e-%'` (kỳ vọng 0).
+- (Tùy chọn) Chạy e2e trên máy dev: cài Docker Desktop (WSL2, ~4GB RAM cho Supabase + Chromium + next start; máy 8GB sẽ chật) → `npx supabase start` → `npx tsx scripts/e2e-seed.ts` → `npx playwright test`. `npx supabase stop` khi xong.
+- Không chạy `npm run test:e2e` trên DB production nữa: `scripts/e2e-env.ts` từ chối URL production và mọi host không phải `127.0.0.1` / `localhost`.
 
 **6.4 Kiểm tra sau deploy** — đang làm (theo checklist `final-report.md` mục 2, lỗi gửi thành một đợt)
 - `https://<domain>/`, `/en`, `/sach/sapiens`, `/sitemap.xml`, `/robots.txt`; slug lạ `/sach/khong-co` → 404.

@@ -28,14 +28,20 @@ npm run import:books -- --from-preview <file>             # import đúng file �
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
 npm run covers -- --measure                               # ghi books.cover_width cho bìa chưa đo (không gọi API ngoài)
 npm run covers -- --openlibrary --dry-run | --apply <file>  # bìa lớn hơn từ Open Library: xem trước + lưới so sánh → duyệt → ghi
-npx playwright test --project=desktop --project=mobile    # e2e catalog/layout, không cần SUPABASE_SERVICE_ROLE_KEY
-npx playwright test --project=desktop-admin --project=mobile-admin   # e2e admin (cần SUPABASE_SERVICE_ROLE_KEY)
+npx supabase start                                        # e2e: Supabase local (cần Docker), dựng DB từ schema.sql + seed
+npx tsx scripts/e2e-seed.ts                               # e2e: nạp 48 sách test (e2e/fixtures/books.json) + bìa giả vào Supabase local
+npx playwright test --project=desktop --project=mobile    # e2e catalog/layout
+npx playwright test --project=desktop-admin --project=mobile-admin   # e2e admin
 ```
 
-`test:e2e` đầy đủ gồm cả project `desktop-account` / `mobile-account`: setup tạo user test bằng admin API (`scripts/e2e-user.ts`) nên **cần `SUPABASE_SERVICE_ROLE_KEY`** trong `.env.local`.
+**e2e chỉ chạy trên Supabase local** (Docker, `supabase/config.toml`), không bao giờ trên project cloud. CI làm hết ở `.github/workflows/e2e.yml` (mọi push trừ `docs/**` / `*.md`, chạy tay bằng `gh workflow run e2e.yml --ref <nhánh>`; tắt tạm bằng variable `RUN_E2E = false`), không dùng secret. Máy dev không có Docker → xem kết quả e2e trên CI (`gh run list --workflow e2e.yml`).
 
 Quy ước e2e:
-- Spec cần user khớp `ACCOUNT_SPECS` trong `playwright.config.ts` (`(account|checkout|orders|error-page|reviews|purchase|crawl).spec.ts`); spec mới cần user thì thêm vào regex. Spec admin là `admin-*.spec.ts` (`ADMIN_SPECS`, loại khỏi mọi project khác; `admin-orders.spec.ts` khớp cả `orders.spec.ts`), chạy ở `desktop-admin` (mobile chỉ `admin-smoke`), phiên admin qua `adminTest` (`e2e/admin.ts`); user admin do cùng setup tạo (`makeAdmin`). Mỗi project có 3 user riêng: chính, checkout, orders (không giẫm giỏ / đơn của nhau khi chạy song song: `checkout.spec` xóa mọi đơn của user checkout sau mỗi test).
+- Env e2e: `scripts/e2e-env.ts` (`loadLocalSupabase`) lấy URL + khóa từ `supabase status -o env`, ghi đè `process.env`, **từ chối** URL production (`ylfgwcxddxvfxwldmwtf`) và mọi host không phải `127.0.0.1` / `localhost`. Dùng ở `playwright.config.ts`, `scripts/e2e-user.ts`, `scripts/e2e-seed.ts`, `e2e/mailbox.ts`. `webServer.env` của Playwright đặt rỗng `RESEND_*`, `VIETQR_*`, `SITE_URL`… để `next start` không nhặt từ `.env.local` (Next chỉ điền biến chưa có).
+- DB local dựng **chỉ từ `schema.sql`** + `seed.sql` + `seed-foreign-books.sql` (`[db.migrations] enabled = false`): migration mới phải chép vào `schema.sql` cùng commit (Vitest `supabase/migrations.test.ts`).
+- Sách thật cho spec catalog / giỏ: `e2e/fixtures/books.json` (48 cuốn trích từ preview đã duyệt, mô tả ≤ 300 ký tự, có `sapiens`, tồn kho đặt tay: 1 cuốn 0, 1 cuốn 3, còn lại ≥ 20). Giả định của spec (> 1 trang lưới, kệ "Mới về" tràn, nhóm tồn kho…) kiểm ở `e2e/fixtures/books.test.ts`; spec mới dựa vào dữ liệu sách thì thêm bất biến vào đó. Thiếu dữ liệu là lỗi (throw), không `test.skip`.
+- Email Auth thật: hộp thư giả Mailpit của Supabase local (`[local_smtp]`), template `supabase/templates/` như production; đọc bằng `waitForAuthEmail(email)` (`e2e/mailbox.ts`). `auth-email.spec.ts`: đăng ký (en), quên mật khẩu (vi).
+- Spec cần user khớp `ACCOUNT_SPECS` trong `playwright.config.ts` (`(account|checkout|orders|error-page|reviews|purchase|crawl|auth-email).spec.ts`); spec mới cần user thì thêm vào regex. Spec admin là `admin-*.spec.ts` (`ADMIN_SPECS`, loại khỏi mọi project khác; `admin-orders.spec.ts` khớp cả `orders.spec.ts`), chạy ở `desktop-admin` (mobile chỉ `admin-smoke`), phiên admin qua `adminTest` (`e2e/admin.ts`); user admin do cùng setup tạo (`makeAdmin`). Mỗi project có 3 user riêng: chính, checkout, orders (không giẫm giỏ / đơn của nhau khi chạy song song: `checkout.spec` xóa mọi đơn của user checkout sau mỗi test).
 - Test làm đổi trạng thái không quay lại được (đổi mật khẩu…) tự tạo user riêng cho mỗi lần chạy và xóa ở `finally`: retry trên CI / `--repeat-each` phải qua.
 - Locator đặt trong `<main>` (`page.getByRole('main')…`) khi trang có Suspense stream: ngay sau hydrate, React có thể còn giữ bản sao ẩn của boundary (`<div hidden id="S:…">` cuối body).
 - Đặt hàng trên **sách e2e riêng** (Phase 10): setup tạo mỗi project tài khoản một bộ sách `e2e-shop-…` (`createShopBooks`, danh mục gốc ẩn, `created_at` năm 2000 để không lên kệ "Mới về"; low / regular / plenty / medium), lưu `e2e/.auth/shop-books.json`, spec đọc bằng `readShopBooks(project)`; teardown `deleteShopBooks()`. Không spec nào đổi tồn kho sách thật. Sách e2e tạo trong spec (`createE2eBook`) cũng có `created_at` năm 2000. `purchase.spec` (luồng mua trọn vẹn) tự tạo user + sách + voucher.
@@ -65,9 +71,10 @@ src/
   types/database.ts
   proxy.ts             # (Next 16, thay middleware.ts) — refresh session Supabase rồi next-intl; /admin bỏ qua next-intl
 messages/vi.json  messages/en.json
-supabase/schema.sql  seed.sql  migrations/
+supabase/schema.sql  seed.sql  migrations/  config.toml (Supabase local cho e2e)
 scripts/import-books.ts  book-list.json   # công cụ nạp dữ liệu, chạy local
-e2e/                   # Playwright
+scripts/e2e-env.ts  e2e-seed.ts  e2e-user.ts   # env Supabase local + guard, nạp sách test, user / dữ liệu test
+e2e/                   # Playwright; fixtures/books.json, mailbox.ts (Mailpit)
 ```
 
 - `lib/supabase/server.ts`: client theo phiên (đọc cookies) → chỉ dùng trong `<Suspense>`. `lib/supabase/public.ts`: client anon không cookies → dùng cho query catalog trong `'use cache'`.
@@ -171,6 +178,8 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 
 Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migration trong `supabase/migrations/`, cập nhật `schema.sql`, sinh lại types.
 
+- `supabase/config.toml` chỉ cho Supabase local của e2e. **Không** `supabase link` / `supabase db push` (sẽ chạy `migrations/` lên production); migration do chủ dự án chạy tay trong SQL Editor.
+
 - Tiền là `integer` VND.
 - RLS bật cho mọi bảng. Không tắt RLS, không dùng service role trong app.
 - Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
@@ -263,6 +272,7 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 
 - **Claude KHÔNG mở, đọc hay sửa `.env.local`**, kể cả khi nghi nó sai. Thay vào đó chạy `npm run check:env` (`scripts/check-env.mjs`, chỉ báo biến thiếu/sai định dạng, không in giá trị) rồi báo để tôi tự sửa.
 - Chỉ dùng `npm run check:env` để kiểm tra env. **Không** viết script nào khác đọc env (kể cả script tạm/debug rồi xóa, kể cả qua `loadEnvConfig` của `@next/env`). Script của dự án cần env (`import:books`, `scripts/e2e-user.ts` ở Phase 4) chỉ được viết khi đã có trong plan đã duyệt (ngoại lệ này đã được duyệt).
+- **Ngoại lệ đã duyệt (2026-10-17)**: `scripts/e2e-env.ts` đọc khóa của **Supabase local** qua `supabase status -o env` (khóa demo của stack Docker, không phải bí mật), với điều kiện: **không đọc file env nào** và **từ chối mọi URL không phải `127.0.0.1` / `localhost`** (kể cả production `ylfgwcxddxvfxwldmwtf`). Không in giá trị. e2e vì vậy không cần secret trên GitHub; khóa thật (production) vẫn không bao giờ đặt lên GitHub.
 - `.env.local` không commit. Client chỉ được dùng URL và anon/publishable key. `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng trong `scripts/` chạy local, **không bao giờ** import vào `src/`.
 - `/admin` kiểm tra `role = 'admin'` ở server (proxy và layout), không chỉ ẩn ở UI. Mọi Server Action admin tự kiểm tra ở hai câu đầu: `const denied = await assertAdmin(); if (denied) return denied` (Server Action gọi thẳng được bằng action ID, không qua layout / proxy; test tĩnh `features/admin/actions.test.ts`).
 - Validate mọi input ở server, kể cả khi client đã validate.

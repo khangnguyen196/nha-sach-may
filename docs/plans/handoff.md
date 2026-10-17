@@ -6,7 +6,8 @@
 
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
 - Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
-- CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build). Job `e2e` tắt tới khi bật biến `RUN_E2E`.
+- CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build).
+- **e2e chuyển sang Supabase local trên GitHub Actions** (nhánh `e2e-project`, chờ duyệt merge): `.github/workflows/e2e.yml` chạy `supabase start` (DB trống dựng từ `schema.sql` + seed, `supabase/config.toml`), `scripts/e2e-seed.ts` nạp 48 sách test (`e2e/fixtures/books.json`, bìa giả), rồi `npx playwright test`. Mọi push (trừ `docs/**`, `*.md`) + chạy tay; không secret. Guard `scripts/e2e-env.ts` từ chối production / host cloud. Không còn chạy e2e trên DB production.
 - Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
 - Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
@@ -14,7 +15,7 @@
 ## Đọc gì trước
 
 1. `docs/plans/final-report.md`: tính năng đã có, checklist test tay, việc của chủ dự án theo thứ tự ưu tiên, rủi ro còn lại.
-2. `docs/plans/owner-todo.md`: hướng dẫn từng bước (Redirect URLs, Vercel, CI, project Supabase riêng cho e2e).
+2. `docs/plans/owner-todo.md`: hướng dẫn từng bước (Redirect URLs, Vercel, CI, e2e trên Supabase local).
 3. Cần chi tiết một phần thì đọc `docs/plans/phase-<n>.md` (mục "Báo cáo" và "Quyết định tự chọn" ở đầu file) và `docs/plans/data.md` (dữ liệu sách, bìa).
 
 ## Cách làm việc chủ dự án đã quen
@@ -22,7 +23,7 @@
 - Mọi việc làm trên **nhánh riêng**, kiểm tra đủ (`typecheck`, `lint`, `build`, Vitest, e2e liên quan), push nhánh rồi **báo trước khi merge**. Merge vào `main` bằng `--ff-only` khi đã được duyệt, xong thì xóa nhánh và xem CI.
 - Không mở / đọc / sửa `.env.local`; chỉ chạy `npm run check:env`. Không chạy SQL lên Supabase: viết migration (idempotent) để chủ dự án chạy.
 - Thêm dependency phải hỏi trước.
-- e2e đang chạy trên **DB production**. Fail vì mạng / Supabase chậm (timeout, `fetch failed`) thì chờ 3 phút rồi chạy lại, tối đa 3 lượt. Không nới timeout, không xóa / skip test. Một test fail lặp lại thì dừng và báo.
+- e2e chạy trên **Supabase local ở CI** (máy dev không có Docker): push nhánh → `gh run list --workflow e2e.yml --branch <nhánh>` / `gh run view <id> --log-failed`; chạy lại tay `gh workflow run e2e.yml --ref <nhánh>`. Không nới timeout, không xóa / skip test. Một test fail lặp lại thì dừng và báo. Không chạy `npx playwright test` khi chưa có Supabase local (`scripts/e2e-env.ts` sẽ báo lỗi, không bao giờ rơi về production).
 
 ## Đã xong trong đợt sửa sau test tay (đã merge `main`, deploy production 2026-10-17)
 
@@ -35,12 +36,12 @@
 - Font tự host (`src/assets/fonts`, OFL): build không cần mạng tới Google Fonts.
 - `LocaleSwitcher`: giữ query khi bấm trước hydrate (inline script), bỏ `?` thừa.
 - Tốc độ (`docs/plans/perf.md`): bìa đầu lưới ưu tiên cao; footer không gây CLS; `AdminLink` chỉ prefetch khi rê chuột / focus (is_admin mỗi lần mở trang admin ~19 → 2); trạng thái đang tải khi sắp xếp / lọc / sang trang và khi áp voucher.
-- e2e mới: `admin-account-orders.spec` (đã chuyển từ fail sang qua), `crawl.spec` (dò lỗi chỉ đọc), đánh giá trên trang đơn, `/xac-nhan` lỗi sau `#`, prefetch admin, trạng thái đang tải. Script đo tốc độ: `npx tsx scripts/perf/measure.ts` (`--only`, `--devices`, `--cleanup-only`; dọn dữ liệu e2e và đếm phần sót).
+- e2e mới: `admin-account-orders.spec` (đã chuyển từ fail sang qua), `crawl.spec` (dò lỗi chỉ đọc), đánh giá trên trang đơn, `/xac-nhan` lỗi sau `#`, prefetch admin, trạng thái đang tải. Script đo tốc độ: `npx tsx scripts/perf/measure.ts` (`--only`, `--devices`). Trên production chỉ đo phần công khai (không tạo dữ liệu); luồng cần phiên + `--cleanup-only` / `--check-leftovers` chỉ với `--base http://localhost:<port>` trỏ Supabase local.
 
 ## Việc mở
 
 - **Kết quả bàn giao lần trước (2026-10-17)**:
-  - Mạng: đường tới Supabase chập chờn (health trung bình 1,4–2,2 s, có lần timeout 10 s, bắt tay TLS tới 5,9 s) dù vercel.com ~0,25 s. Bật **Cloudflare WARP** thì health trung bình 298 ms, bắt tay ≤ 0,23 s. Trước khi chạy e2e: đo 5 lần `https://ylfgwcxddxvfxwldmwtf.supabase.co/auth/v1/health` (401 là bình thường, không kèm apikey), cần trung bình < 300 ms, 0 lỗi.
+  - Mạng: đường tới Supabase chập chờn (health trung bình 1,4–2,2 s, có lần timeout 10 s, bắt tay TLS tới 5,9 s) dù vercel.com ~0,25 s. Bật **Cloudflare WARP** thì health trung bình 298 ms, bắt tay ≤ 0,23 s. (Trước đây cần đo health trước khi chạy e2e trên production; nay e2e chạy trên Supabase local ở CI, chỉ còn liên quan khi dev / build / đo tốc độ từ máy dev.)
   - `npm run test:e2e` toàn bộ (gồm `crawl.spec`): **261/261 qua ngay lượt đầu** (20,9 phút), kể cả các test `checkout.spec` trước đây chưa chạy được (voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả). Log `fetch failed (e2e fault injection)` là của `error-page.spec`, có chủ đích.
   - CI trên `main` xanh; Vercel Production `f4899ab` deploy xong.
   - Kiểm 3 điểm trên https://nha-sach-may.vercel.app bằng dữ liệu e2e tạm (user khách + admin, danh mục / sách `e2e-admin-…`, 1 đơn đã giao của khách + 1 đơn của admin; script tạm đã xóa): admin ở `/tai-khoan/don-hang` chỉ thấy đơn của mình ✔; admin mở `/thanh-toan/thanh-cong/<mã đơn khách>` → UI "Không tìm thấy trang" ✔ nhưng **HTTP 200** (soft 404, như mọi trang theo phiên: Cache Components stream trước khi `notFound()` chạy; proxy không kiểm được vì cần phiên; trang cần đăng nhập nên không ảnh hưởng SEO, không lộ dữ liệu); đơn đã giao của khách có nút "Đánh giá" ✔. Dọn xong `measure.ts --check-leftovers`: 0 sót mọi loại.
@@ -49,6 +50,6 @@
 - **Lỗi #3 (build) chưa hết**: một lần build vẫn fail "`use cache` took too long" ở `getRelatedBooks` dù đã có timeout + retry (tối đa 33 s, dưới giới hạn 54 s của Next; `fetch` của Next có chuyển `signal`). Chưa tìm ra chỗ treo; hướng xem tiếp: giảm số trang prerender đồng thời, tăng `staticPageGenerationTimeout`, log thời gian từng lượt thử lúc build.
 - Thêm vào giỏ khi bấm lúc header chưa biết phiên: `router.refresh()` dự phòng (`add-to-cart-button.tsx` dòng 66) render lại cả phần động của trang sách (+6 query). **Chủ dự án đã đồng ý giữ** (2026-10-17): bỏ đi thì header stream tới sau có thể ghi đè badge bằng số cũ (lệch đồng bộ). Muốn bỏ phải thiết kế lại cách header và nút đồng bộ số giỏ.
 - LCP mobile trang lưới (danh mục ~3,5–5,2 s mô phỏng 4G chậm) chưa giảm: lưới stream theo `searchParams` nên preload không tới sớm hơn thẻ `<img>`. Hướng tiếp: đưa hàng đầu lưới vào phần prerender tĩnh (đổi cấu trúc trang, cần plan).
-- Đề xuất, chưa duyệt: tạo project Supabase riêng cho e2e / CI (`owner-todo.md` mục 6.5); kéo LCP mobile xuống < 2.5 s (đo trên domain thật trước; ý tưởng ở báo cáo `phase-10.md`); captcha (mục 7).
+- Đề xuất, chưa duyệt: kéo LCP mobile xuống < 2.5 s (đo trên domain thật trước; ý tưởng ở báo cáo `phase-10.md`); captcha (mục 7).
 
 Mở đầu phiên mới: tóm tắt trạng thái trong vài dòng rồi chờ giao việc.
