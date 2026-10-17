@@ -14,6 +14,10 @@ const withNextIntl = createNextIntlPlugin({
 // (wildcard cho phép tối ưu ảnh từ bucket của project khác bằng server của mình).
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 if (!supabaseUrl) throw new Error('Thiếu NEXT_PUBLIC_SUPABASE_URL (chạy npm run check:env)')
+const storage = new URL(supabaseUrl)
+// e2e chạy Supabase local (http://127.0.0.1:54321): Next 16 chặn tối ưu ảnh từ IP local nếu không bật cờ này.
+// Production luôn là host cloud https → cờ tắt.
+const localSupabase = storage.hostname === '127.0.0.1' || storage.hostname === 'localhost'
 
 // Header bảo mật cho mọi response. Không có CSP: CSP chặt cần nonce → mọi trang render theo request, mất prerender.
 // HSTS chỉ có tác dụng trên HTTPS (Vercel); trình duyệt bỏ qua khi chạy http://localhost.
@@ -40,13 +44,15 @@ const nextConfig: NextConfig = {
     // Ảnh bìa đã tải về Supabase Storage (scripts/import-books.ts), không hotlink Google Books
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: new URL(supabaseUrl).hostname,
+        protocol: localSupabase ? 'http' : 'https',
+        hostname: storage.hostname,
+        port: storage.port,
         pathname: '/storage/v1/object/public/book-covers/**',
         search: '',
       },
     ],
     qualities: [75],
+    dangerouslyAllowLocalIP: localSupabase,
   },
   turbopack: {
     rules: {

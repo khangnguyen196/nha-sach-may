@@ -1,7 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { loadLocalSupabase } from './scripts/e2e-env'
+
+// e2e chỉ chạy trên Supabase local (npx supabase start): khóa lấy từ `supabase status`, từ chối production / host cloud.
+// Chạy ở main process lẫn từng worker (Playwright nạp lại config) → mọi process đều trỏ cùng DB local.
+const supabase = loadLocalSupabase()
 
 const PORT = 3100
-// Spec cần user e2e (admin API → SUPABASE_SERVICE_ROLE_KEY): *account.spec.ts, checkout, orders, error-page, reviews, purchase,
+// Spec cần user e2e (admin API): *account.spec.ts, checkout, orders, error-page, reviews, purchase,
 // crawl (dò lỗi chỉ đọc, dùng cả phiên user lẫn phiên admin của setup)
 const ACCOUNT_SPECS = /(account|checkout|orders|error-page|reviews|purchase|crawl)\.spec\.ts$/
 // Admin (Phase 7): admin-*.spec.ts, user admin riêng mỗi project. Phải loại khỏi ACCOUNT_SPECS (admin-orders.spec.ts
@@ -24,11 +29,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    // Catalog / layout: không cần tài khoản → chạy được không có SUPABASE_SERVICE_ROLE_KEY
+    // Catalog / layout: không cần tài khoản
     //   npx playwright test --project=desktop --project=mobile
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: [ACCOUNT_SPECS, ADMIN_SPECS] },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: [ACCOUNT_SPECS, ADMIN_SPECS] },
-    // Tài khoản: setup tạo user test (admin API, cần SUPABASE_SERVICE_ROLE_KEY) + đăng nhập sẵn; teardown xóa user
+    // Tài khoản: setup tạo user test (admin API) + đăng nhập sẵn; teardown xóa user
     { name: 'setup', testMatch: /auth\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /auth\.teardown\.ts/ },
     {
@@ -56,7 +61,22 @@ export default defineConfig({
     // Luôn build + start mới: reuse dễ chạy nhầm trên bản build cũ còn sót ở cổng 3100
     reuseExistingServer: false,
     timeout: 300_000,
-    // Cho phép error-page.spec.ts làm hỏng request Supabase bằng cookie (src/lib/supabase/fault-injection.ts)
-    env: { E2E_FAULT_INJECTION: '1' },
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: supabase.url,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: supabase.publishableKey,
+      // Next chỉ điền từ .env.local (máy dev, production) biến chưa có → đặt rỗng để không gửi email thật, VietQR
+      // luôn là demo, link tuyệt đối theo localhost: local giống CI
+      SITE_URL: '',
+      RESEND_API_KEY: '',
+      EMAIL_FROM: '',
+      VIETQR_BANK_BIN: '',
+      VIETQR_BANK_NAME: '',
+      VIETQR_ACCOUNT_NO: '',
+      VIETQR_ACCOUNT_NAME: '',
+      GOOGLE_BOOKS_API_KEY: '',
+      SUPABASE_SERVICE_ROLE_KEY: '',
+      // Cho phép error-page.spec.ts làm hỏng request Supabase bằng cookie (src/lib/supabase/fault-injection.ts)
+      E2E_FAULT_INJECTION: '1',
+    },
   },
 })

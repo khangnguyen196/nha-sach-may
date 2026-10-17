@@ -1,10 +1,9 @@
 /**
  * Tài khoản test cho e2e (Playwright setup/teardown + test đặt lại mật khẩu). Chạy local, không import vào src/.
  *
- * Env (.env.local, nạp bằng process.loadEnvFile; không in giá trị):
- *   NEXT_PUBLIC_SUPABASE_URL
- *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY  — kiểm tra refresh token / đăng nhập như một client bình thường
- *   SUPABASE_SERVICE_ROLE_KEY            — admin API: tạo / xóa user, sinh link đặt lại mật khẩu (không gửi email)
+ * Chỉ chạy trên Supabase local (scripts/e2e-env.ts: khóa lấy từ `supabase status`, từ chối production / host cloud):
+ *   publishable key — kiểm tra refresh token / đăng nhập như một client bình thường
+ *   service role    — admin API: tạo / xóa user, sinh link đặt lại mật khẩu (không gửi email)
  *
  * Email luôn có dạng e2e+<random>[-<nhãn>]@example.com; cleanupE2eUsers() xóa mọi user khớp mẫu này
  * (user còn sót khi lần chạy trước bị ngắt).
@@ -12,39 +11,22 @@
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes, randomUUID } from 'node:crypto'
 import type { Database } from '../src/types/database'
+import { loadLocalSupabase } from './e2e-env'
 
 export type E2eUser = { id: string; email: string; password: string; fullName: string }
 
 const E2E_EMAIL = /^e2e\+[a-z0-9-]+@example\.com$/
 
-function loadEnv() {
-  try {
-    process.loadEnvFile('.env.local')
-  } catch {
-    /* đã có env từ shell (CI) */
-  }
-}
-
-function requireEnv(name: string) {
-  const value = process.env[name]
-  if (!value) throw new Error(`Thiếu ${name} (chạy npm run check:env)`)
-  return value
-}
-
 const clientOptions = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
 
 function adminClient() {
-  loadEnv()
-  return createClient<Database>(requireEnv('NEXT_PUBLIC_SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'), clientOptions)
+  const { url, serviceRoleKey } = loadLocalSupabase()
+  return createClient<Database>(url, serviceRoleKey, clientOptions)
 }
 
 function anonClient() {
-  loadEnv()
-  return createClient<Database>(
-    requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
-    clientOptions,
-  )
+  const { url, publishableKey } = loadLocalSupabase()
+  return createClient<Database>(url, publishableKey, clientOptions)
 }
 
 const random = () => randomBytes(6).toString('hex')
