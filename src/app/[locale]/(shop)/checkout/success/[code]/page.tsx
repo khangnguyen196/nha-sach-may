@@ -2,8 +2,8 @@ import { CircleCheckIcon } from 'lucide-react'
 import type { Metadata } from 'next'
 import type { Locale } from 'next-intl'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { buttonVariants } from '@/components/ui/button'
 import { OrderDetails, OrderDetailsSkeleton } from '@/features/orders/components/order-details'
 import { getOrderByCode } from '@/features/orders/queries'
@@ -44,8 +44,9 @@ async function OrderSuccess({ locale, params }: { locale: Locale; params: Props[
   const { code } = await params
   const user = await requireUser(locale, { pathname: '/checkout/success/[code]', params: { code } })
   const [order, t, format] = await Promise.all([getOrderByCode(code, user.id), getTranslations('order'), getFormatter()])
-  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau
-  if (!order) notFound()
+  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
+  // được) thì hiện UI 404 trong boundary
+  if (!order) return <InlineNotFound />
 
   return (
     <>

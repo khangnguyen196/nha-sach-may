@@ -2,8 +2,8 @@ import { BookIcon, PackageIcon } from 'lucide-react'
 import Image from 'next/image'
 import type { Locale } from 'next-intl'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { buttonVariants } from '@/components/ui/button'
 import { accountPageMetadata } from '@/features/account/metadata'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
@@ -51,8 +51,8 @@ async function Orders({ locale, searchParams }: { locale: Locale; searchParams: 
   const user = await requireUser(locale, { pathname: '/account/orders', query: orderListQuery(params) })
   const [{ orders, total }, t] = await Promise.all([listOrders(params, user.id), getTranslations('orders')])
   const totalPages = Math.ceil(total / ORDERS_PAGE_SIZE)
-  // Trang vượt quá số đơn (URL sửa tay / đơn vừa bị xóa) → 404 như catalog
-  if (params.page > 1 && params.page > totalPages) notFound()
+  // Trang vượt quá số đơn (URL sửa tay / đơn vừa bị xóa) → UI 404 như catalog
+  if (params.page > 1 && params.page > totalPages) return <InlineNotFound />
 
   return (
     <>

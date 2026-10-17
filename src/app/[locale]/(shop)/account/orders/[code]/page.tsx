@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { cancelOrder } from '@/features/orders/actions'
 import { CancelOrderForm } from '@/features/orders/components/cancel-order-form'
@@ -50,8 +50,9 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
     getTranslations('order'),
     getFormMessages(['ORDER_NOT_CANCELLABLE', 'REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED']),
   ])
-  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau
-  if (!order) notFound()
+  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
+  // được) thì hiện UI 404 trong boundary
+  if (!order) return <InlineNotFound />
 
   // Đơn đã giao: đánh giá từng cuốn ngay trên trang đơn (sách đã xóa khỏi catalog thì không còn chỗ đánh giá)
   const delivered = order.status === 'delivered'
