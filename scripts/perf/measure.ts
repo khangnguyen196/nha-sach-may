@@ -1,6 +1,8 @@
 /**
  * Đo tốc độ trên bản deploy (mặc định https://nha-sach-may.vercel.app) bằng Playwright. Chạy local:
  *   npx tsx scripts/perf/measure.ts [--base <url>] [--out <file.json>] [--runs 3]
+ *   npx tsx scripts/perf/measure.ts --only "lọc Tiếng Anh"   # chỉ đo trang / thao tác có tên chứa chuỗi này
+ *   npx tsx scripts/perf/measure.ts --cleanup-only    # lượt đo bị ngắt giữa chừng: dọn mọi dữ liệu e2e rồi đếm phần sót
  *
  * - Trang: TTFB, FCP, LCP, CLS, TBT; "lạnh" = context mới (cache trình duyệt trống), "ấm" = tải lại trong cùng context.
  * - Thao tác: thời gian từ lúc bấm tới lúc thấy kết quả + INP (event timing dài nhất của thao tác).
@@ -15,6 +17,7 @@
 import { chromium, devices, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
 import {
+  cleanupE2eUsers,
   clearCart,
   createE2eUser,
   createE2eVoucher,
@@ -31,14 +34,21 @@ import {
   type E2eUser,
 } from '../e2e-user'
 
+const CLEANUP_ONLY = process.argv.includes('--cleanup-only')
 const args = new Map<string, string>()
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i] ?? '', process.argv[i + 1] ?? '')
 const BASE = args.get('--base') ?? 'https://nha-sach-may.vercel.app'
 const OUT = args.get('--out') ?? 'perf-result.json'
 const RUNS = Number(args.get('--runs') ?? 3)
+const ONLY = args.get('--only')
+// --only "a,b": tên chứa một trong các chuỗi
+const selected = (name: string) => !ONLY || ONLY.split(',').some((part) => name.includes(part.trim()))
 
 type Device = 'desktop' | 'mobile'
-const DEVICES: Device[] = ['desktop', 'mobile']
+// --devices desktop | mobile | desktop,mobile (mặc định cả hai)
+const DEVICES: Device[] = (args.get('--devices') ?? 'desktop,mobile')
+  .split(',')
+  .flatMap((name): Device[] => (name === 'desktop' || name === 'mobile' ? [name] : []))
 
 const median = (values: number[]) => {
   const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b)
@@ -57,14 +67,37 @@ async function newContext(browser: Browser, device: Device, storageState?: Await
   })
   // Quan sát hiệu năng từ đầu trang (trước mọi script của app)
   await context.addInitScript(() => {
-    const store = { lcp: 0, cls: 0, longTasks: [] as { start: number; duration: number }[], events: [] as number[] }
+    // tsx biên dịch hàm có tên thành __name(fn, 'tên'): helper đó không có trong trình duyệt
+    Reflect.set(globalThis, '__name', (target: unknown) => target)
+    const store = {
+      lcp: 0,
+      lcpElement: '',
+      cls: 0,
+      shifts: [] as { value: number; at: number; sources: string[] }[],
+      longTasks: [] as { start: number; duration: number }[],
+      events: [] as number[],
+    }
+    // Mô tả ngắn phần tử (thẻ#id.class[data-testid]) để biết cái gì xê dịch / là LCP
+    const describe = (node: unknown) => {
+      if (!(node instanceof Element)) return ''
+      const testId = node.getAttribute('data-testid')
+      const cls = (node.getAttribute('class') ?? '').split(' ').slice(0, 3).join('.')
+      return `${node.tagName.toLowerCase()}${node.id ? '#' + node.id : ''}${cls ? '.' + cls : ''}${testId ? `[${testId}]` : ''}`
+    }
     Object.assign(window, { __perf: store })
     new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) store.lcp = entry.startTime
+      for (const entry of list.getEntries()) {
+        store.lcp = entry.startTime
+        store.lcpElement = describe(Reflect.get(entry, 'element'))
+      }
     }).observe({ type: 'largest-contentful-paint', buffered: true })
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        if (!Reflect.get(entry, 'hadRecentInput')) store.cls += Number(Reflect.get(entry, 'value') ?? 0)
+        if (Reflect.get(entry, 'hadRecentInput')) continue
+        const value = Number(Reflect.get(entry, 'value') ?? 0)
+        store.cls += value
+        const sources: unknown[] = Reflect.get(entry, 'sources') ?? []
+        store.shifts.push({ value, at: entry.startTime, sources: sources.map((source) => describe(Reflect.get(Object(source), 'node'))) })
       }
     }).observe({ type: 'layout-shift', buffered: true })
     new PerformanceObserver((list) => {
@@ -116,7 +149,17 @@ async function login(browser: Browser, user: E2eUser) {
 
 // ---------- Trang ----------
 
-type PageMetrics = { status: number; ttfb: number; fcp: number; lcp: number; cls: number; tbt: number; load: number }
+type PageMetrics = {
+  status: number
+  ttfb: number
+  fcp: number
+  lcp: number
+  lcpElement: string
+  cls: number
+  shifts: { value: number; at: number; sources: string[] }[]
+  tbt: number
+  load: number
+}
 
 async function loadMetrics(page: Page, path: string): Promise<PageMetrics> {
   const response = await page.goto(path, { waitUntil: 'load', timeout: 90_000 })
@@ -133,7 +176,9 @@ async function loadMetrics(page: Page, path: string): Promise<PageMetrics> {
       ttfb: nav ? Reflect.get(nav, 'responseStart') - Reflect.get(nav, 'startTime') : NaN,
       fcp,
       lcp: store?.lcp ?? NaN,
+      lcpElement: store?.lcpElement ?? '',
       cls: store?.cls ?? NaN,
+      shifts: (store?.shifts ?? []).filter((shift: { value: number }) => shift.value >= 0.01),
       tbt,
       load: nav ? Reflect.get(nav, 'loadEventEnd') - Reflect.get(nav, 'startTime') : NaN,
     }
@@ -274,9 +319,9 @@ function interactions(data: Fixtures): Interaction[] {
           async () => {
             if (device === 'mobile') {
               await page.getByRole('button', { name: /Bộ lọc/ }).click()
-              await page.getByRole('dialog').getByRole('link', { name: 'Tiếng Anh' }).click()
+              await page.getByRole('dialog').getByRole('link', { name: 'Tiếng Anh', exact: true }).click()
             } else {
-              await main(page).getByRole('link', { name: 'Tiếng Anh' }).click()
+              await main(page).getByRole('link', { name: 'Tiếng Anh', exact: true }).filter({ visible: true }).first().click()
             }
           },
           async () => {
@@ -339,12 +384,16 @@ function interactions(data: Fixtures): Interaction[] {
         await page.goto(`/sach/${data.cartBook}`)
         await waitForHydration(page, 'main form button[type="submit"]')
       },
-      run: (page) =>
-        timed(
+      run: async (page) => {
+        const result = await timed(
           page,
           () => main(page).locator('form button[type="submit"]').click(),
           () => page.getByRole('banner').getByTestId('cart-count').filter({ hasText: '1' }).waitFor({ timeout: 30_000 }),
-        ),
+        )
+        // Badge là optimistic: chờ server ghi xong rồi mới sang lượt sau (lượt sau xóa giỏ trước)
+        await main(page).getByText(/Đã thêm vào giỏ/).waitFor({ timeout: 30_000 })
+        return result
+      },
     },
     {
       name: 'Thêm vào giỏ (đã đăng nhập): server ghi xong',
@@ -397,15 +446,33 @@ function interactions(data: Fixtures): Interaction[] {
 
 // ---------- Ảnh bìa ----------
 
-async function measureImages(browser: Browser) {
-  const context = await newContext(browser, 'desktop')
+/** Ảnh trình duyệt thật sự tải (currentSrc theo srcset + DPR của thiết bị) trên trang danh mục và trang sách */
+async function loadedImages(browser: Browser, device: Device) {
+  const context = await newContext(browser, device)
   const page = await context.newPage()
-  await page.goto('/danh-muc/van-hoc')
-  const optimized = await page.evaluate(() =>
-    [...document.querySelectorAll('main img')].map((img) => img.getAttribute('src') ?? '').filter((src) => src.startsWith('/_next/image')),
-  )
+  const urls = new Set<string>()
+  for (const path of ['/danh-muc/van-hoc', '/sach/sapiens']) {
+    await page.goto(path, { waitUntil: 'load' })
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight) {
+        window.scrollTo(0, y)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+      }
+    })
+    await page.waitForLoadState('networkidle').catch(() => undefined)
+    const current = await page.evaluate(() =>
+      [...document.images].map((img) => img.currentSrc).filter((src) => src.includes('/_next/image')),
+    )
+    for (const src of current) urls.add(src)
+  }
   await context.close()
-  const direct = optimized.map((src) => new URL(src, BASE).searchParams.get('url') ?? '')
+  return [...urls]
+}
+
+async function measureImages(browser: Browser) {
+  const optimized = [...(await loadedImages(browser, 'desktop')), ...(await loadedImages(browser, 'mobile'))]
+  const widths = optimized.map((src) => new URL(src).searchParams.get('w'))
+  const direct = [...new Set(optimized.map((src) => new URL(src).searchParams.get('url') ?? ''))]
 
   const timeFetch = async (url: string) => {
     const start = performance.now()
@@ -439,8 +506,9 @@ async function measureImages(browser: Browser) {
     ),
     types: [...new Set(list.map((r) => r.type))],
   })
-  const optimizedUrls = optimized.map((src) => new URL(src, BASE).toString())
+  const optimizedUrls = [...new Set(optimized)]
   return {
+    widths: Object.fromEntries([...new Set(widths)].map((w) => [w, widths.filter((x) => x === w).length])),
     optimizedFirst: summarize(await round(optimizedUrls)),
     optimizedRepeat: summarize(await round(optimizedUrls)),
     directFirst: summarize(await round(direct)),
@@ -526,8 +594,8 @@ async function run() {
 
     const pages = []
     for (const device of DEVICES) {
-      for (const spec of PAGES) {
-        console.log(`trang ${device} ${spec.path}`)
+      for (const spec of PAGES.filter((page) => selected(page.name))) {
+        console.log(`${Date.now()} trang ${device} ${spec.path}`)
         pages.push(await measurePage(browser, device, spec, sessions))
       }
     }
@@ -535,14 +603,16 @@ async function run() {
 
     const actions = []
     for (const device of DEVICES) {
-      for (const interaction of interactions(data)) {
-        console.log(`thao tác ${device} ${interaction.name}`)
+      for (const interaction of interactions(data).filter((item) => selected(item.name))) {
+        console.log(`${Date.now()} thao tác ${device} ${interaction.name}`)
         actions.push(await measureInteraction(browser, device, interaction, sessions))
       }
     }
     result.interactions = actions
-    console.log('ảnh bìa')
-    result.images = await measureImages(browser)
+    if (selected('ảnh bìa')) {
+      console.log('ảnh bìa')
+      result.images = await measureImages(browser)
+    }
   } finally {
     await browser.close()
     result.leftoversAfter = await cleanup(fixtures, voucherCodes)
@@ -553,4 +623,13 @@ async function run() {
   }
 }
 
-await run()
+async function cleanupOnly() {
+  const removed = await cleanupE2eUsers()
+  console.log(`Đã xóa ${removed} user e2e (kèm đơn, sách / danh mục / voucher e2e)`)
+  console.log('Dữ liệu e2e còn lại:', await e2eLeftovers())
+}
+
+;(CLEANUP_ONLY ? cleanupOnly() : run()).catch((error: unknown) => {
+  console.error(error)
+  process.exitCode = 1
+})
