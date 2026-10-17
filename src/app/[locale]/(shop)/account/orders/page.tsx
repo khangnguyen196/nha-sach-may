@@ -48,8 +48,8 @@ export default async function OrdersPage({ searchParams }: Props) {
 
 async function Orders({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
   const params = parseOrderListParams(await searchParams)
-  await requireUser(locale, { pathname: '/account/orders', query: orderListQuery(params) })
-  const [{ orders, total }, t] = await Promise.all([listOrders(params), getTranslations('orders')])
+  const user = await requireUser(locale, { pathname: '/account/orders', query: orderListQuery(params) })
+  const [{ orders, total }, t] = await Promise.all([listOrders(params, user.id), getTranslations('orders')])
   const totalPages = Math.ceil(total / ORDERS_PAGE_SIZE)
   // Trang vượt quá số đơn (URL sửa tay / đơn vừa bị xóa) → 404 như catalog
   if (params.page > 1 && params.page > totalPages) notFound()

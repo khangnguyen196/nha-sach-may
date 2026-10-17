@@ -42,9 +42,9 @@ export default async function OrderSuccessPage({ params }: Props) {
 
 async function OrderSuccess({ locale, params }: { locale: Locale; params: Props['params'] }) {
   const { code } = await params
-  await requireUser(locale, { pathname: '/checkout/success/[code]', params: { code } })
-  const [order, t, format] = await Promise.all([getOrderByCode(code), getTranslations('order'), getFormatter()])
-  // Không có hoặc của người khác (RLS lọc) → 404 như nhau
+  const user = await requireUser(locale, { pathname: '/checkout/success/[code]', params: { code } })
+  const [order, t, format] = await Promise.all([getOrderByCode(code, user.id), getTranslations('order'), getFormatter()])
+  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau
   if (!order) notFound()
 
   return (

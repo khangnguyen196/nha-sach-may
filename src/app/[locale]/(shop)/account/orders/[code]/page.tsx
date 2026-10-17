@@ -41,14 +41,14 @@ export default async function OrderPage({ params }: Props) {
 
 async function Order({ locale, params }: { locale: Locale; params: Props['params'] }) {
   const { code } = await params
-  await requireUser(locale, { pathname: '/account/orders/[code]', params: { code } })
+  const user = await requireUser(locale, { pathname: '/account/orders/[code]', params: { code } })
   const [order, t, tOrder, messages] = await Promise.all([
-    getOrderByCode(code),
+    getOrderByCode(code, user.id),
     getTranslations('orders'),
     getTranslations('order'),
     getFormMessages(['ORDER_NOT_CANCELLABLE', 'AUTH_REQUIRED']),
   ])
-  // Không có hoặc của người khác (RLS lọc) → 404 như nhau
+  // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau
   if (!order) notFound()
 
   return (
