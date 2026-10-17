@@ -684,3 +684,35 @@ export async function cleanupE2eAdminData(slugs?: string[]) {
     if (deleteError) throw new Error(`cleanupE2eAdminData: ${deleteError.message}`)
   }
 }
+
+// ---------- Kiểm tra dọn dẹp ----------
+
+/**
+ * Dữ liệu e2e còn trong DB (sau khi đo tốc độ trên production / sau teardown): user email e2e+…, sách / danh mục /
+ * tác giả slug e2e-…, voucher E2E-…, đơn của user e2e (đơn mồ côi user_id null không đếm được ở đây).
+ */
+export async function e2eLeftovers() {
+  const admin = adminClient()
+  const users: string[] = []
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw new Error(`listUsers: ${error.message}`)
+    users.push(...data.users.filter((user) => E2E_EMAIL.test(user.email ?? '')).map((user) => user.id))
+    if (data.users.length < 1000) break
+  }
+  const count = async (query: PromiseLike<{ count: number | null; error: { message: string } | null }>, label: string) => {
+    const { count: total, error } = await query
+    if (error) throw new Error(`e2eLeftovers (${label}): ${error.message}`)
+    return total ?? 0
+  }
+  const [books, categories, authors, vouchers, orders] = await Promise.all([
+    count(admin.from('books').select('id', { count: 'exact', head: true }).like('slug', 'e2e-%'), 'books'),
+    count(admin.from('categories').select('id', { count: 'exact', head: true }).like('slug', 'e2e-%'), 'categories'),
+    count(admin.from('authors').select('id', { count: 'exact', head: true }).like('slug', 'e2e-%'), 'authors'),
+    count(admin.from('vouchers').select('id', { count: 'exact', head: true }).like('code', 'E2E-%'), 'vouchers'),
+    users.length === 0
+      ? Promise.resolve(0)
+      : count(admin.from('orders').select('id', { count: 'exact', head: true }).in('user_id', users), 'orders'),
+  ])
+  return { users: users.length, books, categories, authors, vouchers, orders }
+}
