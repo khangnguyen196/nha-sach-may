@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { collectErrors, openPalette } from './helpers'
+import { collectErrors, openPalette, waitForHydration } from './helpers'
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')
@@ -39,6 +39,28 @@ test('đổi theme → class trên <html> đổi', async ({ page }) => {
   await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click()
   await expect(html).toHaveClass(/dark/)
   expect(errors).toEqual([])
+})
+
+test('bấm đổi ngôn ngữ trước khi hydrate (JS chưa tải) vẫn giữ query', async ({ page }) => {
+  // Chặn JS của app (giữ CSS): trang chỉ còn HTML tĩnh + inline script, như lúc mạng chậm chưa hydrate xong
+  await page.route('**/_next/static/**', (route) =>
+    route.request().resourceType() === 'script' ? route.abort() : route.continue(),
+  )
+  await page.goto('/sach?page=2&sort=price-asc')
+  const link = page.getByRole('link', { name: /Xem bằng tiếng Anh/ })
+  await expect(link).toHaveAttribute('href', '/en/books?page=2&sort=price-asc')
+  await link.click()
+  await expect(page).toHaveURL(/\/en\/books\?page=2&sort=price-asc$/)
+})
+
+test('trang không có query: link đổi ngôn ngữ không có dấu ? thừa (trước và sau hydrate)', async ({ page }) => {
+  await page.goto('/')
+  const link = page.getByRole('link', { name: /Xem bằng tiếng Anh/ })
+  await expect(link).toHaveAttribute('href', '/en')
+  await waitForHydration(page, 'header a[hreflang]')
+  await expect(link).toHaveAttribute('href', '/en')
+  await page.goto('/dang-nhap')
+  await expect(page.getByRole('link', { name: /Xem bằng tiếng Anh/ })).toHaveAttribute('href', '/en/login')
 })
 
 test('đổi ngôn ngữ giữ nguyên query', async ({ page }) => {
