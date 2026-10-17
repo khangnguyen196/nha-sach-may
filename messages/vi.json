@@ -60,6 +60,7 @@
       "hidden": "Đã ẩn",
       "yes": "Có",
       "viewInShop": "Xem trên cửa hàng",
+      "hiddenInShop": "Đang ẩn, khách không thấy",
       "opensInNewTab": "(mở tab mới)",
       "slugHint": "Để trống: tạo từ tên. Chữ có dấu, khoảng trắng tự đổi thành dạng không dấu, nối bằng gạch ngang.",
       "slugChangeHint": "Đổi đường dẫn thì link cũ sẽ không còn mở được.",

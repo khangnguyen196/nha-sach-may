@@ -64,6 +64,7 @@ async function EditBook({ params }: { params: Props['params'] }) {
             slug={book.slug}
             label={tCommon('viewInShop')}
             newTabLabel={tCommon('opensInNewTab')}
+            hiddenLabel={book.is_active ? undefined : tCommon('hiddenInShop')}
           />
         </div>
         <BookForm

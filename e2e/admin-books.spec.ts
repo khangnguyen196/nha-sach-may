@@ -82,6 +82,10 @@ test('ẩn → trang sách 404 và mất khỏi danh mục; hiện lại → có
   await main(page).getByRole('button', { name: 'Ẩn sách' }).click()
   await expect(main(page).getByText(/Sách đang ẩn/)).toBeVisible({ timeout: 15_000 })
   expect((await bookRow(book.id))?.is_active).toBe(false)
+  // Đang ẩn: "Xem trên cửa hàng" không còn là link (trang cửa hàng 404)
+  await openBookEditor(page, book.id)
+  await expect(main(page).getByTestId('shop-link-hidden')).toContainText('Đang ẩn, khách không thấy')
+  await expect(main(page).getByRole('link', { name: /Xem trên cửa hàng/ })).toHaveCount(0)
 
   await page.goto(`/sach/${book.slug}`)
   await expect(main(page).getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
@@ -92,6 +96,8 @@ test('ẩn → trang sách 404 và mất khỏi danh mục; hiện lại → có
   await openBookEditor(page, book.id)
   await main(page).getByRole('button', { name: 'Hiện lại' }).click()
   await expect(main(page).getByText('Sách đang hiện trên cửa hàng.')).toBeVisible({ timeout: 15_000 })
+  await openBookEditor(page, book.id)
+  await expect(main(page).getByRole('link', { name: /Xem trên cửa hàng/ })).toHaveAttribute('href', `/sach/${book.slug}`)
 
   await page.goto(`/sach/${book.slug}`)
   await expect(main(page).getByRole('heading', { level: 1 })).toHaveText(book.title)

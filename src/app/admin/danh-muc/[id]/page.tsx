@@ -50,6 +50,7 @@ async function EditCategory({ params }: { params: Props['params'] }) {
           slug={category.slug}
           label={tCommon('viewInShop')}
           newTabLabel={tCommon('opensInNewTab')}
+          hiddenLabel={category.is_active ? undefined : tCommon('hiddenInShop')}
         />
       </div>
       <CategoryForm
