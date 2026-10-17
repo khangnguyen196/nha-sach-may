@@ -45,9 +45,10 @@ describe('e2e/fixtures/books.json', () => {
   it('đủ nhóm tồn kho của cart / cart-account spec', () => {
     expect(books.some((b) => b.stock === 0)).toBe(true)
     expect(books.some((b) => b.stock >= 1 && b.stock <= 5)).toBe(true)
-    // findBooksByStock(10, 10_000, 20): tăng số lượng tới mốc freeship mà không vượt tồn kho
-    const roomy = books.filter((b) => b.stock >= 10)
-    expect(roomy.length).toBeGreaterThanOrEqual(20)
+    // findBooksByStock(10, 10_000, 20) lấy 20 cuốn đầu theo id (= thứ tự trong fixture): tăng số lượng tới mốc
+    // freeship mà không vượt tồn kho
+    const roomy = books.filter((b) => b.stock >= 10).slice(0, 20)
+    expect(roomy.length).toBe(20)
     expect(roomy.some((b) => b.price < FREE_SHIP_FROM && Math.ceil(FREE_SHIP_FROM / b.price) <= Math.min(b.stock, 99))).toBe(true)
   })
 

@@ -41,8 +41,7 @@ test.describe('giỏ khách', () => {
 
   test('không vượt tồn kho', async ({ page }) => {
     const [lowStock] = await findBooksByStock(1, 5)
-    test.skip(!lowStock, 'Không có sách tồn kho 1–5')
-    if (!lowStock) return
+    if (!lowStock) throw new Error('Fixture e2e thiếu sách tồn kho 1–5 (e2e/fixtures/books.json)')
 
     await addFromBookPage(page, lowStock, { times: lowStock.stock })
     await page.getByRole('main').getByRole('button', { name: 'Thêm vào giỏ' }).click()
@@ -52,8 +51,7 @@ test.describe('giỏ khách', () => {
 
   test('sách hết hàng → nút "Hết hàng" bị khóa', async ({ page }) => {
     const [soldOut] = await findBooksByStock(0, 0)
-    test.skip(!soldOut, 'Không có sách hết hàng')
-    if (!soldOut) return
+    if (!soldOut) throw new Error('Fixture e2e thiếu sách hết hàng (e2e/fixtures/books.json)')
 
     await page.goto(`/sach/${soldOut.slug}`)
     await expect(page.getByRole('main').getByRole('button', { name: 'Hết hàng' })).toBeDisabled()
@@ -70,8 +68,7 @@ test.describe('trang giỏ của khách', () => {
     // Sách rẻ hơn mốc freeship để thấy cả hai trạng thái
     const candidates = await findBooksByStock(10, 10_000, 20)
     const book = candidates.find((b) => b.price < FREE_SHIP_FROM && Math.ceil(FREE_SHIP_FROM / b.price) <= Math.min(b.stock, 99))
-    test.skip(!book, 'Không có sách phù hợp')
-    if (!book) return
+    if (!book) throw new Error('Fixture e2e thiếu sách phù hợp (e2e/fixtures/books.json)')
 
     await addFromBookPage(page, book)
     await page.getByRole('main').getByRole('link', { name: 'Xem giỏ hàng' }).click()

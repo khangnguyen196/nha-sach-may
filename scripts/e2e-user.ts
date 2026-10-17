@@ -74,6 +74,18 @@ export async function createE2eUser(label?: string): Promise<E2eUser> {
   return { id: data.user.id, email, password, fullName }
 }
 
+/** id của user theo email (user tự đăng ký qua UI trong test, cần xóa ở finally); null nếu chưa có */
+export async function findUserIdByEmail(email: string) {
+  const admin = adminClient()
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw new Error(`listUsers: ${error.message}`)
+    const user = data.users.find((candidate) => candidate.email === email)
+    if (user) return user.id
+    if (data.users.length < 1000) return null
+  }
+}
+
 /** hashed_token của link đặt lại mật khẩu, lấy qua admin API thay vì gửi email */
 export async function recoveryTokenHash(email: string) {
   const { data, error } = await adminClient().auth.admin.generateLink({ type: 'recovery', email })

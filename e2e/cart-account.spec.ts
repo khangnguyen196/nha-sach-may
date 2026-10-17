@@ -63,8 +63,7 @@ test('thêm / đổi số lượng / xóa, tải lại vẫn đúng', async ({ p
 
 test('vượt tồn kho → lỗi dịch sẵn ở server theo locale', async ({ page }) => {
   const [lowStock] = await findBooksByStock(1, 5)
-  test.skip(!lowStock, 'Không có sách tồn kho 1–5')
-  if (!lowStock) return
+  if (!lowStock) throw new Error('Fixture e2e thiếu sách tồn kho 1–5 (e2e/fixtures/books.json)')
 
   const errors = collectErrors(page)
   // Nút của người đã đăng nhập không tự chặn ở client: lần bấm vượt tồn kho đi tới Server Action

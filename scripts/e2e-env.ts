@@ -5,7 +5,7 @@
  * (.env.local trỏ production). Ghi đè NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY /
  * SUPABASE_SERVICE_ROLE_KEY trong process.env để biến còn sót từ shell không lọt vào. Không in giá trị.
  *
- * Dùng ở playwright.config.ts (main process + mọi worker), scripts/e2e-user.ts, scripts/e2e-seed.ts.
+ * Dùng ở playwright.config.ts (main process + mọi worker), scripts/e2e-user.ts, scripts/e2e-seed.ts, e2e/mailbox.ts.
  */
 import { execSync } from 'node:child_process'
 
@@ -41,7 +41,13 @@ export function parseStatusEnv(output: string): Map<string, string> {
   return vars
 }
 
-export type LocalSupabase = { url: string; publishableKey: string; serviceRoleKey: string }
+export type LocalSupabase = {
+  url: string
+  publishableKey: string
+  serviceRoleKey: string
+  /** Hộp thư giả Mailpit ([local_smtp] trong config.toml) */
+  mailUrl: string
+}
 
 let cached: LocalSupabase | undefined
 
@@ -65,9 +71,10 @@ export function loadLocalSupabase(): LocalSupabase {
   const publishableKey = vars.get('PUBLISHABLE_KEY') || vars.get('ANON_KEY')
   const serviceRoleKey = vars.get('SERVICE_ROLE_KEY') || vars.get('SECRET_KEY')
   if (!publishableKey || !serviceRoleKey) throw new Error('`supabase status` không có publishable / service role key')
+  const mailUrl = assertLocalSupabase(vars.get('MAILPIT_URL') || vars.get('INBUCKET_URL') || 'http://127.0.0.1:54324')
   process.env.NEXT_PUBLIC_SUPABASE_URL = url
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = publishableKey
   process.env.SUPABASE_SERVICE_ROLE_KEY = serviceRoleKey
-  cached = { url, publishableKey, serviceRoleKey }
+  cached = { url, publishableKey, serviceRoleKey, mailUrl }
   return cached
 }
