@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
+import { coverImagesConfig } from './src/lib/cover-images-config'
 
 const withNextIntl = createNextIntlPlugin({
   requestConfig: './src/i18n/request.ts',
@@ -10,14 +11,9 @@ const withNextIntl = createNextIntlPlugin({
   },
 })
 
-// Next nạp .env.local trước khi đọc file này. Lấy đúng host của project, không dùng wildcard *.supabase.co
-// (wildcard cho phép tối ưu ảnh từ bucket của project khác bằng server của mình).
+// Next nạp .env.local trước khi đọc file này
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 if (!supabaseUrl) throw new Error('Thiếu NEXT_PUBLIC_SUPABASE_URL (chạy npm run check:env)')
-const storage = new URL(supabaseUrl)
-// e2e chạy Supabase local (http://127.0.0.1:54321): Next 16 chặn tối ưu ảnh từ IP local nếu không bật cờ này.
-// Production luôn là host cloud https → cờ tắt.
-const localSupabase = storage.hostname === '127.0.0.1' || storage.hostname === 'localhost'
 
 // Header bảo mật cho mọi response. Không có CSP: CSP chặt cần nonce → mọi trang render theo request, mất prerender.
 // HSTS chỉ có tác dụng trên HTTPS (Vercel); trình duyệt bỏ qua khi chạy http://localhost.
@@ -42,17 +38,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     // Ảnh bìa đã tải về Supabase Storage (scripts/import-books.ts), không hotlink Google Books
-    remotePatterns: [
-      {
-        protocol: localSupabase ? 'http' : 'https',
-        hostname: storage.hostname,
-        port: storage.port,
-        pathname: '/storage/v1/object/public/book-covers/**',
-        search: '',
-      },
-    ],
+    ...coverImagesConfig(supabaseUrl, { vercel: process.env.VERCEL === '1' }),
     qualities: [75],
-    dangerouslyAllowLocalIP: localSupabase,
   },
   turbopack: {
     rules: {
