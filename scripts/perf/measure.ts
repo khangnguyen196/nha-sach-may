@@ -11,9 +11,14 @@
  * - desktop: Desktop Chrome, mạng thật. mobile: Pixel 7 + mô phỏng 4G chậm (RTT 150 ms, 1.6 Mbps / 750 Kbps) + CPU
  *   chậm 4x như Lighthouse mobile.
  *
- * Thao tác ghi (giỏ, voucher, đổi trạng thái đơn) chỉ chạm dữ liệu e2e tạo tại chỗ bằng scripts/e2e-user.ts (user, admin,
- * sách e2e-shop-perf-…, voucher E2E-ADMIN-…, đơn của user e2e); dọn ở finally rồi đếm dữ liệu e2e còn sót.
- * Không chạy cùng lúc với `npm run test:e2e` (setup e2e xóa mọi user e2e).
+ * Hai chế độ theo --base:
+ * - Không phải localhost (mặc định production): CÔNG KHAI — trang không cần phiên, thao tác của khách, ảnh bìa. Không
+ *   tạo dữ liệu, không đụng DB (dữ liệu e2e không bao giờ nằm trên production).
+ * - http://localhost:<port> / 127.0.0.1 (next start trỏ Supabase local, env như webServer của playwright.config.ts):
+ *   ĐẦY ĐỦ — thêm trang / thao tác cần phiên (thanh toán, đơn, admin, thêm giỏ khi đăng nhập, voucher, đổi trạng thái
+ *   đơn) trên dữ liệu e2e tạo tại chỗ bằng scripts/e2e-user.ts; dọn ở finally rồi đếm dữ liệu e2e còn sót.
+ * --cleanup-only / --check-leftovers chỉ chạm Supabase local (scripts/e2e-env.ts từ chối production).
+ * Không chạy cùng lúc với `npx playwright test` trên cùng Supabase local (setup e2e xóa mọi user e2e).
  */
 import { chromium, devices, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
@@ -40,6 +45,8 @@ const CHECK_ONLY = process.argv.includes('--check-leftovers')
 const args = new Map<string, string>()
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i] ?? '', process.argv[i + 1] ?? '')
 const BASE = args.get('--base') ?? 'https://nha-sach-may.vercel.app'
+// Chỉ bản chạy local (trỏ Supabase local) mới có dữ liệu e2e để đo luồng cần phiên
+const FULL = ['localhost', '127.0.0.1'].includes(new URL(BASE).hostname)
 const OUT = args.get('--out') ?? 'perf-result.json'
 const RUNS = Number(args.get('--runs') ?? 3)
 const ONLY = args.get('--only')
@@ -189,8 +196,8 @@ async function loadMetrics(page: Page, path: string): Promise<PageMetrics> {
 
 type PageSpec = { name: string; path: string; session?: 'user' | 'admin' }
 
-async function measurePage(browser: Browser, device: Device, spec: PageSpec, sessions: Sessions) {
-  const storage = spec.session ? sessions[spec.session] : undefined
+async function measurePage(browser: Browser, device: Device, spec: PageSpec, sessions?: Sessions) {
+  const storage = spec.session && sessions ? sessions[spec.session] : undefined
   const cold: PageMetrics[] = []
   for (let run = 0; run < RUNS; run++) {
     const context = await newContext(browser, device, storage)
@@ -243,10 +250,11 @@ type Interaction = {
   run: (page: Page, run: number, device: Device) => Promise<{ ms: number; inp: number }>
 }
 
-async function measureInteraction(browser: Browser, device: Device, interaction: Interaction, sessions: Sessions) {
+async function measureInteraction(browser: Browser, device: Device, interaction: Interaction, sessions?: Sessions) {
   const results: { ms: number; inp: number }[] = []
   for (let run = 0; run < RUNS; run++) {
-    const context = await newContext(browser, device, interaction.session ? sessions[interaction.session] : undefined)
+    const storage = interaction.session && sessions ? sessions[interaction.session] : undefined
+    const context = await newContext(browser, device, storage)
     const page = await newPage(context, device)
     try {
       await interaction.prepare(page, run, device)
@@ -271,7 +279,7 @@ async function measureInteraction(browser: Browser, device: Device, interaction:
 const main = (page: Page) => page.getByRole('main')
 const bookLinks = (page: Page) => main(page).locator('a[href^="/sach/"]').filter({ visible: true })
 
-function interactions(data: Fixtures): Interaction[] {
+function publicInteractions(): Interaction[] {
   const firstHref = (page: Page) => bookLinks(page).first().getAttribute('href')
   const changedFrom = async (page: Page, before: string | null) =>
     page.waitForFunction(
@@ -378,6 +386,12 @@ function interactions(data: Fixtures): Interaction[] {
           () => page.getByRole('dialog').getByRole('option').first().waitFor({ timeout: 30_000 }),
         ),
     },
+  ]
+}
+
+/** Cần dữ liệu e2e (chế độ đầy đủ) */
+function sessionInteractions(data: Fixtures): Interaction[] {
+  return [
     {
       name: 'Thêm vào giỏ (đã đăng nhập): badge cập nhật',
       session: 'user',
@@ -583,23 +597,31 @@ const PAGES: PageSpec[] = [
 
 async function run() {
   const startedAt = new Date().toISOString()
-  const before = await e2eLeftovers()
-  console.log('Dữ liệu e2e trước khi đo:', before)
+  const result: Record<string, unknown> = { base: BASE, mode: FULL ? 'full' : 'public', startedAt, runs: RUNS }
+  console.log(FULL ? 'Chế độ đầy đủ (Supabase local)' : 'Chế độ công khai: không đo trang / thao tác cần phiên, không đụng DB')
+  if (FULL) {
+    result.leftoversBefore = await e2eLeftovers()
+    console.log('Dữ liệu e2e trước khi đo:', result.leftoversBefore)
+  }
   let fixtures: Partial<Fixtures> = {}
   const voucherCodes: string[] = []
   const browser = await chromium.launch()
-  const result: Record<string, unknown> = { base: BASE, startedAt, runs: RUNS, leftoversBefore: before }
   try {
-    const data = await setupFixtures()
-    fixtures = data
-    voucherCodes.push(data.voucher)
-    const sessions: Sessions = { user: await login(browser, data.user), admin: await login(browser, data.admin) }
-    // Thanh toán cần giỏ có sách
-    await setCartItem(data.user.id, data.checkoutBookId, 1)
+    let sessions: Sessions | undefined
+    const list = publicInteractions()
+    if (FULL) {
+      const data = await setupFixtures()
+      fixtures = data
+      voucherCodes.push(data.voucher)
+      sessions = { user: await login(browser, data.user), admin: await login(browser, data.admin) }
+      // Thanh toán cần giỏ có sách
+      await setCartItem(data.user.id, data.checkoutBookId, 1)
+      list.push(...sessionInteractions(data))
+    }
 
     const pages = []
     for (const device of DEVICES) {
-      for (const spec of PAGES.filter((page) => selected(page.name))) {
+      for (const spec of PAGES.filter((page) => selected(page.name) && (!page.session || sessions))) {
         console.log(`${Date.now()} trang ${device} ${spec.path}`)
         pages.push(await measurePage(browser, device, spec, sessions))
       }
@@ -608,7 +630,7 @@ async function run() {
 
     const actions = []
     for (const device of DEVICES) {
-      for (const interaction of interactions(data).filter((item) => selected(item.name))) {
+      for (const interaction of list.filter((item) => selected(item.name))) {
         console.log(`${Date.now()} thao tác ${device} ${interaction.name}`)
         actions.push(await measureInteraction(browser, device, interaction, sessions))
       }
@@ -620,10 +642,12 @@ async function run() {
     }
   } finally {
     await browser.close()
-    result.leftoversAfter = await cleanup(fixtures, voucherCodes)
+    if (FULL) {
+      result.leftoversAfter = await cleanup(fixtures, voucherCodes)
+      console.log('Dữ liệu e2e sau khi dọn:', result.leftoversAfter)
+    }
     result.finishedAt = new Date().toISOString()
     writeFileSync(OUT, JSON.stringify(result, null, 2))
-    console.log('Dữ liệu e2e sau khi dọn:', result.leftoversAfter)
     console.log(`Kết quả: ${OUT}`)
   }
 }
