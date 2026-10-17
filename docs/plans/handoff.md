@@ -5,7 +5,7 @@
 ## Trạng thái
 
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
-- **Chờ duyệt merge** (đợt sửa sau test tay, 2026-10-17): `check-after-manual-test` (spec dò lỗi + báo cáo `check-after-manual-test.md`) rồi `fix-manual-test` (xếp chồng lên nó). Merge theo thứ tự đó, `--ff-only`.
+- **Nhánh đang mở**: `fix-manual-test` (đã push; chứa luôn `check-after-manual-test`). Chủ dự án đã duyệt merge **khi có một lượt e2e toàn bộ sạch**.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build). Job `e2e` tắt tới khi bật biến `RUN_E2E`.
 - Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
@@ -39,11 +39,15 @@
 
 ## Việc mở
 
-- Chủ dự án: duyệt + merge `check-after-manual-test` rồi `fix-manual-test`; sau khi deploy, đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
+- **Việc tiếp theo (đã duyệt, làm theo thứ tự)**:
+  1. Chạy `npm run test:e2e` toàn bộ trên `fix-manual-test` khi mạng ổn, theo quy ước ở trên (chờ 3 phút, tối đa 3 lượt chạy lại, không nới timeout, không skip). Không sạch thì KHÔNG merge, báo test nào fail.
+  2. Có một lượt sạch: `git switch main && git merge --ff-only fix-manual-test`, push `main`, xóa nhánh `fix-manual-test` và `check-after-manual-test` (local + remote), xem CI trên `main`, chờ Vercel deploy production.
+  3. Kiểm 3 điểm trên https://nha-sach-may.vercel.app bằng dữ liệu e2e tạm (`scripts/e2e-user.ts`: user khách + admin + sách e2e + đơn): admin mở `/tai-khoan/don-hang` chỉ thấy đơn của mình; admin mở `/thanh-toan/thanh-cong/<mã đơn của khách>` → 404; đơn đã giao của khách có nút "Đánh giá". Dọn xong chạy `npx tsx scripts/perf/measure.ts --check-leftovers` phải ra 0. Báo kết quả.
+- Sau khi deploy (tùy chọn): đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
 - Bản Preview của Vercel đang bật Vercel Authentication → script đo không vào được bản Preview (muốn đo trước khi merge cần Protection Bypass for Automation, do chủ dự án quyết).
 - **e2e chưa có lượt sạch** sau các sửa (mạng / Supabase chậm suốt 2026-10-17): lượt toàn bộ 252 qua / 3 fail (2 do cách viết test voucher, đã sửa; 1 lỗi mạng ở `afterAll`); 3 lượt chạy lại `checkout.spec` fail ở chỗ khác nhau mỗi lượt (đăng nhập / đặt hàng chờ > 20 s, lượt cuối hỏng ngay ở build). Các test sau chỗ fail trong `checkout.spec` (serial) chưa chạy được sau sửa: voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả. Chạy lại khi mạng ổn.
 - **Lỗi #3 (build) chưa hết**: một lần build vẫn fail "`use cache` took too long" ở `getRelatedBooks` dù đã có timeout + retry (tối đa 33 s, dưới giới hạn 54 s của Next; `fetch` của Next có chuyển `signal`). Chưa tìm ra chỗ treo; hướng xem tiếp: giảm số trang prerender đồng thời, tăng `staticPageGenerationTimeout`, log thời gian từng lượt thử lúc build.
-- Thêm vào giỏ khi bấm lúc header chưa biết phiên: `router.refresh()` dự phòng (`add-to-cart-button.tsx` dòng 66) render lại cả phần động của trang sách (+6 query). Chưa sửa vì bỏ đi có thể lệch badge; cần thiết kế lại cách header và nút đồng bộ số giỏ.
+- Thêm vào giỏ khi bấm lúc header chưa biết phiên: `router.refresh()` dự phòng (`add-to-cart-button.tsx` dòng 66) render lại cả phần động của trang sách (+6 query). **Chủ dự án đã đồng ý giữ** (2026-10-17): bỏ đi thì header stream tới sau có thể ghi đè badge bằng số cũ (lệch đồng bộ). Muốn bỏ phải thiết kế lại cách header và nút đồng bộ số giỏ.
 - LCP mobile trang lưới (danh mục ~3,5–5,2 s mô phỏng 4G chậm) chưa giảm: lưới stream theo `searchParams` nên preload không tới sớm hơn thẻ `<img>`. Hướng tiếp: đưa hàng đầu lưới vào phần prerender tĩnh (đổi cấu trúc trang, cần plan).
 - Đề xuất, chưa duyệt: tạo project Supabase riêng cho e2e / CI (`owner-todo.md` mục 6.5); kéo LCP mobile xuống < 2.5 s (đo trên domain thật trước; ý tưởng ở báo cáo `phase-10.md`); captcha (mục 7).
 
