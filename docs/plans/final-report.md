@@ -55,6 +55,8 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 
 ### B. Thành viên
 
+Dùng **tài khoản thường** (không phải admin) cho cả phần B. Tài khoản admin thấy thêm link "Quản trị" và các trang admin; chỗ nào cần admin (giao đơn, xem tồn kho) thì mở ở trình duyệt / cửa sổ ẩn danh khác bằng tài khoản admin.
+
 | # | Làm gì | Kết quả đúng |
 |---|---|---|
 | B1 | `/dang-ky` bằng email bất kỳ (SMTP Gmail gửi được mọi địa chỉ); làm lại một lần ở `/en/register` bằng email khác | "Kiểm tra hộp thư"; email "Xác nhận email" bằng tiếng Việt (đăng ký ở `/en`: "Confirm your email", tiếng Anh) — ngôn ngữ theo `user_metadata.locale` ghi lúc đăng ký. Link trong email trỏ `{{ .SiteURL }}` (domain Vercel) kể cả khi đăng ký từ localhost |
@@ -66,13 +68,14 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 | B6 | Nhập mã voucher sai, bấm "Áp dụng" | Dòng lỗi "Mã giảm giá không hợp lệ hoặc đã hết hạn."; tổng không đổi |
 | B7 | Nhập mã voucher đúng (tạo ở admin, D6) bằng chữ thường | "Đã áp dụng mã …"; dòng "Giảm giá"; tổng giảm đúng |
 | B8 | Chọn COD → "Đặt hàng" | Trang "Đặt hàng thành công", mã `NS…`, "Thanh toán khi nhận hàng: …"; badge giỏ về 0 |
-| B9 | Mở lại trang sách vừa đặt | Tồn kho giảm đúng số đã đặt |
+| B9 | (Tài khoản admin) `/admin/sach` → tìm sách vừa đặt | Cột tồn kho giảm đúng số đã đặt. Trang sách công khai chỉ hiện số khi tồn ≤ 5 ("Chỉ còn N cuốn"), nên kiểm ở admin |
 | B10 | Đặt đơn thứ hai, chọn "Chuyển khoản ngân hàng (VietQR)" | Trang thành công có thẻ VietQR: mã QR, ngân hàng, STK `0000000000`, số tiền = tổng, nội dung = mã đơn, khung cảnh báo demo |
 | B11 | (Tùy chọn) Quét QR bằng app ngân hàng | App đọc được ngân hàng + số tiền + nội dung; báo tài khoản không tồn tại (demo). **Không chuyển tiền** |
 | B12 | `/tai-khoan/don-hang` | Hai đơn mới nhất trước; lọc "Chờ xác nhận" chỉ còn đơn chờ |
-| B13 | Mở đơn COD → "Hủy đơn hàng" → nhập lý do → xác nhận | Trạng thái "Đã hủy", lý do hiện ra; tồn kho sách hoàn lại |
+| B13 | Mở đơn COD → "Hủy đơn hàng" → nhập lý do → xác nhận | Trạng thái "Đã hủy", lý do hiện ra; tồn kho sách hoàn lại (xem ở `/admin/sach` như B9) |
 | B14 | Đơn chuyển khoản sau khi admin bấm "Đã nhận tiền" (D4) | "Đã thanh toán"; không còn thẻ QR; **không** còn nút hủy |
-| B15 | Sau khi admin giao đơn (D3), mở trang sách trong đơn | Khối đánh giá có form; chọn sao + nhận xét → "Đã lưu đánh giá."; điểm trung bình hiện dưới tên sách |
+| B15 | Tài khoản **người mua**, sau khi admin giao đơn (D3): `/tai-khoan/don-hang/<mã đơn>` → bấm tên hoặc bìa sách | Mở đúng trang sách (sách đã xóa / đang ẩn thì tên là chữ thường, không có link). Khối đánh giá ở trang sách có form |
+| B15b | Quay lại trang đơn đã giao → nút "Đánh giá" dưới dòng sách → chọn sao + nhận xét → "Gửi đánh giá" | Form mở ngay dưới dòng, không chuyển trang; "Đã lưu đánh giá."; nút đổi thành số sao + "Sửa đánh giá". Trang sách hiện đánh giá trong danh sách và điểm trung bình dưới tên sách; form ở trang sách là cùng đánh giá đó (sửa ở đâu cũng được). Đơn chưa giao / đã hủy: không có nút "Đánh giá" |
 | B16 | Sửa đánh giá (đổi số sao) rồi "Xóa đánh giá" | Điểm cập nhật; xóa xong về "Chưa có đánh giá nào." |
 | B17 | Mở trang một sách chưa mua | "Bạn có thể đánh giá sau khi đã nhận cuốn sách này." (không có form) |
 | B18 | Trang tài khoản → đổi "Ngôn ngữ email" sang English | Lưu thành công; email sau đó (đơn hàng, đặt lại mật khẩu) bằng tiếng Anh |
@@ -87,7 +90,7 @@ Chạy `npm run build && npm start` (hoặc bản deploy). Mỗi dòng: **làm g
 | D2 | `/admin/sach` → tìm không dấu → mở một sách → sửa giá, tick "Nổi bật", lưu | "Đã lưu."; trang sách công khai đổi giá ngay; chọn ≥ 4 sách nổi bật thì trang chủ hiện kệ "Nổi bật" |
 | D3 | `/admin/don-hang` → mở đơn COD của B8 → "Xác nhận đơn" → "Chuyển sang đang giao" → "Đánh dấu đã giao" | Mỗi bước "Đã cập nhật trạng thái đơn."; cuối cùng "Đã giao" + "Đã thanh toán"; không còn nút |
 | D4 | Mở đơn chuyển khoản của B10 → "Đã nhận tiền" | "Đã ghi nhận thanh toán."; trạng thái thanh toán "Đã thanh toán"; hiện ghi chú hoàn tiền khi hủy |
-| D5 | (Đơn chuyển khoản đã trả) "Hủy đơn" + lý do | "Đã hủy" + "Đã hoàn tiền"; tồn kho hoàn lại |
+| D5 | (Đơn chuyển khoản đã trả) "Hủy đơn" + lý do | "Đã hủy" + "Đã hoàn tiền"; tồn kho hoàn lại: `/admin/sach` → tìm sách trong đơn → cột tồn kho tăng lại đúng số (trang sách chỉ hiện số khi tồn ≤ 5) |
 | D6 | `/admin/voucher` → "Tạo" mã `test10` giảm 10% | Lưu thành `TEST10`; dùng được ở B7 |
 | D7 | Xóa voucher đã có đơn dùng | Báo chỉ tắt được, không xóa |
 | D8 | `/admin/danh-gia` → lọc 1 sao → "Gỡ đánh giá" | Đánh giá biến mất ở admin và ở trang sách |
