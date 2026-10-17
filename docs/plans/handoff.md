@@ -1,4 +1,4 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-17)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-17, sau merge e2e Supabase local)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
@@ -7,7 +7,10 @@
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
 - Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build).
-- **e2e chuyển sang Supabase local trên GitHub Actions** (nhánh `e2e-project`, chờ duyệt merge): `.github/workflows/e2e.yml` chạy `supabase start` (DB trống dựng từ `schema.sql` + seed, `supabase/config.toml`), `scripts/e2e-seed.ts` nạp 58 sách test (`e2e/fixtures/books.json`, bìa giả), rồi `npx playwright test`. Mọi push (trừ `docs/**`, `*.md`) + chạy tay; không secret. Guard `scripts/e2e-env.ts` từ chối production / host cloud. Không còn chạy e2e trên DB production.
+- **e2e chạy trên Supabase local ở GitHub Actions** (`e2e-project`, **đã merge `main`** ff `df891fb`, 2026-10-17; nhánh đã xóa local + remote): `.github/workflows/e2e.yml` chạy `supabase start` (DB trống dựng từ `schema.sql` + seed, `supabase/config.toml`), `scripts/e2e-seed.ts` nạp 58 sách test (`e2e/fixtures/books.json`, bìa giả), rồi `npx playwright test`. Mọi push (trừ `docs/**`, `*.md`) + chạy tay; không secret. Guard `scripts/e2e-env.ts` từ chối production / host cloud; `ci.yml` không còn job e2e. Không còn chạy e2e trên DB production.
+  - Kết quả: 2 lượt liền trên nhánh + 1 lượt trên `main` đều **265/265, 0 flaky** (~5,9–6,4 phút Playwright; cả job ~8,5 phút: npm ci 14 s, `supabase start` ~75 s, Chromium 13–21 s, seed 3 s).
+  - `next.config.ts`: cấu hình ảnh qua `coverImagesConfig` (`src/lib/cover-images-config.ts`): pattern http / IP local chỉ khi URL Supabase là local; build Vercel (`VERCEL=1`) với URL local → build fail (chống SSRF qua `/_next/image`, Vitest). Đã kiểm production sau deploy (chỉ đọc): bìa hiện ở trang chủ, `/danh-muc/van-hoc`, `/sach/sapiens`, 0 ảnh lỗi.
+  - Theo dõi: `public.ecr.aws` đôi lúc trả `toomanyrequests` khi kéo image (CLI tự thử lại, +~13 s); nếu làm fail job thì thêm cache image Docker.
 - Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
 - Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
@@ -40,6 +43,7 @@
 
 ## Việc mở
 
+- Trang lưới có `?page=` vượt quá số trang (soft 404 + `noindex`, VD `/sach?lang=en&page=2` khi chỉ có ≤ 24 sách tiếng Anh) làm trình duyệt báo **React error #419** trong console (`notFound()` trong Suspense sau khi đã stream). Lộ ra khi e2e chạy trên fixture nhỏ (đã tăng fixture để crawl không gặp); chưa sửa ở app.
 - **Kết quả bàn giao lần trước (2026-10-17)**:
   - Mạng: đường tới Supabase chập chờn (health trung bình 1,4–2,2 s, có lần timeout 10 s, bắt tay TLS tới 5,9 s) dù vercel.com ~0,25 s. Bật **Cloudflare WARP** thì health trung bình 298 ms, bắt tay ≤ 0,23 s. (Trước đây cần đo health trước khi chạy e2e trên production; nay e2e chạy trên Supabase local ở CI, chỉ còn liên quan khi dev / build / đo tốc độ từ máy dev.)
   - `npm run test:e2e` toàn bộ (gồm `crawl.spec`): **261/261 qua ngay lượt đầu** (20,9 phút), kể cả các test `checkout.spec` trước đây chưa chạy được (voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả). Log `fetch failed (e2e fault injection)` là của `error-page.spec`, có chủ đích.
