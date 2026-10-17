@@ -124,3 +124,12 @@ test('/api/search: từ khóa quá ngắn → 400 INVALID_INPUT; hợp lệ → 
   expect(body.data.length).toBeGreaterThan(0)
   expect(body.data.length).toBeLessThanOrEqual(8)
 })
+
+test('footer nằm dưới màn hình đầu ở trang có nội dung stream (không gây CLS)', async ({ page }) => {
+  for (const path of ['/gio-hang', '/tim-kiem?q=zzqqxx', '/tim-kiem?q=nguyen']) {
+    await page.goto(path)
+    const top = await page.getByRole('contentinfo').evaluate((footer) => footer.getBoundingClientRect().top)
+    const viewport = await page.evaluate(() => window.innerHeight)
+    expect(top, path).toBeGreaterThanOrEqual(viewport - 1)
+  }
+})
