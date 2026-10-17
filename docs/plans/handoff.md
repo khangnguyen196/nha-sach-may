@@ -5,7 +5,7 @@
 ## Trạng thái
 
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
-- **Nhánh đang mở**: `fix-manual-test` (đã push; chứa luôn `check-after-manual-test`). Chủ dự án đã duyệt merge **khi có một lượt e2e toàn bộ sạch**.
+- Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build). Job `e2e` tắt tới khi bật biến `RUN_E2E`.
 - Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
@@ -24,7 +24,7 @@
 - Thêm dependency phải hỏi trước.
 - e2e đang chạy trên **DB production**. Fail vì mạng / Supabase chậm (timeout, `fetch failed`) thì chờ 3 phút rồi chạy lại, tối đa 3 lượt. Không nới timeout, không xóa / skip test. Một test fail lặp lại thì dừng và báo.
 
-## Đã xong trong đợt sửa sau test tay (nhánh `fix-manual-test`, chưa merge)
+## Đã xong trong đợt sửa sau test tay (đã merge `main`, deploy production 2026-10-17)
 
 - Admin không còn thấy đơn của khách khác ở `/tai-khoan/don-hang`, chi tiết đơn, `/thanh-toan/thanh-cong/[code]` (query phía khách lọc `user_id`; RLS giữ nguyên cho `/admin`).
 - Trang chi tiết đơn: tên / bìa sách dẫn tới trang sách; đơn đã giao có nút "Đánh giá" / "Sửa đánh giá" mở form ngay dưới dòng (cùng đánh giá với trang sách).
@@ -39,13 +39,13 @@
 
 ## Việc mở
 
-- **Việc tiếp theo (đã duyệt, làm theo thứ tự)**:
-  1. Chạy `npm run test:e2e` toàn bộ trên `fix-manual-test` khi mạng ổn, theo quy ước ở trên (chờ 3 phút, tối đa 3 lượt chạy lại, không nới timeout, không skip). Không sạch thì KHÔNG merge, báo test nào fail.
-  2. Có một lượt sạch: `git switch main && git merge --ff-only fix-manual-test`, push `main`, xóa nhánh `fix-manual-test` và `check-after-manual-test` (local + remote), xem CI trên `main`, chờ Vercel deploy production.
-  3. Kiểm 3 điểm trên https://nha-sach-may.vercel.app bằng dữ liệu e2e tạm (`scripts/e2e-user.ts`: user khách + admin + sách e2e + đơn): admin mở `/tai-khoan/don-hang` chỉ thấy đơn của mình; admin mở `/thanh-toan/thanh-cong/<mã đơn của khách>` → 404; đơn đã giao của khách có nút "Đánh giá". Dọn xong chạy `npx tsx scripts/perf/measure.ts --check-leftovers` phải ra 0. Báo kết quả.
+- **Kết quả bàn giao lần trước (2026-10-17)**:
+  - Mạng: đường tới Supabase chập chờn (health trung bình 1,4–2,2 s, có lần timeout 10 s, bắt tay TLS tới 5,9 s) dù vercel.com ~0,25 s. Bật **Cloudflare WARP** thì health trung bình 298 ms, bắt tay ≤ 0,23 s. Trước khi chạy e2e: đo 5 lần `https://ylfgwcxddxvfxwldmwtf.supabase.co/auth/v1/health` (401 là bình thường, không kèm apikey), cần trung bình < 300 ms, 0 lỗi.
+  - `npm run test:e2e` toàn bộ (gồm `crawl.spec`): **261/261 qua ngay lượt đầu** (20,9 phút), kể cả các test `checkout.spec` trước đây chưa chạy được (voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả). Log `fetch failed (e2e fault injection)` là của `error-page.spec`, có chủ đích.
+  - CI trên `main` xanh; Vercel Production `f4899ab` deploy xong.
+  - Kiểm 3 điểm trên https://nha-sach-may.vercel.app bằng dữ liệu e2e tạm (user khách + admin, danh mục / sách `e2e-admin-…`, 1 đơn đã giao của khách + 1 đơn của admin; script tạm đã xóa): admin ở `/tai-khoan/don-hang` chỉ thấy đơn của mình ✔; admin mở `/thanh-toan/thanh-cong/<mã đơn khách>` → UI "Không tìm thấy trang" ✔ nhưng **HTTP 200** (soft 404, như mọi trang theo phiên: Cache Components stream trước khi `notFound()` chạy; proxy không kiểm được vì cần phiên; trang cần đăng nhập nên không ảnh hưởng SEO, không lộ dữ liệu); đơn đã giao của khách có nút "Đánh giá" ✔. Dọn xong `measure.ts --check-leftovers`: 0 sót mọi loại.
 - Sau khi deploy (tùy chọn): đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
 - Bản Preview của Vercel đang bật Vercel Authentication → script đo không vào được bản Preview (muốn đo trước khi merge cần Protection Bypass for Automation, do chủ dự án quyết).
-- **e2e chưa có lượt sạch** sau các sửa (mạng / Supabase chậm suốt 2026-10-17): lượt toàn bộ 252 qua / 3 fail (2 do cách viết test voucher, đã sửa; 1 lỗi mạng ở `afterAll`); 3 lượt chạy lại `checkout.spec` fail ở chỗ khác nhau mỗi lượt (đăng nhập / đặt hàng chờ > 20 s, lượt cuối hỏng ngay ở build). Các test sau chỗ fail trong `checkout.spec` (serial) chưa chạy được sau sửa: voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả. Chạy lại khi mạng ổn.
 - **Lỗi #3 (build) chưa hết**: một lần build vẫn fail "`use cache` took too long" ở `getRelatedBooks` dù đã có timeout + retry (tối đa 33 s, dưới giới hạn 54 s của Next; `fetch` của Next có chuyển `signal`). Chưa tìm ra chỗ treo; hướng xem tiếp: giảm số trang prerender đồng thời, tăng `staticPageGenerationTimeout`, log thời gian từng lượt thử lúc build.
 - Thêm vào giỏ khi bấm lúc header chưa biết phiên: `router.refresh()` dự phòng (`add-to-cart-button.tsx` dòng 66) render lại cả phần động của trang sách (+6 query). **Chủ dự án đã đồng ý giữ** (2026-10-17): bỏ đi thì header stream tới sau có thể ghi đè badge bằng số cũ (lệch đồng bộ). Muốn bỏ phải thiết kế lại cách header và nút đồng bộ số giỏ.
 - LCP mobile trang lưới (danh mục ~3,5–5,2 s mô phỏng 4G chậm) chưa giảm: lưới stream theo `searchParams` nên preload không tới sớm hơn thẻ `<img>`. Hướng tiếp: đưa hàng đầu lưới vào phần prerender tĩnh (đổi cấu trúc trang, cần plan).
