@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
-import { FILTER_STATUSES, ORDERS_PAGE_SIZE, type OrderListParams } from './params'
+import { FILTER_STATUSES, ORDER_CODE, ORDERS_PAGE_SIZE, type OrderListParams } from './params'
 
 // Dữ liệu theo user: client theo phiên (cookies), không cache chung. Chỉ gọi trong <Suspense>.
 // Luôn lọc user_id của người đang đăng nhập, không chỉ dựa vào RLS: policy orders_select_own_or_admin cho admin đọc
@@ -9,9 +9,6 @@ import { FILTER_STATUSES, ORDERS_PAGE_SIZE, type OrderListParams } from './param
 const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
   street, note, subtotal, shipping_fee, discount, voucher_code, total, cancelled_reason, created_at,
   order_items(id, book_id, title, cover_url, unit_price, quantity, line_total, books(slug, is_active))`
-
-// Mã đơn do generate_order_code() sinh: NS + YYMMDD + số thứ tự (≥ 5 chữ số)
-export const ORDER_CODE = /^NS\d{11,16}$/
 
 export async function getOrderByCode(code: string, userId: string) {
   if (!ORDER_CODE.test(code)) return null

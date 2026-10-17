@@ -1,10 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import createIntlMiddleware from 'next-intl/middleware'
 import type { Locale } from 'next-intl'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
 import { catalogParamsSchema, pageExistsResponseSchema } from '@/features/books/schemas'
-import { localizedPath, matchListingPath, matchSlugPath, type ListingMatch, type SlugPathname } from '@/i18n/paths'
+import { ORDER_CODE } from '@/features/orders/params'
+import { localizedPath, matchListingPath, matchOrderPath, matchSlugPath, type ListingMatch, type SlugPathname } from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
 import { createSlugGuard } from '@/lib/slug-guard'
@@ -68,14 +70,37 @@ async function missingListingPage(request: NextRequest) {
 }
 
 /**
- * Slug không tồn tại, `?page=` vượt quá → rewrite sang một đường dẫn không khớp
+ * Trang một đơn (đặt hàng thành công, chi tiết đơn) mà đơn không có hoặc của người khác. Lọc user_id như
+ * getOrderByCode (RLS cho admin đọc mọi đơn). Lỗi → cho qua: trang tự hiện UI 404 + noindex.
+ */
+async function missingOrder(pathname: string, supabase: SupabaseClient<Database>, userId: string) {
+  const match = matchOrderPath(pathname)
+  if (!match) return null
+  if (!ORDER_CODE.test(match.code)) return match.locale
+  const { count, error } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('order_code', match.code)
+    .eq('user_id', userId)
+  if (error) {
+    console.error('order-guard:', error.message)
+    return null
+  }
+  return count === 0 ? match.locale : null
+}
+
+/**
+ * Slug không tồn tại, `?page=` vượt quá, đơn không thuộc người đang đăng nhập → rewrite sang một đường dẫn không khớp
  * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
  * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
  */
-async function notFoundRewrite(request: NextRequest) {
+async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Database>, userId: string | undefined) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null
   const { pathname } = request.nextUrl
-  const locale = (await missingSlug(pathname)) ?? (await missingListingPage(request))
+  const locale =
+    (await missingSlug(pathname)) ??
+    (await missingListingPage(request)) ??
+    (userId ? await missingOrder(pathname, supabase, userId) : null)
   return locale ? NextResponse.rewrite(new URL(`/${locale}/__not-found`, request.url)) : null
 }
 
@@ -137,7 +162,9 @@ export async function proxy(request: NextRequest) {
   } else {
     // Lớp ngoài; trang tài khoản kiểm tra lại ở server (requireUser)
     response =
-      authRedirect(request, Boolean(auth?.claims)) ?? (await notFoundRewrite(request)) ?? handleI18nRouting(request)
+      authRedirect(request, Boolean(auth?.claims)) ??
+      (await notFoundRewrite(request, supabase, auth?.claims.sub)) ??
+      handleI18nRouting(request)
   }
 
   // 3. Trả cookie mới về trình duyệt, kèm header chống cache của Supabase (không để CDN cache token)

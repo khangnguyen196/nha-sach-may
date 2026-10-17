@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { parseLocale } from '@/features/auth/schemas'
 import { expireOrderBooks } from './cache'
 import { notifyOrder, ownRecipient } from './emails'
-import { ORDER_CODE } from './queries'
+import { ORDER_CODE } from './params'
 import { cancelOrderSchema, orderIdSchema } from './schemas'
 
 // locale, id và mã đơn do page bind sẵn (Server Action không đọc được next/root-params); tham số bind đi qua client

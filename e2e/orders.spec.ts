@@ -166,11 +166,27 @@ test('chi tiết đơn: mã, địa chỉ, sách, tiền khớp DB; đơn của 
   await expect(main(page).getByTestId('order-item')).toContainText(book.title)
   await expect(main(page).getByTestId('order-total')).toHaveText(vnd(order.total))
 
-  // User chính của project (khác user đơn hàng): RLS không trả đơn → 404 như mã không tồn tại
+  // Chủ đơn: trang đặt hàng thành công + chi tiết đơn (tải thẳng, qua proxy) là 200
+  for (const path of [`/tai-khoan/don-hang/${order.order_code}`, `/en/checkout/success/${order.order_code}`]) {
+    expect((await page.goto(path))?.status(), path).toBe(200)
+  }
+
+  // User chính của project (khác user đơn hàng): proxy không thấy đơn (lọc user_id) → HTTP 404 như mã không tồn tại
   const other = await browser.newContext({ baseURL, storageState: storageStatePath(testInfo.project.name) })
   const otherPage = await other.newPage()
-  await otherPage.goto(`/tai-khoan/don-hang/${order.order_code}`)
-  await expect(main(otherPage).getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
+  const errors = collectErrors(otherPage)
+  for (const path of [
+    `/tai-khoan/don-hang/${order.order_code}`,
+    `/thanh-toan/thanh-cong/${order.order_code}`,
+    `/en/account/orders/${order.order_code}`,
+    '/tai-khoan/don-hang/NS-khong-hop-le',
+  ]) {
+    const response = await otherPage.goto(path)
+    expect(response?.status(), path).toBe(404)
+    await expect(main(otherPage).getByRole('heading', { name: /^(Không tìm thấy trang|Page not found)$/ })).toBeVisible()
+    await otherPage.waitForLoadState('networkidle')
+    expect(errors, path).toEqual([])
+  }
   await other.close()
 })
 

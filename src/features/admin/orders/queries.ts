@@ -1,5 +1,5 @@
 import 'server-only'
-import { ORDER_CODE } from '@/features/orders/queries'
+import { ORDER_CODE } from '@/features/orders/params'
 import { escapeLike, quoteFilterValue } from '@/lib/like'
 import { ADMIN_PAGE_SIZE } from '../params'
 import { createAdminQueryClient } from '../supabase'

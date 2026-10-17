@@ -5,6 +5,9 @@ import type { Database } from '@/types/database'
 
 export type OrderStatus = Database['public']['Enums']['order_status']
 
+// Mã đơn do generate_order_code() sinh: NS + YYMMDD + số thứ tự (≥ 5 chữ số)
+export const ORDER_CODE = /^NS\d{11,16}$/
+
 export const ORDERS_PAGE_SIZE = 10
 const MAX_PAGE = 10_000
 
