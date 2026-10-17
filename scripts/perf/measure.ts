@@ -3,6 +3,7 @@
  *   npx tsx scripts/perf/measure.ts [--base <url>] [--out <file.json>] [--runs 3]
  *   npx tsx scripts/perf/measure.ts --only "lọc Tiếng Anh"   # chỉ đo trang / thao tác có tên chứa chuỗi này
  *   npx tsx scripts/perf/measure.ts --cleanup-only    # lượt đo bị ngắt giữa chừng: dọn mọi dữ liệu e2e rồi đếm phần sót
+ *   npx tsx scripts/perf/measure.ts --check-leftovers # chỉ đếm dữ liệu e2e còn trong DB, không xóa gì
  *
  * - Trang: TTFB, FCP, LCP, CLS, TBT; "lạnh" = context mới (cache trình duyệt trống), "ấm" = tải lại trong cùng context.
  * - Thao tác: thời gian từ lúc bấm tới lúc thấy kết quả + INP (event timing dài nhất của thao tác).
@@ -35,6 +36,7 @@ import {
 } from '../e2e-user'
 
 const CLEANUP_ONLY = process.argv.includes('--cleanup-only')
+const CHECK_ONLY = process.argv.includes('--check-leftovers')
 const args = new Map<string, string>()
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i] ?? '', process.argv[i + 1] ?? '')
 const BASE = args.get('--base') ?? 'https://nha-sach-may.vercel.app'
@@ -402,6 +404,9 @@ function interactions(data: Fixtures): Interaction[] {
         await clearCart(data.user.id)
         await page.goto(`/sach/${data.cartBook}`)
         await waitForHydration(page, 'main form button[type="submit"]')
+        // Bấm trước khi header (phần theo phiên) stream xong thì nút chưa biết phiên → sau action gọi router.refresh()
+        // (render lại cả phần động của trang sách). Chờ link tài khoản để đo đúng luồng của người đã đăng nhập.
+        await page.getByRole('banner').getByRole('link', { name: /Tài khoản của/ }).waitFor({ timeout: 30_000 })
       },
       run: (page) =>
         timed(
@@ -629,7 +634,11 @@ async function cleanupOnly() {
   console.log('Dữ liệu e2e còn lại:', await e2eLeftovers())
 }
 
-;(CLEANUP_ONLY ? cleanupOnly() : run()).catch((error: unknown) => {
+async function checkOnly() {
+  console.log('Dữ liệu e2e còn lại:', await e2eLeftovers())
+}
+
+;(CHECK_ONLY ? checkOnly() : CLEANUP_ONLY ? cleanupOnly() : run()).catch((error: unknown) => {
   console.error(error)
   process.exitCode = 1
 })
