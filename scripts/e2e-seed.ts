@@ -2,7 +2,7 @@
  * Nạp sách test vào Supabase local của e2e (sau `npx supabase start`; danh mục + voucher đã có từ seed của config.toml):
  *   npx tsx scripts/e2e-seed.ts
  *
- * - Sách: e2e/fixtures/books.json, 48 cuốn trích từ preview đã duyệt (scripts/out/preview-approved*.json), mô tả cắt
+ * - Sách: e2e/fixtures/books.json, 58 cuốn trích từ preview đã duyệt (scripts/out/preview-approved*.json), mô tả cắt
  *   ≤ 300 ký tự, không có URL ảnh. Bất biến mà spec dựa vào (sapiens, > 1 trang lưới, nhóm tồn kho…) kiểm ở
  *   scripts/e2e-seed.test.ts.
  * - Bìa giả sinh bằng sharp (màu theo ISBN) → Storage local, không gọi mạng ngoài, không gọi Google Books.

@@ -27,6 +27,10 @@ describe('e2e/fixtures/books.json', () => {
     expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(0)
   })
 
+  it('lọc tiếng Anh có trang 2 (crawl.spec, measure.ts: /sach?lang=en&sort=price-asc&page=2)', () => {
+    expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(PAGE_SIZE)
+  })
+
   it('Văn học có ≥ 2 danh mục con có sách, danh mục con đầu (Tiểu thuyết) có sách (catalog.spec)', () => {
     const children = new Set(books.map((b) => b.category_slug).filter((slug) => ['tieu-thuyet', 'truyen-ngan-tan-van', 'tho'].includes(slug)))
     expect(children.size).toBeGreaterThanOrEqual(2)

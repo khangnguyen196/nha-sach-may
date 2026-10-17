@@ -222,7 +222,7 @@ test('sang trang / sắp xếp: hiện trạng thái đang tải ngay khi bấm,
 
   await page.getByRole('navigation', { name: 'Phân trang' }).getByRole('link', { name: 'Trang 2' }).click()
   await expect(region).toHaveCount(1, { timeout: 1_000 })
-  await expect(page.getByTestId('catalog-loading')).toHaveText('Đang tải kết quả…')
+  await expect(page.getByRole('main').getByTestId('catalog-loading')).toHaveText('Đang tải kết quả…')
   await expect(page).toHaveURL(/\/sach\?page=2$/)
   await expect(region).toHaveCount(0)
 

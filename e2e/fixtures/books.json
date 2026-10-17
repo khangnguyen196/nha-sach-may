@@ -579,6 +579,42 @@
     "stock": 72
   },
   {
+    "title": "Jane Austen's Pride and Prejudice",
+    "subtitle": "A Book-to-Table Classic",
+    "slug": "jane-austen-s-pride-and-prejudice",
+    "description": "Puffin Plated: A Book-to-Table Reading Experience A deluxe, full-color hardback edition of the perennial Jane Austen classic featuring a selection of recipes for tea-time treats by the one and only Martha Stewart! Have your book and eat it, too, with this clever edition of a classic novel…",
+    "isbn": "9780593113189",
+    "authors": [
+      "Jane Austen"
+    ],
+    "publisher": "Penguin",
+    "published_year": 2018,
+    "page_count": 338,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 127000,
+    "original_price": 151000,
+    "stock": 62
+  },
+  {
+    "title": "Northanger Abbey",
+    "subtitle": null,
+    "slug": "northanger-abbey",
+    "description": "Jane Austen's first novel tells the story of Catherine Morland, the very ideal of a nice girl. But her naïve heroine is also in possession of an overactive imagination, fueled by her obsession with gothic novels. When Catherine meets Henry Tilney, she's instantly smitten. But when she's invited to…",
+    "isbn": "9781551110783",
+    "authors": [
+      "Jane Austen"
+    ],
+    "publisher": "Peterborough, Ont. : Broadview Press",
+    "published_year": 1996,
+    "page_count": null,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 97000,
+    "original_price": null,
+    "stock": 44
+  },
+  {
     "title": "People and Performance",
     "subtitle": "The Best of Peter Drucker on Management",
     "slug": "people-and-performance",
@@ -651,6 +687,42 @@
     "stock": 106
   },
   {
+    "title": "The Essential Drucker",
+    "subtitle": null,
+    "slug": "the-essential-drucker",
+    "description": "Peter Drucker's wide-ranging book, drawn from his best work, looks at management, the individual and society. He connects these themes of today's world with his usual clear-sighted and far-reaching style to create a work which encapsulates his essential and strongest writings in one volume.Under…",
+    "isbn": "9781000205589",
+    "authors": [
+      "Peter F. Drucker"
+    ],
+    "publisher": "Routledge",
+    "published_year": 2020,
+    "page_count": 432,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 150000,
+    "original_price": 184000,
+    "stock": 119
+  },
+  {
+    "title": "Peter F. Drucker on Business and Society",
+    "subtitle": null,
+    "slug": "peter-f-drucker-on-business-and-society",
+    "description": "\"This collection of Peter F. Drucker's essays explores the intersection between society, politics, and economics. Despite this lofty goal, however, the essays themselves remain down to earth, highly readable, and full of stories and ideas that make us think differently about the business world…",
+    "isbn": "9781633699632",
+    "authors": [
+      "Peter F. Drucker"
+    ],
+    "publisher": null,
+    "published_year": 2020,
+    "page_count": 336,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 133000,
+    "original_price": null,
+    "stock": 100
+  },
+  {
     "title": "Atomic Habits",
     "subtitle": "The life-changing million-copy #1 bestseller",
     "slug": "atomic-habits",
@@ -721,6 +793,42 @@
     "price": 115000,
     "original_price": null,
     "stock": 55
+  },
+  {
+    "title": "Pathways to Success in Your Professional & Private Lives",
+    "subtitle": null,
+    "slug": "pathways-to-success-in-your-professional-private-lives",
+    "description": null,
+    "isbn": "9781578660391",
+    "authors": [
+      "Dale Carnegie"
+    ],
+    "publisher": null,
+    "published_year": 1998,
+    "page_count": 570,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 184000,
+    "original_price": 230000,
+    "stock": 40
+  },
+  {
+    "title": "Dale Carnegie Omnibus (How To Stop Worrying And Start Living/How To Enjoy Your Life And Job) - Vol. 2",
+    "subtitle": null,
+    "slug": "dale-carnegie-omnibus-how-to-stop-worrying-and-start-living-how-to-enjoy-your-li",
+    "description": "Banish worry and fatigue from your life and learn how to achieve the perfect work-life balance, with The Dale Carnegie Omnibus Volume 2. Containing two of Dale Carnegie's bestselling titles, How to Stop Worrying and Start Living and How to Enjoy Your Life and Job, this book will help you, among…",
+    "isbn": "9788129140357",
+    "authors": [
+      "Dale Carnegie"
+    ],
+    "publisher": "Rupa Publications",
+    "published_year": 2017,
+    "page_count": null,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 97000,
+    "original_price": null,
+    "stock": 20
   },
   {
     "title": "How Not to Be a Twit and Other Wisdom from Roald Dahl",
@@ -796,6 +904,45 @@
     "stock": 22
   },
   {
+    "title": "Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)",
+    "subtitle": null,
+    "slug": "ladybird-readers-level-4-roald-dahl-esio-trot-elt-graded-reader",
+    "description": "Ladybird Readers is an ELT graded reader series for children aged 3-11 learning English as a foreign or second language. The series includes traditional tales, popular characters, modern stories, and non-fiction. Beautifully illustrated books, carefully written by language learning…",
+    "isbn": "9780241579084",
+    "authors": [
+      "Roald Dahl",
+      "Ladybird"
+    ],
+    "publisher": "Random House",
+    "published_year": 2024,
+    "page_count": 48,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 56000,
+    "original_price": null,
+    "stock": 20
+  },
+  {
+    "title": "Roald Dahl's Revolting Recipes",
+    "subtitle": null,
+    "slug": "roald-dahl-s-revolting-recipes",
+    "description": "Who but Roald Dahl could think up such mouthwatering and deliciously disgusting foods as Lickable Wallpaper, Stink Bugs Eggs, and Eatable Pillows? Now theres a practical guide to making these and other delicacies featured in Charlie and the Chocolate Factory, James and the Giant Peach, and Roald…",
+    "isbn": "9780140378207",
+    "authors": [
+      "Roald Dahl",
+      "Felicity Dahl",
+      "Josie Fison"
+    ],
+    "publisher": "Penguin",
+    "published_year": 1997,
+    "page_count": 65,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 69000,
+    "original_price": 78000,
+    "stock": 20
+  },
+  {
     "title": "Sapiens",
     "subtitle": "A Brief History of Humankind",
     "slug": "sapiens",
@@ -865,6 +1012,42 @@
     "language": "en",
     "price": 107000,
     "original_price": null,
+    "stock": 20
+  },
+  {
+    "title": "Unstoppable Us: The Two-Book Boxed Set",
+    "subtitle": "How Humans Took Over the World and Why the World Isn't Fair",
+    "slug": "unstoppable-us-the-two-book-boxed-set",
+    "description": "Learn HOW early humans took over the Earth and WHY the world they built isn't fair in this two-volume boxed set of the New York Times bestselling UNSTOPPABLE US series. The author of SAPIENS takes middle school readers on an epic and exciting voyage through early human history in these beautifully…",
+    "isbn": "9798217023752",
+    "authors": [
+      "YUVAL NOAH. HARARI"
+    ],
+    "publisher": "Random House",
+    "published_year": 2024,
+    "page_count": 209,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 101000,
+    "original_price": 119000,
+    "stock": 53
+  },
+  {
+    "title": "Nexus",
+    "subtitle": "A Brief History of Information Networks from the Stone Age to AI",
+    "slug": "nexus",
+    "description": "#1 NEW YORK TIMES BESTSELLER • From the author of Sapiens comes the groundbreaking story of how information networks have made, and unmade, our world. “Strikingly original . . . A historian whose arguments operate on the scale of millennia has managed to capture the zeitgeist perfectly.”—The…",
+    "isbn": "9780593734247",
+    "authors": [
+      "Yuval Noah Harari"
+    ],
+    "publisher": "Random House",
+    "published_year": 2024,
+    "page_count": 545,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 179000,
+    "original_price": 208000,
     "stock": 20
   }
 ]

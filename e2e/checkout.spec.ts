@@ -488,7 +488,7 @@ test('áp dụng voucher (form GET): khối tổng tiền hiện "Đang tính l�
       button.click()
       const deadline = performance.now() + 1_000
       while (performance.now() < deadline) {
-        const text = document.querySelector('[data-testid="voucher-pending"]')?.textContent ?? ''
+        const text = document.querySelector('main [data-testid="voucher-pending"]')?.textContent ?? ''
         if (text) return text
         await new Promise((resolve) => setTimeout(resolve, 20))
       }
@@ -497,7 +497,7 @@ test('áp dụng voucher (form GET): khối tổng tiền hiện "Đang tính l�
   expect(pendingText).toBe('Đang tính lại tổng tiền…')
   await expect(page).toHaveURL(/[?&]voucher=KHONG-CO-MA-NAY/)
   await expect(main(page).getByTestId('voucher-error')).toBeVisible()
-  await expect(page.getByTestId('voucher-pending')).toHaveText('')
+  await expect(main(page).getByTestId('voucher-pending')).toHaveText('')
 })
 
 test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đúng (gõ chữ thường) → giảm 10%, đơn lưu mã', async ({

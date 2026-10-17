@@ -1,5 +1,5 @@
 # e2e (Playwright) trên Supabase local: `supabase start` dựng DB trống từ schema.sql + seed (supabase/config.toml),
-# scripts/e2e-seed.ts nạp 48 sách test, Playwright build + start app trỏ vào đó. Không dùng project cloud nào, không
+# scripts/e2e-seed.ts nạp 58 sách test, Playwright build + start app trỏ vào đó. Không dùng project cloud nào, không
 # cần secret (khóa của Supabase local là khóa demo, lấy bằng `supabase status`; scripts/e2e-env.ts từ chối production).
 # Tắt tạm: Settings → Secrets and variables → Actions → Variables → RUN_E2E = false.
 name: e2e

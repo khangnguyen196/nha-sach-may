@@ -54,10 +54,10 @@ test('thêm / đổi số lượng / xóa, tải lại vẫn đúng', async ({ p
 
   await waitForHydration(page, 'main [data-testid="cart-line"] button')
   await page.getByRole('button', { name: `Xóa “${book.title}” khỏi giỏ` }).click()
-  await expect(page.getByText('Giỏ hàng đang trống')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Giỏ hàng đang trống')).toBeVisible()
   await expect(badge(page)).toHaveCount(0)
   await page.reload()
-  await expect(page.getByText('Giỏ hàng đang trống')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Giỏ hàng đang trống')).toBeVisible()
   expect(errors).toEqual([])
 })
 

@@ -27,6 +27,7 @@ const STOCK = 20
 let customer: E2eUser
 let addressId: number
 let book: E2eAdminBook
+let leafId: number
 const slugs: string[] = []
 
 test.beforeAll(async () => {
@@ -34,6 +35,7 @@ test.beforeAll(async () => {
   slugs.push(root.slug)
   const leaf = await createE2eCategory({ parentId: root.id })
   slugs.push(leaf.slug)
+  leafId = leaf.id
   book = await createE2eBook({ categoryId: leaf.id, price: 80_000, stock: STOCK })
   slugs.push(book.slug)
   customer = await createE2eUser('admin-orders')
@@ -45,8 +47,8 @@ test.afterAll(async () => {
   await cleanupE2eAdminData(slugs)
 })
 
-async function placeOrder(quantity = 1, paymentMethod: 'cod' | 'bank_transfer' = 'cod') {
-  return placeE2eOrder(await signedInClient(customer), customer.id, { addressId, bookId: book.id, quantity, paymentMethod })
+async function placeOrder(quantity = 1, paymentMethod: 'cod' | 'bank_transfer' = 'cod', bookId = book.id) {
+  return placeE2eOrder(await signedInClient(customer), customer.id, { addressId, bookId, quantity, paymentMethod })
 }
 
 /** Mở trang chi tiết đơn của admin, chờ nút xử lý hydrate (lỗi hiện tại chỗ thay vì POST cả trang) */
@@ -116,10 +118,14 @@ test('chờ xác nhận → đã xác nhận → đang giao → đã giao; COD t
 
 test('hủy: thiếu lý do → lỗi tại ô; có lý do → hoàn tồn kho, trang sách cập nhật, không còn nút', async ({ page }) => {
   test.setTimeout(60_000)
-  // Đặt tới khi chỉ còn 3 cuốn: trang sách hiện "Chỉ còn 3 cuốn", hủy xong phải về "Còn hàng" (cache đã làm mới)
-  const stock = (await bookRow(book.id))?.stock ?? 0
-  const order = await placeOrder(stock - 3)
-  await page.goto(`/sach/${book.slug}`)
+  // Đặt tới khi chỉ còn 3 cuốn: trang sách hiện "Chỉ còn 3 cuốn", hủy xong phải về "Còn hàng" (cache đã làm mới).
+  // Sách riêng của test: đặt qua RPC (không qua action nên không updateTag), còn trang sách của `book` có thể đã nằm
+  // trong cache từ test trước (link sách ở trang đơn của khách được prefetch) → sẽ hiện tồn kho cũ.
+  const target = await createE2eBook({ categoryId: leafId, price: 80_000, stock: STOCK })
+  slugs.push(target.slug)
+  const stock = target.stock
+  const order = await placeOrder(stock - 3, 'cod', target.id)
+  await page.goto(`/sach/${target.slug}`)
   await expect(main(page).getByText('Chỉ còn 3 cuốn')).toBeVisible()
 
   await openOrder(page, order.order_code)
@@ -127,7 +133,7 @@ test('hủy: thiếu lý do → lỗi tại ô; có lý do → hoàn tồn kho, 
   const confirm = main(page).getByRole('button', { name: 'Xác nhận hủy đơn' })
   await confirm.click()
   await expect(main(page).getByText('Nhập lý do hủy (tối đa 500 ký tự).')).toBeVisible()
-  expect((await bookRow(book.id))?.stock).toBe(3)
+  expect((await bookRow(target.id))?.stock).toBe(3)
 
   await main(page).getByLabel('Lý do hủy').fill('Khách gọi điện đổi ý (e2e)')
   await confirm.click()
@@ -136,10 +142,10 @@ test('hủy: thiếu lý do → lỗi tại ô; có lý do → hoàn tồn kho, 
   await expect(main(page).getByTestId('order-cancelled-reason')).toContainText('Khách gọi điện đổi ý (e2e)')
   await expect(main(page).getByRole('button', { name: /Xác nhận đơn|Xác nhận hủy đơn/ })).toHaveCount(0)
   await expect(main(page).getByText('Hủy đơn', { exact: true })).toHaveCount(0)
-  expect((await bookRow(book.id))?.stock).toBe(stock)
+  expect((await bookRow(target.id))?.stock).toBe(stock)
 
   // updateTag(book:{id}) → trang sách công khai thấy tồn kho mới ngay
-  await page.goto(`/sach/${book.slug}`)
+  await page.goto(`/sach/${target.slug}`)
   await expect(main(page).getByText('Còn hàng')).toBeVisible()
 })
 

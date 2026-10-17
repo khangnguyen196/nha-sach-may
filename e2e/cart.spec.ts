@@ -100,7 +100,7 @@ test.describe('trang giỏ của khách', () => {
     await expect(page.getByTestId('cart-subtotal')).toHaveText(vnd(book.price * target))
 
     await page.getByRole('button', { name: `Xóa “${book.title}” khỏi giỏ` }).click()
-    await expect(page.getByText('Giỏ hàng đang trống')).toBeVisible()
+    await expect(page.getByRole('main').getByText('Giỏ hàng đang trống')).toBeVisible()
     await expect(badge(page)).toHaveCount(0)
     expect(await readGuestCart(page)).toBeNull()
     expect(errors).toEqual([])
