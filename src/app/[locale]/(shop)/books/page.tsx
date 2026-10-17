@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { resolveSort } from '@/features/books/catalog-params'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { CatalogSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { CatalogView } from '@/features/books/components/catalog-view'
+import { withCategoryFilter } from '@/features/books/listing'
 import { getCategories, listBooks } from '@/features/books/queries'
 import { catalogParamsSchema } from '@/features/books/schemas'
 import { localeAlternates } from '@/i18n/alternates'
@@ -34,24 +34,10 @@ export default async function AllBooksPage({ searchParams }: Props) {
 
 async function AllBooksResults({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
   const [raw, t, categories] = await Promise.all([searchParams, getTranslations('catalog'), getCategories()])
-  const parsed = catalogParamsSchema.parse(raw)
-
-  // Lọc danh mục như trang tìm kiếm: chip là danh mục cha; `cat` nhận cả slug danh mục lá
-  const parents = categories.filter((c) => c.parent_id === null)
-  const selected = categories.find((c) => c.slug === parsed.cat)
-  const params = selected ? parsed : { ...parsed, cat: undefined }
-  const children = selected ? categories.filter((c) => c.parent_id === selected.id) : []
-  const categoryIds = selected ? (children.length > 0 ? children.map((c) => c.id) : [selected.id]) : undefined
-
-  const result = await listBooks({
-    categoryIds,
-    price: params.price,
-    lang: params.lang,
-    inStock: Boolean(params.stock),
-    sort: resolveSort(params, 'browse'),
-    page: params.page,
-  })
-  if (params.page > 1 && result.books.length === 0) notFound()
+  const { params, parents, input } = withCategoryFilter(catalogParamsSchema.parse(raw), categories, 'browse')
+  const result = await listBooks(input)
+  // Proxy đã trả 404 cho trang vượt quá; còn tới đây (proxy không hỏi được) thì hiện UI 404 trong boundary
+  if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
 
   return (
     <CatalogView

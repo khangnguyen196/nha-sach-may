@@ -89,7 +89,7 @@ test('lọc giá → URL có price, về trang 1, mọi giá trong khoảng', as
   expect(errors).toEqual([])
 })
 
-test('phân trang: trang 2 không trùng trang 1; ?page=999 → trang 404', async ({ page }) => {
+test('phân trang: trang 2 không trùng trang 1', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/tim-kiem?q=978')
   const total = await resultTotal(page)
@@ -110,12 +110,27 @@ test('phân trang: trang 2 không trùng trang 1; ?page=999 → trang 404', asyn
     expect(secondPage.filter((href) => firstPage.includes(href))).toEqual([])
   }
   expect(errors).toEqual([])
+})
 
-  // Trang có static shell → stream đã bắt đầu khi notFound() chạy nên HTTP vẫn 200 (xem phase-3.md);
-  // kiểm tra UI 404 + noindex
-  await page.goto('/danh-muc/van-hoc?page=999')
-  await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
-  await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
+// Trang tự kiểm thì đã stream (Cache Components) → chỉ trả được 200; proxy hỏi /api/catalog/page-exists khi page > 1
+// rồi rewrite sang 404 thật. Trước đây notFound() trong Suspense → React error #419 ở console.
+test('?page= vượt quá số trang → HTTP 404 + noindex, không lỗi console; trang hợp lệ vẫn 200', async ({ page }) => {
+  const errors = collectErrors(page)
+  for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-kiem?q=978&page=999']) {
+    const response = await page.goto(url)
+    expect(response?.status(), url).toBe(404)
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
+    await expect(page.locator('head meta[name="robots"][content*="noindex"]').first()).toBeAttached()
+    await page.waitForLoadState('networkidle')
+    expect(errors, url).toEqual([])
+  }
+
+  for (const url of ['/sach', '/sach?page=2', '/danh-muc/van-hoc', '/danh-muc/van-hoc?page=1']) {
+    const response = await page.goto(url)
+    expect(response?.status(), url).toBe(200)
+    await expect(cards(page).first()).toBeVisible()
+  }
+  expect(errors).toEqual([])
 })
 
 test('card → trang sách: h1 đúng tên, có giá; link tác giả → trang tác giả có cuốn đó', async ({ page }) => {

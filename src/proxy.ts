@@ -3,7 +3,8 @@ import createIntlMiddleware from 'next-intl/middleware'
 import type { Locale } from 'next-intl'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
-import { localizedPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
+import { catalogParamsSchema, pageExistsResponseSchema } from '@/features/books/schemas'
+import { localizedPath, matchListingPath, matchSlugPath, type ListingMatch, type SlugPathname } from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
 import { createSlugGuard } from '@/lib/slug-guard'
@@ -28,15 +29,54 @@ const slugExists = createSlugGuard({
   },
 })
 
+async function missingSlug(pathname: string) {
+  const match = matchSlugPath(pathname)
+  return match && !(await slugExists(match.kind, match.slug)) ? match.locale : null
+}
+
+const LISTING_KINDS = {
+  '/books': 'books',
+  '/search': 'search',
+  '/categories/[slug]': 'category',
+  '/authors/[slug]': 'author',
+} as const satisfies Record<ListingMatch['kind'], string>
+
 /**
- * Trang sách / danh mục / tác giả với slug không tồn tại → rewrite sang một đường dẫn không khớp route nào của locale
- * đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật + not-found.tsx đúng ngôn ngữ.
+ * `?page=` > 1 của trang lưới mà trang đó không có sách. Trang 1 / không có `page` đi thẳng, không thêm request.
+ * Proxy không dùng được cache của app (trên Vercel chạy tách khỏi runtime của app) → hỏi /api/catalog/page-exists,
+ * nơi listBooks trả từ cache có tag. Lỗi / hết giờ → cho qua: trang tự hiện UI 404 + noindex (InlineNotFound).
+ */
+async function missingListingPage(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl
+  if (catalogParamsSchema.shape.page.parse(searchParams.get('page')) === 1) return null
+  const match = matchListingPath(pathname)
+  if (!match) return null
+
+  const url = new URL('/api/catalog/page-exists', request.url)
+  for (const [key, value] of searchParams) url.searchParams.append(key, value)
+  url.searchParams.set('listing', LISTING_KINDS[match.kind])
+  if ('slug' in match) url.searchParams.set('slug', match.slug)
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(3_000) })
+    const body = pageExistsResponseSchema.safeParse(await response.json())
+    if (!body.success) throw new Error(`HTTP ${response.status}`)
+    return body.data.data.exists ? null : match.locale
+  } catch (error) {
+    console.error('page-guard:', error instanceof Error ? error.message : error)
+    return null
+  }
+}
+
+/**
+ * Slug không tồn tại, `?page=` vượt quá → rewrite sang một đường dẫn không khớp
+ * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
+ * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
  */
 async function notFoundRewrite(request: NextRequest) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null
-  const match = matchSlugPath(request.nextUrl.pathname)
-  if (!match || (await slugExists(match.kind, match.slug))) return null
-  return NextResponse.rewrite(new URL(`/${match.locale}/__not-found`, request.url))
+  const { pathname } = request.nextUrl
+  const locale = (await missingSlug(pathname)) ?? (await missingListingPage(request))
+  return locale ? NextResponse.rewrite(new URL(`/${locale}/__not-found`, request.url)) : null
 }
 
 const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')
