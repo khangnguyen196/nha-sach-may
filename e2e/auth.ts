@@ -60,7 +60,9 @@ export const NO_SESSION = { cookies: [], origins: [] }
 
 /** Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang) */
 export async function fillLogin(page: Page, { email, password }: { email: string; password: string }) {
-  await waitForHydration(page, 'form button[type="submit"]')
+  // Trong <main>: ngay sau điều hướng, bản sao ẩn của boundary (cuối body) có thể hydrate trước form thật → điền vào
+  // form chưa hydrate thì React thay nội dung và mất email đã điền
+  await waitForHydration(page, 'main form button[type="submit"]')
   await page.getByRole('main').getByLabel('Email').fill(email)
   await page.getByRole('main').getByLabel('Mật khẩu', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Đăng nhập' }).click()
