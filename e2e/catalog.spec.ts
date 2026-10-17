@@ -113,19 +113,20 @@ test('phân trang: trang 2 không trùng trang 1', async ({ page }) => {
 })
 
 // Trang tự kiểm thì đã stream (Cache Components) → chỉ trả được 200; proxy hỏi /api/catalog/page-exists khi page > 1
-// rồi rewrite sang 404 thật. Trước đây notFound() trong Suspense → React error #419 ở console.
-test('?page= vượt quá số trang → HTTP 404 + noindex, không lỗi console; trang hợp lệ vẫn 200', async ({ page }) => {
-  const errors = collectErrorsAllow404(page)
-  for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-kiem?q=978&page=999']) {
+// rồi rewrite sang 404 thật. Trước đây notFound() trong Suspense → React error #419 ở console (lúc hydrate).
+for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-kiem?q=978&page=999']) {
+  test(`${url} → HTTP 404 + noindex, không lỗi console`, async ({ page }) => {
+    const errors = collectErrorsAllow404(page)
     const response = await page.goto(url)
-    expect(response?.status(), url).toBe(404)
+    expect(response?.status()).toBe(404)
     await expect(page.getByRole('main').getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
     await expect(page.locator('head meta[name="robots"][content*="noindex"]').first()).toBeAttached()
-    await page.waitForLoadState('networkidle')
-    expect(errors, url).toEqual([])
-  }
+    await waitForHydration(page, 'main a[href="/"]')
+    expect(errors).toEqual([])
+  })
+}
 
-  // Trang hợp lệ (cả page=2 và page=1 qua proxy): chỉ cần status, lỗi console của lưới đã có test khác
+test('trang lưới hợp lệ qua proxy (page=1, page=2) vẫn 200', async ({ page }) => {
   for (const url of ['/sach', '/sach?page=2', '/danh-muc/van-hoc', '/danh-muc/van-hoc?page=1']) {
     const response = await page.goto(url)
     expect(response?.status(), url).toBe(200)

@@ -150,6 +150,8 @@ test('chi tiết đơn: mã, địa chỉ, sách, tiền khớp DB; đơn của 
   users,
   projectIndex,
 }, testInfo) => {
+  // 6 lượt tải thẳng trang 404 / 200 sau phần chi tiết đơn: quá 30 giây mặc định khi CI chậm
+  test.setTimeout(60_000)
   const book = plentyBook(projectIndex)
   const { orders } = await placeOrders(users, book, 1)
   const order = orders[0]
@@ -184,7 +186,7 @@ test('chi tiết đơn: mã, địa chỉ, sách, tiền khớp DB; đơn của 
     const response = await otherPage.goto(path)
     expect(response?.status(), path).toBe(404)
     await expect(main(otherPage).getByRole('heading', { name: /^(Không tìm thấy trang|Page not found)$/ })).toBeVisible()
-    await otherPage.waitForLoadState('networkidle')
+    await waitForHydration(otherPage, 'main a[href="/"], main a[href="/en"]')
     expect(errors, path).toEqual([])
   }
   await other.close()
