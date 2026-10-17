@@ -21,7 +21,7 @@ import {
   type ProjectUsers,
 } from './auth'
 import { vnd } from './cart'
-import { collectErrors, waitForHydration } from './helpers'
+import { collectErrors, collectErrorsAllow404, waitForHydration } from './helpers'
 
 // Đơn của user "orders" riêng cho mỗi project (checkout.spec xóa mọi đơn của user checkout sau mỗi test). Đơn tạo
 // bằng RPC place_order với phiên của chính user đó (nhanh, không phụ thuộc trang checkout), trừ test hủy đơn đặt qua
@@ -174,7 +174,7 @@ test('chi tiết đơn: mã, địa chỉ, sách, tiền khớp DB; đơn của 
   // User chính của project (khác user đơn hàng): proxy không thấy đơn (lọc user_id) → HTTP 404 như mã không tồn tại
   const other = await browser.newContext({ baseURL, storageState: storageStatePath(testInfo.project.name) })
   const otherPage = await other.newPage()
-  const errors = collectErrors(otherPage)
+  const errors = collectErrorsAllow404(otherPage)
   for (const path of [
     `/tai-khoan/don-hang/${order.order_code}`,
     `/thanh-toan/thanh-cong/${order.order_code}`,

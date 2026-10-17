@@ -9,6 +9,24 @@ export function collectErrors(page: Page) {
   return errors
 }
 
+/**
+ * collectErrors cho trang trả 404 thật: Chromium log "Failed to load resource" cho chính tài liệu 404 → bỏ dòng đó,
+ * thay bằng ghi mọi response lỗi không phải điều hướng (chunk, RSC, prefetch…).
+ */
+export function collectErrorsAllow404(page: Page) {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !message.text().startsWith('Failed to load resource')) errors.push(message.text())
+  })
+  page.on('response', (response) => {
+    if (response.status() >= 400 && !response.request().isNavigationRequest()) {
+      errors.push(`${response.status()} ${response.url()}`)
+    }
+  })
+  return errors
+}
+
 // Phím tắt chỉ có tác dụng sau hydration. Không bấm lặp tới khi mở: ⌘K là toggle, nếu chunk palette tải chậm
 // thì lần bấm thứ hai đóng nó lại. React gắn `__reactProps$…` lên DOM node khi hydrate nút, nhưng listener ⌘K
 // gắn trong useEffect, chạy sau khi cả cây hydrate xong: trang nhiều card (nhiều Link) + máy bận thì khoảng hở
