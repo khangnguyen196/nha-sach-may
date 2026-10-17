@@ -107,6 +107,21 @@ test.describe('khách (chưa đăng nhập)', () => {
     await expect(page.getByRole('main').getByRole('alert')).toContainText('Liên kết đã hết hạn')
   })
 
+  // Template mặc định: link hết hạn / đã dùng → Supabase chuyển về redirectTo, lỗi nằm sau # (server không thấy)
+  test('link đặt lại mật khẩu lỗi (lỗi sau #) → "Yêu cầu liên kết mới" → quên mật khẩu', async ({ page }) => {
+    await page.goto('/api/auth/confirm?locale=vi&type=recovery&next=%2Fdat-lai-mat-khau#error=access_denied&error_code=otp_expired')
+    await expect(page).toHaveURL(/\/xac-nhan\?/)
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Liên kết đã hết hạn' })).toBeVisible()
+    await page.getByRole('main').getByRole('link', { name: 'Yêu cầu liên kết mới' }).click()
+    await expect(page).toHaveURL(/\/quen-mat-khau$/)
+  })
+
+  test('/xac-nhan thiếu token, không có lỗi sau # → "Liên kết không hợp lệ" + về đăng nhập', async ({ page }) => {
+    await page.goto('/xac-nhan?type=recovery')
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Liên kết không hợp lệ' })).toBeVisible()
+    await expect(page.getByRole('main').getByRole('link', { name: 'Về trang đăng nhập' })).toBeVisible()
+  })
+
   // Template email mặc định của Supabase: /auth/v1/verify chuyển về redirectTo của app kèm ?code= (PKCE). Mã thật chỉ
   // có khi Supabase gửi email (admin generateLink cho link implicit, token sau #), nên ở đây kiểm tra các nhánh lỗi;
   // nhánh đổi code thành công có Vitest (src/app/api/auth/confirm/route.test.ts).

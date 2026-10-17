@@ -790,7 +790,9 @@
       "why": "Liên kết chỉ dùng được một lần. Bước bấm nút này giúp các trình quét link trong hộp thư không dùng mất liên kết trước bạn.",
       "invalidTitle": "Liên kết không hợp lệ",
       "invalid": "Liên kết thiếu thông tin. Hãy mở lại liên kết trong email hoặc yêu cầu một liên kết mới.",
-      "backToLogin": "Về trang đăng nhập"
+      "backToLogin": "Về trang đăng nhập",
+      "expiredTitle": "Liên kết đã hết hạn",
+      "requestNew": "Yêu cầu liên kết mới"
     }
   },
   "account": {

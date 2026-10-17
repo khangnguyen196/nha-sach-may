@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { AuthPage } from '@/features/auth/components/auth-page'
+import { LinkErrorNotice } from '@/features/auth/components/link-error-notice'
 import { Notice } from '@/features/auth/components/notice'
 import { authPageMetadata } from '@/features/auth/metadata'
 import { safeNextPath } from '@/features/auth/next-path'
@@ -34,22 +35,41 @@ export default async function ConfirmPage({ searchParams }: Props) {
 }
 
 async function ConfirmContent({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
-  const [query, t] = await Promise.all([searchParams, getTranslations('auth.confirm')])
+  const [query, t, tErrors] = await Promise.all([searchParams, getTranslations('auth.confirm'), getTranslations('errors')])
   const type = toOtpType(first(query.type))
   const tokenHash = toTokenHash(first(query.token_hash))
 
   if (!type || !tokenHash) {
+    const button = buttonVariants({ size: 'lg', className: 'h-11 px-5' })
+    // Template mặc định: link lỗi về đây không có token_hash, lỗi nằm sau dấu # (chỉ client đọc được). Yêu cầu lại:
+    // đặt lại mật khẩu → quên mật khẩu; xác nhận đăng ký → đăng ký lại cùng email (Supabase gửi lại thư xác nhận).
     return (
-      <Notice
-        title={t('invalidTitle')}
-        action={
-          <Link href="/login" className={buttonVariants({ size: 'lg', className: 'h-11 px-5' })}>
-            {t('backToLogin')}
-          </Link>
+      <LinkErrorNotice
+        invalid={
+          <Notice
+            title={t('invalidTitle')}
+            action={
+              <Link href="/login" className={button}>
+                {t('backToLogin')}
+              </Link>
+            }
+          >
+            <p>{t('invalid')}</p>
+          </Notice>
         }
-      >
-        <p>{t('invalid')}</p>
-      </Notice>
+        expired={
+          <Notice
+            title={t('expiredTitle')}
+            action={
+              <Link href={type === 'recovery' ? '/forgot-password' : '/register'} className={button} data-testid="request-new-link">
+                {t('requestNew')}
+              </Link>
+            }
+          >
+            <p>{tErrors('LINK_EXPIRED')}</p>
+          </Notice>
+        }
+      />
     )
   }
 

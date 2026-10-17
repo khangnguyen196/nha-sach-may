@@ -378,7 +378,9 @@
       "why": "The link works only once. This extra step stops link scanners in your mailbox from using it up before you do.",
       "invalidTitle": "Invalid link",
       "invalid": "This link is missing information. Open the link in your email again or request a new one.",
-      "backToLogin": "Back to sign in"
+      "backToLogin": "Back to sign in",
+      "expiredTitle": "Link expired",
+      "requestNew": "Request a new link"
     }
   },
   "account": {
