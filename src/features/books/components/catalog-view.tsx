@@ -16,6 +16,7 @@ import {
 import type { BookCard } from '../queries'
 import { BOOK_LANGUAGES, PRICE_RANGES, type CatalogParams } from '../schemas'
 import { BookGrid } from './book-grid'
+import { CatalogPending } from './catalog-pending'
 import { EmptyState } from './empty-state'
 import { FilterSheet } from './filter-sheet'
 import { Pagination } from './pagination'
@@ -113,7 +114,7 @@ export async function CatalogView({ params, context, base, result, subcategories
   )
 
   return (
-    <div>
+    <CatalogPending stateKey={JSON.stringify(params)} loadingLabel={t('loading')}>
       {subcategories && subcategories.length > 0 && (
         <nav aria-label={t('subcategories')} className="-mx-4 mb-6 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
           <ul className="flex w-max gap-2">
@@ -170,7 +171,7 @@ export async function CatalogView({ params, context, base, result, subcategories
       )}
 
       <Pagination page={params.page} totalPages={totalPages} hrefFor={(page) => href({ page })} />
-    </div>
+    </CatalogPending>
   )
 }
 

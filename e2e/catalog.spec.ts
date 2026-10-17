@@ -209,3 +209,25 @@ test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), bìa sau không', 
   await expect(covers.nth(2)).not.toHaveAttribute('fetchpriority', 'high')
   await expect(covers.nth(5)).toHaveAttribute('loading', 'lazy')
 })
+
+test('sang trang / sắp xếp: hiện trạng thái đang tải ngay khi bấm, hết khi kết quả mới tới', async ({ page }) => {
+  await page.goto('/sach')
+  await waitForHydration(page, 'main select')
+  const region = page.getByRole('main').locator('[aria-busy="true"]')
+  // Làm chậm phản hồi của trang mới để thấy được trạng thái đang tải
+  await page.route(/\/sach\?(.*&)?(page=2|sort=price-asc)/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await route.continue()
+  })
+
+  await page.getByRole('navigation', { name: 'Phân trang' }).getByRole('link', { name: 'Trang 2' }).click()
+  await expect(region).toHaveCount(1, { timeout: 1_000 })
+  await expect(page.getByTestId('catalog-loading')).toHaveText('Đang tải kết quả…')
+  await expect(page).toHaveURL(/\/sach\?page=2$/)
+  await expect(region).toHaveCount(0)
+
+  await page.getByRole('combobox', { name: /Sắp xếp/ }).selectOption('price-asc')
+  await expect(region).toHaveCount(1, { timeout: 1_000 })
+  await expect(page).toHaveURL(/sort=price-asc/)
+  await expect(region).toHaveCount(0)
+})

@@ -108,7 +108,8 @@
     "seeAll": "See all",
     "categoryMetaDescription": "{name} books at Nhà Sách Mây: details, prices and availability.",
     "shelfPrevious": "Scroll shelf left",
-    "shelfNext": "Scroll shelf right"
+    "shelfNext": "Scroll shelf right",
+    "loading": "Loading results…"
   },
   "book": {
     "authors": "Author",

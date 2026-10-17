@@ -521,7 +521,8 @@
     "seeAll": "Xem tất cả",
     "categoryMetaDescription": "Sách {name} tại Nhà Sách Mây: thông tin chi tiết, giá bán, tình trạng còn hàng.",
     "shelfPrevious": "Cuộn kệ sang trái",
-    "shelfNext": "Cuộn kệ sang phải"
+    "shelfNext": "Cuộn kệ sang phải",
+    "loading": "Đang tải kết quả…"
   },
   "book": {
     "authors": "Tác giả",
