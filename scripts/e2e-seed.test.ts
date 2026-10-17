@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE } from '../../src/features/books/catalog-params'
-import { readFixture } from '../../scripts/e2e-seed'
+import { PAGE_SIZE } from '../src/features/books/catalog-params'
+import { readFixture } from './e2e-seed'
 
 // Dữ liệu sách của Supabase local e2e (scripts/e2e-seed.ts). Spec Playwright dựa vào các giả định dưới đây; sửa
 // fixture làm hỏng giả định thì fail ở đây (job check) thay vì fail mơ hồ lúc chạy e2e.

@@ -4,7 +4,7 @@
  *
  * - Sách: e2e/fixtures/books.json, 48 cuốn trích từ preview đã duyệt (scripts/out/preview-approved*.json), mô tả cắt
  *   ≤ 300 ký tự, không có URL ảnh. Bất biến mà spec dựa vào (sapiens, > 1 trang lưới, nhóm tồn kho…) kiểm ở
- *   e2e/fixtures/books.test.ts.
+ *   scripts/e2e-seed.test.ts.
  * - Bìa giả sinh bằng sharp (màu theo ISBN) → Storage local, không gọi mạng ngoài, không gọi Google Books.
  * - Ghi qua save() của import-books.ts (cùng đường ghi với dữ liệu thật). Sách đã có (ISBN) bị bỏ qua → chạy lại an toàn.
  * - Chỉ chạy trên Supabase local (loadLocalSupabase từ chối production / host cloud).
