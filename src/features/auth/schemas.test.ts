@@ -82,7 +82,15 @@ describe('authErrorCode', () => {
   })
 
   it('mã lạ hoặc không có mã → UNKNOWN', () => {
-    expect(authErrorCode({ code: 'hook_timeout' })).toBe('UNKNOWN')
+    expect(authErrorCode({ code: 'hook_timeout', status: 422 })).toBe('UNKNOWN')
     expect(authErrorCode({})).toBe('UNKNOWN')
+  })
+
+  it('không gọi được Supabase Auth (fetch lỗi, 502 / 503 / 504, 5xx) → NETWORK_ERROR', () => {
+    expect(authErrorCode({ name: 'AuthRetryableFetchError', status: 0 })).toBe('NETWORK_ERROR')
+    expect(authErrorCode({ name: 'AuthRetryableFetchError', status: 503 })).toBe('NETWORK_ERROR')
+    expect(authErrorCode({ name: 'AuthApiError', code: 'unexpected_failure', status: 500 })).toBe('NETWORK_ERROR')
+    // Mã đã biết vẫn ưu tiên (rate limit là 429, không phải lỗi mạng)
+    expect(authErrorCode({ code: 'over_request_rate_limit', status: 429 })).toBe('RATE_LIMITED')
   })
 })

@@ -243,7 +243,7 @@ test('mất mạng khi đặt hàng → khối lỗi trong form; bấm lại cù
 
   // 1. Request không tới server
   await placeButton(page).click()
-  await expect(checkoutError(page)).toContainText('Đã có lỗi xảy ra. Vui lòng thử lại.')
+  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ, thử lại sau ít phút.')
   await expect(checkoutError(page)).toBeFocused()
   await expect(page).toHaveURL(/\/thanh-toan$/)
   expect(await ordersOf(users.checkout.id)).toHaveLength(0)
@@ -253,7 +253,7 @@ test('mất mạng khi đặt hàng → khối lỗi trong form; bấm lại cù
   await placeButton(page).click()
   await expect.poll(async () => (await ordersOf(users.checkout.id)).length).toBe(1)
   await expect(placeButton(page)).toBeEnabled()
-  await expect(checkoutError(page)).toContainText('Đã có lỗi xảy ra. Vui lòng thử lại.')
+  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ, thử lại sau ít phút.')
   await expect(page).toHaveURL(/\/thanh-toan$/)
   const [created, ...others] = await ordersOf(users.checkout.id)
   expect(others).toEqual([])

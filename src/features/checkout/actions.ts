@@ -31,8 +31,9 @@ async function failed(locale: Locale, failure: Failure): Promise<Failure> {
     // Ràng buộc của place_order trùng với checkoutSchema (chỉ có ghi chú) → hiện tại ô
     return failure.details?.field === 'note' ? { ok: false, code: 'INVALID_INPUT', fieldErrors: { note: 'note' } } : failure
   }
-  // UNKNOWN: không làm mới trang để lần bấm lại giữ nguyên idempotency key (đơn có thể đã tạo mà mất phản hồi)
-  if (failure.code === 'UNKNOWN') return withMessage(locale, failure)
+  // UNKNOWN / lỗi mạng: không làm mới trang để lần bấm lại giữ nguyên idempotency key (đơn có thể đã tạo mà mất
+  // phản hồi)
+  if (failure.code === 'UNKNOWN' || failure.code === 'NETWORK_ERROR') return withMessage(locale, failure)
 
   // Lỗi tồn kho / ngừng bán nghĩa là cache của sách đó đang cũ
   const bookId = failure.details?.book_id

@@ -7,14 +7,14 @@ import type { FormMessages } from './form-messages'
 
 type FormAction<T> = (prev: Result<T> | null, formData: FormData) => Promise<Result<T>>
 
-const NETWORK_FAILURE: Failure = { ok: false, code: 'UNKNOWN' }
+const NETWORK_FAILURE: Failure = { ok: false, code: 'NETWORK_ERROR' }
 
 /**
  * useActionState cho form gửi Server Action, giữ progressive enhancement:
  * - Không JS: `formProps.action` là chính Server Action (React render thành URL), trình duyệt POST, server render
  *   lại kèm state. Hook này phải nhận đúng server reference, bọc lại thì mất progressive enhancement.
  * - Có JS: onSubmit tự dispatch (React KHÔNG reset form như mặc định của `<form action>`) qua bản bọc của action:
- *   request không tới / không về được server (mất mạng) thì action ném lỗi → đổi thành UNKNOWN, hiện trong khối
+ *   request không tới / không về được server (mất mạng) thì action ném lỗi → đổi thành NETWORK_ERROR, hiện trong khối
  *   lỗi của form thay vì ném lên error boundary. Lỗi điều hướng của Next (redirect, notFound) vẫn ném tiếp.
  * - Đang gửi thì bỏ qua lần submit mới (double click / Enter lặp). useActionState xếp hàng các lần dispatch
  *   chứ không bỏ, và lần bấm thứ hai có thể tới trước khi nút kịp render `disabled`.

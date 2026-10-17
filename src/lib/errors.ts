@@ -34,6 +34,8 @@ export const ERROR_CODES = [
   'VOUCHER_IN_USE',
   // Phase 9: viết đánh giá khi chưa nhận sách (RLS reviews_insert_if_purchased)
   'REVIEW_NOT_ALLOWED',
+  // Không tới được máy chủ: request Server Action fail ở client, hoặc server không gọi được Supabase
+  'NETWORK_ERROR',
   'UNKNOWN',
 ] as const
 
@@ -147,8 +149,19 @@ function parseDetails(details: string | null | undefined): ErrorDetails | undefi
   }
 }
 
+/**
+ * postgrest-js không gọi được server (fetch ném lỗi) → error.code rỗng, message = "<tên lỗi>: <message>"
+ * (VD "TypeError: fetch failed", "TimeoutError: …"); lỗi do Postgres / PostgREST trả luôn có code.
+ */
+const FETCH_FAILURE = /^(TypeError|AbortError|TimeoutError|FetchError|Error): /
+
+export function isNetworkFailure(error: { message: string; code?: string | null }) {
+  return !error.code && FETCH_FAILURE.test(error.message)
+}
+
 /** Đổi lỗi PostgREST (message = mã lỗi do `raise exception` đặt) thành Result thất bại */
-export function toFailure(error: { message: string; details?: string | null }): Failure {
+export function toFailure(error: { message: string; details?: string | null; code?: string | null }): Failure {
+  if (isNetworkFailure(error)) return { ok: false, code: 'NETWORK_ERROR' }
   const code = isErrorCode(error.message) ? error.message : 'UNKNOWN'
   const details = code === 'UNKNOWN' ? undefined : parseDetails(error.details)
   return details ? { ok: false, code, details } : { ok: false, code }

@@ -875,6 +875,7 @@
     "VOUCHER_CODE_TAKEN": "Mã voucher này đã tồn tại.",
     "VOUCHER_IN_USE": "Voucher đã có đơn hàng dùng nên chỉ tắt được, không xóa được.",
     "REVIEW_NOT_ALLOWED": "Chỉ khách đã nhận cuốn sách này mới viết đánh giá được.",
+    "NETWORK_ERROR": "Không kết nối được máy chủ, thử lại sau ít phút.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   },
   "allBooks": {

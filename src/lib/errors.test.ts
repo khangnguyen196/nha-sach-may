@@ -17,6 +17,18 @@ describe('toFailure', () => {
     })
   })
 
+  it('postgrest-js không gọi được server (code rỗng, message "TypeError: …") → NETWORK_ERROR', () => {
+    expect(toFailure({ message: 'TypeError: fetch failed', details: 'TypeError: fetch failed at …', code: '' })).toEqual({
+      ok: false,
+      code: 'NETWORK_ERROR',
+    })
+    expect(toFailure({ message: 'TimeoutError: The operation was aborted due to timeout', code: '' }).code).toBe(
+      'NETWORK_ERROR',
+    )
+    // Lỗi của Postgres / PostgREST luôn có code → không bị coi là lỗi mạng
+    expect(toFailure({ message: 'TypeError: something', code: '22P02' }).code).toBe('UNKNOWN')
+  })
+
   it('detail không phải JSON object → bỏ qua', () => {
     expect(toFailure({ message: 'CART_EMPTY', details: 'not json' })).toEqual({ ok: false, code: 'CART_EMPTY' })
     expect(toFailure({ message: 'CART_EMPTY', details: '[1, 2]' })).toEqual({ ok: false, code: 'CART_EMPTY' })
