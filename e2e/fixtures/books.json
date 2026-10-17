@@ -1,0 +1,870 @@
+[
+  {
+    "title": "Bạn Văn",
+    "subtitle": null,
+    "slug": "ban-van",
+    "description": "Hơn 200 trang sách với 49 bài viết, nhà văn Nguyễn Quang Lập đã tạo nên một góc nhìn riêng về các “bạn văn” của mình: Xuân Diệu, Trần Dần, Bảo Sinh, Trọng Đài, Nguyễn Khải, Trần Vàng Sao, Nguyễn Trọng Tạo, Trần Đăng Khoa, Hoàng Phủ Ngọc Tường, Nguyễn Minh Châu, Bảo Ninh, Xuân Sách, Bùi Giáng, Hoàng…",
+    "isbn": "9786042257015",
+    "authors": [
+      "Nguyễn Quang Lập"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 230,
+    "price": 101000,
+    "original_price": 129000,
+    "stock": 0,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Vong bướm",
+    "subtitle": "kịch bản chèo",
+    "slug": "vong-buom",
+    "description": "Tác giả gửi gấm quan niệm sống, quá trình tìm đến lý tưởng về chân - thiện - mỹ của con người.",
+    "isbn": "9782359070392",
+    "authors": [
+      "Huy Thiệp Nguyễn"
+    ],
+    "publisher": "Editions de La Frémillerie",
+    "published_year": 2012,
+    "page_count": 96,
+    "price": 77000,
+    "original_price": null,
+    "stock": 3,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Mười chín chân dùng nhà văn cùng thời",
+    "subtitle": null,
+    "slug": "muoi-chin-chan-dung-nha-van-cung-thoi",
+    "description": "“Đó là những gương mặt lớn của nền văn học Việt Nam hiện đại như Ngô Tất Tố, Vũ Trọng Phụng, Nguyễn Tuân, Nam Cao, Nguyễn Bính, Tô Hoài... Những tác phẩm này đặc biệt quý và có giá trị nhiều mặt mà muốn hiểu được nhất thiết phải đặt chúng vào trong toàn bộ các tác phẩm hồi ký, hồi ức của Vũ Bằng…",
+    "isbn": "9786042257060",
+    "authors": [
+      "Vũ Bằng"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 378,
+    "price": 128000,
+    "original_price": 149000,
+    "stock": 83,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Văn thi sĩ tiền chiến",
+    "subtitle": null,
+    "slug": "van-thi-si-tien-chien",
+    "description": "Với phương châm “chỉ nói đến các bạn làng văn mà tôi đã được hân hạnh quen biết nhiều”, những gương mặt văn sĩ tiền chiến được nhà thơ Nguyễn Vỹ khắc họa chân dung, giúp độc giả hiểu thêm về “thế hệ Văn học Cận kim” như: Tản Đà, Nguyễn Văn Vĩnh, Phạm Quỳnh, Vũ Trọng Phụng, Lê Văn Trương, Lan Khai…",
+    "isbn": "9786042257046",
+    "authors": [
+      "Nguyễn Vỹ"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 318,
+    "price": 125000,
+    "original_price": 146000,
+    "stock": 27,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Sương Khói Quê Nhà",
+    "subtitle": null,
+    "slug": "suong-khoi-que-nha",
+    "description": "Những nhớ thương miền quê nghèo Quảng Nam qua kỷ niệm thời thơ bé; tình đời , tình người; tình thâm với bạn văn và những người mà anh yêu quý. Là những suy ngẫm của anh về cuộc đời, qua vô vàn chi tiết nhỏ trong phát hiện khiến đọc là thấy bất ngờ đầy thích thú. Hấp dẫn vô cùng là những bài có liên…",
+    "isbn": "9786041016613",
+    "authors": [
+      "Nguyễn Nhật Ánh"
+    ],
+    "publisher": "Google Play eBooks",
+    "published_year": 2019,
+    "page_count": 143,
+    "price": 79000,
+    "original_price": 103000,
+    "stock": 83,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Bước Qua Nước Mắt, Tự Khắc Trưởng Thành",
+    "subtitle": null,
+    "slug": "buoc-qua-nuoc-mat-tu-khac-truong-thanh",
+    "description": "\"Kỷ niệm hơn một thập kỷ gắn bó với văn chương, Anh Khang trình làng tác phẩm mới: Bước qua nước mắt, tự khắc trưởng thành. Anh Khang gọi đây là một “cuốn sách làm lành” – thay vì “chữa lành” như cách gọi thường thấy trong xã hội hiện đại. Tác phẩm được chia làm hai phần, mở đầu bằng “Độc thoại”…",
+    "isbn": "9786047739486",
+    "authors": [
+      "Anh Khang"
+    ],
+    "publisher": "Gioi",
+    "published_year": 2024,
+    "page_count": null,
+    "price": 102000,
+    "original_price": 137000,
+    "stock": 20,
+    "category_slug": "truyen-ngan-tan-van",
+    "language": "vi"
+  },
+  {
+    "title": "Làm bạn với bầu trời",
+    "subtitle": "truyện dài",
+    "slug": "lam-ban-voi-bau-troi",
+    "description": "A charming and poignant story of young stirrings and lovely emotions of several youngsters who first experienced love and compassions... By a favorite writer of novels and stories for the young and the young-at-heart.",
+    "isbn": "9786041153356",
+    "authors": [
+      "Nguyễn Nhật Ánh"
+    ],
+    "publisher": "Tre",
+    "published_year": 2019,
+    "page_count": 249,
+    "price": 105000,
+    "original_price": 139000,
+    "stock": 20,
+    "category_slug": "tieu-thuyet",
+    "language": "vi"
+  },
+  {
+    "title": "Oxford thương yêu",
+    "subtitle": "truyện dài",
+    "slug": "oxford-thuong-yeu",
+    "description": "The love story of a Vietnamese student and a Portuguese teaching assistant at Oxford University - England is a happy ending Beautiful natural scenery, open-minded and good-natured views of a young class grown up in a foreign country have had the good life they wanted.",
+    "isbn": "9786041223325",
+    "authors": [
+      "Thụy Dương"
+    ],
+    "publisher": "Tre",
+    "published_year": 2023,
+    "page_count": null,
+    "price": 96000,
+    "original_price": 123000,
+    "stock": 20,
+    "category_slug": "tieu-thuyet",
+    "language": "vi"
+  },
+  {
+    "title": "Cầm Thư quán",
+    "subtitle": "Tiểu thuyết dã sử thời Lê Thánh Tông",
+    "slug": "cam-thu-quan",
+    "description": "Người viết mượn bối cảnh lịch sử để sáng tác có nhiều loại: Có người biết lịch sử là một món hời để truyền thông, có người mượn chuyện xưa để nói chuyện nay, có người mê đắm trong không khí của những lầu son gác tía… Nhưng suy cho cùng, điều quan trọng của sáng tác, đó là tâm niệm muốn truyền tải…",
+    "isbn": "9786049723278",
+    "authors": [
+      "Hà Thủy Nguyên"
+    ],
+    "publisher": "Book Hunter",
+    "published_year": 2020,
+    "page_count": 160,
+    "price": 79000,
+    "original_price": 99000,
+    "stock": 69,
+    "category_slug": "tieu-thuyet",
+    "language": "vi"
+  },
+  {
+    "title": "Kien Chuot Va Ruoi",
+    "subtitle": null,
+    "slug": "kien-chuot-va-ruoi",
+    "description": null,
+    "isbn": "9781629885025",
+    "authors": [
+      "Lap Nguyen",
+      "Quang Lập Nguyễn"
+    ],
+    "publisher": null,
+    "published_year": 2019,
+    "page_count": 364,
+    "price": 127000,
+    "original_price": null,
+    "stock": 53,
+    "category_slug": "tieu-thuyet",
+    "language": "vi"
+  },
+  {
+    "title": "Ký mộng",
+    "subtitle": null,
+    "slug": "ky-mong",
+    "description": "Nguyễn Du góp phần đưa văn học Việt Nam trở thành một phần tinh hoa của văn hóa nhân loại, ghi dấu ấn trên thi đàn quốc tế. Với Truyện Kiều nói riêng và toàn bộ sự nghiệp sáng tác nói chung, Nguyễn Du được các thế hệ người Việt tôn vinh là Đại thi hào dân tộc. Hội đồng Hòa bình thế giới vinh danh…",
+    "isbn": "9786042257275",
+    "authors": [
+      "Nguyễn Du"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 16,
+    "price": 54000,
+    "original_price": null,
+    "stock": 20,
+    "category_slug": "tho",
+    "language": "vi"
+  },
+  {
+    "title": "Truyện Kiều",
+    "subtitle": null,
+    "slug": "truyen-kieu",
+    "description": "Đoạn trường tân thanh, thường được biết đến với tên Truyện Kiều, là một truyện thơ của đại thi hào Nguyễn Du. Đây được xem là truyện thơ nổi tiếng nhất và xét vào hàng kinh điển trong văn học Việt Nam, tác phẩm được viết bằng chữ Nôm theo thể lục bát, gồm 3.254 câu. Câu chuyện dựa theo tiểu thuyết…",
+    "isbn": "9786048885083",
+    "authors": [
+      "Nguyễn Du"
+    ],
+    "publisher": "Vietnam Omega Books. JSC",
+    "published_year": 2024,
+    "page_count": 236,
+    "price": 98000,
+    "original_price": 125000,
+    "stock": 84,
+    "category_slug": "tho",
+    "language": "vi"
+  },
+  {
+    "title": "Tư liệu văn hiến Thăng Long - Hà Nội",
+    "subtitle": "tuyển tập hương ước tục lệ",
+    "slug": "tu-lieu-van-hien-thang-long-ha-noi",
+    "description": "Giới thiệu 57 bản hương ước tục lệ của các làng, xã, thôn trên đất Thăng Long - Hà Nộ. Những hương ước khoán lệ khắc trên Bia.",
+    "isbn": "9786045500668",
+    "authors": [
+      "Tá Nhí Nguyễn"
+    ],
+    "publisher": null,
+    "published_year": 2010,
+    "page_count": 1332,
+    "price": 334000,
+    "original_price": 404000,
+    "stock": 76,
+    "category_slug": "lich-su-dia-ly",
+    "language": "vi"
+  },
+  {
+    "title": "Khắc họa bức tranh lịch sử Nam Kỳ",
+    "subtitle": null,
+    "slug": "khac-hoa-buc-tranh-lich-su-nam-ky",
+    "description": "Từ các nguồn sử liệu phong phú về nội dung và gần 150 hình ảnh minh hoạ, trong đó một số hình ảnh lần đầu được giới thiệu, cuốn sách “Khắc họa bức tranh lịch sử Nam kỳ” mang đến cho độc giả những thông tin hữu ích về Sài Gòn nói riêng và Nam kỳ nói chung, diễn giải những câu chuyện lịch sử diễn ra…",
+    "isbn": "9786044838618",
+    "authors": [
+      "Nguyễn Quang Diệu"
+    ],
+    "publisher": "Vietnam Omega Books. JSC",
+    "published_year": 2024,
+    "page_count": 360,
+    "price": 120000,
+    "original_price": 140000,
+    "stock": 98,
+    "category_slug": "lich-su-dia-ly",
+    "language": "vi"
+  },
+  {
+    "title": "Từ điển văn hóa cổ truyền Việt Nam",
+    "subtitle": null,
+    "slug": "tu-dien-van-hoa-co-truyen-viet-nam",
+    "description": "Một cuốn từ điển để “dạo chơi trong tác phẩm, lang thang từ mục từ này sang mục từ khác, lần giở vài trang rồi lộn lại, nhảy vọt từ trò chơi dân gian sang văn chương bác học, từ nghi lễ đạo giáo sang phẩm phục, từ đền chùa sang ma quỷ, từ đàn nguyệt sang cây thuốc… Mà có lẽ cũng nên lạc đường quên…",
+    "isbn": "9786042257831",
+    "authors": [
+      "Hữu Ngọc"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 844,
+    "price": 224000,
+    "original_price": 264000,
+    "stock": 75,
+    "category_slug": "lich-su-dia-ly",
+    "language": "vi"
+  },
+  {
+    "title": "Lãng du trong văn hóa Việt Nam - Tập 3 - Văn hóa - Bản sắc dân tộc - Văn học nghệ thuật",
+    "subtitle": null,
+    "slug": "lang-du-trong-van-hoa-viet-nam-tap-3-van-hoa-ban-sac-dan-toc-van-hoc-nghe-thuat",
+    "description": "Bộ sách “Lãng du trong văn hóa Việt Nam” của học giả Hữu Ngọc vừa là một cuộc lãng du chữ nghĩa, vừa giống cẩm nang văn hóa Việt, một “bách khoa toàn thư” thu nhỏ về văn hóa xứ sở tiên rồng. Bộ sách được chia làm 3 tập: Đất Việt (103 bài), Lịch sử - Truyền thống (150 bài) và Văn hóa – Bản sắc dân…",
+    "isbn": "9786042258074",
+    "authors": [
+      "Hữu Ngọc"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 482,
+    "price": 157000,
+    "original_price": 190000,
+    "stock": 78,
+    "category_slug": "lich-su-dia-ly",
+    "language": "vi"
+  },
+  {
+    "title": "Nghệ Thuật Sống",
+    "subtitle": null,
+    "slug": "nghe-thuat-song",
+    "description": "Nghệ thuật sống là kỹ năng làm chủ lối sống. Lối sống được thể hiện qua các hành vi và văn hóa ứng xử, vốn là kết quả của các thói quen, do ảnh hưởng của giáo dục hoặc kinh nghiệm bản thân. Khi ta làm chủ được lối sống thì lời nói, ý nghĩ, việc làm, nếu không trực tiếp mang lại niềm vui cho tha…",
+    "isbn": "9786046324409",
+    "authors": [
+      "Thích Nhật Từ"
+    ],
+    "publisher": "Tủ sách Đạo Phật Ngày Nay",
+    "published_year": 2017,
+    "page_count": 221,
+    "price": 95000,
+    "original_price": 116000,
+    "stock": 20,
+    "category_slug": "ky-nang-song",
+    "language": "vi"
+  },
+  {
+    "title": "Tâm lý đàn bà, lý trí đàn ông",
+    "subtitle": "thuật đọc tâm lý và thấu hiểu cảm xúc trong tình yêu để xây dựng mối quan hệ bền vững",
+    "slug": "tam-ly-dan-ba-ly-tri-dan-ong",
+    "description": "How to make him yearn to be with you. Longing to accompany you and begging for your commitment. You should read this book.",
+    "isbn": "9786043937541",
+    "authors": [
+      "Bruce Bryans"
+    ],
+    "publisher": "Lao Dong/Tsai Fong Books",
+    "published_year": 2023,
+    "page_count": null,
+    "price": 93000,
+    "original_price": 104000,
+    "stock": 20,
+    "category_slug": "ky-nang-song",
+    "language": "vi"
+  },
+  {
+    "title": "Truyện Kiều tự kể",
+    "subtitle": null,
+    "slug": "truyen-kieu-tu-ke",
+    "description": "Truyện Kiều là kiệt tác của nền văn học Việt Nam. Các nhân vật trong tác phẩm đã được Nguyễn Du thổi hồn, khắc họa bằng ngôn từ điêu luyện, để tất cả trở nên chân thực, với sức sống vượt ra khỏi đường biên không gian và thời gian. Hai trăm năm qua, Truyện Kiều không chỉ hiện diện trong đời sống thi…",
+    "isbn": "9786042256544",
+    "authors": [
+      "Cao Nguyệt Nguyên"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 142,
+    "price": 79000,
+    "original_price": 90000,
+    "stock": 20,
+    "category_slug": "truyen-tranh",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển tập văn học viết cho thiếu nhi - TÔ HOÀI - 1: Truyện đồng thoại - Kịch",
+    "subtitle": null,
+    "slug": "tuyen-tap-van-hoc-viet-cho-thieu-nhi-to-hoai-1-truyen-dong-thoai-kich",
+    "description": "Chủ yếu giới thiệu các truyện ngắn, truyện vừa có nhân vật, chủ thể chính được đề cập tới là loài vật. Bên cạnh những sáng tác đã được tái bản nhiều lần, dịp này xin giới thiệu thêm một số truyện “hiếm thấy khó tìm” của nhà văn. Đó là Con dế mèn – “tiền thân” của truyện dài “Dế Mèn phiêu lưu ký”…",
+    "isbn": "9786042256551",
+    "authors": [
+      "Tô Hoài"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 590,
+    "price": 191000,
+    "original_price": null,
+    "stock": 46,
+    "category_slug": "truyen-tranh",
+    "language": "vi"
+  },
+  {
+    "title": "Animation Artist",
+    "subtitle": null,
+    "slug": "animation-artist",
+    "description": "Kỉ nguyên 4.0 đã tạo ra những thay đổi sâu rộng trong sản xuất và đời sống, đặc biệt có những tác động không nhỏ đến sự chuyển dịch của các ngành nghề trong xã hội. Đứng trước các cơ hội lựa chọn nghề nghiệp phong phú, làm thế nào để người Việt trẻ có thể bắt kịp thời đại, khai mở những tiềm năng…",
+    "isbn": "9786042257893",
+    "authors": [
+      "Nhà xuất bản Kim Đồng"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 125,
+    "price": 80000,
+    "original_price": null,
+    "stock": 20,
+    "category_slug": "kien-thuc-bach-khoa",
+    "language": "vi"
+  },
+  {
+    "title": "Travel Blogger",
+    "subtitle": null,
+    "slug": "travel-blogger",
+    "description": "Kỉ nguyên 4.0 đã tạo ra những thay đổi sâu rộng trong sản xuất và đời sống, đặc biệt có những tác động không nhỏ đến sự chuyển dịch của các ngành nghề trong xã hội. Đứng trước các cơ hội lựa chọn nghề nghiệp phong phú, làm thế nào để người Việt trẻ có thể bắt kịp thời đại, khai mở những tiềm năng…",
+    "isbn": "9786042257077",
+    "authors": [
+      "Nhiều tác giả"
+    ],
+    "publisher": "Nhà xuất bản Kim Đồng",
+    "published_year": null,
+    "page_count": 143,
+    "price": 77000,
+    "original_price": 99000,
+    "stock": 33,
+    "category_slug": "kien-thuc-bach-khoa",
+    "language": "vi"
+  },
+  {
+    "title": "21 Cách Học Tiếng Anh Du Kích (song ngữ)",
+    "subtitle": null,
+    "slug": "21-cach-hoc-tieng-anh-du-kich-song-ngu",
+    "description": "“Làm sao giỏi tiếng Anh mà... không cần học?” Nghe thật lạ, nhưng đó là câu hỏi mà tác giả Fususu đã đặt ra, sau cả chục năm học tiếng Anh trên trường, mà khi cần thì vẫn không dùng được: - Phải học cả ngàn từ mới trên trường, nhưng khi gặp lại vẫn cần tra từ điển. - Phải thuộc cả trăm cấu trúc ngữ…",
+    "isbn": "9786048440756",
+    "authors": [
+      "Fususu"
+    ],
+    "publisher": "Nguyen Chu Nam Phuong",
+    "published_year": 2019,
+    "page_count": 283,
+    "category_slug": "tieng-anh",
+    "language": "vi",
+    "price": 122000,
+    "original_price": null,
+    "stock": 109
+  },
+  {
+    "title": "Văn phạm tiếng Anh thực hành - Practical English Grammar course",
+    "subtitle": "tiếng Anh cho người Việt",
+    "slug": "van-pham-tieng-anh-thuc-hanh-practical-english-grammar-course",
+    "description": "Cuốn sách “Văn phạm tiếng anh thực hành” của tác giả Trần Văn Điền biên soạn dựa trên cơ sở nghiên cứu cách viết văn pháp của Người mỹ và người Pháp để phân tích và tìm ra nguyên lý tốt nhất về việc xây dựng một lối bố trí lý thuyết và bài tập tiếng anh một cách hợp lý, vừa đủ để các em học sinh…",
+    "isbn": "9786048422677",
+    "authors": [
+      "Trần Văn Điền",
+      "Trí Tuệ"
+    ],
+    "publisher": "Trí Tuệ",
+    "published_year": 2024,
+    "page_count": 370,
+    "category_slug": "tieng-anh",
+    "language": "vi",
+    "price": 131000,
+    "original_price": 172000,
+    "stock": 66
+  },
+  {
+    "title": "Nâng cao vốn từ vựng tiếng Nhật theo chủ đề bằng hình ảnh",
+    "subtitle": "tiếng Nhật cho người Việt",
+    "slug": "nang-cao-von-tu-vung-tieng-nhat-theo-chu-de-bang-hinh-anh",
+    "description": "Nâng Cao Vốn Từ Vựng Tiếng Nhật Theo Chủ Đề Bằng Hình Ảnh dành cho những bạn muốn tự học trau dồi lượng từ vựng tiếng Nhật của bản thân, để từ đó nâng cao khả năng sử dụng ngôn ngữ này. Tiếng Nhật có một sự khác biệt nhất định với tiếng Việt nên việc học từ vựng cũng cần có một sự tiếp thu khác…",
+    "isbn": "9786048427542",
+    "authors": [
+      "Phương Dung",
+      "Trí Tuệ"
+    ],
+    "publisher": "Trí Tuệ",
+    "published_year": 2024,
+    "page_count": 184,
+    "price": 93000,
+    "original_price": 112000,
+    "stock": 49,
+    "category_slug": "tieng-nhat",
+    "language": "vi"
+  },
+  {
+    "title": "BÍ QUYẾT XÂY DỰNG VÀ QUẢN TRỊ THÀNH CÔNG CHUỖI CỬA HÀNG DỊCH VỤ SỬA CHỮA XE MÁY",
+    "subtitle": "Xuất bản lần 2 - có bổ sung thêm đầy đủ hơn",
+    "slug": "bi-quyet-xay-dung-va-quan-tri-thanh-cong-chuoi-cua-hang-dich-vu-sua-chua-xe-may",
+    "description": "Chúng tôi xin trân trọng giới thiệu tới bạn cuốn sách “Bí quyết xây dựng và quản trị thành công chuỗi cửa hàng dịch vụ sửa chữa xe máy”. Đây là cuốn sách được biên soạn bởi tác giả, kỹ sư, nhà quản lý, nhà đào tạo Nguyễn Hồng Cương, người đã có nhiều kinh nghiệm hoạt động thực tế trong lĩnh vực…",
+    "isbn": "9786048045241",
+    "authors": [
+      "Nguyễn Hồng Cương"
+    ],
+    "publisher": "Nhà Xuất bản thông tin truyền thông",
+    "published_year": 2020,
+    "page_count": 256,
+    "price": 117000,
+    "original_price": null,
+    "stock": 92,
+    "category_slug": "quan-tri-lanh-dao",
+    "language": "vi"
+  },
+  {
+    "title": "Cha Mẹ 5.0",
+    "subtitle": "Cuốn sách thay đổi hàng triệu gia đình về tư duy & tiền bạc",
+    "slug": "cha-me-5-0",
+    "description": "CHA MẸ 5.0 – Cuộc Cách Mạng Tư Duy Thành Công & Giàu Có Cho Thế Hệ Mới Bạn và con cái xứng đáng có một cuộc sống giàu có và ý nghĩa. Nhưng đã bao giờ bạn tự hỏi: Tại sao càng học giỏi, càng chăm chỉ, cuộc sống lại càng căng thẳng và thiếu tự do? Câu trả lời nằm ở hệ thống giáo dục truyền thống…",
+    "isbn": "9786049953644",
+    "authors": [
+      "Dr. Tung Phan"
+    ],
+    "publisher": "Hồng Đức",
+    "published_year": null,
+    "page_count": 226,
+    "category_slug": "tai-chinh-ca-nhan",
+    "language": "vi",
+    "price": 105000,
+    "original_price": 123000,
+    "stock": 41
+  },
+  {
+    "title": "Cách Mạng Pháp Và Tâm Lý Học Của Các Cuộc Cách Mạng",
+    "subtitle": null,
+    "slug": "cach-mang-phap-va-tam-ly-hoc-cua-cac-cuoc-cach-mang",
+    "description": "Đây là một trong ba cuốn sách kinh điển của tác giả Le Bon, bao gồm: Tâm lý học đám đông; Những quy luật tâm lý về sự tiến hóa của các dân tộc; Cách mạng Pháp và tâm lý học của các cuộc cách mạng. “Lịch sử của cuộc Cách mạng Pháp trên thực tế được cấu thành từ một loạt những biến cố lịch sử song…",
+    "isbn": "9786047776443",
+    "authors": [
+      "Gustave Le Bon"
+    ],
+    "publisher": "Vietnam Omega Books. JSC",
+    "published_year": 2024,
+    "page_count": 444,
+    "price": 149000,
+    "original_price": null,
+    "stock": 84,
+    "category_slug": "tam-ly-hoc",
+    "language": "vi"
+  },
+  {
+    "title": "The Classic George Orwell Collection",
+    "subtitle": null,
+    "slug": "the-classic-george-orwell-collection",
+    "description": "George Orwell was perhaps the twentieth century's best chronicler of English culture and one of our most significant political thinkers. Best known for his chilling dystopia Nineteen-Eighty Four and the disturbing parable of Animal Farm, Orwell also turned his attention to subjects as wide-ranging…",
+    "isbn": "9781398813168",
+    "authors": [
+      "George Orwell"
+    ],
+    "publisher": "Arcturus Publishing",
+    "published_year": 2021,
+    "page_count": 1182,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 306000,
+    "original_price": null,
+    "stock": 20
+  },
+  {
+    "title": "Animal Farm",
+    "subtitle": null,
+    "slug": "animal-farm",
+    "description": "Animal Farm describes a revolution that takes place when the animals on a farm decide that they can run the farm better and more productively than the humans.",
+    "isbn": "9784871872690",
+    "authors": [
+      "George Orwell"
+    ],
+    "publisher": "Ishi Press",
+    "published_year": 2017,
+    "page_count": 108,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 76000,
+    "original_price": null,
+    "stock": 57
+  },
+  {
+    "title": "Notes on Nationalism",
+    "subtitle": null,
+    "slug": "george-orwell-notes-on-nationalism",
+    "description": "George Orwell’s \"Notes on Nationalism\" (first published in 1945) is a groundbreaking examination of political psychology. In this essay, Orwell redefines nationalism not as love of country, but as a dangerous habit of mind: the urge to merge one’s identity with a cause, ideology, or power bloc and…",
+    "isbn": "9783753802923",
+    "authors": [
+      "George Orwell"
+    ],
+    "publisher": "BoD – Books on Demand",
+    "published_year": 2026,
+    "page_count": 54,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 64000,
+    "original_price": null,
+    "stock": 20
+  },
+  {
+    "title": "Jane Austen's Letters",
+    "subtitle": null,
+    "slug": "jane-austen-s-letters",
+    "description": "The fourth edition of Jane Austen's Letters incorporates the findings of new scholarship to enrich our understanding of Austen and give us the fullest view yet of her life and family. The biographical and topographical indexes have been updated, a new subject index has been created, and the…",
+    "isbn": "9780199576074",
+    "authors": [
+      "Jane Austen"
+    ],
+    "publisher": "Oxford University Press",
+    "published_year": 2011,
+    "page_count": 695,
+    "category_slug": "ngoai-van-van-hoc",
+    "language": "en",
+    "price": 217000,
+    "original_price": 242000,
+    "stock": 72
+  },
+  {
+    "title": "People and Performance",
+    "subtitle": "The Best of Peter Drucker on Management",
+    "slug": "people-and-performance",
+    "description": "What is management? What is a manager? How is a business organized, and how can managers use people's strengths more effectively? What is the relationship between management today and the society and culture it seeks to direct? These and many more questions are discussed in Peter Drucker's classic…",
+    "isbn": "9780750625029",
+    "authors": [
+      "Peter Ferdinand Drucker"
+    ],
+    "publisher": "Routledge",
+    "published_year": 1995,
+    "page_count": 372,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 137000,
+    "original_price": 183000,
+    "stock": 57
+  },
+  {
+    "title": "Peter F. Drucker Boxed Set (8 Books) (The Drucker Library)",
+    "subtitle": null,
+    "slug": "peter-f-drucker-boxed-set-8-books-the-drucker-library",
+    "description": "The perfect gift for aspiring leaders: The Peter F. Drucker Library. Filled with practical guidance on perennial leadership issues, the Peter F. Drucker Boxed Set is essential reading for all managers and executives. More vitally relevant than ever, each book features the best of Peter F. Drucker's…",
+    "isbn": "9781647820275",
+    "authors": [
+      "Peter F. Drucker"
+    ],
+    "publisher": "Harvard Business Press",
+    "published_year": 2020,
+    "page_count": 2352,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 492000,
+    "original_price": 570000,
+    "stock": 90
+  },
+  {
+    "title": "The Practice of Management",
+    "subtitle": null,
+    "slug": "the-practice-of-management",
+    "description": "This classic volume achieves a remarkable width of appeal without sacrificing scientific accuracy or depth of analysis. It is a valuable contribution to the study of business efficiency which should be read by anyone wanting information about the developments and place of management, and it is as…",
+    "isbn": "9781136356223",
+    "authors": [
+      "Peter Drucker"
+    ],
+    "publisher": "Routledge",
+    "published_year": 2012,
+    "page_count": 370,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 139000,
+    "original_price": 160000,
+    "stock": 94
+  },
+  {
+    "title": "Management",
+    "subtitle": null,
+    "slug": "management",
+    "description": "In this classic text, Peter Drucker studies how modern-day managers, whether in business or public service, can perform effectively. He takes an international view, exploring management problems in Great Britain, Western Europe, Japan, and Latin America, and suggests how these problems can be…",
+    "isbn": "9781136006890",
+    "authors": [
+      "Peter Drucker"
+    ],
+    "publisher": "Routledge",
+    "published_year": 2012,
+    "page_count": 578,
+    "category_slug": "ngoai-van-kinh-doanh",
+    "language": "en",
+    "price": 188000,
+    "original_price": 217000,
+    "stock": 106
+  },
+  {
+    "title": "Atomic Habits",
+    "subtitle": "The life-changing million-copy #1 bestseller",
+    "slug": "atomic-habits",
+    "description": "***COMING 9TH DECEMBER 2025 - THE ATOMIC HABITS WORKBOOK: OFFICIAL COMPANION TO THE #1 WORLDWIDE BESTSELLER. PREORDER NOW*** THE PHENOMENAL INTERNATIONAL BESTSELLER: OVER 25 MILLION COPIES SOLD WORLDWIDE Transform your life with tiny changes in behaviour, starting now. People think that when you…",
+    "isbn": "9781473537804",
+    "authors": [
+      "James Clear"
+    ],
+    "publisher": "Random House",
+    "published_year": 2018,
+    "page_count": 216,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 100000,
+    "original_price": null,
+    "stock": 20
+  },
+  {
+    "title": "Leadership Mastery",
+    "subtitle": "How to Challenge Yourself and Others to Greatness",
+    "slug": "leadership-mastery",
+    "description": "In a world quickly becoming more virtual, human relations skills are being lost -- along with the skill of leadership. There is a vacuum of leadership in many of our major institutions: government, education, business, religion, the arts. This crisis has arisen in part because many of those…",
+    "isbn": "9781847379566",
+    "authors": [
+      "Dale Carnegie Training"
+    ],
+    "publisher": "Simon and Schuster",
+    "published_year": 2010,
+    "page_count": 270,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 102000,
+    "original_price": 135000,
+    "stock": 20
+  },
+  {
+    "title": "Make Yourself Unforgettable",
+    "subtitle": "How to Become the Person Everyone Remembers and No One Can Resist",
+    "slug": "make-yourself-unforgettable",
+    "description": "Make Yourself Unforgettable tells readers how to become someone whom other people really want to work with, work for, know, and help.",
+    "isbn": "9781439188224",
+    "authors": [
+      "Dale Carnegie Training"
+    ],
+    "publisher": "Simon and Schuster",
+    "published_year": 2011,
+    "page_count": 240,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 113000,
+    "original_price": 143000,
+    "stock": 20
+  },
+  {
+    "title": "The Essential Dale Carnegie",
+    "subtitle": "Curated Wisdom from 3 Bestselling Books",
+    "slug": "the-essential-dale-carnegie",
+    "description": "THE ONLY BOOK YOU’LL EVER NEED FOR LIVING YOUR BEST LIFE. Ever wondered what makes successful people tick? According to legendary speaker and self-help guru Dale Carnegie, it’s their great interpersonal skills and how they effectively remove stress and anxiety from their day-to-day life. In this…",
+    "isbn": "9789351951575",
+    "authors": [
+      "Dale Carnegie"
+    ],
+    "publisher": "Hachette UK",
+    "published_year": 2016,
+    "page_count": 292,
+    "category_slug": "ngoai-van-ky-nang-song",
+    "language": "en",
+    "price": 115000,
+    "original_price": null,
+    "stock": 55
+  },
+  {
+    "title": "How Not to Be a Twit and Other Wisdom from Roald Dahl",
+    "subtitle": null,
+    "slug": "how-not-to-be-a-twit-and-other-wisdom-from-roald-dahl",
+    "description": "From advice on finding magic and thinking nice thoughts, to the importance of frequent whizzpopping, the writing of Roald Dahl is filled with wit and wisdom and advice for little people growing up - and big people growing down.",
+    "isbn": "9780241330821",
+    "authors": [
+      "Roald Dahl"
+    ],
+    "publisher": "Puffin",
+    "published_year": 2018,
+    "page_count": null,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 86000,
+    "original_price": 109000,
+    "stock": 20
+  },
+  {
+    "title": "Roald Dahl: Lift-The-Flap Hide and Seek",
+    "subtitle": null,
+    "slug": "roald-dahl-lift-the-flap-hide-and-seek",
+    "description": "Lift the flaps of this sturdy board book to play a gloriumptious game of hide and seek! It's time for a gloriumptious game of hide and seek with Roald Dahl! Who's that hiding under the flap? Is it a ginormous giraffe or a friendly giant? Just watch out for the enormous crocodile ... With iconic…",
+    "isbn": "9780241481554",
+    "authors": [
+      "Roald Dahl"
+    ],
+    "publisher": "Puffin",
+    "published_year": 2021,
+    "page_count": null,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 91000,
+    "original_price": 112000,
+    "stock": 117
+  },
+  {
+    "title": "Charlie and the Chocolate Factory: The Roald Dahl Clothbound Collection",
+    "subtitle": null,
+    "slug": "charlie-and-the-chocolate-factory-the-roald-dahl-clothbound-collection",
+    "description": "Discover The Roald Dahl Clothbound Collection, a stunning hardback collection of Roald Dahl's most beloved titles. 'The one thing he longed for more than anything else was . . .CHOCOLATE.' Charlie Bucket's life is about to change forever, thanks to one miraculous moment. Willy Wonka, chocolate…",
+    "isbn": "9780241827628",
+    "authors": [
+      "Roald Dahl"
+    ],
+    "publisher": "Penguin Group",
+    "published_year": 2026,
+    "page_count": null,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 98000,
+    "original_price": 113000,
+    "stock": 118
+  },
+  {
+    "title": "Roald Dahl's Rotsome and Repulsant Words",
+    "subtitle": null,
+    "slug": "roald-dahl-s-rotsome-and-repulsant-words",
+    "description": "The perfect introduction to the naughtiest words and phrases created by Roald Dahl with redunculous language notes. Find insulting similes and learn a load of poppyrot. Use words in a brilliantly disgusterous way.",
+    "isbn": "9780192771971",
+    "authors": [
+      "Susan Rennie",
+      "Roald Dahl"
+    ],
+    "publisher": null,
+    "published_year": 2019,
+    "page_count": 62,
+    "category_slug": "ngoai-van-thieu-nhi",
+    "language": "en",
+    "price": 67000,
+    "original_price": 74000,
+    "stock": 22
+  },
+  {
+    "title": "Sapiens",
+    "subtitle": "A Brief History of Humankind",
+    "slug": "sapiens",
+    "description": "#1 New York Times Bestseller • New York Times Readers’ Pick: Top 100 Books of the 21st Century • The Summer Reading Pick for President Barack Obama and Bill Gates Official U.S. edition with full color illustrations throughout. From renowned historian Yuval Noah Harari comes a groundbreaking…",
+    "isbn": "9780062316103",
+    "authors": [
+      "Yuval Noah Harari"
+    ],
+    "publisher": "Harper Collins",
+    "published_year": 2015,
+    "page_count": 403,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 143000,
+    "original_price": null,
+    "stock": 77
+  },
+  {
+    "title": "Money",
+    "subtitle": "Vintage Minis",
+    "slug": "money",
+    "description": "Selected from the books Sapiens and Homo Deus by Yuval Noah Harari How did money come to be invented? Why does it now have such significance in our lives? Does it make us happier or unhappier? And what does the future hold for it? With brilliant clarity and insight, Yuval Noah Harari takes the…",
+    "isbn": "9781473556041",
+    "authors": [
+      "Yuval Noah Harari"
+    ],
+    "publisher": "Random House",
+    "published_year": 2018,
+    "page_count": 110,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 80000,
+    "original_price": 106000,
+    "stock": 20
+  },
+  {
+    "title": "Yuval Noah Harari Box Set (Sapiens, Homo Deus, 21 Lessons for 21st Century)",
+    "subtitle": null,
+    "slug": "yuval-noah-harari-box-set-sapiens-homo-deus-21-lessons-for-21st-century",
+    "description": null,
+    "isbn": "9798999168641",
+    "authors": [
+      "Yuval Noah Harari"
+    ],
+    "publisher": null,
+    "published_year": 2023,
+    "page_count": null,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 90000,
+    "original_price": 112000,
+    "stock": 49
+  },
+  {
+    "title": "21 Lessons for the 21st Century",
+    "subtitle": "'Truly mind-expanding... Ultra-topical' Guardian",
+    "slug": "21-lessons-for-the-21st-century",
+    "description": "**THE NUMBER ONE BESTSELLER** In twenty-one bite-sized lessons, Yuval Noah Harari explores what it means to be human in an age of bewilderment. How can we protect ourselves from nuclear war, ecological cataclysms and technological disruptions? What can we do about the epidemic of fake news or the…",
+    "isbn": "9781473554719",
+    "authors": [
+      "Yuval Noah Harari"
+    ],
+    "publisher": "Random House",
+    "published_year": 2018,
+    "page_count": 256,
+    "category_slug": "ngoai-van-lich-su-khoa-hoc",
+    "language": "en",
+    "price": 107000,
+    "original_price": null,
+    "stock": 20
+  }
+]

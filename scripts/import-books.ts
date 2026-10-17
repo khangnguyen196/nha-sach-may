@@ -582,16 +582,19 @@ export function isLikelyPlaceholder(img: Image) {
 /** WebP rộng 600px (src/lib/cover-image.ts, dùng chung với upload bìa ở admin); null nếu không decode được */
 const toWebp = (img: Image) => toCoverWebp(img.bytes)
 
+/** Lấy bìa WebP cho một sách; `source` chỉ để thống kê. null = không có bìa dùng được (sách bị bỏ qua). */
+export type CoverSource = (book: BookInput) => Promise<{ webp: CoverWebp; source: string } | null>
+
 /** Ưu tiên ảnh lớn; lỗi tải / nghi trang lót / không decode được → ảnh nhỏ. Trả về null nếu cả hai hỏng. */
-async function prepareCover(book: BookInput): Promise<{ webp: CoverWebp; source: 'large' | 'small' } | null> {
+const prepareCover: CoverSource = async (book) => {
   if (book.cover_large) {
     const large = await download(book.cover_large)
     const webp = large && !isLikelyPlaceholder(large) ? await toWebp(large) : null
-    if (webp) return { webp, source: 'large' }
+    if (webp) return { webp, source: 'ảnh lớn' }
   }
   const small = await download(book.cover_small)
   const webp = small ? await toWebp(small) : null
-  return webp ? { webp, source: 'small' } : null
+  return webp ? { webp, source: 'ảnh nhỏ (fallback)' } : null
 }
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -609,14 +612,15 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
 }
 
 /** Upload bìa cho sách mới, trả về ISBN → public URL + chiều rộng. Sách không có bìa dùng được thì không có trong map. */
-async function uploadCovers(db: SupabaseClient, books: BookInput[]) {
-  const stats = { large: 0, small: 0, failed: [] as string[] }
+async function uploadCovers(db: SupabaseClient, books: BookInput[], coverSource: CoverSource) {
+  const sources = new Map<string, number>()
+  const failed: string[] = []
   const covers = new Map<string, { url: string; width: number }>()
 
   await mapLimit(books, 6, async (book) => {
-    const cover = await prepareCover(book)
+    const cover = await coverSource(book)
     if (!cover) {
-      stats.failed.push(`${book.isbn} ${book.title}`)
+      failed.push(`${book.isbn} ${book.title}`)
       return
     }
     const path = `${book.isbn}.webp`
@@ -626,15 +630,17 @@ async function uploadCovers(db: SupabaseClient, books: BookInput[]) {
       .upload(path, cover.webp.data, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
     if (error) throw new Error(`Storage ${path}: ${error.message}`)
     covers.set(book.isbn, { url: db.storage.from(COVER_BUCKET).getPublicUrl(path).data.publicUrl, width: cover.webp.width })
-    stats[cover.source]++
+    sources.set(cover.source, (sources.get(cover.source) ?? 0) + 1)
   })
 
-  console.log(`  Bìa: ${stats.large} ảnh lớn, ${stats.small} ảnh nhỏ (fallback), ${stats.failed.length} lỗi`)
-  for (const f of stats.failed) console.warn(`  ⚠ Không lấy được bìa, bỏ qua sách: ${f}`)
+  const counts = [...sources].map(([source, count]) => `${count} ${source}`).join(', ')
+  console.log(`  Bìa: ${counts || '0'}, ${failed.length} lỗi`)
+  for (const f of failed) console.warn(`  ⚠ Không lấy được bìa, bỏ qua sách: ${f}`)
   return covers
 }
 
-async function save(books: BookInput[]) {
+/** Ghi sách mới vào DB của NEXT_PUBLIC_SUPABASE_URL. `coverSource` mặc định tải ảnh trong preview (e2e: bìa giả). */
+export async function save(books: BookInput[], coverSource: CoverSource = prepareCover) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Thiếu NEXT_PUBLIC_SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY')
@@ -664,7 +670,7 @@ async function save(books: BookInput[]) {
   }
 
   console.log(`Đang xử lý bìa cho ${newBooks.length} sách mới…`)
-  const covers = await uploadCovers(db, newBooks)
+  const covers = await uploadCovers(db, newBooks, coverSource)
   const toInsert = newBooks.filter((b) => covers.has(b.isbn))
 
   // Sách chưa có ISBN trong DB vẫn giữ slug → dùng khóa riêng để không bao giờ trùng ISBN thật
@@ -745,29 +751,34 @@ async function findBooksWithoutAuthors(db: SupabaseClient, books: BookInput[], e
 }
 
 // ---------- Preview file ----------
-const bookInputSchema = z
-  .object({
-    title: z.string().trim().min(1),
-    subtitle: z.string().nullable(),
-    slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    description: z.string().nullable(),
-    isbn: z.string().regex(/^[0-9]{9}[0-9X]$|^[0-9]{13}$/),
-    authors: z.array(z.string().trim().min(1)),
-    publisher: z.string().nullable(),
-    published_year: z.number().int().min(1800).max(2100).nullable(),
-    page_count: z.number().int().positive().nullable(),
-    cover_small: z.url({ protocol: /^https$/ }),
-    cover_large: z.url({ protocol: /^https$/ }).nullable(),
-    price: z.number().int().nonnegative(),
-    original_price: z.number().int().nonnegative().nullable(),
-    stock: z.number().int().nonnegative(),
-    category_slug: z.string().min(1),
-    // Preview cũ (trước khi có ngoại văn) không có field này → mặc định tiếng Việt
-    language: z.enum(['vi', 'en']).default('vi'),
-  })
-  .refine((b) => b.original_price === null || b.original_price >= b.price, {
-    message: 'original_price phải >= price (giống check constraint trong DB)',
-  }) satisfies z.ZodType<BookInput>
+export const bookFieldsSchema = z.object({
+  title: z.string().trim().min(1),
+  subtitle: z.string().nullable(),
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  description: z.string().nullable(),
+  isbn: z.string().regex(/^[0-9]{9}[0-9X]$|^[0-9]{13}$/),
+  authors: z.array(z.string().trim().min(1)),
+  publisher: z.string().nullable(),
+  published_year: z.number().int().min(1800).max(2100).nullable(),
+  page_count: z.number().int().positive().nullable(),
+  cover_small: z.url({ protocol: /^https$/ }),
+  cover_large: z.url({ protocol: /^https$/ }).nullable(),
+  price: z.number().int().nonnegative(),
+  original_price: z.number().int().nonnegative().nullable(),
+  stock: z.number().int().nonnegative(),
+  category_slug: z.string().min(1),
+  // Preview cũ (trước khi có ngoại văn) không có field này → mặc định tiếng Việt
+  language: z.enum(['vi', 'en']).default('vi'),
+})
+
+/** Giống check constraint trong DB */
+export const validOriginalPrice = (b: { price: number; original_price: number | null }) =>
+  b.original_price === null || b.original_price >= b.price
+export const ORIGINAL_PRICE_MESSAGE = 'original_price phải >= price (giống check constraint trong DB)'
+
+const bookInputSchema = bookFieldsSchema.refine(validOriginalPrice, {
+  message: ORIGINAL_PRICE_MESSAGE,
+}) satisfies z.ZodType<BookInput>
 
 /** File preview có thể đã bị sửa tay → validate lại đúng các ràng buộc của DB trước khi ghi */
 export function readPreview(path: string): BookInput[] {
