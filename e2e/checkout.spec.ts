@@ -464,6 +464,42 @@ async function applyVoucher(page: Page, code: string) {
   await main(page).getByRole('button', { name: 'Áp dụng' }).click()
 }
 
+test('áp dụng voucher (form GET): khối tổng tiền hiện "Đang tính lại…" ngay khi bấm, hết khi trang mới tới', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, pick(regular, projectIndex).id, 1)
+  await openCheckout(page)
+  // Làm chậm trang tính lại để thấy trạng thái đang tính
+  await page.route(/\/thanh-toan\?(.*&)?voucher=/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await route.continue()
+  })
+  await main(page).getByLabel('Mã giảm giá').fill('KHONG-CO-MA-NAY')
+  // click() và expect(locator) của Playwright đều chờ điều hướng do cú bấm gây ra xong (tức chờ hết độ trễ giả lập, trang
+  // cũ đã bị thay) → bấm và đọc chữ ngay trong trang cũ, trong cùng một evaluate (thăm dò tối đa 1 s, trước khi phản
+  // hồi bị làm chậm 1,5 s tới)
+  const pendingText = await main(page)
+    .getByRole('button', { name: 'Áp dụng' })
+    .evaluate(async (button) => {
+      if (!(button instanceof HTMLButtonElement)) return null
+      button.click()
+      const deadline = performance.now() + 1_000
+      while (performance.now() < deadline) {
+        const text = document.querySelector('[data-testid="voucher-pending"]')?.textContent ?? ''
+        if (text) return text
+        await new Promise((resolve) => setTimeout(resolve, 20))
+      }
+      return null
+    })
+  expect(pendingText).toBe('Đang tính lại tổng tiền…')
+  await expect(page).toHaveURL(/[?&]voucher=KHONG-CO-MA-NAY/)
+  await expect(main(page).getByTestId('voucher-error')).toBeVisible()
+  await expect(page.getByTestId('voucher-pending')).toHaveText('')
+})
+
 test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đúng (gõ chữ thường) → giảm 10%, đơn lưu mã', async ({
   page,
   users,

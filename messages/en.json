@@ -223,7 +223,8 @@
     "voucherApply": "Apply",
     "voucherApplied": "Code {code} applied",
     "voucherRemove": "Remove code",
-    "discount": "Discount"
+    "discount": "Discount",
+    "recalculating": "Recalculating the total…"
   },
   "order": {
     "successTitle": "Order placed",

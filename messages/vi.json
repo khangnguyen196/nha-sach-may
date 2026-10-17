@@ -636,7 +636,8 @@
     "voucherApply": "Áp dụng",
     "voucherApplied": "Đã áp dụng mã {code}",
     "voucherRemove": "Bỏ mã",
-    "discount": "Giảm giá"
+    "discount": "Giảm giá",
+    "recalculating": "Đang tính lại tổng tiền…"
   },
   "order": {
     "successTitle": "Đặt hàng thành công",

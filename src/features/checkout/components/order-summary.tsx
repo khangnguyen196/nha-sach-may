@@ -4,6 +4,8 @@ import { getFormatter, getTranslations } from 'next-intl/server'
 import type { CartLine, CartQuote } from '@/features/cart/queries'
 import { Link } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
+import { VOUCHER_FORM_ID } from './voucher-field'
+import { VoucherPending } from './voucher-pending'
 
 /** Dòng không đặt được: ngừng bán (book null) hoặc vượt tồn kho (kể cả hết hàng) */
 export function isProblemLine(line: CartLine) {
@@ -67,37 +69,39 @@ export async function OrderSummary({ lines, quote, voucherCode }: Props) {
         ))}
       </ul>
 
-      <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex items-baseline justify-between gap-4">
-          <dt className="text-muted-foreground">{tCart('subtotal')}</dt>
-          <dd className="tabular-nums" data-testid="checkout-subtotal">
-            {price(quote.subtotal)}
-          </dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-4">
-          <dt className="text-muted-foreground">{tCart('shipping')}</dt>
-          <dd className="tabular-nums" data-testid="checkout-shipping">
-            {quote.shipping_fee === 0 && quote.item_count > 0 ? tCart('freeShipping') : price(quote.shipping_fee)}
-          </dd>
-        </div>
-        {quote.discount > 0 && (
+      <VoucherPending formId={VOUCHER_FORM_ID} label={t('recalculating')}>
+        <dl className="mt-4 space-y-2 text-sm">
           <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-muted-foreground">
-              {t('discount')}
-              {voucherCode && <span className="ml-1 font-mono text-xs">({voucherCode})</span>}
-            </dt>
-            <dd className="text-success tabular-nums" data-testid="checkout-discount">
-              −{price(quote.discount)}
+            <dt className="text-muted-foreground">{tCart('subtotal')}</dt>
+            <dd className="tabular-nums" data-testid="checkout-subtotal">
+              {price(quote.subtotal)}
             </dd>
           </div>
-        )}
-        <div className="flex items-baseline justify-between gap-4 border-t pt-3 text-base">
-          <dt className="font-semibold">{tCart('total')}</dt>
-          <dd className="font-semibold text-primary tabular-nums" data-testid="checkout-total">
-            {price(quote.total)}
-          </dd>
-        </div>
-      </dl>
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-muted-foreground">{tCart('shipping')}</dt>
+            <dd className="tabular-nums" data-testid="checkout-shipping">
+              {quote.shipping_fee === 0 && quote.item_count > 0 ? tCart('freeShipping') : price(quote.shipping_fee)}
+            </dd>
+          </div>
+          {quote.discount > 0 && (
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-muted-foreground">
+                {t('discount')}
+                {voucherCode && <span className="ml-1 font-mono text-xs">({voucherCode})</span>}
+              </dt>
+              <dd className="text-success tabular-nums" data-testid="checkout-discount">
+                −{price(quote.discount)}
+              </dd>
+            </div>
+          )}
+          <div className="flex items-baseline justify-between gap-4 border-t pt-3 text-base">
+            <dt className="font-semibold">{tCart('total')}</dt>
+            <dd className="font-semibold text-primary tabular-nums" data-testid="checkout-total">
+              {price(quote.total)}
+            </dd>
+          </div>
+        </dl>
+      </VoucherPending>
     </section>
   )
 }
