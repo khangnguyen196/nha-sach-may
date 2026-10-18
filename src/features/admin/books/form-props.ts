@@ -9,7 +9,7 @@ export async function getBookFormProps() {
   const [t, tCommon, messages, coverMessages] = await Promise.all([
     getTranslations('admin.books'),
     getTranslations('admin.common'),
-    getAdminFormMessages(['SLUG_TAKEN']),
+    getAdminFormMessages(['SLUG_TAKEN', 'BOOK_AUTHORS_NOT_SAVED']),
     getAdminFormMessages(['COVER_TOO_LARGE', 'COVER_INVALID']),
   ])
   return {

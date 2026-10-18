@@ -22,7 +22,7 @@ import {
   type ProjectUsers,
 } from './auth'
 import { vnd } from './cart'
-import { collectErrors, collectErrorsAllow404, waitForHydration } from './helpers'
+import { collectErrors, collectErrorsAllow404, failServerActions, waitForHydration } from './helpers'
 
 // Đơn của user "orders" riêng cho mỗi project (checkout.spec xóa mọi đơn của user checkout sau mỗi test). Đơn tạo
 // bằng RPC place_order với phiên của chính user đó (nhanh, không phụ thuộc trang checkout), trừ test hủy đơn đặt qua
@@ -414,4 +414,19 @@ test('danh sách đơn ?page vượt quá → soft 404 (200, noindex), "Về tra
     'href',
     '/tai-khoan/don-hang?status=cancelled',
   )
+})
+
+test('hủy đơn khi mất mạng → câu mới, lý do đã gõ còn nguyên, đơn chưa bị hủy', async ({ page, users, projectIndex }) => {
+  const { orders } = await placeOrders(users, plentyBook(projectIndex), 1)
+  const order = orders[0]
+  if (!order) throw new Error('Không tạo được đơn')
+  await page.goto(`/tai-khoan/don-hang/${order.order_code}`)
+  await waitForHydration(page, 'main details form button[type="submit"]')
+  await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
+  await main(page).getByLabel('Lý do hủy').fill('Đặt nhầm địa chỉ')
+  await failServerActions(page, `**/tai-khoan/don-hang/${order.order_code}`)
+  await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()
+  await expect(main(page).getByTestId('cancel-error')).toHaveText('Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.')
+  await expect(main(page).getByLabel('Lý do hủy')).toHaveValue('Đặt nhầm địa chỉ')
+  expect((await ordersOf(users.orders.id))[0]?.status).toBe('pending')
 })

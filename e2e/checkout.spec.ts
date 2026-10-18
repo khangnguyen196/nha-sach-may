@@ -241,10 +241,12 @@ test('mất mạng khi đặt hàng → khối lỗi trong form; bấm lại cù
     await route.abort('internetdisconnected')
   })
 
-  // 1. Request không tới server
+  // 1. Request không tới server: ghi chú đã gõ vẫn còn
+  await main(page).getByLabel('Ghi chú cho đơn hàng').fill('Giao giờ hành chính')
   await placeButton(page).click()
-  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ, thử lại sau ít phút.')
+  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.')
   await expect(checkoutError(page)).toBeFocused()
+  await expect(main(page).getByLabel('Ghi chú cho đơn hàng')).toHaveValue('Giao giờ hành chính')
   await expect(page).toHaveURL(/\/thanh-toan$/)
   expect(await ordersOf(users.checkout.id)).toHaveLength(0)
 
@@ -253,7 +255,7 @@ test('mất mạng khi đặt hàng → khối lỗi trong form; bấm lại cù
   await placeButton(page).click()
   await expect.poll(async () => (await ordersOf(users.checkout.id)).length).toBe(1)
   await expect(placeButton(page)).toBeEnabled()
-  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ, thử lại sau ít phút.')
+  await expect(checkoutError(page)).toContainText('Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.')
   await expect(page).toHaveURL(/\/thanh-toan$/)
   const [created, ...others] = await ordersOf(users.checkout.id)
   expect(others).toEqual([])
@@ -547,6 +549,17 @@ test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đ�
     await cancelAndDeleteOrders([users.checkout.id])
     await deleteE2eVouchers([voucher.code, highMin.code])
   }
+})
+
+test('ghi chú đã gõ còn nguyên sau khi áp mã giảm giá (form GET tải lại trang)', async ({ page, users, projectIndex }) => {
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, pick(regular, projectIndex).id, 1)
+  await openCheckout(page)
+  await main(page).getByLabel('Ghi chú cho đơn hàng').fill('Gọi trước khi giao')
+  await applyVoucher(page, 'KHONG-CO-MA-NAY')
+  await expect(page).toHaveURL(/[?&]voucher=KHONG-CO-MA-NAY/)
+  await expect(main(page).getByTestId('voucher-error')).toBeVisible()
+  await expect(main(page).getByLabel('Ghi chú cho đơn hàng')).toHaveValue('Gọi trước khi giao')
 })
 
 test('voucher: mỗi lý do không dùng được có câu riêng dưới ô, tổng không đổi', async ({ page, users, projectIndex }) => {

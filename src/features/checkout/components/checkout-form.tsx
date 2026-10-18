@@ -1,7 +1,7 @@
 'use client'
 
 import { ShoppingBagIcon } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { FormAlert, TextAreaField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Link } from '@/i18n/navigation'
@@ -10,6 +10,27 @@ import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
 import { useFormAction } from '@/lib/use-form-action'
 import { useGuestCart } from '@/features/cart/store'
+
+// Nháp ghi chú trong tab này: áp mã giảm giá / chọn địa chỉ khác là form GET tải lại trang, không để mất chữ đã gõ.
+// Xóa khi bấm đặt hàng, ghi lại nếu đặt không được (đơn đặt xong thì đã sang trang khác).
+const NOTE_DRAFT_KEY = 'checkout-note-draft'
+
+function readNoteDraft() {
+  try {
+    return sessionStorage.getItem(NOTE_DRAFT_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeNoteDraft(value: string) {
+  try {
+    if (value) sessionStorage.setItem(NOTE_DRAFT_KEY, value)
+    else sessionStorage.removeItem(NOTE_DRAFT_KEY)
+  } catch {
+    // sessionStorage bị chặn → chỉ mất tiện ích giữ nháp
+  }
+}
 
 /** Chuỗi đã dịch từ server; `{count}` của noteCount điền ở client */
 export type CheckoutFormLabels = {
@@ -90,6 +111,7 @@ export function CheckoutForm({
   const { state, formProps, pending, formError, fieldError } = useFormAction(action, messages)
   const [noteLength, setNoteLength] = useState(0)
   const alertRef = useRef<HTMLDivElement>(null)
+  const noteRef = useRef<HTMLTextAreaElement>(null)
   // Giỏ khách chưa gộp xong (vừa đăng nhập từ trang giỏ): trang đang thiếu sách → chờ CartSync gộp + refresh
   const syncing = useGuestCart().length > 0
 
@@ -101,10 +123,26 @@ export function CheckoutForm({
   // Focus vào khối lỗi để trình đọc màn hình đọc ngay (khối lỗi nằm ở cột phải, xa chỗ bấm trên mobile)
   useEffect(() => {
     if (failure) alertRef.current?.focus()
+    // Đặt không được: giữ nháp ghi chú cho lần tải lại trang sau (đã xóa lúc bấm đặt hàng)
+    if (failure && noteRef.current) writeNoteDraft(noteRef.current.value)
   }, [failure])
 
+  // Khôi phục nháp sau khi tải lại trang (áp mã giảm giá…); ô đang có chữ (khách gõ trước khi hydrate) thì giữ chữ đó
+  useEffect(() => {
+    const note = noteRef.current
+    const draft = readNoteDraft()
+    if (!note || !draft || note.value) return
+    note.value = draft.slice(0, noteMax)
+    setNoteLength(note.value.length)
+  }, [noteMax])
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    writeNoteDraft('')
+    formProps.onSubmit(event)
+  }
+
   return (
-    <form {...formProps} className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
+    <form action={formProps.action} onSubmit={onSubmit} className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12">
       <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       <input type="hidden" name="expected_total" value={expectedTotal} />
       {voucherCode && <input type="hidden" name="voucher_code" value={voucherCode} />}
@@ -122,7 +160,11 @@ export function CheckoutForm({
           }
           maxLength={noteMax}
           rows={3}
-          onChange={(event) => setNoteLength(event.target.value.length)}
+          ref={noteRef}
+          onChange={(event) => {
+            setNoteLength(event.target.value.length)
+            writeNoteDraft(event.target.value)
+          }}
           error={noteError}
         />
         {payment}

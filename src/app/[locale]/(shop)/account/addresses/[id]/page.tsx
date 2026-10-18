@@ -1,7 +1,7 @@
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { updateAddress } from '@/features/account/actions'
 import { AddressForm } from '@/features/account/components/address-form'
 import { AddressFormSkeleton } from '@/features/account/components/address-form-skeleton'
@@ -10,6 +10,7 @@ import { getAddressFormProps } from '@/features/account/form-props'
 import { getAddress } from '@/features/account/queries'
 import { addressIdSchema } from '@/features/account/schemas'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
+import { getPathname } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
 
 type Props = PageProps<'/[locale]/account/addresses/[id]'>
@@ -49,12 +50,18 @@ export default async function EditAddressPage({ params }: Props) {
 async function EditAddressForm({ locale, params }: { locale: Locale; params: Props['params'] }) {
   const { id: rawId } = await params
   const id = addressIdSchema.safeParse(rawId)
-  if (!id.success) notFound()
+  // Proxy đã trả 404 thật cho id sai / không có / của người khác; tới được đây là proxy không hỏi được DB → UI 404 trong
+  // boundary (notFound() sau khi stream làm React bỏ SSR: lỗi #419)
+  if (!id.success) return <InlineNotFound kind="address" />
 
-  await requireUser(locale, { pathname: '/account/addresses/[id]', params: { id: String(id.data) } })
-  const [props, address] = await Promise.all([getAddressFormProps(locale), getAddress(id.data)])
+  const href = { pathname: '/account/addresses/[id]', params: { id: String(id.data) } } as const
+  await requireUser(locale, href)
+  const [props, address] = await Promise.all([
+    getAddressFormProps(locale, getPathname({ href, locale })),
+    getAddress(id.data),
+  ])
   // Không có hoặc của người khác (RLS lọc) → 404 như nhau, không lộ id nào tồn tại
-  if (!address) notFound()
+  if (!address) return <InlineNotFound kind="address" />
 
   // Tên đã lưu → mã để chọn sẵn; dữ liệu hành chính đổi khiến không tìm thấy thì người dùng chọn lại
   const { provinceCode, wardCode } = findDivisionCodes(address.province, address.ward)

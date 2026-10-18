@@ -2,6 +2,7 @@
 
 import { StarIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { SignInAgainLink } from '@/components/layout/sign-in-again-link'
 import { FormAlert, TextAreaField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import type { Result } from '@/lib/errors'
@@ -110,7 +111,9 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
           onChange={(event) => setContentLength(event.target.value.length)}
           error={saving.fieldError('content')}
         />
-        {saving.formError && !saving.quietError && <FormAlert>{saving.formError}</FormAlert>}
+        {saving.formError && !saving.quietError && (
+          <FormAlert action={saving.signIn && <SignInAgainLink signIn={saving.signIn} />}>{saving.formError}</FormAlert>
+        )}
         <div className="flex flex-wrap items-center gap-4">
           <SubmitButton pending={saving.pending} pendingLabel={labels.saving} size="lg" className="h-11 px-5">
             {labels.submit}
@@ -122,7 +125,9 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
       </form>
       {remove && (
         <form {...deleting.formProps} className="grid justify-items-start gap-3">
-          {deleting.formError && <FormAlert>{deleting.formError}</FormAlert>}
+          {deleting.formError && (
+            <FormAlert action={deleting.signIn && <SignInAgainLink signIn={deleting.signIn} />}>{deleting.formError}</FormAlert>
+          )}
           <SubmitButton pending={deleting.pending} pendingLabel={labels.deleting} variant="outline" className="h-9">
             {labels.delete}
           </SubmitButton>

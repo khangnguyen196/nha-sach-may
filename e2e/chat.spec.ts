@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { badge } from './cart'
 import { ask, bubble, CONFIRM_AGE, openChat } from './chat'
-import { collectErrors } from './helpers'
+import { collectErrors, failServerActions } from './helpers'
 
 // Chatbot Mây (Phase 11), desktop + mobile, khách chưa đăng nhập. AI giả, không gọi Gemini thật.
 // Playwright chạy từ thư mục gốc repo và biên dịch spec sang CommonJS (không có import.meta)
@@ -262,4 +262,14 @@ test('bong bóng không che nút "Thêm vào giỏ" và "Thanh toán"', async ({
   const checkout = page.getByRole('main').getByRole('link', { name: 'Thanh toán' })
   await expect(checkout).toBeVisible()
   await assertNotCovering(page, checkout)
+})
+
+test('mất mạng khi hỏi Mây → câu báo mạng (không phải "Mây hơi mệt"), câu hỏi trả lại ô nhập', async ({ page }) => {
+  await page.goto('/')
+  const panel = await openChat(page)
+  const restore = await failServerActions(page, '**/')
+  const reply = await ask(panel, 'Gợi ý sách lịch sử Việt Nam')
+  await expect(reply).toContainText('Không kết nối được máy chủ. Bạn kiểm tra mạng rồi gửi lại nhé, câu hỏi vẫn còn trong ô.')
+  await expect(panel.getByLabel('Câu hỏi cho Mây')).toHaveValue('Gợi ý sách lịch sử Việt Nam')
+  await restore()
 })

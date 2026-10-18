@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { buttonVariants } from '@/components/ui/button'
+import { SignInAgainLink } from '@/components/layout/sign-in-again-link'
 import { FormAlert, SelectField, TextField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Link, type Href } from '@/i18n/navigation'
@@ -71,7 +72,7 @@ export function AddressForm({
   initial,
   cancelHref = '/account/addresses',
 }: Props) {
-  const { formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { formProps, pending, formError, quietError, fieldError, signIn } = useFormAction(action, messages)
   const [provinceCode, setProvinceCode] = useState(initial.provinceCode)
   const [wardCode, setWardCode] = useState(initial.wardCode)
   const [wards, setWards] = useState(initial.wards)
@@ -115,7 +116,11 @@ export function AddressForm({
 
   return (
     <form {...formProps} noValidate className="grid gap-5">
-      {formError && <FormAlert quiet={quietError}>{formError}</FormAlert>}
+      {formError && (
+        <FormAlert quiet={quietError} action={signIn && <SignInAgainLink signIn={signIn} />}>
+          {formError}
+        </FormAlert>
+      )}
       <TextField
         name="recipient_name"
         label={labels.recipientName}

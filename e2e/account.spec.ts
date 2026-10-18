@@ -10,7 +10,7 @@ import {
   refreshTokenFromCookies,
 } from '../scripts/e2e-user'
 import { fillLogin, login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
-import { collectErrors, fillAddress, waitForHydration } from './helpers'
+import { collectErrors, failServerActions, fillAddress, waitForHydration } from './helpers'
 
 // Mặc định mọi test dùng phiên đã đăng nhập sẵn của project (auth.setup.ts); test cần trạng thái khách tự bỏ phiên.
 const test = base.extend<{ users: ProjectUsers }>({
@@ -302,3 +302,45 @@ test.describe('đã đăng nhập', () => {
 function card(page: Page, name: string): Locator {
   return page.getByRole('main').getByRole('listitem').filter({ hasText: name })
 }
+
+test.describe('form địa chỉ: mất mạng / phiên hết khi đang nhập', () => {
+  const address = {
+    name: 'Người Nhận Mạng',
+    phone: '0912345678',
+    province: 'Thành phố Hà Nội',
+    ward: 'Phường Ba Đình',
+    street: '5 Phố Huế',
+  }
+
+  test('mất mạng khi bấm lưu → câu mới, mọi ô giữ nguyên, có mạng lại bấm được', async ({ page }) => {
+    await page.goto('/tai-khoan/dia-chi/moi')
+    await fillAddress(page, address)
+    const restore = await failServerActions(page, '**/tai-khoan/dia-chi/moi')
+    await page.getByRole('button', { name: 'Lưu địa chỉ' }).click()
+    const main = page.getByRole('main')
+    await expect(main.getByRole('alert')).toHaveText('Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.')
+    await expect(main.getByLabel('Tên người nhận')).toHaveValue(address.name)
+    await expect(main.getByLabel('Số điện thoại')).toHaveValue(address.phone)
+    await expect(main.getByLabel('Phường/Xã')).toHaveValue(/\d+/)
+    await expect(main.getByLabel('Số nhà, tên đường')).toHaveValue(address.street)
+    await restore()
+    await expect(main.getByRole('button', { name: 'Lưu địa chỉ' })).toBeEnabled()
+  })
+
+  test('phiên hết lúc đang nhập → "Phiên đăng nhập đã hết" + "Đăng nhập lại" quay về đúng trang', async ({ page, users }) => {
+    const errors = collectErrors(page)
+    await page.goto('/tai-khoan/dia-chi/moi')
+    await fillAddress(page, address)
+    // Phiên mất (hết hạn / đăng xuất ở tab khác): action tự kiểm phiên, proxy không chuyển hướng POST
+    await page.context().clearCookies()
+    await page.getByRole('button', { name: 'Lưu địa chỉ' }).click()
+    const alert = page.getByRole('main').getByRole('alert')
+    await expect(alert).toContainText('Phiên đăng nhập đã hết. Bạn đăng nhập lại để tiếp tục nhé.')
+    const signIn = alert.getByRole('link', { name: 'Đăng nhập lại' })
+    await expect(signIn).toHaveAttribute('href', '/dang-nhap?next=%2Ftai-khoan%2Fdia-chi%2Fmoi')
+    await signIn.click()
+    await fillLogin(page, users.user)
+    await expect(page).toHaveURL(/\/tai-khoan\/dia-chi\/moi$/)
+    expect(errors).toEqual([])
+  })
+})

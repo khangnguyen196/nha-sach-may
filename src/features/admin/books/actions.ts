@@ -24,11 +24,17 @@ type AuthorKey = { author_id: number; role: string }
 
 const authorKey = ({ author_id, role }: AuthorKey) => `${author_id}:${role}`
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
+// Mục vừa bị xóa ở tab / máy khác (update khớp 0 dòng)
+const ITEM_DELETED: Failure = { ok: false, code: 'ITEM_DELETED' }
 
+/** Trạng thái hiện tại của sách (để làm mới đúng tag); lỗi DB và sách vừa bị xóa trả Failure riêng */
 async function readSnapshot(supabase: Supabase, id: number) {
   const { data, error } = await supabase.from('books').select(SNAPSHOT_COLUMNS).eq('id', id).maybeSingle()
-  if (error) console.error('admin readSnapshot:', error.message)
-  if (!data) return null
+  if (error) {
+    console.error('admin readSnapshot:', error.message)
+    return toFailure(error)
+  }
+  if (!data) return ITEM_DELETED
   const { book_authors, cover_url, ...book } = data
   const snapshot: BookSnapshot = { ...book, authors: book_authors.map(authorKey) }
   return { snapshot, coverUrl: cover_url, bookAuthors: book_authors }
@@ -53,7 +59,8 @@ async function checkLeafCategory(supabase: Supabase, categoryId: number): Promis
     supabase.from('categories').select('id').eq('id', categoryId).maybeSingle(),
     supabase.from('categories').select('id', { count: 'exact', head: true }).eq('parent_id', categoryId),
   ])
-  if (category.error || children.error) return UNKNOWN
+  const queryError = category.error ?? children.error
+  if (queryError) return toFailure(queryError)
   if (!category.data) return { ok: false, code: 'INVALID_INPUT', fieldErrors: { category_id: 'category' } }
   if ((children.count ?? 0) > 0) return { ok: false, code: 'INVALID_INPUT', fieldErrors: { category_id: 'categoryLeaf' } }
   return null
@@ -97,12 +104,12 @@ export async function updateBook(id: number, _prev: Result<null> | null, formDat
     readSnapshot(supabase, bookId.data),
     checkLeafCategory(supabase, fields.category_id),
   ])
-  if (!current) return UNKNOWN
+  if ('ok' in current) return current
   if (categoryFailure) return categoryFailure
 
   const { data, error } = await supabase.from('books').update(fields).eq('id', bookId.data).select('id')
   if (error) return bookWriteFailure(error)
-  if (data.length === 0) return UNKNOWN
+  if (data.length === 0) return ITEM_DELETED
 
   const authorsResult = await syncAuthors(supabase, bookId.data, current.bookAuthors, authors)
   if (authorsResult === 'invalid') return { ok: false, code: 'INVALID_INPUT', fieldErrors: { authors: 'invalid' } }
@@ -112,7 +119,8 @@ export async function updateBook(id: number, _prev: Result<null> | null, formDat
   const after: BookSnapshot = { ...before, ...fields, authors: authors.map(authorKey) }
   expire(adminCatalogTags({ kind: 'book', before, after }))
   refresh()
-  return authorsResult === null ? { ok: true, data: null } : UNKNOWN
+  // Thông tin sách đã lưu, chỉ bảng tác giả lỗi → nói rõ đã lưu một phần, bấm Lưu lại
+  return authorsResult === null ? { ok: true, data: null } : { ok: false, code: 'BOOK_AUTHORS_NOT_SAVED' }
 }
 
 /** Ẩn / hiện sách (không xóa cứng: đơn cũ giữ liên kết, giỏ không bị xóa theo cascade) */
@@ -125,7 +133,7 @@ export async function setBookActive(id: number, active: boolean): Promise<Result
 
   const supabase = await createClient()
   const current = await readSnapshot(supabase, bookId.data)
-  if (!current) return UNKNOWN
+  if ('ok' in current) return current
 
   const { data, error } = await supabase
     .from('books')
@@ -133,7 +141,7 @@ export async function setBookActive(id: number, active: boolean): Promise<Result
     .eq('id', bookId.data)
     .select('id')
   if (error) return toFailure(error)
-  if (data.length === 0) return UNKNOWN
+  if (data.length === 0) return ITEM_DELETED
 
   const before = current.snapshot
   expire(adminCatalogTags({ kind: 'book', before, after: { ...before, is_active: isActive.data } }))
@@ -164,7 +172,8 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
 
   const supabase = await createClient()
   const current = await supabase.from('books').select('cover_url').eq('id', bookId.data).maybeSingle()
-  if (current.error || !current.data) return UNKNOWN
+  if (current.error) return toFailure(current.error)
+  if (!current.data) return ITEM_DELETED
 
   const storage = supabase.storage.from(COVER_BUCKET)
   const path = `${bookId.data}-${randomBytes(4).toString('hex')}.webp`
@@ -186,7 +195,7 @@ export async function uploadCover(id: number, _prev: Result<null> | null, formDa
   if (error || data.length === 0) {
     const { error: cleanupError } = await storage.remove([path])
     if (cleanupError) console.error('uploadCover (cleanup):', cleanupError.message)
-    return error ? toFailure(error) : UNKNOWN
+    return error ? toFailure(error) : ITEM_DELETED
   }
 
   // Dọn ảnh cũ sau khi đã trả phản hồi: bìa mới đã lưu, việc dọn chỉ tốn thêm 2 lượt gọi Supabase cho người dùng chờ

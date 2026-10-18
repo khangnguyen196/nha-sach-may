@@ -80,8 +80,10 @@ export default function ChatPanel({
           ? { id: nextId.current++, role: 'assistant', reply: result.data }
           : { id: nextId.current++, role: 'error', code: result.code, details: result.details }
       } catch {
-        // Không tới được server (mất mạng…): báo trong khung, không lên error boundary
+        // Không tới được server (mất mạng…): báo trong khung, không lên error boundary; trả câu hỏi lại ô nhập để gửi
+        // lại (trừ khi khách đã gõ câu khác trong lúc chờ)
         entry = { id: nextId.current++, role: 'error', code: 'NETWORK_ERROR' }
+        setDraft((current) => current || check.message)
       }
       setEntries((current) => [...current, entry])
     })
@@ -337,6 +339,8 @@ function errorText(entry: ErrorEntry, labels: ChatLabels): { vi: string; en?: st
       return { vi: labels.errors.visitorDay }
     case 'CHAT_REGION':
       return { vi: labels.errors.region }
+    case 'NETWORK_ERROR':
+      return { vi: labels.errors.network }
     default:
       return { vi: labels.errors.tired }
   }

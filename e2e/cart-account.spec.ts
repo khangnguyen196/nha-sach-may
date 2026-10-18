@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { cartQuantities, clearCart, findBooksByStock, type E2eBook } from '../scripts/e2e-user'
 import { login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
 import { addFromBookPage, badge, readGuestCart, vnd } from './cart'
-import { collectErrors, waitForHydration } from './helpers'
+import { collectErrors, failServerActions, waitForHydration } from './helpers'
 
 // Giỏ tài khoản + gộp giỏ khi đăng nhập. Mặc định dùng phiên đăng nhập sẵn của project (auth.setup.ts).
 const test = base.extend<{ users: ProjectUsers }>({
@@ -147,4 +147,30 @@ test('nhiều tab cùng mở sau khi đăng nhập → chỉ gộp một lần',
   await expect(badge(tabB)).toHaveText('2')
   expect(await cartQuantities(users.user.id)).toEqual({ [book.id]: 2 })
   await context.close()
+})
+
+test('mất mạng khi thêm vào giỏ / đổi số lượng → báo tại chỗ, không ra trang lỗi, số lượng giữ như cũ', async ({ page, users }) => {
+  const errors = collectErrors(page)
+  const [book] = books
+  if (!book) throw new Error('Không có sách test')
+  const network = 'Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé.'
+
+  await page.goto(`/sach/${book.slug}`)
+  await waitForHydration(page, 'main form button[type="submit"]')
+  const restore = await failServerActions(page, `**/sach/${book.slug}`)
+  await page.getByRole('main').locator('form button[type="submit"]').click()
+  await expect(page.getByRole('main').getByRole('status').filter({ hasText: network })).toBeVisible()
+  await expect(page.getByTestId('error-page')).toHaveCount(0)
+  await restore()
+
+  await addFromBookPage(page, book)
+  await page.goto('/gio-hang')
+  const line = page.getByRole('main').getByTestId('cart-line')
+  await expect(line).toHaveCount(1)
+  await waitForHydration(page, 'main [data-testid="cart-line"] button')
+  await failServerActions(page, '**/gio-hang')
+  await line.getByRole('button', { name: /^Tăng/ }).click()
+  await expect(page.getByRole('main').getByText(network)).toBeVisible()
+  expect(await cartQuantities(users.user.id)).toEqual({ [book.id]: 1 })
+  expect(errors).toEqual([])
 })

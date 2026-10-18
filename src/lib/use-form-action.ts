@@ -9,6 +9,9 @@ type FormAction<T> = (prev: Result<T> | null, formData: FormData) => Promise<Res
 
 const NETWORK_FAILURE: Failure = { ok: false, code: 'NETWORK_ERROR' }
 
+// Phiên hết giữa chừng → kèm link đăng nhập lại (nếu trang truyền signInNext)
+const SIGN_IN_CODES = new Set(['AUTH_REQUIRED', 'SESSION_EXPIRED'])
+
 /**
  * useActionState cho form gửi Server Action, giữ progressive enhancement:
  * - Không JS: `formProps.action` là chính Server Action (React render thành URL), trình duyệt POST, server render
@@ -59,6 +62,8 @@ export function useFormAction<T>(action: FormAction<T>, messages: FormMessages) 
      */
     formError: failure ? (failure.message ?? messages.errors[failure.code] ?? messages.errors.UNKNOWN) : undefined,
     quietError: fieldKeys !== undefined && Object.keys(fieldKeys).length > 0,
+    /** Link "Đăng nhập lại" cho khối lỗi chung (FormAlert `action`) */
+    signIn: failure && SIGN_IN_CODES.has(failure.code) ? messages.signIn : undefined,
     fieldError(name: string) {
       const key = fieldKeys?.[name]
       return key ? (messages.validation[key] ?? messages.validation.invalid) : undefined

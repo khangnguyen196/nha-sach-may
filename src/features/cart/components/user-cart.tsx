@@ -38,7 +38,7 @@ function applyChange(lines: CartLine[], change: Change): CartLine[] {
 export function UserCart({ lines, quote, labels, locale, setQuantity, remove, empty }: Props) {
   const [optimisticLines, addOptimistic] = useOptimistic(lines, applyChange)
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; signIn: boolean } | null>(null)
   const versions = useRef(new Map<number, number>())
 
   function change(next: Change) {
@@ -52,10 +52,16 @@ export function UserCart({ lines, quote, labels, locale, setQuantity, remove, em
       // Đã có thay đổi mới hơn cho dòng này → để lần sau gửi
       if (versions.current.get(next.bookId) !== version) return
 
-      const result =
-        next.quantity === 'remove' ? await remove(next.bookId) : await setQuantity(next.bookId, next.quantity)
+      let result: Result<CartActionData>
+      try {
+        result = next.quantity === 'remove' ? await remove(next.bookId) : await setQuantity(next.bookId, next.quantity)
+      } catch (failure) {
+        // Request không tới / không về được (mất mạng): báo ngay tại tóm tắt, số lượng tự về như cũ (rollback)
+        console.error('UserCart:', failure)
+        return setError({ message: labels.networkError, signIn: false })
+      }
       if (result.ok) setUserCartCount(result.data.count)
-      else setError(result.message ?? labels.error)
+      else setError({ message: result.message ?? labels.error, signIn: result.code === 'AUTH_REQUIRED' })
     })
   }
 
@@ -66,7 +72,8 @@ export function UserCart({ lines, quote, labels, locale, setQuantity, remove, em
       lines={optimisticLines}
       quote={quote}
       updating={pending}
-      error={error}
+      error={error?.message ?? null}
+      errorSignIn={error?.signIn}
       labels={labels}
       locale={locale}
       onQuantityChange={(bookId, quantity) => change({ bookId, quantity })}

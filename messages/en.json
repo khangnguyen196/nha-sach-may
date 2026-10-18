@@ -1,7 +1,8 @@
 {
   "common": {
     "siteName": "Nhà Sách Mây",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "signInAgain": "Sign in again"
   },
   "metadata": {
     "title": "Nhà Sách Mây — good books for quiet reading hours",
@@ -205,7 +206,8 @@
     "checkout": "Checkout",
     "updating": "Updating…",
     "loadError": "Could not load your cart. Check your connection and try again.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "networkError": "Couldn’t reach the server. Check your connection and try again."
   },
   "checkout": {
     "title": "Checkout",
@@ -473,7 +475,7 @@
     "cancel": "Cancel"
   },
   "errors": {
-    "AUTH_REQUIRED": "Please sign in to continue.",
+    "AUTH_REQUIRED": "You’ve been signed out. Please sign in again to continue.",
     "INVALID_ADDRESS": "The shipping address is invalid.",
     "BOOK_UNAVAILABLE": "\"{title}\" is no longer available.",
     "OUT_OF_STOCK": "Only {stock} copies of \"{title}\" are left.",
@@ -506,7 +508,7 @@
     "CHAT_FREE_QUOTA": "Mây has used up its free requests; the website is working normally.",
     "CHAT_UNAVAILABLE": "Mây is a bit tired, please come back in a few minutes.",
     "CHAT_REGION": "Mây is not available in your region yet.",
-    "NETWORK_ERROR": "Could not reach the server. Please try again in a few minutes.",
+    "NETWORK_ERROR": "Couldn’t reach the server. Check your connection and try again; everything you entered is still here.",
     "UNKNOWN": "Something went wrong on our side, not yours. Please try again; if it keeps happening, email {email}.",
     "VOUCHER_NOT_FOUND": "We couldn’t find this code. Please check it letter by letter.",
     "VOUCHER_INACTIVE": "This code is no longer active. Please try another one.",

@@ -5,7 +5,7 @@ import type { Locale } from 'next-intl'
 import { NextResponse, type NextRequest } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
 import { ORDER_CODE } from '@/features/orders/params'
-import { localizedPath, matchOrderPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
+import { localizedPath, matchAddressPath, matchOrderPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
 import { NOT_FOUND_HEADER, type NotFoundKind } from '@/lib/not-found-kind'
@@ -62,6 +62,27 @@ async function missingOrder(pathname: string, supabase: SupabaseClient<Database>
 }
 
 /**
+ * Trang sửa địa chỉ mà địa chỉ không có hoặc của người khác (RLS addresses chỉ trả địa chỉ của chính mình). Trước đây
+ * trang tự gọi notFound() trong Suspense (soft 404 + React #419). Lỗi → cho qua: trang tự hiện UI 404.
+ */
+async function missingAddress(pathname: string, supabase: SupabaseClient<Database>, userId: string): Promise<Missing | null> {
+  const match = matchAddressPath(pathname)
+  if (!match) return null
+  const missing = { locale: match.locale, kind: 'address' } as const
+  if (!/^[1-9]\d{0,17}$/.test(match.id)) return missing
+  const { count, error } = await supabase
+    .from('addresses')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', Number(match.id))
+    .eq('user_id', userId)
+  if (error) {
+    console.error('address-guard:', error.message)
+    return null
+  }
+  return count === 0 ? missing : null
+}
+
+/**
  * Slug không tồn tại, đơn không thuộc người đang đăng nhập → rewrite sang một đường dẫn không khớp
  * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
  * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
@@ -70,7 +91,9 @@ async function missingOrder(pathname: string, supabase: SupabaseClient<Database>
 async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Database>, userId: string | undefined) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null
   const { pathname } = request.nextUrl
-  const missing = (await missingSlug(pathname)) ?? (userId ? await missingOrder(pathname, supabase, userId) : null)
+  const missing =
+    (await missingSlug(pathname)) ??
+    (userId ? ((await missingOrder(pathname, supabase, userId)) ?? (await missingAddress(pathname, supabase, userId))) : null)
   if (!missing) return null
   const headers = new Headers(request.headers)
   headers.set(NOT_FOUND_HEADER, missing.kind)
@@ -89,8 +112,13 @@ function matchLocalized(pathname: string, hrefs: Parameters<typeof localizedPath
   }
 }
 
-/** Chưa đăng nhập vào khu tài khoản / thanh toán → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới */
+/**
+ * Chưa đăng nhập vào khu tài khoản / thanh toán → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới.
+ * Chỉ GET / HEAD: POST là Server Action, tự kiểm phiên và trả AUTH_REQUIRED (form hiện "Đăng nhập lại"). Chuyển hướng
+ * một Server Action sang trang HTML làm client coi là lỗi mạng ("Không kết nối được máy chủ") dù chỉ là phiên hết hạn.
+ */
 function authRedirect(request: NextRequest, signedIn: boolean) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return null
   const { pathname, search, searchParams } = request.nextUrl
   if (!signedIn) {
     const locale = matchLocalized(pathname, ['/account', '/checkout'])

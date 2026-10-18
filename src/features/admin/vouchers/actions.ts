@@ -13,6 +13,8 @@ import { voucherFormSchema } from './schemas'
 // Voucher không nằm trong cache catalog (khách kiểm tra mã qua quote_order / place_order theo request) → không updateTag.
 
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
+// Mục vừa bị xóa ở tab / máy khác (update khớp 0 dòng)
+const ITEM_DELETED: Failure = { ok: false, code: 'ITEM_DELETED' }
 
 function voucherWriteFailure(error: { code?: string; message: string }): Failure {
   if (violatedUniqueConstraint(error) === 'vouchers_code_key') {
@@ -46,7 +48,8 @@ export async function updateVoucher(id: number, _prev: Result<null> | null, form
   const supabase = await createClient()
   const { data, error } = await supabase.from('vouchers').update(parsed.data).eq('id', voucherId.data).select('id')
   if (error) return voucherWriteFailure(error)
-  if (data.length === 0) return UNKNOWN
+  // Khớp 0 dòng: voucher vừa bị xóa ở tab / máy khác
+  if (data.length === 0) return ITEM_DELETED
   refresh()
   return { ok: true, data: null }
 }
@@ -69,7 +72,8 @@ export async function deleteVoucher(id: number): Promise<Result<null>> {
   ])
   if (voucher.error) return toFailure(voucher.error)
   if (orders.error) return toFailure(orders.error)
-  if (!voucher.data) return UNKNOWN
+  // Đã bị xóa ở tab / máy khác: kết quả như mong muốn → về danh sách
+  if (!voucher.data) redirect('/admin/voucher')
   if (voucher.data.used_count > 0 || (orders.count ?? 0) > 0) return { ok: false, code: 'VOUCHER_IN_USE' }
 
   const { error } = await supabase.from('vouchers').delete().eq('id', voucherId.data)

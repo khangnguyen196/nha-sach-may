@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Page, type Route } from '@playwright/test'
 
 export function collectErrors(page: Page) {
   const errors: string[] = []
@@ -61,4 +61,18 @@ export async function fillAddress(
   await expect(ward.locator('option', { hasText: address.ward })).toHaveCount(1)
   await ward.selectOption({ label: address.ward })
   await page.getByRole('main').getByLabel('Số nhà, tên đường').fill(address.street)
+}
+
+/**
+ * Mất mạng đúng lúc gửi form: chặn request Server Action (POST có header `next-action`) tới `url`, các request khác (trang,
+ * RSC, ảnh) đi bình thường. Trả về hàm bỏ chặn.
+ */
+export async function failServerActions(page: Page, url: string) {
+  const handler = async (route: Route) => {
+    const request = route.request()
+    if (request.method() !== 'POST' || !request.headers()['next-action']) return route.continue()
+    await route.abort('internetdisconnected')
+  }
+  await page.route(url, handler)
+  return () => page.unroute(url, handler)
 }

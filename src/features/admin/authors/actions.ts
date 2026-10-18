@@ -13,6 +13,8 @@ import { authorFormSchema } from './schemas'
 // id do page bind sẵn; tham số bind đi qua client nên parse lại. Câu đầu mọi action là assertAdmin.
 
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
+// Mục vừa bị xóa ở tab / máy khác (update khớp 0 dòng)
+const ITEM_DELETED: Failure = { ok: false, code: 'ITEM_DELETED' }
 
 function authorWriteFailure(error: { code?: string; message: string }): Failure {
   if (violatedUniqueConstraint(error) === 'authors_slug_key') {
@@ -57,7 +59,8 @@ export async function updateAuthor(id: number, _prev: Result<null> | null, formD
     .select('book_authors(book_id)')
   if (error) return authorWriteFailure(error)
   const [author] = data
-  if (!author) return UNKNOWN
+  // Khớp 0 dòng: tác giả vừa bị xóa ở tab / máy khác
+  if (!author) return ITEM_DELETED
 
   const bookIds = [...new Set(author.book_authors.map((row) => row.book_id))]
   expire(adminCatalogTags({ kind: 'author', bookIds }))

@@ -106,3 +106,26 @@ describe('câu lỗi hủy đơn / mã giảm giá (ux-messages)', () => {
     }
   })
 })
+
+describe('toFailure: lỗi trước đây rơi vào UNKNOWN', () => {
+  it('JWT bị PostgREST từ chối (phiên cũ) → SESSION_EXPIRED', () => {
+    for (const code of ['PGRST301', 'PGRST302', 'PGRST303']) {
+      expect(toFailure({ code, message: 'JWT expired' }), code).toEqual({ ok: false, code: 'SESSION_EXPIRED' })
+    }
+  })
+
+  it('RLS / quyền cột chặn ghi (42501) → FORBIDDEN; mã do raise exception đặt vẫn ưu tiên', () => {
+    expect(toFailure({ code: '42501', message: 'new row violates row-level security policy' })).toEqual({
+      ok: false,
+      code: 'FORBIDDEN',
+    })
+    expect(toFailure({ code: '42501', message: 'FORBIDDEN' })).toEqual({ ok: false, code: 'FORBIDDEN' })
+  })
+
+  it('lỗi phía máy chủ khác (timeout câu lệnh…) vẫn là UNKNOWN', () => {
+    expect(toFailure({ code: '57014', message: 'canceling statement due to statement timeout' })).toEqual({
+      ok: false,
+      code: 'UNKNOWN',
+    })
+  })
+})

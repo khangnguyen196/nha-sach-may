@@ -35,7 +35,7 @@ export async function MyReview({ bookId, slug, locale }: Props) {
 
   const [{ review, eligible }, messages] = await Promise.all([
     getMyReviewState(bookId, user.id),
-    getFormMessages(['REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED']),
+    getFormMessages(['REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED'], { signInNext: bookPath }),
   ])
   if (!review && !eligible) {
     return (

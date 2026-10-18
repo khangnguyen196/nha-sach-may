@@ -189,9 +189,16 @@ export function isNetworkFailure(error: { message: string; code?: string | null 
   return !error.code && FETCH_FAILURE.test(error.message)
 }
 
+// PostgREST từ chối JWT (hết hạn / không đọc được): phiên đăng nhập cũ, không phải lỗi của web
+const JWT_REJECTED = new Set(['PGRST301', 'PGRST302', 'PGRST303'])
+// Postgres insufficient_privilege: RLS / quyền cột chặn ghi
+const PRIVILEGE_DENIED = '42501'
+
 /** Đổi lỗi PostgREST (message = mã lỗi do `raise exception` đặt) thành Result thất bại */
 export function toFailure(error: { message: string; details?: string | null; code?: string | null }): Failure {
   if (isNetworkFailure(error)) return { ok: false, code: 'NETWORK_ERROR' }
+  if (error.code && JWT_REJECTED.has(error.code)) return { ok: false, code: 'SESSION_EXPIRED' }
+  if (error.code === PRIVILEGE_DENIED && !isErrorCode(error.message)) return { ok: false, code: 'FORBIDDEN' }
   const code = isErrorCode(error.message) ? error.message : 'UNKNOWN'
   const details = code === 'UNKNOWN' ? undefined : parseDetails(error.details)
   return details ? { ok: false, code, details } : { ok: false, code }

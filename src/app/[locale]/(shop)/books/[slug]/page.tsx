@@ -350,6 +350,7 @@ async function AddToCart({ book }: { book: BookDetail }) {
         cartFull: tCart('cartFull', { max: MAX_LINES }),
         storageError: tCart('storageError'),
         error: tErrors('UNKNOWN', { email: SUPPORT_EMAIL }),
+        networkError: tCart('networkError'),
       }}
     />
   )

@@ -5,11 +5,12 @@ import { getFormMessages } from '@/lib/form-messages'
 import { getProvinceOptions } from './divisions'
 
 /** Chuỗi + danh sách tỉnh cho AddressForm, dùng chung trang thêm và trang sửa */
-export async function getAddressFormProps(locale: Locale) {
+/** `signInNext`: URL hiển thị của trang (link "Đăng nhập lại" khi phiên hết lúc đang nhập) */
+export async function getAddressFormProps(locale: Locale, signInNext: string) {
   const [t, tAuth, messages] = await Promise.all([
     getTranslations('address'),
     getTranslations('auth'),
-    getFormMessages(['AUTH_REQUIRED', 'INVALID_ADDRESS']),
+    getFormMessages(['AUTH_REQUIRED', 'INVALID_ADDRESS'], { signInNext }),
   ])
   return {
     locale,

@@ -1,7 +1,8 @@
 {
   "common": {
     "siteName": "Nhà Sách Mây",
-    "skipToContent": "Bỏ qua, tới nội dung chính"
+    "skipToContent": "Bỏ qua, tới nội dung chính",
+    "signInAgain": "Đăng nhập lại"
   },
   "metadata": {
     "title": "Nhà Sách Mây — sách hay cho những giờ đọc yên tĩnh",
@@ -621,7 +622,8 @@
     "checkout": "Thanh toán",
     "updating": "Đang cập nhật…",
     "loadError": "Không tải được giỏ hàng. Kiểm tra kết nối rồi thử lại.",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "networkError": "Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé."
   },
   "checkout": {
     "title": "Thanh toán",
@@ -889,7 +891,7 @@
     "cancel": "Hủy"
   },
   "errors": {
-    "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
+    "AUTH_REQUIRED": "Phiên đăng nhập đã hết. Bạn đăng nhập lại để tiếp tục nhé.",
     "INVALID_ADDRESS": "Địa chỉ giao hàng không hợp lệ.",
     "BOOK_UNAVAILABLE": "Sách \"{title}\" hiện không còn bán.",
     "OUT_OF_STOCK": "Sách \"{title}\" chỉ còn {stock} cuốn.",
@@ -922,7 +924,7 @@
     "CHAT_FREE_QUOTA": "Mây đã dùng hết lượt hỏi miễn phí, website vẫn hoạt động bình thường.",
     "CHAT_UNAVAILABLE": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
     "CHAT_REGION": "Mây chưa hỗ trợ khu vực của bạn.",
-    "NETWORK_ERROR": "Không kết nối được máy chủ, thử lại sau ít phút.",
+    "NETWORK_ERROR": "Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.",
     "UNKNOWN": "Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn thử lại nhé; nếu vẫn lỗi, gửi email tới {email}.",
     "VOUCHER_NOT_FOUND": "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.",
     "VOUCHER_INACTIVE": "Mã này hiện đã ngừng áp dụng. Bạn thử mã khác nhé.",
@@ -1059,6 +1061,7 @@
     "visitorDay": "Hôm nay bạn đã hỏi Mây nhiều câu rồi, mai quay lại nhé. Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
     "region": "Mây chưa phục vụ khu vực của bạn. Bạn vẫn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
     "tired": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
-    "chipsLabel": "Câu hỏi gợi ý"
+    "chipsLabel": "Câu hỏi gợi ý",
+    "network": "Không kết nối được máy chủ. Bạn kiểm tra mạng rồi gửi lại nhé, câu hỏi vẫn còn trong ô."
   }
 }

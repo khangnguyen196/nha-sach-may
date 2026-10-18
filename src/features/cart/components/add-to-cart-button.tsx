@@ -19,6 +19,8 @@ export type AddToCartLabels = {
   cartFull: string
   storageError: string
   error: string
+  /** Server Action không tới được máy chủ (mất mạng) */
+  networkError: string
 }
 
 type Props = {
@@ -59,7 +61,15 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction }: Prop
 
     startTransition(async () => {
       if (mode === 'user') beginUserAdd()
-      const result = await add()
+      let result: Result<CartActionData>
+      try {
+        result = await add()
+      } catch (failure) {
+        // Mất mạng: báo cạnh nút thay vì cả trang thành trang lỗi; badge về số cũ
+        console.error('AddToCartButton:', failure)
+        if (mode === 'user') endUserAdd(null)
+        return setStatus({ kind: 'error', message: labels.networkError })
+      }
       if (mode === 'user') endUserAdd(result.ok ? result.data.count : null)
       else if (result.ok) {
         setUserCartCount(result.data.count)

@@ -15,6 +15,7 @@ import { VietQrCard } from '@/features/payments/components/vietqr-card'
 import { OrderItemReview } from '@/features/reviews/components/order-item-review'
 import { getMyReviews } from '@/features/reviews/queries'
 import { requireUser } from '@/lib/auth'
+import { getPathname } from '@/i18n/navigation'
 import { getFormMessages } from '@/lib/form-messages'
 import { placeholder } from '@/lib/template'
 
@@ -48,7 +49,9 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
     getOrderByCode(code, user.id),
     getTranslations('orders'),
     getTranslations('order'),
-    getFormMessages(['ORDER_NOT_CANCELLABLE', 'REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED']),
+    getFormMessages(['ORDER_NOT_CANCELLABLE', 'REVIEW_NOT_ALLOWED', 'AUTH_REQUIRED'], {
+      signInNext: getPathname({ href: { pathname: '/account/orders/[code]', params: { code } }, locale }),
+    }),
   ])
   // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
   // được) thì hiện UI 404 trong boundary

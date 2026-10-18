@@ -140,7 +140,7 @@ export function TextAreaField({
  * Lỗi chung của form. `quiet`: chỉ đọc cho trình đọc màn hình (đã có lỗi hiện tại từng ô).
  * Chuỗi có email liên hệ (UNKNOWN, đơn đã thanh toán…) → email thành link mailto.
  */
-export function FormAlert({ children, quiet = false }: { children: ReactNode; quiet?: boolean }) {
+export function FormAlert({ children, quiet = false, action }: { children: ReactNode; quiet?: boolean; action?: ReactNode }) {
   return (
     <p
       role="alert"
@@ -151,6 +151,7 @@ export function FormAlert({ children, quiet = false }: { children: ReactNode; qu
       }
     >
       {typeof children === 'string' ? <SupportEmailText text={children} /> : children}
+      {action && <> {action}</>}
     </p>
   )
 }

@@ -4,10 +4,12 @@ import { BookIcon, MinusIcon, PlusIcon, ShoppingBagIcon, Trash2Icon } from 'luci
 import Image from 'next/image'
 import type { Locale } from 'next-intl'
 import { useState, type KeyboardEvent } from 'react'
+import { SignInAgainLink } from '@/components/layout/sign-in-again-link'
 import { SupportEmailText } from '@/components/layout/support-email-text'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { formats } from '@/i18n/formats'
 import { Link } from '@/i18n/navigation'
+import type { SignInLink } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
 import { cn } from '@/lib/utils'
 import { cartLimit } from '../guest-cart'
@@ -42,6 +44,10 @@ export type CartViewLabels = {
   checkout: string
   updating: string
   error: string
+  /** Server Action không tới được máy chủ (mất mạng) */
+  networkError: string
+  /** Giỏ tài khoản: link "Đăng nhập lại" khi phiên hết giữa chừng (AUTH_REQUIRED) */
+  signIn?: SignInLink
 }
 
 type Props = {
@@ -50,6 +56,8 @@ type Props = {
   /** Đang chờ server (debounce, action, tải lại): tóm tắt mờ đi tới khi có quote mới */
   updating: boolean
   error: string | null
+  /** Hiện link "Đăng nhập lại" cạnh lỗi (labels.signIn) */
+  errorSignIn?: boolean
   labels: CartViewLabels
   locale: Locale
   onQuantityChange: (bookId: number, quantity: number) => void
@@ -57,7 +65,7 @@ type Props = {
 }
 
 /** Giao diện giỏ dùng chung cho khách (localStorage) và tài khoản (Server Action). Rỗng → trang tự hiện EmptyState. */
-export function CartView({ lines, quote, updating, error, labels, locale, onQuantityChange, onRemove }: Props) {
+export function CartView({ lines, quote, updating, error, errorSignIn, labels, locale, onQuantityChange, onRemove }: Props) {
   const formatPrice = new Intl.NumberFormat(locale, formats.number.price).format
 
   return (
@@ -84,6 +92,7 @@ export function CartView({ lines, quote, updating, error, labels, locale, onQuan
         quote={quote}
         updating={updating}
         error={error}
+        errorSignIn={errorSignIn}
         labels={labels}
         formatPrice={formatPrice}
       />
@@ -279,11 +288,13 @@ type SummaryProps = {
   quote: CartQuote
   updating: boolean
   error: string | null
+  /** Hiện link "Đăng nhập lại" cạnh lỗi (labels.signIn) */
+  errorSignIn?: boolean
   labels: CartViewLabels
   formatPrice: (value: number) => string
 }
 
-function CartSummary({ lines, quote, updating, error, labels, formatPrice }: SummaryProps) {
+function CartSummary({ lines, quote, updating, error, errorSignIn, labels, formatPrice }: SummaryProps) {
   const itemCount = lines.reduce((sum, line) => sum + (line.book ? line.quantity : 0), 0)
   const freeShip = freeShipStatus(quote)
   const canCheckout = quote.item_count > 0
@@ -340,7 +351,19 @@ function CartSummary({ lines, quote, updating, error, labels, formatPrice }: Sum
       </div>
 
       <p role="status" className="mt-3 min-h-5 text-sm">
-        {error ? <span className="text-sale"><SupportEmailText text={error} /></span> : updating ? <span className="text-muted-foreground">{labels.updating}</span> : null}
+        {error ? (
+          <span className="text-sale">
+            <SupportEmailText text={error} />
+            {errorSignIn && labels.signIn && (
+              <>
+                {' '}
+                <SignInAgainLink signIn={labels.signIn} />
+              </>
+            )}
+          </span>
+        ) : updating ? (
+          <span className="text-muted-foreground">{labels.updating}</span>
+        ) : null}
       </p>
 
       {canCheckout ? (

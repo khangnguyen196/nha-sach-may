@@ -1,12 +1,21 @@
 import 'server-only'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { getPathname } from '@/i18n/navigation'
 import { SUPPORT_EMAIL } from '@/lib/support'
 import { placeholder } from '@/lib/template'
 import type { CartViewLabels } from './components/cart-view'
 
-/** Chuỗi cho CartView; tham số chỉ biết ở client (tên sách giỏ khách, số tiền còn thiếu) để chỗ trống */
+/**
+ * Chuỗi cho CartView; tham số chỉ biết ở client (tên sách giỏ khách, số tiền còn thiếu) để chỗ trống. Giỏ tài khoản có
+ * link "Đăng nhập lại" về trang giỏ khi phiên hết giữa chừng.
+ */
 export async function getCartViewLabels(): Promise<CartViewLabels> {
-  const [t, tErrors] = await Promise.all([getTranslations('cart'), getTranslations('errors')])
+  const [t, tErrors, tCommon, locale] = await Promise.all([
+    getTranslations('cart'),
+    getTranslations('errors'),
+    getTranslations('common'),
+    getLocale(),
+  ])
   const title = placeholder('title')
   const stock = placeholder('stock')
   return {
@@ -36,5 +45,7 @@ export async function getCartViewLabels(): Promise<CartViewLabels> {
     checkout: t('checkout'),
     updating: t('updating'),
     error: tErrors('UNKNOWN', { email: SUPPORT_EMAIL }),
+    networkError: t('networkError'),
+    signIn: { next: getPathname({ href: '/cart', locale }), label: tCommon('signInAgain') },
   }
 }

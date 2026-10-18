@@ -17,7 +17,7 @@ export function localizedPath(pathname: StaticPathname, locale: Locale, query?: 
 
 export type SlugPathname = '/books/[slug]' | '/categories/[slug]' | '/authors/[slug]'
 type OrderPathname = '/checkout/success/[code]' | '/account/orders/[code]'
-type ParamPathname = SlugPathname | OrderPathname
+type ParamPathname = SlugPathname | OrderPathname | '/account/addresses/[id]'
 
 /** URL hiển thị của trang có một tham số động ([slug], [code]) theo locale */
 function localizedParamPath(pathname: ParamPathname, value: string, locale: Locale) {
@@ -63,4 +63,14 @@ export function matchSlugPath(pathname: string): { kind: SlugPathname; slug: str
 export function matchOrderPath(pathname: string): { code: string; locale: Locale } | null {
   const match = matchParamPath(pathname, ['/checkout/success/[code]', '/account/orders/[code]'] as const)
   return match && { code: match.value, locale: match.locale }
+}
+
+/**
+ * Trang sửa một địa chỉ → id (chưa kiểm định dạng), locale. Trang thêm địa chỉ (/tai-khoan/dia-chi/moi) cùng tiền tố
+ * nhưng không phải trang này.
+ */
+export function matchAddressPath(pathname: string): { id: string; locale: Locale } | null {
+  const match = matchParamPath(pathname, ['/account/addresses/[id]'] as const)
+  if (!match || pathname === localizedPath('/account/addresses/new', match.locale)) return null
+  return { id: match.value, locale: match.locale }
 }

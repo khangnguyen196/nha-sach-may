@@ -10,7 +10,7 @@ import { accountPageMetadata } from '@/features/account/metadata'
 import { getProfile } from '@/features/account/queries'
 import { isAdmin } from '@/features/admin/auth'
 import { signOut } from '@/features/auth/actions'
-import { Link } from '@/i18n/navigation'
+import { getPathname, Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { requireUser } from '@/lib/auth'
 import { getFormMessages } from '@/lib/form-messages'
@@ -39,7 +39,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
     getTranslations('account'),
     getTranslations('auth'),
     getProfile(user.id),
-    getFormMessages(['AUTH_REQUIRED']),
+    getFormMessages(['AUTH_REQUIRED'], { signInNext: getPathname({ href: '/account', locale }) }),
     isAdmin(),
   ])
   const name = profile?.full_name?.trim() || user.fullName || user.email

@@ -15,6 +15,8 @@ import { categoryFormSchema } from './schemas'
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
+// Mục vừa bị xóa ở tab / máy khác (update khớp 0 dòng)
+const ITEM_DELETED: Failure = { ok: false, code: 'ITEM_DELETED' }
 
 function categoryWriteFailure(error: { code?: string; message: string }): Failure {
   if (violatedUniqueConstraint(error) === 'categories_slug_key') {
@@ -42,7 +44,8 @@ async function checkParent(supabase: Supabase, selfId: number | null, parentId: 
       ? Promise.resolve({ count: 0, error: null })
       : supabase.from('categories').select('id', { count: 'exact', head: true }).eq('parent_id', selfId),
   ])
-  if (parent.error || parentBooks.error || children.error) return UNKNOWN
+  const queryError = parent.error ?? parentBooks.error ?? children.error
+  if (queryError) return toFailure(queryError)
   if (!parent.data || parent.data.parent_id !== null) return depth
   if ((children.count ?? 0) > 0) {
     return { ok: false, code: 'INVALID_INPUT', fieldErrors: { parent_id: 'categoryHasChildren' } }
@@ -87,12 +90,14 @@ export async function updateCategory(id: number, _prev: Result<null> | null, for
     supabase.from('categories').select('parent_id, is_active').eq('id', categoryId.data).maybeSingle(),
     checkParent(supabase, categoryId.data, parsed.data.parent_id),
   ])
-  if (current.error || !current.data) return UNKNOWN
+  if (current.error) return toFailure(current.error)
+  // Danh mục vừa bị xóa ở tab / máy khác
+  if (!current.data) return ITEM_DELETED
   if (parentFailure) return parentFailure
 
   const { data, error } = await supabase.from('categories').update(parsed.data).eq('id', categoryId.data).select('id')
   if (error) return categoryWriteFailure(error)
-  if (data.length === 0) return UNKNOWN
+  if (data.length === 0) return ITEM_DELETED
 
   const before: CategorySnapshot = current.data
   expire(adminCatalogTags({ kind: 'category', before, after: parsed.data }))

@@ -48,7 +48,8 @@ async function NewAddressForm({ locale, searchParams }: { locale: Locale; search
     locale,
     fromCheckout ? { pathname: '/account/addresses/new', query: { next } } : '/account/addresses/new',
   )
-  const [props, profile] = await Promise.all([getAddressFormProps(locale), getProfile(user.id)])
+  const signInNext = getPathname({ href: fromCheckout ? { pathname: '/account/addresses/new', query: { next } } : '/account/addresses/new', locale })
+  const [props, profile] = await Promise.all([getAddressFormProps(locale, signInNext), getProfile(user.id)])
 
   return (
     <AddressForm

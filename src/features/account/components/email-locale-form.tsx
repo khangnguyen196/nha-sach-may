@@ -1,5 +1,6 @@
 'use client'
 
+import { SignInAgainLink } from '@/components/layout/sign-in-again-link'
 import { FormAlert, SelectField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import type { Result } from '@/lib/errors'
@@ -17,11 +18,11 @@ type Props = {
 }
 
 export function EmailLocaleForm({ action, messages, labels, options, defaultValue }: Props) {
-  const { state, formProps, pending, formError } = useFormAction(action, messages)
+  const { state, formProps, pending, formError, signIn } = useFormAction(action, messages)
 
   return (
     <form {...formProps} className="grid gap-4">
-      {formError && <FormAlert>{formError}</FormAlert>}
+      {formError && <FormAlert action={signIn && <SignInAgainLink signIn={signIn} />}>{formError}</FormAlert>}
       <SelectField name="locale" label={labels.label} hint={labels.description} defaultValue={defaultValue}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>

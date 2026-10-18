@@ -48,6 +48,7 @@ export async function getChatLabels() {
       visitorDay: t('visitorDay'),
       region: t('region'),
       tired: t('tired'),
+      network: t('network'),
     },
   }
 }
