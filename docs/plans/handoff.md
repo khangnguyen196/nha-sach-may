@@ -70,13 +70,7 @@
   - Trang đặt hàng thành công: tiêu đề "Đặt hàng thành công" nằm trong boundary, đơn không có thì chỉ hiện UI 404 của đơn.
   - `layout.spec.ts:66`: lỗi thật của `LocaleSwitcher` (fallback Suspense ngoài nằm trong HTML tĩnh, thiếu query) → đã sửa.
   - `account.spec.ts:71` (đăng nhập → đăng xuất) flaky 1 lần trên CI (run 39051786575, qua ở lần retry): console có một "Failed to load resource: 404" chưa rõ request nào; 2 lần chạy sau không lặp lại. Gặp lại thì xem trace (`playwright-report` artifact).
-- **Đợt sau** (chủ dự án ghi, chưa làm):
-  - `/sach`, tìm kiếm **và** catalog chatbot (`getChatCatalog`) chưa loại sách thuộc danh mục đang ẩn (ux-messages chỉ lọc kệ trang chủ) → cần quyết một quy tắc chung.
-  - Tác giả nước ngoài trùng: Peter Drucker (id 86 / 87 / 88), Stephen Hawking (113 / 114), Jim Collins (90 / 92), Jerry Porras (93 / 94).
-  - id 75 gộp hai người: "Trần Tuyết Nhung và Anthony Reid".
-  - Tổ chức ghi là tác giả: Nhà xuất bản Kim Đồng, Harvard Business Review, Ladybird.
-  - Tên sách lỗi: "Kien Chuot Va Ruoi" (không dấu), "Mười chín chân dùng nhà văn…" (sai chính tả), tên còn dính "(hardcover)" / "(soft cover…)".
-  - Xóa `INVALID_VOUCHER` sau khi migration B đã chạy.
+- Việc để sau: xem docs/progress.md
 - Sau khi deploy (tùy chọn): đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
 - Bản Preview của Vercel đang bật Vercel Authentication → script đo không vào được bản Preview (muốn đo trước khi merge cần Protection Bypass for Automation, do chủ dự án quyết).
 - **Lỗi #3 (build) chưa hết**: một lần build vẫn fail "`use cache` took too long" ở `getRelatedBooks` dù đã có timeout + retry (tối đa 33 s, dưới giới hạn 54 s của Next; `fetch` của Next có chuyển `signal`). Chưa tìm ra chỗ treo; hướng xem tiếp: giảm số trang prerender đồng thời, tăng `staticPageGenerationTimeout`, log thời gian từng lượt thử lúc build.
