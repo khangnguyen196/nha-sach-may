@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import en from '../../messages/en.json'
 import vi from '../../messages/vi.json'
@@ -40,6 +42,35 @@ describe('ERROR_CODES', () => {
     const codes = [...ERROR_CODES].sort()
     expect(Object.keys(vi.errors).sort()).toEqual(codes)
     expect(Object.keys(en.errors).sort()).toEqual(codes)
+  })
+})
+
+// Mã lỗi DB raise (danh sách cuối schema.sql) mà app không đưa thẳng tới khách: lý do + chỗ đổi mã
+const INTERNAL_DB_CODES: Record<string, string> = {
+  CHAT_DISABLED: 'consume_chat_quota chưa đặt token = lỗi cấu hình; mapQuotaError (features/chat/quota.ts) đổi thành CHAT_UNAVAILABLE',
+}
+
+describe('mã lỗi raise trong supabase/schema.sql', () => {
+  const schema = readFileSync(join(import.meta.dirname, '../../supabase/schema.sql'), 'utf8').replace(/--[^\n]*/g, '')
+  const known: readonly string[] = ERROR_CODES
+  const literal = [...schema.matchAll(/raise exception '([A-Z][A-Z_]+)'/g)].flatMap((m) => (m[1] ? [m[1]] : []))
+  // raise exception '%', p_error: chỉ private.chat_quota_take; mã truyền vào là tham số thứ 4 ở mọi lời gọi
+  const dynamic = [...schema.matchAll(/chat_quota_take\([^;]*?'([A-Z][A-Z_]+)',\s*'[a-z_]+'/g)].flatMap((m) => (m[1] ? [m[1]] : []))
+
+  it('mọi mã có trong ERROR_CODES và có câu vi / en (trừ mã nội bộ đã liệt kê)', () => {
+    const codes = [...new Set([...literal, ...dynamic])].filter((code) => !(code in INTERNAL_DB_CODES)).sort()
+    expect(codes.length).toBeGreaterThan(20)
+    expect(codes.filter((code) => !known.includes(code))).toEqual([])
+    expect(codes.filter((code) => !(code in vi.errors) || !(code in en.errors))).toEqual([])
+  })
+
+  it('raise động (`%`) chỉ có ở chat_quota_take, mã của nó đọc được', () => {
+    expect(schema.match(/raise exception '%'/g)).toHaveLength(1)
+    expect([...new Set(dynamic)].sort()).toEqual(['CHAT_FREE_QUOTA', 'CHAT_QUOTA_EXCEEDED'])
+  })
+
+  it('mã nội bộ vẫn còn được raise (xóa khỏi danh sách khi schema bỏ)', () => {
+    for (const code of Object.keys(INTERNAL_DB_CODES)) expect(literal).toContain(code)
   })
 })
 

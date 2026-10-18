@@ -371,39 +371,56 @@ for (const refusal of refusals) {
   })
 }
 
-test('không tìm thấy đơn: mã sai dạng, mã không có, đơn của tài khoản khác → HTTP 404, CÙNG một câu', async ({
-  browser,
-  baseURL,
-  users,
-  projectIndex,
-}, testInfo) => {
-  test.setTimeout(60_000)
-  const { orders } = await placeOrders(users, plentyBook(projectIndex), 1)
-  const order = orders[0]
-  if (!order) throw new Error('Không tạo được đơn')
+const ORDER_NOT_FOUND = {
+  vi: {
+    paths: (code: string) => [`/tai-khoan/don-hang/${code}`, `/thanh-toan/thanh-cong/${code}`],
+    message:
+      'Không tìm thấy đơn hàng này. Có thể mã đơn chưa đúng, hoặc đơn này thuộc một tài khoản khác. Bạn kiểm tra lại trong Tài khoản → Đơn hàng.',
+    myOrders: { name: 'Đơn hàng của tôi', href: '/tai-khoan/don-hang' },
+  },
+  en: {
+    paths: (code: string) => [`/en/account/orders/${code}`, `/en/checkout/success/${code}`],
+    message:
+      'We couldn’t find this order. The order code may be wrong, or the order belongs to another account. Please check under Account → Orders.',
+    myOrders: { name: 'My orders', href: '/en/account/orders' },
+  },
+} as const
 
-  // User chính của project: không phải chủ đơn
-  const other = await browser.newContext({ baseURL, storageState: storageStatePath(testInfo.project.name) })
-  const page = await other.newPage()
-  const errors = collectErrorsAllow404(page)
-  const message =
-    'Không tìm thấy đơn hàng này. Có thể mã đơn chưa đúng, hoặc đơn này thuộc một tài khoản khác. Bạn kiểm tra lại trong Tài khoản → Đơn hàng.'
-  const texts = new Set<string>()
-  for (const code of ['NS-khong-hop-le', 'NS00000000000', order.order_code]) {
-    for (const path of [`/tai-khoan/don-hang/${code}`, `/thanh-toan/thanh-cong/${code}`]) {
-      const response = await page.goto(path)
-      expect(response?.status(), path).toBe(404)
-      const view = main(page).getByTestId('not-found')
-      await expect(view, path).toContainText(message)
-      await expect(view.getByRole('link', { name: 'Đơn hàng của tôi' }), path).toHaveAttribute('href', '/tai-khoan/don-hang')
-      texts.add((await view.textContent()) ?? '')
+for (const [locale, expected] of Object.entries(ORDER_NOT_FOUND)) {
+  const title =
+    locale === 'vi'
+      ? 'không tìm thấy đơn: mã sai dạng, mã không có, đơn của tài khoản khác → HTTP 404, CÙNG một câu'
+      : 'không tìm thấy đơn (en): mã sai dạng, mã không có, đơn của tài khoản khác → HTTP 404, CÙNG một câu'
+  test(title, async ({ browser, baseURL, users, projectIndex }, testInfo) => {
+    test.setTimeout(60_000)
+    const { orders } = await placeOrders(users, plentyBook(projectIndex), 1)
+    const order = orders[0]
+    if (!order) throw new Error('Không tạo được đơn')
+
+    // User chính của project: không phải chủ đơn
+    const other = await browser.newContext({ baseURL, storageState: storageStatePath(testInfo.project.name) })
+    const page = await other.newPage()
+    const errors = collectErrorsAllow404(page)
+    const texts = new Set<string>()
+    for (const code of ['NS-khong-hop-le', 'NS00000000000', order.order_code]) {
+      for (const path of expected.paths(code)) {
+        const response = await page.goto(path)
+        expect(response?.status(), path).toBe(404)
+        const view = main(page).getByTestId('not-found')
+        await expect(view, path).toContainText(expected.message)
+        await expect(view.getByRole('link', { name: expected.myOrders.name }), path).toHaveAttribute(
+          'href',
+          expected.myOrders.href,
+        )
+        texts.add((await view.textContent()) ?? '')
+      }
     }
-  }
-  // Không để lộ mã đơn nào tồn tại: mọi trường hợp hiện y hệt nhau
-  expect(texts.size).toBe(1)
-  expect(errors).toEqual([])
-  await other.close()
-})
+    // Không để lộ mã đơn nào tồn tại: mọi trường hợp hiện y hệt nhau
+    expect(texts.size).toBe(1)
+    expect(errors).toEqual([])
+    await other.close()
+  })
+}
 
 test('danh sách đơn ?page vượt quá → soft 404 (200, noindex), "Về trang đầu" giữ bộ lọc', async ({ page }) => {
   const response = await page.goto('/tai-khoan/don-hang?status=cancelled&page=99')

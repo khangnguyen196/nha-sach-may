@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
 import { readFixture } from './e2e-seed'
@@ -74,5 +75,26 @@ describe('e2e/fixtures/books.json', () => {
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
+  })
+})
+
+const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
+
+describe('seed của Supabase local (ux-messages)', () => {
+  it('seed.sql có ít nhất 1 voucher public (gợi ý mã ở checkout.spec có mã seed hiện chung)', () => {
+    const insert = /insert into public\.vouchers \(([^)]*)\) values([\s\S]*?);/.exec(read('../supabase/seed.sql'))
+    expect(insert, 'seed.sql không có insert into public.vouchers').not.toBeNull()
+    const columns = (insert?.[1] ?? '').split(',').map((column) => column.trim())
+    expect(columns.at(-1)).toBe('is_public')
+    const rows = (insert?.[2] ?? '').split('\n').filter((line) => line.trim().startsWith('('))
+    expect(rows.filter((row) => /,\s*true\)[,;]?\s*$/.test(row)).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('kệ "Bán chạy" ẩn với dữ liệu seed: không đường nạp nào ghi sold_count (mặc định 0, chỉ đơn hàng mới tăng)', () => {
+    // Kệ cần sold_count > 0 ở ≥ 6 sách (SHELF_MIN, features/books/queries.ts). Không spec nào dựa vào kệ này hiện;
+    // sách e2e có đơn nằm trong danh mục ẩn nên cũng không lên kệ (visibleCategoryIds, ux-messages mục 15).
+    const loaders = ['./import-books.ts', './e2e-seed.ts', '../supabase/seed.sql', '../supabase/seed-foreign-books.sql', '../e2e/fixtures/books.json']
+    for (const path of loaders) expect(read(path), path).not.toContain('sold_count')
+    expect(read('../supabase/schema.sql')).toMatch(/sold_count\s+int not null default 0/)
   })
 })
