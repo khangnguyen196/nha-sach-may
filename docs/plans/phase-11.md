@@ -1,6 +1,26 @@
 # Phase 11: Chatbot gợi ý sách "Mây"
 
-Trạng thái: **plan, chờ duyệt** (2026-10-18, bản 2). Chưa viết code, chưa tạo migration thật.
+Trạng thái: **plan đã duyệt** (bản 2 `062f1a0` + quyết định ★ và chỉnh sửa của chủ dự án, 2026-10-18 → bản 3). Đang ở bước migration: viết file migration + `schema.sql`, **chưa chạy** trên Supabase. Chưa code server / UI cho tới khi chủ dự án báo đã chạy migration và đặt token.
+
+Thứ tự đã duyệt:
+1. Cập nhật plan (bản 3).
+2. Câu SQL rà mô tả (chủ dự án tự chạy).
+3. Migration + `schema.sql` mục 14 + `migrations.test.ts`.
+4. Push rồi **dừng**.
+5. Chủ dự án kiểm file, chạy migration, đặt `CHAT_QUOTA_TOKEN` vào `.env.local` + Vercel.
+6. Sinh lại types, code server + UI, thử thật ≤ 10 lượt.
+
+Bản 3 (duyệt plan):
+- IP 60 / giờ, 200 / ngày.
+- Bước xác nhận 18+.
+- Phân loại 429 theo `quotaId`.
+- `maxOutputTokens` 1.200.
+- Chốt chặn chế độ AI giả.
+- Lịch sử từ client coi như dữ liệu không tin cậy.
+- Bộ lọc tự hại chạy trước bước kiểm khu vực; danh sách 32 mã nước bị chặn.
+- Câu tự hại có số 115 + đường dây Ngày Mai.
+- `check:env` chỉ cảnh báo khi định dạng key lạ.
+- Rà mô tả bằng câu SQL (không viết script).
 
 Bản 2 cập nhật theo góp ý của chủ dự án:
 - Đã có số rate limit thật đọc từ AI Studio (★ 2).
@@ -70,7 +90,7 @@ Không lưu nội dung chat ở đâu cả. Không thêm dependency.
 
 - Trang rate-limits chính thức (https://ai.google.dev/gemini-api/docs/rate-limits, cập nhật 2026-10-15) không ghi số cụ thể, chỉ trỏ tới AI Studio. Trang này có ghi:
   - Giới hạn tính **theo project**, không theo key.
-  - RPD reset lúc **0h giờ Thái Bình Dương**: 14h giờ Việt Nam khi Mỹ đang giờ mùa hè (PDT), **15h từ 2026-11-01** (PST).
+  - RPD reset lúc **0h giờ Thái Bình Dương**: 14h giờ Việt Nam khi Mỹ đang giờ mùa hè (PDT), **15h khi Mỹ dùng giờ chuẩn (PST), bắt đầu từ ngày 2/11/2026 giờ Việt Nam** (Mỹ đổi giờ lúc 2h sáng 1/11 giờ Los Angeles, nên lần reset ngày 1/11 vẫn là 14h).
   - Giới hạn "không được đảm bảo", có thể đổi.
 
 **Điều khoản** (Gemini API Additional Terms, cập nhật 2026-04-28):
@@ -106,19 +126,22 @@ Không lưu nội dung chat ở đâu cả. Không thêm dependency.
 
 ```
 Client (khung chat, tải lười)
-  └─ askMay({ message, history[≤4], slug? })            ← chỉ gửi slug, không gửi mô tả sách
+  └─ askMay({ message, history[≤4], slug?, ageConfirmed: true })   ← chỉ gửi slug, không gửi mô tả sách
 Server Action (features/chat/actions.ts)
-  1. parse zod: message 1–300 ký tự (sau trim), history ≤ 4 lượt, slug theo định dạng slug
-  2. chatEnabled()? (đủ GEMINI_API_KEY + CHAT_QUOTA_TOKEN, hoặc CHAT_AI_MOCK) → không thì CHAT_UNAVAILABLE
-  3. khu vực EEA / UK / CH (x-vercel-ip-country) → CHAT_REGION (★ 9)
-  4. bộ lọc tự hại (crisis.ts) → khớp: trả lời cố định, KHÔNG trừ lượt, KHÔNG gọi AI
-  5. cooldown trong bộ nhớ sau 429 của Gemini còn hạn → CHAT_FREE_QUOTA (không trừ lượt, không gọi Gemini)
+  1. parse zod: message 1–300 ký tự (sau trim), history ≤ 4 lượt (mục Lịch sử), slug theo định dạng slug,
+     ageConfirmed = true (khách đã bấm xác nhận 18+; thiếu → INVALID_INPUT)
+  2. chatEnabled()? (key thật + CHAT_QUOTA_TOKEN, hoặc mock hợp lệ: mục Chế độ AI giả) → không thì CHAT_UNAVAILABLE
+  3. bộ lọc tự hại (crisis.ts) → khớp: trả lời cố định, KHÔNG trừ lượt, KHÔNG gọi AI (TRƯỚC bước khu vực: khách ở
+     đâu cũng nhận được câu hỗ trợ)
+  4. khu vực: x-vercel-ip-country thuộc BLOCKED_COUNTRIES → CHAT_REGION (★ 9); không có header (chạy local) → cho qua
+  5. cooldown trong bộ nhớ sau 429 của Gemini còn hạn → CHAT_FREE_QUOTA theo loại cooldown (không trừ lượt, không gọi Gemini)
   6. consume_chat_quota(token, khách, IP băm, giới hạn): +1 lượt khách (câu hỏi) VÀ +1 lượt trần chung (lượt gọi
      Gemini sắp làm), nguyên tử → vượt lượt khách: CHAT_QUOTA_EXCEEDED; vượt trần chung: CHAT_FREE_QUOTA
   7. ứng viên: catalog rút gọn (cache) → chấm điểm → ≤ 30 sách; có slug → cuốn đang xem đứng đầu
      → fitPromptBudget: ước tính token đầu vào ≤ 7.500, quá thì bớt lịch sử rồi bớt ứng viên
   8. gọi Gemini 1 lần (timeout 10 s, không retry) | CHAT_AI_MOCK=1 → AI giả
-     429 → CHAT_FREE_QUOTA + bật cooldown, KHÔNG gọi lại; timeout / 5xx / bị chặn → CHAT_UNAVAILABLE
+     429 → phân loại theo quotaId (mục Phân loại 429) → CHAT_FREE_QUOTA + cooldown, KHÔNG gọi lại;
+     timeout / 5xx / bị chặn / MAX_TOKENS → CHAT_UNAVAILABLE
   9. validate JSON (zod) → bỏ slug ngoài ứng viên / trùng → tối đa 3 → làm sạch chữ
  10. lấy thẻ sách thật (cache theo book:{id}, RLS bỏ sách ẩn) → bỏ sách không còn
   └─ Result<ChatReply> = { ok: true, data } | { ok: false, code }
@@ -135,6 +158,7 @@ Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt v�
   - Số lần `fetch` tới Gemini luôn bằng số vé đã cấp.
   - Không có đường nào gọi `fetch` mà không có vé.
 - Câu bị chặn bởi bộ lọc tự hại, khu vực hay cooldown không gọi Gemini, nên không trừ trần chung.
+- `actions.test.ts` kiểm thứ tự: câu tự hại từ IP nước bị chặn vẫn nhận câu hỗ trợ; câu thường từ nước bị chặn → `CHAT_REGION`, không gọi quota / AI.
 
 ## Lọc ứng viên (≤ 30 sách) và ước tính token
 
@@ -189,7 +213,7 @@ Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt v�
 | Sách đang xem (chỉ ở trang sách, mô tả 600 ký tự) | ~700 | ~280 | ~350 |
 | 4 lượt lịch sử (câu hỏi ≤ 300 + trả lời rút gọn ~450) | ~3.000 | ~1.200 | ~1.500 |
 | **Tổng đầu vào, tối đa** | | **~6.800** | **~8.550** |
-| Ra (`maxOutputTokens` 800, gồm suy luận `minimal`) | | ≤ 800 | ≤ 800 |
+| Ra (`maxOutputTokens` **1.200**, gồm suy luận `minimal`) | | ≤ 1.200 | ≤ 1.200 |
 
 - **Chặn cứng** `fitPromptBudget` (`prompt.ts`, có Vitest):
   - Server ước tính token theo mức xấu (số ký tự / 2) trước khi gọi.
@@ -199,7 +223,9 @@ Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt v�
   - Nhờ vậy mọi lượt dưới 8K kể cả khi tiếng Việt tốn token hơn dự kiến.
 - **So với TPM**: 10 lượt gọi / phút × ≤ 8K = **≤ 80K token / phút**, khoảng 32% của 250K TPM. RPM / RPD vẫn là giới hạn chạm trước.
 - **Đo số thật**:
-  - Lúc thử thật (★ 12), đọc `usageMetadata.promptTokenCount` (log **chỉ con số**, không log nội dung) và ghi vào báo cáo cho 3 trường hợp: câu đầu, câu ở trang sách, câu thứ 5 (đủ 4 lượt lịch sử).
+  - Lúc thử thật (★ 12), đọc `usageMetadata.promptTokenCount`, `candidatesTokenCount`, `thoughtsTokenCount` (log **chỉ con số**, không log nội dung). Ghi vào báo cáo cho 3 trường hợp: câu đầu, câu ở trang sách, câu thứ 5 (đủ 4 lượt lịch sử).
+  - Báo ngay nếu có lượt nào `finishReason: MAX_TOKENS`.
+  - Lý do nâng `maxOutputTokens` 800 → 1.200: `message` 600 + 3 `reason` × 160 + `follow_up` 200 đã khoảng 1.300 ký tự tiếng Việt, chưa tính khóa JSON, slug và phần suy luận.
   - Số thật vượt 8K → giảm mô tả xuống 120 ký tự hoặc ứng viên xuống 24, rồi đo lại.
 
 ## Giới hạn (`src/features/chat/config.ts`)
@@ -215,12 +241,24 @@ export const FREE_TIER = {
   'gemini-3.1-flash-lite': { rpm: 15, tpm: 250_000, rpd: 500 },
 } as const
 
-export const GEMINI = { timeoutMs: 10_000, maxOutputTokens: 800, maxPromptTokens: 7_500 } as const
+export const GEMINI = { timeoutMs: 10_000, maxOutputTokens: 1_200, maxPromptTokens: 7_500 } as const
+
+// Cooldown sau 429 (mục Phân loại 429)
+export const COOLDOWN = { minuteMinMs: 10_000, minuteMaxMs: 60_000, unknownMs: 60_000 } as const
+
+// ★ 9: điều khoản Gemini API — người dùng ở EEA / Anh / Thụy Sĩ chỉ được phục vụ bằng gói trả phí
+// 27 nước EU + IS, LI, NO (EEA) + GB + CH = 32 mã ISO 3166-1 alpha-2 (giá trị của x-vercel-ip-country)
+export const BLOCKED_COUNTRIES = [
+  'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU',
+  'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
+  'IS', 'LI', 'NO',
+  'GB', 'CH',
+] as const
 
 export const CHAT_LIMITS = {
   // Theo khách: đếm CÂU HỎI (khách = cookie, hoặc user id khi đã đăng nhập)
   visitorPerHour: 10, visitorPerDay: 30,
-  ipPerHour: 40, ipPerDay: 120,      // ★ 6: chỉ khách chưa đăng nhập; cả lớp chung một IP (NAT)
+  ipPerHour: 60, ipPerDay: 200,      // ★ 6: chỉ khách chưa đăng nhập; demo cả lớp chung một IP (NAT); trần chung vẫn là chốt chặn chính
   // Trần chung cả web: đếm LƯỢT GỌI GEMINI (kể cả gọi lại nếu sau này có), ngày theo America/Los_Angeles
   geminiCallsPerMinute: 10,          // 15 RPM thật → chừa 33%
   geminiCallsPerDay: 400,            // 500 RPD thật → chừa 20%
@@ -238,69 +276,82 @@ export const CHAT_INPUT = { maxChars: 300, historyTurns: 4, maxBooks: 3, candida
   - Phút / giờ: cửa sổ cố định (`date_trunc`).
   - Ngày của khách (30 câu / ngày): theo giờ Việt Nam (+07:00 cố định, như voucher), vì khách hiểu "ngày" theo giờ mình.
   - **Ngày của trần chung: theo `America/Los_Angeles`**: `date_trunc('day', now() at time zone 'America/Los_Angeles') at time zone 'America/Los_Angeles'`, Postgres tự xử lý giờ mùa hè. Bộ đếm reset cùng lúc với RPD của Google:
-    - **14h giờ Việt Nam** khi Mỹ đang giờ mùa hè (tới hết 2026-10-31).
-    - **15h giờ Việt Nam từ 2026-11-01** (PST).
+    - **14h giờ Việt Nam** khi Mỹ đang giờ mùa hè.
+    - **15h giờ Việt Nam** khi Mỹ dùng giờ chuẩn (PST).
+    - Mỹ đổi giờ lúc 2h sáng ngày 2026-11-01 (giờ Los Angeles), sau 0h của ngày đó. Vì vậy lần reset lúc 0h ngày 1/11 (Los Angeles) **vẫn là 14h** ngày 1/11 giờ Việt Nam. **15h bắt đầu từ ngày 2/11** giờ Việt Nam.
+    - Postgres tự tính đúng (`at time zone 'America/Los_Angeles'`). Vitest có case 14:00 ngày 1/11 và 15:00 ngày 2/11.
     - Nếu dùng ngày Việt Nam, một ngày của Google có thể nhận tới 2 × 400 lượt.
-  - Vitest có case quanh mốc 2026-11-01. Thông báo hết lượt trong ngày hiện giờ reset tính theo giờ Việt Nam.
-- **Chế độ AI giả** (`CHAT_AI_MOCK=1`): riêng giới hạn IP và trần chung nhân 100, vì e2e chạy song song và mọi request đều từ `127.0.0.1`. Giới hạn khách giữ nguyên để e2e "hết lượt" kiểm đúng số 10.
-- **Cooldown sau 429**:
-  - Gemini trả 429 thì trong 60 giây (hoặc theo `retryDelay` nếu có) server không gọi Gemini và **không trừ lượt** nào.
-  - Khách nhận ngay thông báo hết lượt miễn phí.
-  - Biến này nằm trong bộ nhớ instance: mỗi instance tự học, không cần DB.
-  - **Không gọi lại Gemini, không đổi model.**
+  - Thông báo hết lượt trong ngày hiện giờ reset (`resets_at`) đổi sang giờ Việt Nam.
+- **Chế độ AI giả** (`CHAT_AI_MOCK=1`):
+  - Chỉ có hiệu lực khi **cả hai** điều kiện đúng (cùng kiểu chốt chặn với `scripts/e2e-env.ts`):
+    - Host của `NEXT_PUBLIC_SUPABASE_URL` là `127.0.0.1` / `localhost`.
+    - **Không** có biến `VERCEL`.
+  - Ngược lại: bỏ qua mock, `console.warn` **một lần** mỗi instance (chỉ ghi "mock bị bỏ qua", không in giá trị env). Lúc đó nếu không có key thật thì `chatEnabled() = false`, bong bóng không hiện.
+  - Khi mock có hiệu lực: riêng giới hạn IP và trần chung nhân 100, vì e2e chạy song song và mọi request đều từ `127.0.0.1`. Giới hạn khách giữ nguyên để e2e "hết lượt" kiểm đúng số 10.
+  - `env.test.ts` có 3 trường hợp: mock + URL production → bỏ qua; mock + `VERCEL=1` (URL localhost) → bỏ qua; mock + localhost, không `VERCEL` → bật.
+
+### Phân loại 429 (`gemini.ts`)
+
+- Phân loại theo **body lỗi**, không theo `retryDelay`:
+  - `retryDelay` vẫn có kể cả khi đã hết lượt trong ngày.
+  - Một body có thể chứa cả loại PerMinute lẫn PerDay.
+- Body 429 (theo mô tả của chủ dự án; **lúc code đối chiếu với tài liệu chính thức**, khác thì báo) có `error.details[]` gồm:
+  - `@type: type.googleapis.com/google.rpc.QuotaFailure` với `violations[].quotaId`. Ví dụ: `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `GenerateRequestsPerMinutePerProjectPerModel-FreeTier`, `GenerateContentInputTokensPerModelPerMinute-FreeTier`.
+  - `@type: type.googleapis.com/google.rpc.RetryInfo` với `retryDelay` (VD `"55s"`).
+- Quy tắc, hàm thuần `classify429(body)`:
+
+| Body | Loại | Cooldown (trong bộ nhớ instance) | Câu hiện cho khách |
+|---|---|---|---|
+| Có **ít nhất một** `quotaId` chứa `PerDay` (kể cả khi có thêm `PerMinute`) | hết lượt trong ngày | tới **0h `America/Los_Angeles` kế tiếp** | `CHAT_FREE_QUOTA`, `scope: gemini_day`, `resets_at` → "hết lượt hôm nay … lúc {time}" |
+| Chỉ có `quotaId` chứa `PerMinute` | quá nhiều trong phút | `retryDelay` kẹp trong **10–60 giây** (không có `retryDelay` → 60 giây) | `CHAT_FREE_QUOTA`, `scope: gemini_minute` → "quá nhiều câu hỏi cùng lúc" |
+| Không đọc được body / không có `QuotaFailure` / `quotaId` không chứa PerDay hay PerMinute | không rõ | 60 giây | như loại phút |
+
+- Trong cooldown: không gọi Gemini, **không trừ lượt** nào, trả ngay `CHAT_FREE_QUOTA` cùng `scope` / `resets_at` của cooldown đang chạy. Không gọi lại, không đổi model.
+- Log chỉ status HTTP + các `quotaId`; không log body, câu hỏi, key.
+- Vitest với body mẫu:
+  - Chỉ PerDay.
+  - Chỉ PerMinute (`retryDelay` `"55s"` → 55 s; `"3s"` → 10 s; `"120s"` → 60 s; thiếu → 60 s).
+  - Token-per-minute (`GenerateContentInputTokensPerModelPerMinute-FreeTier`) → loại phút.
+  - **Cả PerDay + PerMinute → hết lượt trong ngày.**
+  - Body rỗng / không phải JSON / `details` lạ → 60 s.
+  - `resets_at` đúng quanh mốc đổi giờ (14:00 ngày 1/11, 15:00 ngày 2/11 giờ VN).
 
 ## DB / migration
 
-File `supabase/migrations/20261018100000_chat_quota.sql` (tên sẽ chốt lúc code), idempotent, **chỉ thêm, không đổi gì cũ**. Chép y nguyên vào `schema.sql` mục 14 mới, cập nhật danh sách RPC + mã lỗi ở cuối file (Vitest `migrations.test.ts`).
+File **`supabase/migrations/20261018100000_chat_quota.sql`** (đã viết, **chưa chạy**), idempotent, **chỉ thêm, không đổi gì cũ**. Nội dung y hệt nằm trong `schema.sql` mục 14 (Vitest `migrations.test.ts` kiểm, kèm 4 test riêng cho bộ đếm). Danh sách RPC + mã lỗi ở cuối `schema.sql` đã cập nhật.
 
-```sql
-create extension if not exists pgcrypto with schema extensions;   -- digest(), gen_random_bytes()
-
--- Bộ đếm: schema private → PostgREST không lộ ra; RLS bật, không policy (quy ước "RLS mọi bảng")
-create table if not exists private.chat_quota (
-  bucket       text        not null check (char_length(bucket) <= 80),  -- 'visitor:hour:<hash>', 'gemini:day'…
-  window_start timestamptz not null,
-  used         int         not null default 0 check (used >= 0),
-  primary key (bucket, window_start)
-);
-create index if not exists chat_quota_window_idx on private.chat_quota (window_start);
-alter table private.chat_quota enable row level security;
-
--- Token của server web: chỉ lưu sha256, không lưu token
-create table if not exists private.chat_settings (
-  id         boolean primary key default true check (id),
-  token_hash bytea not null,
-  updated_at timestamptz not null default now()
-);
-alter table private.chat_settings enable row level security;
-```
+- **Không cần extension**: `sha256()` và `gen_random_uuid()` có sẵn từ Postgres 13, nên không cần `pgcrypto`.
+- **Bảng**: hai bảng, đều trong schema `private` (PostgREST không lộ), RLS bật, không policy, `revoke all` khỏi `public, anon, authenticated`.
+  - `private.chat_quota(bucket, window_start, used)`, khóa chính `(bucket, window_start)`, index `window_start`.
+  - `private.chat_settings(id = true, token_hash bytea, updated_at)`: một dòng, chỉ lưu sha256 của token.
+- `private.chat_quota_take(bucket, window, limit, error, scope, resets_at)`: upsert +1; vượt `limit` → `raise <error>` với detail `{"scope", "resets_at"}`.
 
 **`public.consume_chat_quota(p_token text, p_visitor text, p_ip text, p_limits jsonb) returns jsonb`**, `security definer`, `set search_path = ''`, `volatile`:
 
-1. `p_token` rỗng, hoặc sha256 không khớp `chat_settings` → `raise 'FORBIDDEN'`. Chưa có dòng settings → `'CHAT_DISABLED'`. Không đụng bảng đếm.
-2. Kiểm tham số:
-   - `p_visitor` / `p_ip` khớp `^[0-9a-f]{32}$` (`p_ip` được null).
-   - `p_limits` có đủ 6 khóa số nguyên trong khoảng 1–100.000.
-   - Sai → `'INVALID_INPUT'`.
-3. Cộng các bucket bằng `insert … on conflict (bucket, window_start) do update set used = used + 1 returning used`:
-   - `p_visitor` khác null (câu hỏi mới): cộng `visitor:hour`, `visitor:day` (ngày VN) và `ip:hour`, `ip:day` nếu có `p_ip`.
-   - **Luôn** cộng `gemini:minute` và `gemini:day` (ngày `America/Los_Angeles`). Mỗi lời gọi RPC = một vé cho **một** lượt gọi Gemini.
-   - `p_visitor = null`: chỉ cộng trần chung. Dành cho lượt gọi lại, hiện không dùng.
-   - Vượt giới hạn:
-     - Bucket của khách → `raise 'CHAT_QUOTA_EXCEEDED' using detail = '{"scope":"visitor_hour","retry_after":<giây>}'`.
-     - Trần chung → `raise 'CHAT_FREE_QUOTA' using detail = '{"scope":"gemini_day","resets_at":"<timestamptz>"}'`. `resets_at` là 0h Los Angeles kế tiếp; app đổi sang giờ Việt Nam để hiện.
-   - Exception làm **rollback toàn bộ** các lần cộng trước đó trong lượt, nên không bucket nào bị trừ oan.
-   - Bucket của khách được xét trước trần chung, để thông báo đúng phạm vi.
-4. **Dọn dữ liệu**: khi dòng `gemini:day` của ngày mới vừa tạo (`used = 1`, tức một lần mỗi ngày): `delete from private.chat_quota where window_start < now() - interval '3 days'`. Không cần pg_cron.
+1. Chưa có dòng settings → `CHAT_DISABLED`. `p_token` null hoặc sha256 không khớp → `FORBIDDEN`. Cả hai đều chặn **trước** mọi thao tác ghi.
+2. Kiểm tham số → `INVALID_INPUT` (detail `{"field": …}`):
+   - `p_visitor`: null hoặc 32 hex.
+   - `p_ip`: null hoặc 32 hex, và chỉ được có khi có `p_visitor`.
+   - `p_limits`: đủ 6 khóa `visitorPerHour`, `visitorPerDay`, `ipPerHour`, `ipPerDay`, `geminiCallsPerMinute`, `geminiCallsPerDay`, mỗi khóa là số nguyên 1–100.000.
+3. Cộng bucket. Bucket của khách xét trước trần chung:
+   - `p_visitor` khác null: `visitor:hour:<hmac>` (giờ UTC), `visitor:day:<hmac>` (ngày `Asia/Ho_Chi_Minh`). Có `p_ip` thì thêm `ip:hour:<hmac>`, `ip:day:<hmac>`. Vượt → `CHAT_QUOTA_EXCEEDED`, scope `visitor_hour` | `visitor_day` | `ip_hour` | `ip_day`.
+   - **Luôn** cộng `gemini:minute` và `gemini:day` (ngày `America/Los_Angeles`, cộng 1 ngày trên giờ địa phương nên đúng cả ngày đổi giờ). Vượt → `CHAT_FREE_QUOTA`, scope `gemini_minute` | `gemini_day`. `resets_at` = đầu cửa sổ kế tiếp.
+   - Mỗi lời gọi = một vé cho **một** lượt gọi Gemini. `p_visitor = null` chỉ cộng trần chung (dành cho lượt gọi lại, hiện không dùng).
+   - Exception rollback mọi lần cộng trước đó trong cùng lời gọi, nên không bucket nào bị trừ oan.
+   - Cửa sổ tính theo múi giờ cố định, không phụ thuộc `TimeZone` của phiên.
+4. **Dọn dữ liệu**: khi `gemini:day` của ngày mới vừa lên 1 (một lần mỗi ngày Los Angeles): `delete … where window_start < now() - interval '3 days'`. Không cần pg_cron.
 5. Trả `{"ok": true}`.
 
-**`public.set_chat_quota_token(p_token text)`**: ghi `digest(p_token,'sha256')`. Chỉ `service_role` gọi được (e2e local đặt token cố định). **`private.new_chat_quota_token()`**: sinh token 32 byte hex, lưu hash, trả token. Chủ dự án chạy trong SQL Editor rồi dán vào Vercel.
+**Token**:
+
+- **`public.set_chat_quota_token(p_token)`**: nhận đúng 64 hex, lưu sha256. Chỉ `service_role` gọi được; e2e local dùng hàm này để đặt token cố định.
+- **`private.new_chat_quota_token()`**: sinh 64 hex từ 2 UUID v4 (244 bit, `pg_strong_random`), lưu hash, trả token. Chủ dự án chạy trong SQL Editor rồi đặt vào `CHAT_QUOTA_TOKEN` (Vercel + `.env.local`). Chạy lại = đổi token.
 
 Quyền:
 
-- `revoke execute … from public`.
-- `consume_chat_quota`: `grant` cho `anon, authenticated` (server gọi bằng khóa publishable).
-- `set_chat_quota_token`: chỉ `service_role`.
+- `consume_chat_quota`: `revoke … from public`, `grant` cho `anon, authenticated` (server gọi bằng khóa publishable).
+- `set_chat_quota_token`: `revoke … from public, anon, authenticated`, `grant` chỉ `service_role`.
+- `private.chat_quota_take`, `private.new_chat_quota_token`: `revoke … from public, anon, authenticated` (schema `private` vốn đã không cấp `usage`).
 
 **Ai gọi được `consume_chat_quota`, gọi bằng tham số giả thì sao**
 
@@ -327,23 +378,117 @@ Quyền:
 - Khách đã đăng nhập: `getCurrentUser().id`, không tính IP (theo yêu cầu).
 - **Không ghi IP thô** ở đâu cả, kể cả log.
 
-**Câu SQL kiểm tra** (chạy sau migration, trên SQL Editor):
+**Câu SQL kiểm tra sau migration** (chủ dự án chạy trong SQL Editor; K1–K4 chỉ đọc hoặc tự rollback):
 
 ```sql
--- 1. Bảng nằm trong private, RLS bật
-select relname, relrowsecurity from pg_class where relnamespace = 'private'::regnamespace and relname like 'chat_%';
--- 2. Quyền gọi hàm
-select p.proname, has_function_privilege('anon', p.oid, 'execute') anon,
-       has_function_privilege('service_role', p.oid, 'execute') service
-  from pg_proc p where p.proname in ('consume_chat_quota', 'set_chat_quota_token', 'new_chat_quota_token');
--- 3. Không token → FORBIDDEN / CHAT_DISABLED (mong đợi lỗi)
-select public.consume_chat_quota('sai', repeat('a', 32), null, '{"visitorPerHour":10,"visitorPerDay":30,"ipPerHour":40,"ipPerDay":120,"geminiCallsPerMinute":10,"geminiCallsPerDay":400}');
--- 4. Tạo token cho Vercel (CHỈ chạy khi sẵn sàng đặt env), rồi xem bộ đếm
-select private.new_chat_quota_token();
-select bucket, window_start, used from private.chat_quota order by window_start desc limit 20;
--- 5. Hành vi cũ không đổi: bảng / hàm khác giữ nguyên (diff schema.sql chỉ thêm mục 14 + danh sách RPC / mã lỗi)
+-- K1. Bảng mới nằm trong private, bật RLS. Mong đợi: 2 dòng, relrowsecurity = true
+select c.relname, c.relrowsecurity
+  from pg_class c
+ where c.relnamespace = 'private'::regnamespace
+   and c.relname in ('chat_quota', 'chat_settings');
+
+-- K2. Quyền gọi hàm. Mong đợi:
+--   public.consume_chat_quota     anon = true,  authenticated = true
+--   public.set_chat_quota_token   anon = false, authenticated = false, service_role = true
+--   private.chat_quota_take, private.new_chat_quota_token   anon = false, authenticated = false
+select n.nspname || '.' || p.proname as ham,
+       has_function_privilege('anon', p.oid, 'execute')          as anon,
+       has_function_privilege('authenticated', p.oid, 'execute') as authenticated,
+       has_function_privilege('service_role', p.oid, 'execute')  as service_role
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+ where p.proname in ('consume_chat_quota', 'set_chat_quota_token', 'chat_quota_take', 'new_chat_quota_token')
+ order by 1;
+
+-- K3. anon / authenticated không đọc / ghi được bảng. Mong đợi: toàn false
+select t.tbl,
+       has_table_privilege('anon', t.tbl, 'select')          as anon_select,
+       has_table_privilege('anon', t.tbl, 'insert')          as anon_insert,
+       has_table_privilege('authenticated', t.tbl, 'select') as auth_select,
+       has_table_privilege('authenticated', t.tbl, 'update') as auth_update
+  from (values ('private.chat_quota'), ('private.chat_settings')) as t(tbl);
+
+-- K4. Thử hành vi. Cả khối kết thúc bằng một lỗi CÓ CHỦ Ý → mọi thay đổi (token tạm, bộ đếm) bị rollback,
+--     không đụng token thật. Kết quả nằm trong thông báo lỗi "K4 XONG …"; đối chiếu cột "mong đợi".
+do $$
+declare
+  tmp_token text  := repeat('0', 64);   -- token tạm, chỉ sống trong khối này
+  v1        text  := repeat('a', 32);   -- khách giả 1
+  v2        text  := repeat('b', 32);   -- khách giả 2
+  ip        text  := repeat('c', 32);
+  lim       jsonb := '{"visitorPerHour":1,"visitorPerDay":30,"ipPerHour":60,"ipPerDay":200,"geminiCallsPerMinute":1000,"geminiCallsPerDay":100000}';
+  out       text  := '';
+  r         text;
+  d         text;
+begin
+  begin perform public.consume_chat_quota('sai', v1, null, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n1. token sai, chưa đặt token | mong đợi CHAT_DISABLED (FORBIDDEN nếu đã đặt token thật) | ' || r;
+
+  perform public.set_chat_quota_token(tmp_token);
+
+  begin perform public.consume_chat_quota('sai', v1, null, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n2. token sai | mong đợi FORBIDDEN | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, v1, ip, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n3. khách 1, câu 1 (giới hạn 1 / giờ) | mong đợi ok | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, v1, ip, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n4. khách 1, câu 2 | mong đợi CHAT_QUOTA_EXCEEDED scope visitor_hour | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, v2, null, jsonb_set(lim, '{geminiCallsPerMinute}', '1')); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n5. khách 2, trần chung 1 / phút (bước 3 đã dùng 1) | mong đợi CHAT_FREE_QUOTA scope gemini_minute | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, v2, null, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n6. khách 2 hỏi lại (giới hạn 1 / giờ) | mong đợi ok (bước 5 bị chặn đã rollback, không trừ oan) | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, null, null, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n7. vé gọi lại (p_visitor null) | mong đợi ok | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, null, ip, lim); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n8. có IP mà không có khách | mong đợi INVALID_INPUT field ip | ' || r;
+
+  begin perform public.consume_chat_quota(tmp_token, v1, null, lim - 'geminiCallsPerDay'); r := 'ok';
+  exception when others then get stacked diagnostics d = pg_exception_detail; r := sqlerrm || ' ' || coalesce(d, ''); end;
+  out := out || E'\n9. thiếu khóa giới hạn | mong đợi INVALID_INPUT field geminiCallsPerDay | ' || r;
+
+  select string_agg(split_part(q.bucket, ':', 1) || ':' || split_part(q.bucket, ':', 2) || '=' || q.used, ', ' order by q.bucket)
+    into r
+    from private.chat_quota q
+   where q.bucket like '%:' || v1 or q.bucket like '%:' || v2 or q.bucket like '%:' || ip
+      or (q.bucket = 'gemini:minute' and q.window_start = date_trunc('minute', now() at time zone 'UTC') at time zone 'UTC')
+      or (q.bucket = 'gemini:day'
+          and q.window_start = date_trunc('day', now() at time zone 'America/Los_Angeles') at time zone 'America/Los_Angeles');
+  out := out || E'\n10. bộ đếm | mong đợi gemini:day=3, gemini:minute=3, ip:day=1, ip:hour=1, visitor:day=1, visitor:day=1, visitor:hour=1, visitor:hour=1 (gemini cộng thêm lượt thật nếu web đã chạy) | ' || coalesce(r, '(trống)');
+
+  raise exception 'K4 XONG (lỗi có chủ ý để rollback, không để lại dữ liệu):%', out;
+end $$;
 ```
 
+Sau K1–K4, **khi sẵn sàng đặt env**:
+
+```sql
+-- K5. Sinh token thật (chạy lại = đổi token). Chép giá trị vào CHAT_QUOTA_TOKEN ở .env.local và Vercel (Production)
+select private.new_chat_quota_token();
+
+-- K6. Sau khi web chạy: xem bộ đếm, kiểm dọn dữ liệu (min(window_start) không cũ hơn ~3 ngày)
+select bucket, window_start, used from private.chat_quota order by window_start desc limit 20;
+select count(*) as so_dong, min(window_start) as cu_nhat from private.chat_quota;
+```
+
+- Hành vi cũ không đổi: diff `schema.sql` chỉ thêm mục 14 và vài dòng trong danh sách RPC / mã lỗi; không bảng / hàm cũ nào bị sửa.
+- Đọc số ở bước 10:
+  - Bước 3, 6, 7 thành công, mỗi bước +1 `gemini:minute` / `gemini:day` → **3**.
+  - Bước 4, 5 bị chặn nên rollback cả lần cộng của chính nó; bước 8, 9 bị chặn trước khi ghi.
+  - Mỗi khách giả 1 lượt giờ + 1 lượt ngày; IP 1 + 1.
+  - Hiếm khi bước 3 và bước 5 rơi vào hai phút khác nhau (chạy đúng lúc sang phút) → bước 5 ra `ok`; chạy lại K4.
 Sau khi chủ dự án chạy migration: sinh lại `src/types/database.ts`. Phần gọi RPC cần types mới mới typecheck được, nên chạy migration **sớm** (★ 13).
 
 ## Prompt
@@ -406,7 +551,14 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 - Lịch sử nằm ở các `contents` trước đó:
   - Lượt `user` chỉ có `<khach>…</khach>`, không lặp danh sách sách, để tiết kiệm token.
   - Lượt `model` là JSON rút gọn của câu trả lời cũ (`message`, slug, `follow_up`).
-- Trong câu của khách, server xóa chuỗi `<khach>` / `</khach>` và ký tự điều khiển.
+- **Lịch sử do client gửi lên là dữ liệu không tin cậy**, xử lý như câu của khách:
+  - zod (`historySchema`, `.strip()` bỏ trường lạ), tối đa 4 lượt, mỗi lượt gồm:
+    - `user: string` ≤ 300 ký tự.
+    - `model: { message ≤ 600, follow_up ≤ 200, slugs: tối đa 3 chuỗi đúng định dạng slug }`. Không nhận `reason`, `intent`, tên sách, giá hay trường nào khác.
+  - Quá dài, sai kiểu → `INVALID_INPUT` (client chỉ gửi đúng dữ liệu nó nhận từ server nên bình thường không xảy ra).
+  - Xóa `<khach>` / `</khach>` (mọi biến thể hoa / thường, có khoảng trắng) và ký tự điều khiển ở **mọi** lượt lịch sử, cả `user` lẫn `model`, không chỉ câu hiện tại.
+  - Server **tự dựng lại** lượt `model` thành JSON rút gọn từ các trường đã validate. Không chuyển nguyên văn chuỗi client gửi. Slug lạ trong lịch sử bị bỏ (không có trong catalog).
+  - Vitest: lịch sử có trường lạ (bị bỏ), quá dài (lỗi), chứa `<khach>` / `</KHACH >` (bị xóa), slug sai định dạng, lượt `model` cố nhét chỉ dẫn vào `message` (vẫn chỉ là dữ liệu trong JSON).
 
 **`responseJsonSchema`**:
 
@@ -450,9 +602,10 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
     - Câu **có dấu** → so với danh sách cụm có dấu: `tự tử`, `tự sát`, `muốn chết`, `không muốn sống`, `chán sống`, `kết liễu`, `rạch tay`, `uống thuốc ngủ`, `nhảy cầu tự`, `làm hại bản thân`, `không còn lý do để sống`…
     - Câu **không dấu** → so với danh sách không dấu: `tu tu chet`, `muon tu tu`, `tu sat`, `muon chet`, `khong muon song`, `chan song`, `ket lieu`, `rach tay`… Tiếng Anh: `suicide`, `kill myself`, `end my life`, `want to die`, `self harm`.
   - Tách hai trường hợp để "từ từ" (bỏ dấu thành `tu tu`) không bị bắt nhầm. Vitest có case dương tính và âm tính ("từ từ", "chết cười", "đẹp muốn chết").
-  - Khớp thì trả câu cố định (messages `chat.crisis`), không thẻ sách, không trừ lượt, không gọi AI.
+  - Khớp thì trả câu cố định (messages `chat.crisis`), không thẻ sách, không trừ lượt, không gọi AI. Chạy **trước** bước kiểm khu vực.
 - **Lớp 2**: mục AN TOÀN của system prompt + `intent = "crisis"` → server thay bằng cùng câu cố định.
-- **Câu cố định (nháp)**: "Mây rất tiếc khi bạn đang phải trải qua cảm giác này. Bạn không cần một mình đối mặt với nó: hãy nói chuyện ngay với người thân hoặc một người bạn tin tưởng, hoặc tìm tới chuyên gia tâm lý, bác sĩ gần nhất. Nếu bạn đang gặp nguy hiểm, hãy gọi cấp cứu. ★ [số đường dây hỗ trợ: chủ dự án điền sau khi kiểm chứng]". Không tự điền số.
+- **Câu cố định** (`messages/vi.json` → `chat.crisis`, để dễ sửa): "Mây rất tiếc khi bạn đang phải trải qua cảm giác này. Bạn không cần một mình đối mặt với nó: hãy nói chuyện ngay với người thân hoặc một người bạn tin tưởng, hoặc tìm tới chuyên gia tâm lý, bác sĩ gần nhất. Nếu bạn đang gặp nguy hiểm, hãy gọi cấp cứu 115. Bạn cũng có thể gọi đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật)."
+  - `owner-todo.md`: chủ dự án kiểm lại số và giờ trên duongdaynongngaymai.vn **trước khi bật chat trên web thật**.
 - **Ngoài phạm vi**: prompt + `intent = "off_topic"` → từ chối lịch sự, gợi một hướng sách, không thẻ.
 
 ## UI
@@ -493,7 +646,17 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 **Nội dung khung**
 
-- Dòng nhắc luôn hiện, chữ nhỏ màu `subtle`: "Mây dùng AI (Google Gemini) nên có thể sai. Đừng nhập thông tin cá nhân: ở gói miễn phí, nội dung bạn gửi có thể được Google dùng và người của Google đọc để cải thiện dịch vụ." (★ 10: thêm "Dành cho người từ 18 tuổi").
+- **Bước xác nhận 18+** (★ 10), lần đầu mở khung:
+  - Hiện dòng nhắc đầy đủ:
+    - Mây dùng AI (Google Gemini) nên có thể sai.
+    - Đừng nhập thông tin cá nhân.
+    - Ở gói miễn phí, Google có thể dùng nội dung bạn gửi (và người của Google có thể đọc) để cải thiện dịch vụ.
+    - Mây dành cho người từ 18 tuổi.
+  - Nút `primary` "Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây".
+  - Chưa bấm: ô nhập, nút gửi và chip gợi ý bị khóa (`disabled`, `aria-describedby` trỏ tới dòng nhắc).
+  - Bấm rồi: nhớ trong `sessionStorage` (`may-age-ok`, đọc / ghi bọc `try/catch`; lỗi thì nhớ trong bộ nhớ của tab), focus chuyển vào ô nhập.
+  - Action nhận `ageConfirmed: true` (thiếu → `INVALID_INPUT`). Đây chỉ là bằng chứng khách đã bấm, không phải xác minh tuổi; gọi thẳng action bỏ qua được, chấp nhận.
+- Sau khi xác nhận, dòng nhắc ngắn vẫn hiện thường trực, chữ nhỏ màu `subtle`: "AI có thể sai · Đừng nhập thông tin cá nhân · Gói miễn phí: Google có thể dùng nội dung bạn gửi · Từ 18 tuổi".
 - Lời chào + 3 chip gợi ý:
   - Trang thường: "Mình đang thấy mông lung, lạc hướng", "Sách nhẹ nhàng đọc cuối tuần", "Sách cho người mới khởi nghiệp".
   - Trang sách: "Cuốn này nói về gì?", "Cuốn này hợp với ai?", "Có cuốn nào tương tự không?", kèm nhãn "Đang hỏi về cuốn đang xem" (tên sách lấy từ câu trả lời của server).
@@ -515,7 +678,7 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
     - Hết trong phút, hoặc 429 / cooldown (không biết chắc là theo phút hay theo ngày):
       - vi: "Mây đang nhận quá nhiều câu hỏi cùng lúc và đã chạm giới hạn lượt dùng miễn phí. Website vẫn hoạt động bình thường. Bạn thử lại sau khoảng một phút, hoặc tìm sách bằng ô tìm kiếm / xem theo thể loại nhé."
       - en: "Mây is getting too many questions right now and has reached its free usage limit. The website is working normally. Please try again in about a minute, or use the search box or browse by category."
-  - `{time}` do server tính từ `resets_at` (14:00, từ 2026-11-01 là 15:00) và điền bằng `fillTemplate`.
+  - `{time}` do server tính từ `resets_at` (14:00; 15:00 từ ngày 2/11) và điền bằng `fillTemplate`.
   - Kèm hai link (`Link`):
     - "Tìm sách / Search" → `/tim-kiem`.
     - Tối đa 4 danh mục gốc (lấy từ `getCategories()` đã cache, server truyền qua props) → `/danh-muc/<slug>`.
@@ -535,58 +698,62 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 ## Cần chọn (★ = đề xuất)
 
-1. **Model** (**đã chốt**):
+Tất cả ★ đã chốt (2026-10-18). Đánh dấu ✅ = đồng ý như đề xuất, ✏️ = chủ dự án đổi.
+
+1. ✅ **Model** (**đã chốt**):
    - Mặc định `gemini-3.5-flash-lite`.
    - `GEMINI_MODEL=gemini-3.1-flash-lite` đổi được không cần sửa code. Bản này tắt vào 2027-05-07.
    - Không tự đổi model khi 429.
    - Các model Flash khác chỉ 20 RPD nên không dùng.
-2. **Số free tier** (**đã chốt**, AI Studio 2026-10-18): 15 RPM / 250K TPM / 500 RPD cho cả hai model. Trần chung **10 lượt gọi Gemini / phút, 400 / ngày** (ngày Los Angeles). Trần theo khách 10 câu / giờ, 30 câu / ngày.
-3. **API**:
+2. ✅ **Số free tier** (**đã chốt**, AI Studio 2026-10-18): 15 RPM / 250K TPM / 500 RPD cho cả hai model. Trần chung **10 lượt gọi Gemini / phút, 400 / ngày** (ngày Los Angeles). Trần theo khách 10 câu / giờ, 30 câu / ngày.
+3. ✅ **API**:
    - ★ `generateContent` REST bằng `fetch` (0 dependency), structured output qua `responseJsonSchema`.
    - Interactions API mới: tài liệu còn đổi nhiều.
    - `@google/genai` SDK: thêm dependency, không cần.
-4. **Kênh client → server**:
+4. ✅ **Kênh client → server**:
    - ★ Server Action `askMay` trong `features/chat/actions.ts`, theo quy ước: `Result<T>`, Next tự kiểm Origin, không có URL public để spam.
    - Route Handler `POST /api/chat`: dễ gọi bằng curl, phải tự kiểm Origin.
-5. **Chặn gọi thẳng RPC**:
+5. ✅ **Chặn gọi thẳng RPC**:
    - ★ Token server `CHAT_QUOTA_TOKEN` (biến bí mật thứ hai trên Vercel).
    - Không token: chấp nhận rủi ro DoS / phình bảng ở trên.
-6. **Giới hạn theo IP của khách**: ★ 40 / giờ, 120 / ngày (cả lớp sau một IP NAT vẫn dùng được; mỗi máy vẫn bị 10 / giờ theo cookie). Phương án khác: bằng giới hạn khách (10 / 30), khi đó cả lớp chỉ được 10 lượt / giờ.
-7. **Mốc mobile**: ★ < 640px (`sm`) là tấm toàn màn hình. Phương án khác: < 768px (`md`), khi đó tablet dọc cũng toàn màn hình.
-8. **Trang đăng nhập / đăng ký**: ★ không có bong bóng (chỉ layout `(shop)`), vì là form cần tập trung. Phương án khác: thêm vào layout `(auth)`.
-9. **EEA / Anh / Thụy Sĩ**: ★ server trả `CHAT_REGION` theo `x-vercel-ip-country`, không gọi AI (điều khoản: chỉ gói trả phí). Phương án khác: bỏ qua.
-10. **Tuổi 18+**: ★ thêm "Dành cho người từ 18 tuổi" vào dòng nhắc. Điều khoản cấm ứng dụng dễ được người dưới 18 dùng; nhà sách có danh mục thiếu nhi nên đây là vùng xám, chủ dự án quyết. Phương án khác: không ghi.
-11. **Tránh nút "Thêm vào giỏ"**: ★ ẩn bong bóng khi phần tử `data-chat-avoid` đi vào dải đáy. Phương án khác: đẩy bong bóng lên cao cố định trên trang sách (tốn chỗ, vẫn có thể chạm khi cuộn).
-12. **Thử request thật**: ★ cho phép Claude chạy `npm run dev` (dùng key trong `.env.local`, Claude không mở file) và gửi **≤ 10 lượt thật** qua khung chat để chốt dạng structured output và đo token. Ngoài ra không gọi Gemini thật ở đâu khác.
-13. **Thứ tự**: ★ viết migration trước rồi dừng; chủ dự án duyệt + chạy SQL (gồm `private.new_chat_quota_token()`), rồi Claude sinh lại types, rồi mới code phần gọi RPC.
-14. **Lịch sử chat phía client**: ★ chỉ trong bộ nhớ (giữ khi chuyển trang trong `(shop)`, mất khi tải lại). Phương án khác: `sessionStorage` (vẫn trên máy khách, không DB).
-15. **Namespace `chat`**: ★ chỉ ở `vi.json`, mở rộng ngoại lệ của `messages.test.ts` giống `admin`. Phương án khác: dịch cả `en.json` dù không bao giờ hiện.
-16. **Sửa CLAUDE.md** (mục Bảo mật), thêm ngoại lệ:
+6. ✏️ **Giới hạn theo IP của khách**: **60 câu / giờ, 200 câu / ngày** (chỉ khách chưa đăng nhập). Demo cả lớp dùng chung một IP; trần chung 10 / phút, 400 / ngày vẫn là chốt chặn chính. Mỗi máy vẫn bị 10 / giờ theo cookie.
+7. ✅ **Mốc mobile**: ★ < 640px (`sm`) là tấm toàn màn hình. Phương án khác: < 768px (`md`), khi đó tablet dọc cũng toàn màn hình.
+8. ✅ **Trang đăng nhập / đăng ký**: ★ không có bong bóng (chỉ layout `(shop)`), vì là form cần tập trung. Phương án khác: thêm vào layout `(auth)`.
+9. ✅ **EEA / Anh / Thụy Sĩ**: server trả `CHAT_REGION` theo `x-vercel-ip-country` ∈ `BLOCKED_COUNTRIES` (32 mã, `config.ts`), không gọi AI. Không có header (local) → cho qua. Bộ lọc tự hại chạy trước nên khách ở đâu cũng nhận được câu hỗ trợ.
+10. ✏️ **Tuổi 18+**: **bước xác nhận** "Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây" trước khi hỏi (mục UI → Nội dung khung), không chỉ một dòng chữ.
+11. ✅ **Tránh nút "Thêm vào giỏ"**: ★ ẩn bong bóng khi phần tử `data-chat-avoid` đi vào dải đáy. Phương án khác: đẩy bong bóng lên cao cố định trên trang sách (tốn chỗ, vẫn có thể chạm khi cuộn).
+12. ✅ **Thử request thật**: ≤ 10 lượt thật qua `npm run dev`, **chỉ sau khi chủ dự án báo đã thêm `CHAT_QUOTA_TOKEN` vào `.env.local`**. Claude không mở `.env.local`. Không bao giờ gọi Gemini thật trên CI hay e2e.
+13. ✅ **Thứ tự**: viết migration xong thì **dừng**, đưa file cho chủ dự án kiểm trước khi chạy; chủ dự án chạy SQL (gồm `private.new_chat_quota_token()`), rồi Claude sinh lại types, rồi mới code server / UI.
+14. ✅ **Lịch sử chat phía client**: ★ chỉ trong bộ nhớ (giữ khi chuyển trang trong `(shop)`, mất khi tải lại). Phương án khác: `sessionStorage` (vẫn trên máy khách, không DB).
+15. ✅ **Namespace `chat`**: ★ chỉ ở `vi.json`, mở rộng ngoại lệ của `messages.test.ts` giống `admin`. Phương án khác: dịch cả `en.json` dù không bao giờ hiện.
+16. ✅ **Sửa CLAUDE.md** (mục Bảo mật), thêm ngoại lệ:
     > **Ngoại lệ (Phase 11)**: `GEMINI_API_KEY` và `CHAT_QUOTA_TOKEN` là khóa bí mật **chỉ ở server**, được đặt trên **Vercel** (Production, không cần cho Preview) vì chatbot không chạy được nếu thiếu. Không tiền tố `NEXT_PUBLIC_`, không đặt lên GitHub (CI dùng AI giả `CHAT_AI_MOCK=1` + token e2e cố định), không đọc trong `scripts/`. Project Google của key **không gắn billing** (chi phí = 0). Lộ key → thu hồi ở AI Studio; lộ token → chạy lại `private.new_chat_quota_token()`.
-17. **Rà mô tả sách**:
-    - ★ Script chỉ đọc `scripts/audit-descriptions.ts`: dùng **khóa publishable** (anon, RLS → chỉ sách đang hiện, đúng phần chatbot thấy), in bảng ra stdout, Claude chép vào `data.md`. Script đọc `.env.local` qua `process.loadEnvFile` như `import:books`, nên cần duyệt theo CLAUDE.md.
-    - Phương án khác: Claude đưa câu SQL, chủ dự án chạy trong SQL Editor rồi dán kết quả (gồm cả sách đang ẩn).
-18. **Sách hết hàng**: ★ không gợi ý, trừ cuốn đang xem. Phương án khác: gợi ý kèm nhãn "Hết hàng".
-19. **Timeout Gemini**: ★ 10 giây, không retry ("một lượt gọi AI một lần"). Nếu sau này thêm retry, mỗi lần gọi lại vẫn phải xin vé trần chung (mục Luồng).
+17. ✏️ **Rà mô tả sách**: **không** viết script. Claude viết câu SQL chỉ `SELECT` (mục Kiểm tra dữ liệu mô tả), gồm cả sách đang ẩn, có cột ẩn / hiện. Chủ dự án chạy trong SQL Editor rồi dán kết quả, Claude ghi vào `data.md`.
+18. ✅ **Sách hết hàng**: ★ không gợi ý, trừ cuốn đang xem. Phương án khác: gợi ý kèm nhãn "Hết hàng".
+19. ✅ **Timeout Gemini**: ★ 10 giây, không retry ("một lượt gọi AI một lần"). Nếu sau này thêm retry, mỗi lần gọi lại vẫn phải xin vé trần chung (mục Luồng).
 
 ## Checklist
 
 **DB / migration**
 
-- [ ] `supabase/migrations/<ts>_chat_quota.sql`: `pgcrypto`, `private.chat_quota`, `private.chat_settings`, `consume_chat_quota`, `set_chat_quota_token`, `private.new_chat_quota_token`, quyền. Idempotent (`if not exists`, `create or replace`, `drop policy if exists` nếu có).
-- [ ] `schema.sql`: mục 14 + danh sách RPC + mã lỗi `CHAT_QUOTA_EXCEEDED`, `CHAT_FREE_QUOTA`, `CHAT_DISABLED`, `FORBIDDEN`; `migrations.test.ts` qua.
+- [x] `supabase/migrations/20261018100000_chat_quota.sql`: `private.chat_quota`, `private.chat_settings`, `private.chat_quota_take`, `consume_chat_quota`, `set_chat_quota_token`, `private.new_chat_quota_token`, quyền. Idempotent (`if not exists`, `create or replace`, `revoke` / `grant`). Không cần `pgcrypto`.
+- [x] `schema.sql`: mục 14 + danh sách RPC + mã lỗi `CHAT_QUOTA_EXCEEDED`, `CHAT_FREE_QUOTA`, `CHAT_DISABLED`, `FORBIDDEN`; `migrations.test.ts` qua.
 - [ ] **Dừng**: chủ dự án duyệt SQL, chạy migration, chạy `select private.new_chat_quota_token()` → đặt `CHAT_QUOTA_TOKEN` (Vercel + `.env.local`).
 - [ ] Sinh lại `src/types/database.ts`.
 
 **Server API** (`src/features/chat/`)
 
-- [ ] `config.ts`, `schemas.ts` (input, history, output AI), `visibility.ts` (`isChatHidden`), `env.ts` (`chatEnabled`, mock chỉ khi `VERCEL_ENV !== 'production'`).
+- [ ] `config.ts`, `schemas.ts` (input, history, output AI), `visibility.ts` (`isChatHidden`), `env.ts` (`chatEnabled`; mock chỉ khi URL Supabase là localhost **và** không có `VERCEL`), `region.ts` (`isBlockedCountry`).
 - [ ] `queries.ts`: `getChatCatalog` (cache + tag `chat-catalog`), `getChatBookCards(slugs)` (tag `book:{id}`, RLS bỏ sách ẩn).
 - [ ] `candidates.ts` + `moods.ts`; `crisis.ts`; `quota.ts` (định danh, HMAC, cookie `may_vid`, client anon **không retry**, map lỗi RPC); `validate.ts`.
-- [ ] `gemini.ts`: `callGemini(ticket, request)`, nhận đúng một vé từ `consume_chat_quota` cho mỗi `fetch`. Có `fetch`, `AbortSignal.timeout`, model từ `GEMINI_MODEL` (`ALLOWED_MODELS`, mặc định `gemini-3.5-flash-lite`). Map lỗi → mã: 429 → `CHAT_FREE_QUOTA` + cooldown, không gọi lại; 5xx / `blockReason` / `finishReason` → `CHAT_UNAVAILABLE`. Kèm `mock.ts`.
+- [ ] `gemini.ts`: `classify429` (theo `quotaId`, mục Phân loại 429), `callGemini(ticket, request)`, nhận đúng một vé từ `consume_chat_quota` cho mỗi `fetch`. Có `fetch`, `AbortSignal.timeout`, model từ `GEMINI_MODEL` (`ALLOWED_MODELS`, mặc định `gemini-3.5-flash-lite`). Map lỗi → mã: 429 → `CHAT_FREE_QUOTA` + cooldown, không gọi lại; 5xx / `blockReason` / `finishReason` → `CHAT_UNAVAILABLE`. Kèm `mock.ts`.
 - [ ] `actions.ts`: `askMay(input) → Result<ChatReply>`.
 - [ ] `features/admin/cache-tags.ts`: thêm `chat-catalog`.
-- [ ] `lib/errors.ts` + `errors.*` (vi, en); `.env.example` (`GEMINI_API_KEY`, `CHAT_QUOTA_TOKEN`, `GEMINI_MODEL` tùy chọn); `scripts/check-env.mjs` (định dạng `AIza…` 39 ký tự, token 64 hex, nhóm 2 biến đi cùng nhau, `GEMINI_MODEL` rỗng hoặc thuộc danh sách cho phép).
+- [ ] `lib/errors.ts` + `errors.*` (vi, en); `.env.example` (`GEMINI_API_KEY`, `CHAT_QUOTA_TOKEN`, `GEMINI_MODEL` tùy chọn); `scripts/check-env.mjs`:
+  - `GEMINI_API_KEY` không khớp `AIza…` 39 ký tự → **chỉ cảnh báo**, không fail (Google có thể đổi định dạng key).
+  - `CHAT_QUOTA_TOKEN` phải đúng 64 ký tự hex (fail nếu sai).
+  - Hai biến đi cùng nhau.
+  - `GEMINI_MODEL` rỗng hoặc thuộc danh sách cho phép.
 
 **Prompt**
 
@@ -611,15 +778,14 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 **Tài liệu**
 
-- [ ] `data.md`: kết quả rà mô tả. `CLAUDE.md`: ngoại lệ khóa (★ 16), mục chatbot ngắn, quy ước safe-area. `owner-todo.md`: Gemini key, billing tắt, token, Vercel env, đọc rate limit ở AI Studio. `handoff.md`. Báo cáo ở đầu file này.
+- [ ] `data.md`: kết quả rà mô tả (từ kết quả SQL chủ dự án dán). `CLAUDE.md`: ngoại lệ khóa (★ 16), mục chatbot ngắn, quy ước safe-area. `owner-todo.md`: Gemini key, billing tắt, token, Vercel env, đọc rate limit ở AI Studio, **kiểm số 115 / Ngày Mai trên duongdaynongngaymai.vn trước khi bật chat**. `handoff.md`. Báo cáo ở đầu file này.
 
 ## File sẽ tạo / sửa
 
 - **Tạo**:
   - `supabase/migrations/<ts>_chat_quota.sql`
-  - `src/features/chat/{config,env,schemas,visibility,queries,candidates,moods,crisis,quota,prompt,gemini,mock,validate,actions,labels}.ts`, kèm `*.test.ts` cho các file logic thuần.
+  - `src/features/chat/{config,env,region,schemas,visibility,queries,candidates,moods,crisis,quota,prompt,gemini,mock,validate,actions,labels}.ts`, kèm `*.test.ts` cho các file logic thuần.
   - `src/features/chat/components/{chat-bubble,chat-panel,chat-reply,chat-book-card}.tsx`
-  - `scripts/audit-descriptions.ts` (★ 17)
   - `e2e/chat.spec.ts`, `e2e/chat-account.spec.ts`, `e2e/admin-chat.spec.ts`, `e2e/chat-quota.spec.ts`
 - **Sửa**:
   - `supabase/schema.sql`, `src/types/database.ts` (sinh lại)
@@ -639,8 +805,11 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - Cắt độ dài, xóa URL / thẻ / ký tự điều khiển.
   - `crisis` → câu cố định; `off_topic` → không thẻ; `non_vietnamese` → thêm câu thông báo.
 - `schemas`:
-  - Câu hỏi 0 / 300 / 301 ký tự, trim, history > 4 lượt.
+  - Câu hỏi 0 / 300 / 301 ký tự, trim, history > 4 lượt, thiếu `ageConfirmed`.
   - Hàm kiểm tay ở client cho cùng kết quả với zod.
+  - Lịch sử: trường lạ bị bỏ, lượt `user` > 300 / `message` > 600 / `follow_up` > 200 / > 3 slug → lỗi, `<khach>` / ký tự điều khiển bị xóa ở mọi lượt, lượt `model` được dựng lại từ trường đã validate.
+- `region`: 32 mã bị chặn (đủ 27 EU + IS, LI, NO + GB + CH), `VN` / `US` qua, không có header → qua, mã viết thường → chuẩn hóa.
+- `env`: mock + URL production → bỏ qua + cảnh báo một lần; mock + `VERCEL=1` → bỏ qua; mock + localhost → bật; không key thật, mock bị bỏ qua → `chatEnabled() = false`.
 - `candidates`:
   - Câu tâm trạng → có sách của danh mục khớp.
   - Có slug → cuốn đó đứng đầu.
@@ -654,17 +823,19 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - Lấy IP từ header.
   - Map lỗi RPC → mã: `CHAT_QUOTA_EXCEEDED` + scope; `CHAT_FREE_QUOTA` + `resets_at` (đổi ra giờ VN); `FORBIDDEN` / `CHAT_DISABLED` → `CHAT_UNAVAILABLE`.
   - Đọc bucket + cửa sổ: phút / giờ / ngày VN / ngày Los Angeles.
-  - Giờ reset của trần chung hiển thị 14:00 trước 2026-11-01 và 15:00 từ 2026-11-01 (giờ VN).
+  - Giờ reset của trần chung hiển thị 14:00 tới hết ngày 1/11/2026 và 15:00 từ ngày 2/11 (giờ VN).
   - **Vé**: số lần `fetch` tới Gemini = số vé đã cấp (gồm trường hợp giả lập gọi lại: mỗi lần gọi lại xin vé `p_visitor = null`); không có vé thì không `fetch`.
 - `config`: với mọi model trong `ALLOWED_MODELS`: 10 / phút < RPM, 400 / ngày < RPD, 10 × 8.000 < TPM. `GEMINI_MODEL` rỗng / lạ → mặc định. Giới hạn mock chỉ áp khi mock.
 - `prompt`: `fitPromptBudget` giữ ước tính (số ký tự / 2) ≤ 7.500 với 30 ứng viên dài nhất + 4 lượt lịch sử 300 ký tự + sách đang xem; bớt lịch sử trước, ứng viên sau, không dưới 2 lượt / 24 cuốn.
 - `gemini`:
-  - 429 → `CHAT_FREE_QUOTA` + bật cooldown, `fetch` chỉ được gọi **một** lần (không gọi lại, không đổi model); trong cooldown không gọi `fetch`, không trừ lượt. Timeout (fake timer) → `CHAT_UNAVAILABLE`.
+  - `classify429` với body mẫu (mục Phân loại 429, gồm body có cả PerDay + PerMinute → hết lượt trong ngày).
+  - 429 → `CHAT_FREE_QUOTA` + cooldown đúng loại, `fetch` chỉ được gọi **một** lần (không gọi lại, không đổi model); trong cooldown không gọi `fetch`, không trừ lượt, trả đúng `scope`. Log chỉ status + `quotaId`. Timeout (fake timer) → `CHAT_UNAVAILABLE`.
+  - `generationConfig.maxOutputTokens = 1200`.
   - URL request dùng model của `GEMINI_MODEL`.
   - 500, `blockReason`, `finishReason: SAFETY` / `MAX_TOKENS` → `CHAT_UNAVAILABLE`.
   - Body request chỉ có system prompt, contents, generationConfig: không user id, không email.
   - Mock: `fetch` không bao giờ được gọi.
-- `actions` (giả lập phụ thuộc): crisis không gọi quota / AI; cooldown không trừ lượt; thứ tự các bước.
+- `actions` (giả lập phụ thuộc): thứ tự các bước; crisis không gọi quota / AI và chạy trước khu vực (câu tự hại từ nước bị chặn vẫn nhận câu hỗ trợ); câu thường từ nước bị chặn → `CHAT_REGION`; cooldown không trừ lượt.
 - `visibility`: `/checkout`, `/checkout/success/x` ẩn; `/`, `/books/x`, `/cart` hiện.
 - `cache-tags`: mọi thay đổi sách / danh mục / tác giả có `chat-catalog`.
 - `migrations.test.ts` (đã có): migration mới nằm trong `schema.sql`.
@@ -687,6 +858,7 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - `[mock:429]` → khối hết lượt miễn phí **song ngữ** (đoạn vi + đoạn `lang="en"`), có chữ "miễn phí" / "free", link tìm kiếm + link danh mục bấm được, trang không lỗi, console sạch. Câu kế tiếp trong cooldown cũng ra khối đó và mock ghi nhận 0 lượt gọi thêm.
   - Câu tự hại → câu trả lời cố định, không thẻ.
   - Câu > 300 ký tự: textarea không cho gõ thêm; gọi action bằng 301 ký tự → `INVALID_INPUT`, hiện thông báo thân thiện.
+  - **Xác nhận 18+** (desktop + mobile): mở khung lần đầu → thấy dòng nhắc đầy đủ, ô nhập + chip bị khóa, không gửi được; bấm "Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây" → gửi được; đóng / mở lại trong cùng tab → không hỏi lại; tab mới (context mới) → hỏi lại. Các test khác xác nhận trước khi hỏi (helper `openChat(page)`).
   - Mobile: tấm phủ toàn khung, nút Đóng thấy được và hoạt động, focus về bong bóng, nền không cuộn.
   - Không che "Thêm vào giỏ": ở `/sach/sapiens`, cuộn qua nhiều vị trí (đầu trang, nút chạm đáy màn hình, cuối trang). Mỗi lần, hoặc bong bóng ẩn, hoặc khung của nó không giao với khung nút, và bấm được nút. Làm tương tự với nút "Thanh toán" ở giỏ.
 - `chat-account.spec.ts` (khớp `ACCOUNT_SPECS` sẵn, vì tên kết thúc bằng `account.spec.ts`):
@@ -707,12 +879,85 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 ## Kiểm tra dữ liệu mô tả
 
-- Bước code đầu tiên (★ 17): rà sách đang hiện trong DB, ghi vào `data.md` mục "Mô tả sách (Phase 11)". Chỉ đọc, không sửa dữ liệu. Bảng gồm:
-  - Thiếu mô tả.
-  - Mô tả < 150 ký tự.
-  - Sách `language = 'vi'` mà mô tả không có dấu tiếng Việt (chỉ tiếng Anh hoặc gõ không dấu).
-  - Mô tả còn HTML hoặc ký tự lỗi `¿` / `�`.
-  - Số sách mỗi danh mục còn hàng (để chỉnh `moods.ts`).
+- ★ 17 đã chốt: **không viết script**. Chủ dự án chạy hai câu SQL dưới đây trong SQL Editor (chỉ `SELECT`, không ghi gì), rồi dán kết quả. Claude ghi vào `data.md` mục "Mô tả sách (Phase 11)".
+- Phạm vi: **gồm cả sách đang ẩn**, cột `trang_thai` = `hiện` / `ẩn`. Chatbot chỉ thấy sách đang hiện.
+- Ngưỡng "quá ngắn": < 150 ký tự sau khi bỏ khoảng trắng đầu / cuối.
+- "Chỉ có tiếng Anh": sách `language = 'vi'` mà mô tả không có chữ có dấu tiếng Việt nào; gồm cả mô tả gõ không dấu. Sách `en` có mô tả tiếng Anh là bình thường.
+
+**A1. Tổng hợp theo danh mục** (để chỉnh `moods.ts` và biết danh mục nào thiếu dữ liệu):
+
+```sql
+-- Phase 11 · A1 · CHỈ ĐỌC. Tổng hợp mô tả sách theo danh mục, gồm cả sách đang ẩn.
+with b as (
+  select bk.id, bk.slug, bk.title, bk.language,
+         coalesce(p.slug || ' / ', '') || coalesce(c.slug, '(không danh mục)') as danh_muc,
+         case when bk.is_active then 'hiện' else 'ẩn' end                     as trang_thai,
+         bk.stock,
+         btrim(coalesce(bk.description, ''))                                   as d,
+         nullif(btrim(coalesce(bk.description_en, '')), '') is not null         as co_mo_ta_en
+    from public.books bk
+    left join public.categories c on c.id = bk.category_id
+    left join public.categories p on p.id = c.parent_id
+), f as (
+  select b.*,
+         char_length(b.d)                                     as do_dai,
+         b.d = ''                                             as thieu,
+         b.d <> '' and char_length(b.d) < 150                 as ngan,
+         -- sách tiếng Việt mà mô tả không có chữ có dấu (chỉ tiếng Anh, hoặc gõ không dấu)
+         b.language = 'vi' and b.d <> '' and b.d !~ '[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ\u0300-\u036f]' as vi_khong_dau,
+         b.d ~ '<[A-Za-z/!][^>]*>|&(amp|lt|gt|quot|apos|nbsp|#[0-9]+);'   as co_html,
+         b.d ~ '[¿�]'                                         as ky_tu_loi
+    from b
+)
+select danh_muc,
+       count(*)                                                  as tong,
+       count(*) filter (where trang_thai = 'hiện')               as dang_hien,
+       count(*) filter (where trang_thai = 'hiện' and stock > 0) as hien_con_hang,
+       count(*) filter (where thieu)                             as thieu_mo_ta,
+       count(*) filter (where ngan)                              as duoi_150,
+       count(*) filter (where vi_khong_dau)                      as vi_khong_dau,
+       count(*) filter (where co_html or ky_tu_loi)              as html_hoac_loi,
+       percentile_disc(0.5) within group (order by do_dai)       as trung_vi_do_dai
+  from f
+ group by rollup (danh_muc)
+ order by danh_muc nulls last;
+```
+
+**A2. Danh sách sách có vấn đề** (mỗi dòng một cuốn, `true` ở cột vấn đề):
+
+```sql
+-- Phase 11 · A2 · CHỈ ĐỌC. Sách thiếu mô tả / mô tả < 150 ký tự / sách Việt mà mô tả không dấu / còn HTML / ký tự lỗi.
+with b as (
+  select bk.id, bk.slug, bk.title, bk.language,
+         coalesce(p.slug || ' / ', '') || coalesce(c.slug, '(không danh mục)') as danh_muc,
+         case when bk.is_active then 'hiện' else 'ẩn' end                     as trang_thai,
+         bk.stock,
+         btrim(coalesce(bk.description, ''))                                   as d,
+         nullif(btrim(coalesce(bk.description_en, '')), '') is not null         as co_mo_ta_en
+    from public.books bk
+    left join public.categories c on c.id = bk.category_id
+    left join public.categories p on p.id = c.parent_id
+), f as (
+  select b.*,
+         char_length(b.d)                                     as do_dai,
+         b.d = ''                                             as thieu,
+         b.d <> '' and char_length(b.d) < 150                 as ngan,
+         -- sách tiếng Việt mà mô tả không có chữ có dấu (chỉ tiếng Anh, hoặc gõ không dấu)
+         b.language = 'vi' and b.d <> '' and b.d !~ '[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ\u0300-\u036f]' as vi_khong_dau,
+         b.d ~ '<[A-Za-z/!][^>]*>|&(amp|lt|gt|quot|apos|nbsp|#[0-9]+);'   as co_html,
+         b.d ~ '[¿�]'                                         as ky_tu_loi
+    from b
+)
+select id, slug, title, language, danh_muc, trang_thai, stock, do_dai,
+       thieu, ngan, vi_khong_dau, co_html, ky_tu_loi, co_mo_ta_en,
+       left(d, 80) as dau_mo_ta
+  from f
+ where thieu or ngan or vi_khong_dau or co_html or ky_tu_loi
+ order by trang_thai desc, thieu desc, do_dai, title;
+```
+
+- Dòng cuối của A1 (`danh_muc` trống) là tổng toàn bộ.
+- A2 xếp sách đang hiện trước (`'hiện' > 'ẩn'` theo thứ tự chữ).
 - Số sơ bộ (từ `scripts/out/preview-approved*.json` lúc import, **không phải DB**; admin có thể đã sửa):
   - 72 sách Việt: 1 thiếu mô tả, 4 dưới 150 ký tự, 4 không dấu.
   - 117 sách Anh: 3 thiếu mô tả, 12 dưới 150 ký tự.
@@ -721,38 +966,41 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 ## Việc của chủ dự án
 
-1. Duyệt plan, chọn ★.
+1. ✅ Duyệt plan, chọn ★ (2026-10-18).
 2. Google AI Studio:
    - Kiểm project của key **không gắn billing**.
    - Rate limit đã đọc (2026-10-18). Đọc lại khi đổi model, hoặc khi thấy 429 sớm hơn trần.
    - `GEMINI_API_KEY` đã có trong `.env.local`.
 3. Sau khi Claude viết migration: duyệt SQL → chạy trên Supabase → chạy các câu SQL kiểm tra → `select private.new_chat_quota_token()` → đặt `CHAT_QUOTA_TOKEN` vào `.env.local` + Vercel (Production).
 4. Vercel → Environment Variables: `GEMINI_API_KEY` (Production); `GEMINI_MODEL` chỉ khi muốn đổi sang `gemini-3.1-flash-lite`. Sau đó `npm run check:env`.
-5. ★ Số đường dây hỗ trợ, nếu muốn đưa vào câu trả lời cố định.
-6. Demo cả lớp: dặn mọi người hỏi giãn ra. Trần chung 10 lượt gọi / phút, 400 / ngày; ngày reset 14h giờ VN (15h từ 2026-11-01).
+5. Kiểm lại số 115 và đường dây Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật) trên duongdaynongngaymai.vn **trước khi bật chat trên web thật**; sai thì sửa `chat.crisis` trong `vi.json`.
+6. Demo cả lớp: dặn mọi người hỏi giãn ra. Trần chung 10 lượt gọi / phút, 400 / ngày; ngày reset 14h giờ VN (15h từ ngày 2/11).
 
 ## Rủi ro và cách xử lý
 
 | Rủi ro | Xử lý |
 |---|---|
-| **Hết lượt free tier** (RPD) giữa ngày | Trần chung 400 / 500 RPD, ngày Los Angeles (reset 14h, từ 2026-11-01 là 15h giờ VN). Chạm trần → khối song ngữ "hết lượt miễn phí, web không lỗi" + giờ có lượt lại + link tìm kiếm / danh mục; trang không hỏng, không gọi Gemini. Không bật billing nên không phát sinh chi phí. |
+| **Hết lượt free tier** (RPD) giữa ngày | Trần chung 400 / 500 RPD, ngày Los Angeles (reset 14h giờ VN, 15h từ ngày 2/11). Chạm trần → khối song ngữ "hết lượt miễn phí, web không lỗi" + giờ có lượt lại + link tìm kiếm / danh mục; trang không hỏng, không gọi Gemini. Không bật billing nên không phát sinh chi phí. |
 | **Google đổi / hạ giới hạn** mà không báo | Số free tier + ngày kiểm trong `config.ts`, Vitest bắt trần đặt sai. 429 → khối hết lượt miễn phí + cooldown 60 s, không trừ lượt, không gọi lại, không tự đổi model. Model tắt (404) → `CHAT_UNAVAILABLE`. `gemini-3.1-flash-lite` tắt 2027-05-07 (nếu đang dùng qua `GEMINI_MODEL` thì bỏ biến trước ngày đó). Theo dõi trang deprecations. |
-| **Nhiều người cùng lúc khi demo** | 10 lượt gọi / phút: 30 người bấm cùng lúc thì khoảng 20 người nhận khối "đang nhận quá nhiều câu hỏi…, thử lại sau khoảng một phút" trong phút đó. Cả lớp hỏi đều đặn vẫn chỉ được 400 câu / ngày cho toàn web. Giới hạn IP 40 / giờ đủ cho một lớp sau NAT. TPM không phải nút thắt (≤ 80K / 250K). Muốn nhiều hơn chỉ có cách chia nhóm demo, vì cả hai model Flash-Lite đều 15 RPM. |
+| **Nhiều người cùng lúc khi demo** | 10 lượt gọi / phút: 30 người bấm cùng lúc thì khoảng 20 người nhận khối "đang nhận quá nhiều câu hỏi…, thử lại sau khoảng một phút" trong phút đó. Cả lớp hỏi đều đặn vẫn chỉ được 400 câu / ngày cho toàn web. Giới hạn IP 60 / giờ, 200 / ngày đủ cho một lớp sau NAT. TPM không phải nút thắt (≤ 80K / 250K). Muốn nhiều hơn chỉ có cách chia nhóm demo, vì cả hai model Flash-Lite đều 15 RPM. |
 | **Chất lượng mô tả sách** | Thiếu / ngắn / tiếng Anh → gợi ý dựa vào tên, tác giả, danh mục. Prompt cấm bịa. Rà mô tả và báo trong `data.md`; bổ sung mô tả trong admin là việc riêng. |
 | **AI trả slug lạ / bịa nội dung** | `enum` slug trong schema + lọc ở server + thẻ dựng từ DB. Nội dung `reason` vẫn có thể sai, nên dòng nhắc ghi "có thể sai". |
 | **Prompt injection** | Câu khách nằm trong `<khach>`, prompt coi là dữ liệu. Đầu ra luôn qua schema + validate. Không render HTML / link. AI không có công cụ nào và không thấy dữ liệu riêng tư, nên bị lừa cũng không lộ được gì ngoài system prompt (không chứa bí mật). |
 | **Bộ lọc tự hại bắt nhầm** ("đẹp muốn chết", "chết cười", sách nghiên cứu về tự tử) **hoặc bỏ sót** | Lỗi thiên về an toàn: bắt nhầm chỉ khiến khách nhận câu hỗ trợ thay vì sách. Danh sách cụm giữ hẹp; "muốn chết" đi sau tính từ ("đẹp muốn chết") được loại bằng một ngoại lệ có Vitest. Lớp 2 (prompt) bù chỗ sót. |
-| **Điều khoản: dữ liệu được Google dùng, 18+, EEA** | Dòng nhắc trong khung, không gửi dữ liệu cá nhân, chặn khu vực (★ 9), ghi 18+ (★ 10). |
+| **Điều khoản: dữ liệu được Google dùng, 18+, EEA** | Dòng nhắc trong khung, không gửi dữ liệu cá nhân, chặn 32 nước (★ 9), bước xác nhận 18+ trước khi hỏi (★ 10; không xác minh được tuổi thật). |
 | **Lộ key Gemini / token** | Chỉ ở env server; `check:env` không in giá trị. Thu hồi key ở AI Studio, đổi token bằng SQL. |
 | **Độ trễ** (Gemini 1–4 s + quota RPC) | Trạng thái "Mây đang tìm sách…". Timeout 10 s. Không chặn trang (chat là client leaf). |
 | **`generateContent` bị gắn "Legacy"** | Gói gọn trong `gemini.ts`. Có thông báo tắt thì chuyển sang Interactions API. |
 
 ## Tiến độ
 
-- [x] Plan (file này)
-- [ ] Duyệt ★
-- [ ] Rà mô tả → `data.md`
-- [ ] Migration → chủ dự án chạy → types
+- [x] Plan (file này), bản 3 đã duyệt
+- [x] Duyệt ★
+- [x] Câu SQL rà mô tả (mục Kiểm tra dữ liệu mô tả)
+- [ ] Chủ dự án chạy câu SQL rà mô tả → dán kết quả → `data.md`
+- [x] Migration `20261018100000_chat_quota.sql` + `schema.sql` mục 14 (chưa chạy)
+- [ ] Chủ dự án kiểm + chạy migration + câu SQL kiểm tra → đặt `CHAT_QUOTA_TOKEN` → báo Claude
+- [ ] Sinh lại types
 - [ ] Server API + prompt + thử thật ≤ 10 lượt
 - [ ] UI desktop + mobile
 - [ ] Vitest + e2e (CI xanh), `measure:js`
