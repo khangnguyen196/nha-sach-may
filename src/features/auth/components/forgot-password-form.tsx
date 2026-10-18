@@ -13,12 +13,10 @@ type Props = {
   action: (prev: Result<{ email: string }> | null, formData: FormData) => Promise<Result<{ email: string }>>
   messages: FormMessages
   labels: Labels
-  initialError?: string
 }
 
-export function ForgotPasswordForm({ action, messages, labels, initialError }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
-  const error = formError ?? initialError
+export function ForgotPasswordForm({ action, messages, labels }: Props) {
+  const { state, formProps, pending, formError: error, quietError, fieldError } = useFormAction(action, messages)
 
   if (state?.ok) {
     return (

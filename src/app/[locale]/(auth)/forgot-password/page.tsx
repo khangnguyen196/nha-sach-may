@@ -1,12 +1,12 @@
-import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { requestPasswordReset } from '@/features/auth/actions'
 import { AuthPage, authLinkClass } from '@/features/auth/components/auth-page'
 import { ForgotPasswordForm } from '@/features/auth/components/forgot-password-form'
+import { UrlNotices } from '@/features/auth/components/url-notices'
 import { authPageMetadata } from '@/features/auth/metadata'
 import { Link } from '@/i18n/navigation'
-import { getFormMessages, type FormMessages } from '@/lib/form-messages'
+import { getFormMessages } from '@/lib/form-messages'
 
 type Props = PageProps<'/[locale]/forgot-password'>
 
@@ -20,16 +20,12 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
     getLocale(),
     getFormMessages(['RATE_LIMITED', 'LINK_EXPIRED']),
   ])
-  const form = {
-    locale,
-    messages,
-    labels: {
-      email: t('email'),
-      submit: t('forgot.submit'),
-      pending: t('pending'),
-      sentTitle: t('forgot.sentTitle'),
-      sent: t('forgot.sent'),
-    },
+  const labels = {
+    email: t('email'),
+    submit: t('forgot.submit'),
+    pending: t('pending'),
+    sentTitle: t('forgot.sentTitle'),
+    sent: t('forgot.sent'),
   }
 
   return (
@@ -42,37 +38,12 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
         </Link>
       }
     >
-      {/* ?error=LINK_EXPIRED khi link đặt lại mật khẩu đã hết hạn (từ /api/auth/confirm) */}
-      <Suspense
-        fallback={<ForgotPasswordForm action={requestPasswordReset.bind(null, locale)} messages={messages} labels={form.labels} />}
-      >
-        <FormWithError {...form} searchParams={searchParams} />
+      {/* ?error= từ /api/auth/confirm (link hết hạn, không tới được máy chủ): thông báo riêng phía trên, không bọc form */}
+      <Suspense fallback={null}>
+        <UrlNotices searchParams={searchParams} />
       </Suspense>
+      {/* locale bind sẵn: link trong email (template mặc định) quay về trang đặt mật khẩu đúng ngôn ngữ */}
+      <ForgotPasswordForm action={requestPasswordReset.bind(null, locale)} messages={messages} labels={labels} />
     </AuthPage>
-  )
-}
-
-async function FormWithError({
-  searchParams,
-  locale,
-  messages,
-  labels,
-}: {
-  searchParams: Props['searchParams']
-  locale: Locale
-  messages: FormMessages
-  labels: Parameters<typeof ForgotPasswordForm>[0]['labels']
-}) {
-  const [{ error }, t] = await Promise.all([searchParams, getTranslations('auth')])
-  return (
-    <ForgotPasswordForm
-      // locale bind sẵn: link trong email (template mặc định) quay về trang đặt mật khẩu đúng ngôn ngữ
-      action={requestPasswordReset.bind(null, locale)}
-      messages={messages}
-      labels={labels}
-      initialError={
-        error === 'LINK_EXPIRED' ? messages.errors.LINK_EXPIRED : error === 'NETWORK_ERROR' ? t('confirm.networkError') : undefined
-      }
-    />
   )
 }

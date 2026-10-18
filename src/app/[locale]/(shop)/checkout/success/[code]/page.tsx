@@ -24,15 +24,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('successTitle'), robots: { index: false, follow: false } }
 }
 
+// Tiêu đề "Đặt hàng thành công" nằm trong boundary, chỉ hiện khi có đơn: proxy không hỏi được DB mà đơn không có thì
+// trang chỉ hiện UI 404 (trước đây khối 404 nằm ngay dưới tiêu đề "Đặt hàng thành công" đã prerender)
 export default async function OrderSuccessPage({ params }: Props) {
-  const [t, locale] = await Promise.all([getTranslations('order'), getLocale()])
+  const locale = await getLocale()
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 md:py-16">
-      <div className="flex flex-col items-center text-center">
-        <CircleCheckIcon aria-hidden className="size-12 text-success" />
-        <h1 className="mt-4 font-serif text-3xl font-medium md:text-4xl">{t('successTitle')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('successLead')}</p>
-      </div>
       <Suspense fallback={<SuccessSkeleton />}>
         <OrderSuccess locale={locale} params={params} />
       </Suspense>
@@ -46,10 +43,15 @@ async function OrderSuccess({ locale, params }: { locale: Locale; params: Props[
   const [order, t, format] = await Promise.all([getOrderByCode(code, user.id), getTranslations('order'), getFormatter()])
   // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
   // được) thì hiện UI 404 trong boundary
-  if (!order) return <InlineNotFound kind="order" />
+  if (!order) return <InlineNotFound kind="order" heading="h1" />
 
   return (
     <>
+      <div className="flex flex-col items-center text-center">
+        <CircleCheckIcon aria-hidden className="size-12 text-success" />
+        <h1 className="mt-4 font-serif text-3xl font-medium md:text-4xl">{t('successTitle')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('successLead')}</p>
+      </div>
       <div className="mt-10" data-testid="order-success">
         <OrderDetails
           order={order}
@@ -86,8 +88,14 @@ async function OrderSuccess({ locale, params }: { locale: Locale; params: Props[
 }
 
 function SuccessSkeleton() {
+  // Cùng kích thước khối tiêu đề (icon 48px + h1 + câu dẫn) để không xô trang khi nội dung tới
   return (
     <>
+      <div aria-hidden className="flex animate-pulse flex-col items-center motion-reduce:animate-none">
+        <div className="size-12 rounded-full bg-surface-raised" />
+        <div className="mt-4 h-9 w-64 rounded-sm bg-surface-raised md:h-10" />
+        <div className="mt-2 h-6 w-72 max-w-full rounded-sm bg-surface-raised" />
+      </div>
       <div className="mt-10">
         <OrderDetailsSkeleton />
       </div>

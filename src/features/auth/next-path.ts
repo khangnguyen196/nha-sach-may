@@ -15,3 +15,16 @@ export function safeNextPath(value: unknown, fallback: string): string {
   const path = `${url.pathname}${url.search}`
   return path.startsWith('//') ? fallback : path
 }
+
+/**
+ * Form đăng nhập gửi khi JS chưa chạy / bị tắt: input ẩn `next` (điền ở client) còn trống → lấy `next` trong URL trang
+ * đăng nhập (header Referer của chính lần POST đó). Kết quả vẫn phải qua safeNextPath.
+ */
+export function nextFromReferer(referer: string | null): string {
+  if (!referer) return ''
+  try {
+    return new URL(referer).searchParams.get('next') ?? ''
+  } catch {
+    return ''
+  }
+}

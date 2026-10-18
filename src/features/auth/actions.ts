@@ -14,7 +14,7 @@ import { requestOrigin } from '@/lib/site-url'
 import { createClient } from '@/lib/supabase/server'
 import { authCallbackUrl, type ConfirmPurpose } from './confirm-link'
 import { authFailure } from './errors'
-import { safeNextPath } from './next-path'
+import { nextFromReferer, safeNextPath } from './next-path'
 import {
   parseLocale,
   passwordResetRequestSchema,
@@ -56,7 +56,9 @@ export async function signIn(locale: Locale, _prev: Result<null> | null, formDat
     return withAuthMessage(parseLocale(locale), failure)
   }
 
-  redirectToPath(safeNextPath(parsed.data.next, getPathname({ href: '/account', locale: parseLocale(locale) })))
+  // Gửi trước khi JS điền input `next` (hoặc tắt JS) → lấy từ URL trang đăng nhập
+  const next = parsed.data.next || nextFromReferer((await headers()).get('referer'))
+  redirectToPath(safeNextPath(next, getPathname({ href: '/account', locale: parseLocale(locale) })))
 }
 
 export async function signUp(

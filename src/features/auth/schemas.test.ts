@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { invalidInput } from '@/lib/errors'
 import { authErrorCode } from './errors'
-import { safeNextPath } from './next-path'
+import { nextFromReferer, safeNextPath } from './next-path'
 import { signInSchema, signUpSchema } from './schemas'
 
 function fieldErrors(result: ReturnType<typeof signUpSchema.safeParse>) {
@@ -92,5 +92,16 @@ describe('authErrorCode', () => {
     expect(authErrorCode({ name: 'AuthApiError', code: 'unexpected_failure', status: 500 })).toBe('NETWORK_ERROR')
     // Mã đã biết vẫn ưu tiên (rate limit là 429, không phải lỗi mạng)
     expect(authErrorCode({ code: 'over_request_rate_limit', status: 429 })).toBe('RATE_LIMITED')
+  })
+})
+
+describe('nextFromReferer', () => {
+  it('lấy ?next= trong URL trang đăng nhập; không có / URL hỏng → chuỗi rỗng (safeNextPath lọc tiếp)', () => {
+    expect(nextFromReferer('https://nha-sach-may.vercel.app/dang-nhap?next=%2Fgio-hang')).toBe('/gio-hang')
+    expect(nextFromReferer('http://localhost:3100/en/login?next=%2Fen%2Fcheckout&x=1')).toBe('/en/checkout')
+    expect(nextFromReferer('https://nha-sach-may.vercel.app/dang-nhap')).toBe('')
+    expect(nextFromReferer('không phải URL')).toBe('')
+    expect(nextFromReferer(null)).toBe('')
+    expect(safeNextPath(nextFromReferer('https://x.vn/dang-nhap?next=//evil.com'), '/tai-khoan')).toBe('/tai-khoan')
   })
 })

@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
 import type { FormMessages } from '@/lib/form-messages'
 import { useFormAction } from '@/lib/use-form-action'
+import { NextField } from './next-field'
 import { ResendConfirmation, type ResendLabels } from './resend-confirmation'
 
 type Labels = { email: string; password: string; submit: string; pending: string; forgot: string }
@@ -17,22 +18,18 @@ type Props = {
   messages: FormMessages
   labels: Labels
   resendLabels: ResendLabels
-  /** Trang quay lại sau khi đăng nhập (đã lọc ở server, server action lọc lại) */
-  next?: string
-  /** Lỗi mang theo từ URL, VD link xác nhận hết hạn (?error=LINK_EXPIRED) */
-  initialError?: string
 }
 
-export function LoginForm({ action, resend, messages, labels, resendLabels, next, initialError }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
-  const error = formError ?? initialError
+/** Form đăng nhập; trang quay lại sau đăng nhập lấy từ `?next=` ở client (NextField), thông báo của URL nằm ngoài form */
+export function LoginForm({ action, resend, messages, labels, resendLabels }: Props) {
+  const { state, formProps, pending, formError: error, quietError, fieldError } = useFormAction(action, messages)
   const unconfirmed = state && !state.ok && state.code === 'EMAIL_NOT_CONFIRMED' ? state.details?.email : undefined
 
   return (
     <div className="grid gap-5">
       <form {...formProps} noValidate className="grid gap-5">
         {error && <FormAlert quiet={quietError}>{error}</FormAlert>}
-        {next && <input type="hidden" name="next" value={next} />}
+        <NextField />
         <TextField
           name="email"
           type="email"

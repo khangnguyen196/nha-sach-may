@@ -60,17 +60,16 @@ export const NO_SESSION = { cookies: [], origins: [] }
 /**
  * Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang). Chỉ nhắm form ĐANG HIỂN THỊ trong
  * <main> (getByRole bỏ qua <main> ẩn của trang trước mà Next 16 giữ bằng Activity, và bản sao ẩn của boundary).
- * Trang đăng nhập bọc form trong Suspense, fallback là cùng form nhưng chưa có ?next= (login/page.tsx): sau điều
- * hướng phía client, fallback hiện + hydrate trước rồi bị thay bằng form thật → điền vào fallback thì mất email
- * (thí nghiệm Phase 11). URL có ?next= → chờ form thật (có input ẩn next) rồi mới điền.
+ * Trang đăng nhập chỉ có một form (ux-messages mục 14: trước đây fallback Suspense là form thứ hai, bị thay sau hydrate
+ * → mất chữ, xem login-typing.spec.ts); input ẩn `next` điền ở client sau hydrate. URL có ?next= → chờ input đó có giá
+ * trị rồi mới điền (bấm trước thì đăng nhập xong không quay về đúng trang).
  */
 export async function fillLogin(page: Page, { email, password }: { email: string; password: string }) {
   const main = page.getByRole('main')
   const submit = main.getByRole('button', { name: 'Đăng nhập' })
   await expect(submit).toBeVisible()
-  if (new URL(page.url()).searchParams.has('next')) {
-    await expect(main.locator('form').filter({ has: page.locator('input[type="hidden"][name="next"]') })).toHaveCount(1)
-  }
+  const next = new URL(page.url()).searchParams.get('next')
+  if (next) await expect(main.locator('form input[type="hidden"][name="next"]')).toHaveValue(next)
   await expect
     .poll(() => submit.evaluate((element) => Object.keys(element).some((key) => key.startsWith('__reactProps'))))
     .toBe(true)
