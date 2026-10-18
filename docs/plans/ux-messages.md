@@ -34,6 +34,11 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 - **15** Commit chẩn đoán riêng (`6b5d566`: kèm URL vào dòng "Failed to load resource", không lọc dòng nào). 3 lượt e2e sau đó (`e75b18a`, `ecfb2ff`, 1 lượt chạy tay) **không tái hiện** request 404 (`account.spec:71`, `cart-account.spec:94` qua cả 3) → chưa có URL để đối chiếu, cũng không có URL nào khác dự kiến. Bản sửa gốc theo bằng chứng trong trace cũ (kệ "Bán chạy" trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404): kệ trang chủ chỉ lấy sách thuộc danh mục đang hiện (`visibleCategoryIds`, ★12). Commit chẩn đoán giữ lại: nếu còn tái diễn, thông báo fail sẽ có URL.
 - **16** `supabase/checks/authors-fix.sql` (8 tên + gộp 8, 9 → 1, chưa chạy); import dùng lại tác giả cùng tập từ.
 
+**CI (nhánh `ux-messages`)**
+- Job `check` (typecheck, lint, Vitest, build) xanh ở mọi commit có code. Vitest local: 75 file / 647 test qua.
+- e2e cuối (`35e02db`, run 39137620556): **401 qua, 0 fail, 0 flaky** (9 skip như `main`). Hai lượt trước đó (`ecfb2ff`, chạy tay 39136756531) cũng 401 / 0 / 0.
+- Lỗi e2e gặp giữa chừng và đã sửa: test gửi lại email bấm sớm hơn giới hạn 1 giây của Supabase local; test giỏ mất mạng bắt cả `console.error` có chủ ý; `login-typing` chờ `networkidle` không bao giờ tới; **bản sửa `LocaleSwitcher` đầu tiên gọi `usePathname()` ngoài Suspense làm App Shell trang sách / danh mục mới lỗi** (bắt được nhờ 6 test admin) → đã làm lại (`ecfb2ff`).
+
 **Khác với plan**
 - e2e voucher / gợi ý mã nằm trong `checkout.spec` (cùng user checkout, chạy tuần tự) thay vì spec riêng: spec riêng chạy song song sẽ giẫm giỏ của user checkout.
 - Dialog gợi ý: một Radix Dialog với class responsive (không cần hook đo màn hình).
