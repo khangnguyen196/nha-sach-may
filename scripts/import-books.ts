@@ -540,11 +540,40 @@ async function selectAll<T>(page: (from: number, to: number) => PromiseLike<DbRe
   }
 }
 
-/** Thêm tác giả/NXB mới; cái đã có (theo slug) giữ nguyên tên. Trả về slug → id. */
+/** Khóa so tên không theo thứ tự từ: "huy-thiep-nguyen" và "nguyen-huy-thiep" → cùng khóa */
+export function nameTokensKey(slug: string) {
+  return slug.split('-').filter(Boolean).sort().join('-')
+}
+
+/**
+ * Tác giả mới có cùng các từ với tác giả đã có nhưng khác thứ tự (Google Books trả "Huy Thiệp Nguyễn" lẫn "Nguyễn Huy
+ * Thiệp"; DB đã sửa tên một bản): dùng lại tác giả đã có thay vì tạo bản trùng. Trả về slug mới → id đã có.
+ * Hai người khác nhau trùng đúng tập từ (hiếm) sẽ bị gộp: xem lại khi duyệt preview.
+ */
+export function reuseByNameTokens(incoming: string[], existing: IdSlug[]) {
+  const known = new Set(existing.map((row) => row.slug))
+  const byKey = new Map(existing.map((row) => [nameTokensKey(row.slug), row.id]))
+  const reused = new Map<string, number>()
+  for (const slug of incoming) {
+    const id = known.has(slug) ? undefined : byKey.get(nameTokensKey(slug))
+    if (id !== undefined) reused.set(slug, id)
+  }
+  return reused
+}
+
+/** Thêm tác giả/NXB mới; cái đã có (theo slug, tác giả: cả cùng tập từ) giữ nguyên tên. Trả về slug → id. */
 async function ensureNamed(db: SupabaseClient, table: 'authors' | 'publishers', names: string[]) {
-  const rows = [...new Map(names.map((n) => [slugify(n), { name: n, slug: slugify(n) }])).values()].filter(
+  const all = [...new Map(names.map((n) => [slugify(n), { name: n, slug: slugify(n) }])).values()].filter(
     (r) => r.slug !== '',
   )
+  const reused =
+    table === 'authors'
+      ? reuseByNameTokens(
+          all.map((r) => r.slug),
+          await selectAll<IdSlug>((from, to) => db.from('authors').select('id, slug').range(from, to), 'authors'),
+        )
+      : new Map<string, number>()
+  const rows = all.filter((r) => !reused.has(r.slug))
   for (const part of chunk(rows, 500)) {
     const res = await db.from(table).upsert(part, { onConflict: 'slug', ignoreDuplicates: true })
     if (res.error) throw new Error(`${table}: ${res.error.message}`)
@@ -555,6 +584,7 @@ async function ensureNamed(db: SupabaseClient, table: 'authors' | 'publishers', 
     const found: IdSlug[] = must(await db.from(table).select('id, slug').in('slug', part), table)
     for (const r of found) ids.set(r.slug, r.id)
   }
+  for (const [slug, id] of reused) ids.set(slug, id)
   return ids
 }
 

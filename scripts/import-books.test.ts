@@ -6,7 +6,9 @@ import {
   excludeExisting,
   isLikelyPlaceholder,
   mapVolume,
+  nameTokensKey,
   normalizeText,
+  reuseByNameTokens,
   type BookInput,
   type Candidate,
 } from './import-books'
@@ -168,5 +170,29 @@ describe('lọc sách ăn theo ở danh mục en', () => {
     expect(en('An Analysis of Animal Farm')).toBeNull()
     expect(en('Atomic Habits')?.title).toBe('Atomic Habits')
     expect(mapVolume(volume({ title: 'Summary tiếng Việt' }), 'tho')?.title).toBe('Summary tiếng Việt')
+  })
+})
+
+describe('reuseByNameTokens (tên tác giả ngược thứ tự, ux-messages mục 16)', () => {
+  const existing = [
+    { id: 6, slug: 'huy-thiep-nguyen' },
+    { id: 1, slug: 'nguyen-quang-lap' },
+  ]
+
+  it('tác giả mới cùng tập từ, khác thứ tự → dùng lại id đã có', () => {
+    expect(reuseByNameTokens(['nguyen-huy-thiep', 'quang-lap-nguyen'], existing)).toEqual(
+      new Map([
+        ['nguyen-huy-thiep', 6],
+        ['quang-lap-nguyen', 1],
+      ]),
+    )
+  })
+
+  it('slug đã có (upsert lo) hoặc khác tập từ → không dùng lại', () => {
+    expect(reuseByNameTokens(['huy-thiep-nguyen', 'lap-nguyen', 'nguyen-nhat-anh'], existing).size).toBe(0)
+  })
+
+  it('nameTokensKey không phụ thuộc thứ tự từ', () => {
+    expect(nameTokensKey('huy-thiep-nguyen')).toBe(nameTokensKey('nguyen-huy-thiep'))
   })
 })
