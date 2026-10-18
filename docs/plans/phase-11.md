@@ -1,10 +1,18 @@
 # Phase 11: Chatbot gợi ý sách "Mây"
 
-Trạng thái: **plan, chờ duyệt** (2026-10-18). Chưa viết code, chưa tạo migration thật.
+Trạng thái: **plan, chờ duyệt** (2026-10-18, bản 2). Chưa viết code, chưa tạo migration thật.
+
+Bản 2 cập nhật theo góp ý của chủ dự án:
+- Đã có số rate limit thật đọc từ AI Studio (★ 2).
+- Model đọc từ `GEMINI_MODEL`.
+- Trần chung 10 / phút, 400 / ngày, đếm theo **lượt gọi Gemini**.
+- Ngày của trần chung theo `America/Los_Angeles`.
+- Thông báo hết lượt miễn phí có cả tiếng Việt lẫn tiếng Anh.
+- Ngân sách đầu vào dưới 8K token mỗi lượt.
 
 - `main` (local + `origin/main`) ở **`5ef1eb5`** "docs(handoff): grid ?page= stays a soft 404 on purpose; production TTFB after perf-grid-404". Lịch sử thẳng (merge ff).
 - Nhánh chưa merge: **không có**. `origin` chỉ còn `main`. `fix-manual-test`, `e2e-project`, `fix-soft-404`, `perf-grid-404` đã merge và đã xóa (local + remote). Nhánh worktree cũ `claude/unruffled-merkle-5c3162` đã nằm trọn trong `main`.
-- Nhánh **`phase-11`** tạo từ `origin/main` `5ef1eb5`. Hiện chỉ có commit của file plan này, chưa push.
+- Nhánh **`phase-11`** tạo từ `origin/main` `5ef1eb5`. Chỉ có commit của file plan này, đã push lên `origin/phase-11` (chưa có code).
 
 ## Tóm tắt
 
@@ -12,8 +20,8 @@ Có một bong bóng chat ở góc phải dưới, chỉ hiện trên các trang
 
 1. Kiểm tra input.
 2. Lọc từ khóa tự hại. Khớp thì trả câu cố định, không gọi AI.
-3. Trừ lượt bằng RPC `consume_chat_quota` (khách + toàn web, có token server).
-4. Lọc trước khoảng 36 sách ứng viên từ catalog rút gọn đã cache.
+3. Trừ lượt bằng RPC `consume_chat_quota` (có token server). Mỗi câu của khách trừ một lượt của khách; mỗi lượt gọi Gemini trừ một lượt của trần chung.
+4. Lọc trước khoảng 30 sách ứng viên từ catalog rút gọn đã cache.
 5. Gọi Gemini **đúng một lần**, structured output JSON.
 6. Validate kết quả, bỏ slug ngoài danh sách ứng viên.
 7. Lấy dữ liệu thật của tối đa 3 sách để dựng thẻ.
@@ -38,22 +46,32 @@ Không lưu nội dung chat ở đâu cả. Không thêm dependency.
 **Model có free tier** (trang pricing, cập nhật 2026-10-16):
 
 - Có free tier: `gemini-3.8-flash`, `gemini-3.6-flash`, `gemini-3-flash-preview`, `gemini-2.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-flash-lite`.
-- Trang deprecations:
-  - Model 2.5 **chỉ còn mở cho project đã từng dùng**. Project mới được hướng sang 3.5 Flash-Lite hoặc 3.8 Flash.
-  - `gemini-3.1-flash-lite` tắt vào 2027-05-07.
-  - 3.5 Flash-Lite và 3.8 Flash chưa có ngày tắt.
+- Model 2.5 **chỉ còn mở cho project đã từng dùng**. Project mới được hướng sang 3.5 Flash-Lite hoặc 3.8 Flash.
 
-**Rate limit**:
+**Model ID dùng trong code** (đọc trên trang chính thức ngày 2026-10-18):
 
-- **Google không công bố số RPM / TPM / RPD của free tier** trên trang rate-limits (cập nhật 2026-10-15). Trang chỉ ghi "xem trong AI Studio" (aistudio.google.com/rate-limit).
-- Số trên diễn đàn (**chưa xác minh**, mỗi số chỉ từ một bài):
-  - 3.8 Flash: 5 RPM, 250K TPM, 20 RPD.
-  - 3.5 Flash-Lite: 15 RPM, 500 RPD.
-- Trang chính thức ghi:
+| Model ID | Nguồn | Trạng thái | Ngày tắt (trang deprecations) |
+|---|---|---|---|
+| `gemini-3.5-flash-lite` (**mặc định**) | https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite | Stable, "Latest update: July 2026" | chưa công bố |
+| `gemini-3.1-flash-lite` (thay thế qua env) | https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite | Stable | **2027-05-07**, Google đề nghị chuyển sang `gemini-3.5-flash-lite` |
+
+- Danh sách chung: https://ai.google.dev/gemini-api/docs/models (mục Gemini 3 → Stable). Ngày tắt: https://ai.google.dev/gemini-api/docs/deprecations.
+- Cả hai model: vào 1.048.576 token, ra 65.536 token, hỗ trợ structured output và thinking.
+- Không dùng alias kiểu `-latest`; trang không có alias nào cho hai model này.
+- `gemini-3.1-flash-lite-preview` là bản preview đã tắt, **không** dùng.
+
+**Rate limit free tier của project** (chủ dự án đọc trong AI Studio, 2026-10-18):
+
+| Model | RPM | TPM (vào) | RPD |
+|---|---:|---:|---:|
+| `gemini-3.5-flash-lite` | 15 | 250K | 500 |
+| `gemini-3.1-flash-lite` | 15 | 250K | 500 |
+| Các model Flash khác | | | 20 → **không dùng** |
+
+- Trang rate-limits chính thức (https://ai.google.dev/gemini-api/docs/rate-limits, cập nhật 2026-10-15) không ghi số cụ thể, chỉ trỏ tới AI Studio. Trang này có ghi:
   - Giới hạn tính **theo project**, không theo key.
-  - RPD reset lúc **0h giờ Thái Bình Dương**.
+  - RPD reset lúc **0h giờ Thái Bình Dương**: 14h giờ Việt Nam khi Mỹ đang giờ mùa hè (PDT), **15h từ 2026-11-01** (PST).
   - Giới hạn "không được đảm bảo", có thể đổi.
-- ★ Chủ dự án mở AI Studio, đọc số của model đã chọn, rồi điền vào `config.ts` (mục Giới hạn). Code dùng số đã điền, kèm ngày kiểm tra.
 
 **Điều khoản** (Gemini API Additional Terms, cập nhật 2026-04-28):
 
@@ -70,6 +88,11 @@ Không lưu nội dung chat ở đâu cả. Không thêm dependency.
 **Kỹ thuật** (để ghi vào `gemini.ts`):
 
 - Gọi `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`, header `x-goog-api-key`.
+- `{model}` = `GEMINI_MODEL` (server-only env, tùy chọn).
+  - Không đặt → mặc định `gemini-3.5-flash-lite` trong `config.ts`.
+  - Đặt `GEMINI_MODEL=gemini-3.1-flash-lite` thì đổi model mà không sửa code.
+  - Giá trị phải nằm trong danh sách cho phép `ALLOWED_MODELS` (2 ID ở trên). Giá trị lạ → log cảnh báo (không in key) và dùng mặc định; `check:env` cũng báo.
+- **Không tự chuyển model khi gặp 429**. Đổi model là việc chủ dự án quyết. Tự chuyển còn làm trần chung (tính theo một model) mất ý nghĩa.
 - Body gồm `systemInstruction`, `contents`, `generationConfig`.
 - Structured output: tài liệu đang tự mâu thuẫn. Hướng dẫn mới dùng `generationConfig.responseFormat`. Trang reference vẫn nhận `responseMimeType: "application/json"` + `responseJsonSchema` (`responseSchema` cũ bị đánh dấu deprecated). Lúc code sẽ thử bằng một lần gọi thật (★ 12) rồi chốt **một** dạng.
 - Schema dùng được `enum`, `maxItems`, `required`.
@@ -89,10 +112,13 @@ Server Action (features/chat/actions.ts)
   2. chatEnabled()? (đủ GEMINI_API_KEY + CHAT_QUOTA_TOKEN, hoặc CHAT_AI_MOCK) → không thì CHAT_UNAVAILABLE
   3. khu vực EEA / UK / CH (x-vercel-ip-country) → CHAT_REGION (★ 9)
   4. bộ lọc tự hại (crisis.ts) → khớp: trả lời cố định, KHÔNG trừ lượt, KHÔNG gọi AI
-  5. cooldown trong bộ nhớ sau 429 của Gemini còn hạn → CHAT_UNAVAILABLE (không trừ lượt)
-  6. consume_chat_quota(token, khách, IP băm, giới hạn) → vượt: CHAT_QUOTA_EXCEEDED
-  7. ứng viên: catalog rút gọn (cache) → chấm điểm → ≤ 36 sách; có slug → cuốn đang xem đứng đầu
+  5. cooldown trong bộ nhớ sau 429 của Gemini còn hạn → CHAT_FREE_QUOTA (không trừ lượt, không gọi Gemini)
+  6. consume_chat_quota(token, khách, IP băm, giới hạn): +1 lượt khách (câu hỏi) VÀ +1 lượt trần chung (lượt gọi
+     Gemini sắp làm), nguyên tử → vượt lượt khách: CHAT_QUOTA_EXCEEDED; vượt trần chung: CHAT_FREE_QUOTA
+  7. ứng viên: catalog rút gọn (cache) → chấm điểm → ≤ 30 sách; có slug → cuốn đang xem đứng đầu
+     → fitPromptBudget: ước tính token đầu vào ≤ 7.500, quá thì bớt lịch sử rồi bớt ứng viên
   8. gọi Gemini 1 lần (timeout 10 s, không retry) | CHAT_AI_MOCK=1 → AI giả
+     429 → CHAT_FREE_QUOTA + bật cooldown, KHÔNG gọi lại; timeout / 5xx / bị chặn → CHAT_UNAVAILABLE
   9. validate JSON (zod) → bỏ slug ngoài ứng viên / trùng → tối đa 3 → làm sạch chữ
  10. lấy thẻ sách thật (cache theo book:{id}, RLS bỏ sách ẩn) → bỏ sách không còn
   └─ Result<ChatReply> = { ok: true, data } | { ok: false, code }
@@ -100,7 +126,17 @@ Server Action (features/chat/actions.ts)
 
 Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt vẫn mất, để khách không bấm gửi dồn dập lúc AI đang lỗi.
 
-## Lọc ứng viên (≤ 36 sách) và ước tính token
+**Trần chung đếm lượt gọi Gemini, không đếm tin nhắn.**
+
+- Mọi `fetch` tới `generateContent` chỉ đi qua một hàm `callGemini()` (`gemini.ts`). Hàm này **bắt buộc** nhận một "vé" do `consume_chat_quota` cấp, mỗi vé dùng được một lần.
+- Lượt gọi đầu tiên của một câu dùng vé từ bước 6: lượt khách và lượt trần chung được trừ cùng lúc.
+- Nếu sau này có gọi lại (retry, hiện **không** có), mỗi lần gọi lại phải xin vé mới bằng `consume_chat_quota(p_visitor => null)`. Lời gọi đó chỉ +1 trần chung, không +1 lượt khách.
+- Vitest kiểm hai điều:
+  - Số lần `fetch` tới Gemini luôn bằng số vé đã cấp.
+  - Không có đường nào gọi `fetch` mà không có vé.
+- Câu bị chặn bởi bộ lọc tự hại, khu vực hay cooldown không gọi Gemini, nên không trừ trần chung.
+
+## Lọc ứng viên (≤ 30 sách) và ước tính token
 
 **Catalog rút gọn** `getChatCatalog()` (`features/chat/queries.ts`):
 
@@ -108,7 +144,7 @@ Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt v�
 - Một query lấy `id, slug, title, language, category_id, stock, sold_count, is_featured, description, book_authors(role, authors(name))`. Danh mục lấy từ `getCategories()` đã cache.
 - Server tính sẵn, cho mỗi sách:
   - Chữ bỏ dấu để chấm điểm: tên, tác giả, tên danh mục lá + cha, 600 ký tự đầu của mô tả.
-  - Mô tả rút gọn để gửi AI: 200 ký tự, bỏ HTML / khoảng trắng thừa.
+  - Mô tả rút gọn để gửi AI: 160 ký tự, cắt ở ranh giới từ, bỏ HTML / khoảng trắng thừa.
 - Làm mới: tag `books`, `categories` và tag mới **`chat-catalog`**:
   - Thêm `chat-catalog` vào mọi thay đổi sách / danh mục / tác giả ở `features/admin/cache-tags.ts`. Ví dụ: sửa mô tả hiện chỉ gọi `updateTag('book:{id}')`, không đụng tag `books`.
   - Không gắn tag `book:{id}` cho cả 189 sách vì Next giới hạn số tag trên một mục cache. Lúc code kiểm lại giới hạn của Next 16.4.
@@ -125,61 +161,93 @@ Lượt bị trừ ngay **trước** khi gọi AI. Gemini lỗi thì lượt v�
    - `thieu nhi, con nho, be` → `truyen-tranh`, `ngoai-van-thieu-nhi`.
    - `hoc tieng anh` → `tieng-anh`.
 4. Gom danh sách theo thứ tự:
-   - (a) Có slug: cuốn đang xem đứng đầu, kèm tối đa 8 cuốn cùng danh mục lá.
-   - (b) Tối đa 20 cuốn điểm cao nhất (điểm > 0).
+   - (a) Có slug: cuốn đang xem đứng đầu, kèm tối đa 6 cuốn cùng danh mục lá.
+   - (b) Tối đa 16 cuốn điểm cao nhất (điểm > 0).
    - (c) Sách của các danh mục khớp tâm trạng, ưu tiên `is_featured`, rồi `sold_count`, rồi bìa nét.
-   - (d) Lấp cho đủ bằng sách bán chạy, xoay vòng theo danh mục, mỗi danh mục tối đa 6 cuốn.
+   - (d) Lấp cho đủ 30 bằng sách bán chạy, xoay vòng theo danh mục, mỗi danh mục tối đa 5 cuốn.
    - Khách nhắc "tiếng Anh / ngoại văn / English" thì ưu tiên sách `language = 'en'`, không thì ưu tiên tiếng Việt.
    - Bỏ sách hết hàng, trừ cuốn đang xem.
 5. Kết quả ổn định: cùng câu hỏi và cùng catalog thì ra cùng danh sách. Hòa điểm thì xếp theo `id`.
 
-**Định dạng gửi AI**: mỗi sách một object JSON ngắn `{"s":slug,"t":tên,"a":"tác giả, …","c":danh mục,"l":"vi|en","d":mô tả 200 ký tự}`. Danh sách slug cũng đưa vào `enum` của `responseJsonSchema`, nên model không trả được slug lạ.
+**Định dạng gửi AI**: mỗi sách một object JSON ngắn `{"s":slug,"t":tên,"a":"tác giả, …","c":danh mục,"l":"vi|en","d":mô tả 160 ký tự}`, khoảng 290 ký tự / sách. Danh sách slug cũng đưa vào `enum` của `responseJsonSchema`, nên model không trả được slug lạ.
 
-**Ước tính token mỗi lượt.** Google chỉ công bố ~4 ký tự / token cho tiếng Anh, không có số cho tiếng Việt. Plan tính bi quan **2 ký tự / token**:
+**Ước tính token đầu vào mỗi lượt** (mục tiêu **< 8K**):
 
-| Phần | Ký tự | Token |
-|---|---:|---:|
-| System prompt | ~3.000 | ~1.500 |
-| 36 ứng viên × ~360 ký tự | ~13.000 | ~6.500 |
-| `enum` slug trong schema + schema | ~1.800 | ~900 |
-| 4 lượt lịch sử (câu hỏi ≤ 300 + trả lời ~500) | ~3.200 | ~1.600 |
-| Câu hiện tại + sách đang xem (mô tả 600 ký tự) | ~900 | ~450 |
-| **Vào** | | **~11.000** |
-| Ra (`maxOutputTokens` 800, gồm suy luận `minimal`) | | ≤ 800 |
+- Google chỉ công bố ~4 ký tự / token cho tiếng Anh (https://ai.google.dev/gemini-api/docs/tokens), không có số cho tiếng Việt có dấu.
+- Plan tính hai mức:
+  - **2,5 ký tự / token**: ước tính chính.
+  - **2 ký tự / token**: trường hợp xấu.
+- Sách tiếng Anh tốn ít token hơn, nên số thật dự kiến thấp hơn bảng.
 
-- Ở mức trần toàn web 8 lượt / phút: ~88K token vào mỗi phút. Free tier được báo khoảng 250K TPM, nên RPM / RPD mới là giới hạn chạm trước.
-- Lúc code đo số thật bằng `usageMetadata.promptTokenCount` (log **chỉ con số**) hoặc `countTokens`.
-- Vượt 15K token thì giảm xuống 30 ứng viên và mô tả 160 ký tự.
+| Phần | Ký tự | Token (2,5 c/t) | Token (2 c/t) |
+|---|---:|---:|---:|
+| System prompt (bản nháp ở mục Prompt) | ~2.700 | ~1.080 | ~1.350 |
+| 30 ứng viên × ~290 ký tự | ~8.700 | ~3.480 | ~4.350 |
+| `responseJsonSchema` + `enum` 30 slug (tính luôn, vì tài liệu không nói schema có được tính vào `promptTokenCount` không) | ~1.560 | ~620 | ~780 |
+| **Prompt hệ thống + danh sách sách gửi kèm** | | **~5.200** | **~6.500** |
+| Câu hiện tại (≤ 300 ký tự) + nhãn bọc | ~400 | ~160 | ~200 |
+| Sách đang xem (chỉ ở trang sách, mô tả 600 ký tự) | ~700 | ~280 | ~350 |
+| 4 lượt lịch sử (câu hỏi ≤ 300 + trả lời rút gọn ~450) | ~3.000 | ~1.200 | ~1.500 |
+| **Tổng đầu vào, tối đa** | | **~6.800** | **~8.550** |
+| Ra (`maxOutputTokens` 800, gồm suy luận `minimal`) | | ≤ 800 | ≤ 800 |
+
+- **Chặn cứng** `fitPromptBudget` (`prompt.ts`, có Vitest):
+  - Server ước tính token theo mức xấu (số ký tự / 2) trước khi gọi.
+  - Quá **7.500**: bớt lịch sử cũ nhất, xuống tối thiểu 2 lượt.
+  - Vẫn quá: bớt ứng viên cuối danh sách, xuống tối thiểu 24 cuốn.
+  - Ở mức xấu nhất: 8.550 → bớt 2 lượt lịch sử (−750) → bớt 6 ứng viên (−870) → ~6.900.
+  - Nhờ vậy mọi lượt dưới 8K kể cả khi tiếng Việt tốn token hơn dự kiến.
+- **So với TPM**: 10 lượt gọi / phút × ≤ 8K = **≤ 80K token / phút**, khoảng 32% của 250K TPM. RPM / RPD vẫn là giới hạn chạm trước.
+- **Đo số thật**:
+  - Lúc thử thật (★ 12), đọc `usageMetadata.promptTokenCount` (log **chỉ con số**, không log nội dung) và ghi vào báo cáo cho 3 trường hợp: câu đầu, câu ở trang sách, câu thứ 5 (đủ 4 lượt lịch sử).
+  - Số thật vượt 8K → giảm mô tả xuống 120 ký tự hoặc ứng viên xuống 24, rồi đo lại.
 
 ## Giới hạn (`src/features/chat/config.ts`)
 
 ```ts
-export const GEMINI = {
-  model: 'gemini-3.5-flash-lite',            // ★ 1
+// Nguồn model ID: ai.google.dev/gemini-api/docs/models/<id>; số free tier: AI Studio của project (chủ dự án đọc)
+export const ALLOWED_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'] as const
+export const DEFAULT_MODEL = 'gemini-3.5-flash-lite'   // GEMINI_MODEL (server env) ghi đè, phải nằm trong ALLOWED_MODELS
+
+export const FREE_TIER = {
   checkedAt: '2026-10-18',
-  // ★ 2: Google không công bố số free tier; chủ dự án đọc ở aistudio.google.com/rate-limit rồi điền
-  freeTier: { rpm: 15, tpm: 250_000, rpd: 500, source: 'diễn đàn, CHƯA xác minh' },
-  timeoutMs: 10_000,
-  maxOutputTokens: 800,
+  'gemini-3.5-flash-lite': { rpm: 15, tpm: 250_000, rpd: 500 },
+  'gemini-3.1-flash-lite': { rpm: 15, tpm: 250_000, rpd: 500 },
 } as const
+
+export const GEMINI = { timeoutMs: 10_000, maxOutputTokens: 800, maxPromptTokens: 7_500 } as const
 
 export const CHAT_LIMITS = {
-  visitorPerHour: 10, visitorPerDay: 30,      // khách (cookie) hoặc tài khoản (user id)
-  ipPerHour: 40, ipPerDay: 120,               // ★ 6: chỉ khách chưa đăng nhập; cả lớp chung một IP (NAT)
-  globalPerMinute: 8,                         // ≈ 50% RPM
-  globalPerDay: 400,                          // ≈ 80% RPD, ngày theo giờ Thái Bình Dương (khớp lúc Google reset)
+  // Theo khách: đếm CÂU HỎI (khách = cookie, hoặc user id khi đã đăng nhập)
+  visitorPerHour: 10, visitorPerDay: 30,
+  ipPerHour: 40, ipPerDay: 120,      // ★ 6: chỉ khách chưa đăng nhập; cả lớp chung một IP (NAT)
+  // Trần chung cả web: đếm LƯỢT GỌI GEMINI (kể cả gọi lại nếu sau này có), ngày theo America/Los_Angeles
+  geminiCallsPerMinute: 10,          // 15 RPM thật → chừa 33%
+  geminiCallsPerDay: 400,            // 500 RPD thật → chừa 20%
 } as const
 
-export const CHAT_INPUT = { maxChars: 300, historyTurns: 4, maxBooks: 3, candidates: 36 } as const
+export const CHAT_INPUT = { maxChars: 300, historyTurns: 4, maxBooks: 3, candidates: 30, minCandidates: 24 } as const
 ```
 
-- Vitest `config.test.ts` kiểm `globalPerMinute < freeTier.rpm` và `globalPerDay < freeTier.rpd`. Chủ dự án sửa số free tier thì test bắt luôn trần toàn web đặt sai.
-- Cửa sổ:
+- Vitest `config.test.ts`:
+  - Với **mọi** model trong `ALLOWED_MODELS`: `geminiCallsPerMinute < rpm`, `geminiCallsPerDay < rpd`, và `geminiCallsPerMinute × 8.000 < tpm`.
+  - `FREE_TIER` có đủ số cho mọi model được phép.
+  - `GEMINI_MODEL` rỗng hoặc lạ → `DEFAULT_MODEL`.
+  - Chủ dự án sửa số hoặc thêm model mà trần chung đặt sai thì test fail.
+- **Cửa sổ**:
   - Phút / giờ: cửa sổ cố định (`date_trunc`).
-  - Ngày của khách: theo giờ Việt Nam (+07:00 cố định, như voucher).
-  - Ngày của toàn web: theo `America/Los_Angeles`. Nếu dùng ngày Việt Nam, một ngày của Google (từ 14–15h đến 14–15h hôm sau) có thể nhận tới 2 × 400 lượt.
-- Ở chế độ AI giả (`CHAT_AI_MOCK=1`), riêng giới hạn IP và toàn web nhân 100: e2e chạy song song, mọi request đều từ `127.0.0.1`. Giới hạn khách giữ nguyên để e2e "hết lượt" kiểm đúng số 10.
-- **Cooldown sau 429**: Gemini trả 429 thì trong 60 giây (hoặc theo `retryDelay` nếu có) server không gọi tiếp và **không trừ lượt** của khách. Biến này nằm trong bộ nhớ instance: mỗi instance tự học, không cần DB.
+  - Ngày của khách (30 câu / ngày): theo giờ Việt Nam (+07:00 cố định, như voucher), vì khách hiểu "ngày" theo giờ mình.
+  - **Ngày của trần chung: theo `America/Los_Angeles`**: `date_trunc('day', now() at time zone 'America/Los_Angeles') at time zone 'America/Los_Angeles'`, Postgres tự xử lý giờ mùa hè. Bộ đếm reset cùng lúc với RPD của Google:
+    - **14h giờ Việt Nam** khi Mỹ đang giờ mùa hè (tới hết 2026-10-31).
+    - **15h giờ Việt Nam từ 2026-11-01** (PST).
+    - Nếu dùng ngày Việt Nam, một ngày của Google có thể nhận tới 2 × 400 lượt.
+  - Vitest có case quanh mốc 2026-11-01. Thông báo hết lượt trong ngày hiện giờ reset tính theo giờ Việt Nam.
+- **Chế độ AI giả** (`CHAT_AI_MOCK=1`): riêng giới hạn IP và trần chung nhân 100, vì e2e chạy song song và mọi request đều từ `127.0.0.1`. Giới hạn khách giữ nguyên để e2e "hết lượt" kiểm đúng số 10.
+- **Cooldown sau 429**:
+  - Gemini trả 429 thì trong 60 giây (hoặc theo `retryDelay` nếu có) server không gọi Gemini và **không trừ lượt** nào.
+  - Khách nhận ngay thông báo hết lượt miễn phí.
+  - Biến này nằm trong bộ nhớ instance: mỗi instance tự học, không cần DB.
+  - **Không gọi lại Gemini, không đổi model.**
 
 ## DB / migration
 
@@ -190,7 +258,7 @@ create extension if not exists pgcrypto with schema extensions;   -- digest(), g
 
 -- Bộ đếm: schema private → PostgREST không lộ ra; RLS bật, không policy (quy ước "RLS mọi bảng")
 create table if not exists private.chat_quota (
-  bucket       text        not null check (char_length(bucket) <= 80),  -- 'visitor:hour:<hash>', 'global:day'…
+  bucket       text        not null check (char_length(bucket) <= 80),  -- 'visitor:hour:<hash>', 'gemini:day'…
   window_start timestamptz not null,
   used         int         not null default 0 check (used >= 0),
   primary key (bucket, window_start)
@@ -214,8 +282,16 @@ alter table private.chat_settings enable row level security;
    - `p_visitor` / `p_ip` khớp `^[0-9a-f]{32}$` (`p_ip` được null).
    - `p_limits` có đủ 6 khóa số nguyên trong khoảng 1–100.000.
    - Sai → `'INVALID_INPUT'`.
-3. Với từng bucket (khách giờ, khách ngày, IP giờ / ngày nếu có, toàn web phút / ngày): `insert … on conflict (bucket, window_start) do update set used = used + 1 returning used`. Vượt giới hạn → `raise 'CHAT_QUOTA_EXCEEDED' using detail = '{"scope":"visitor_hour","retry_after":<giây>}'`. Exception làm **rollback toàn bộ** các lần cộng trước đó trong lượt, nên không bucket nào bị trừ oan. Bucket của khách xét trước bucket toàn web, để thông báo đúng phạm vi.
-4. **Dọn dữ liệu**: khi dòng `global:day` của ngày mới vừa tạo (`used = 1`, tức một lần mỗi ngày): `delete from private.chat_quota where window_start < now() - interval '3 days'`. Không cần pg_cron.
+3. Cộng các bucket bằng `insert … on conflict (bucket, window_start) do update set used = used + 1 returning used`:
+   - `p_visitor` khác null (câu hỏi mới): cộng `visitor:hour`, `visitor:day` (ngày VN) và `ip:hour`, `ip:day` nếu có `p_ip`.
+   - **Luôn** cộng `gemini:minute` và `gemini:day` (ngày `America/Los_Angeles`). Mỗi lời gọi RPC = một vé cho **một** lượt gọi Gemini.
+   - `p_visitor = null`: chỉ cộng trần chung. Dành cho lượt gọi lại, hiện không dùng.
+   - Vượt giới hạn:
+     - Bucket của khách → `raise 'CHAT_QUOTA_EXCEEDED' using detail = '{"scope":"visitor_hour","retry_after":<giây>}'`.
+     - Trần chung → `raise 'CHAT_FREE_QUOTA' using detail = '{"scope":"gemini_day","resets_at":"<timestamptz>"}'`. `resets_at` là 0h Los Angeles kế tiếp; app đổi sang giờ Việt Nam để hiện.
+   - Exception làm **rollback toàn bộ** các lần cộng trước đó trong lượt, nên không bucket nào bị trừ oan.
+   - Bucket của khách được xét trước trần chung, để thông báo đúng phạm vi.
+4. **Dọn dữ liệu**: khi dòng `gemini:day` của ngày mới vừa tạo (`used = 1`, tức một lần mỗi ngày): `delete from private.chat_quota where window_start < now() - interval '3 days'`. Không cần pg_cron.
 5. Trả `{"ok": true}`.
 
 **`public.set_chat_quota_token(p_token text)`**: ghi `digest(p_token,'sha256')`. Chỉ `service_role` gọi được (e2e local đặt token cố định). **`private.new_chat_quota_token()`**: sinh token 32 byte hex, lưu hash, trả token. Chủ dự án chạy trong SQL Editor rồi dán vào Vercel.
@@ -230,7 +306,7 @@ Quyền:
 
 - Ai cũng gọi được, vì khóa publishable nằm trên trình duyệt và PostgREST lộ mọi hàm `public`.
 - Nếu **không có token**, kẻ xấu gọi thẳng RPC (không qua Server Action, không bị giới hạn IP vì IP do người gọi tự khai) có thể:
-  - (a) Đẩy `global:minute` / `global:day` lên trần → chatbot tắt cho mọi người tới hết cửa sổ. Đây là DoS, chi phí vẫn bằng 0.
+  - (a) Đẩy `gemini:minute` / `gemini:day` lên trần → chatbot tắt cho mọi người tới hết cửa sổ. Đây là DoS, chi phí vẫn bằng 0.
   - (b) Tạo hàng triệu bucket ngẫu nhiên → phình bảng, có thể chạm 500MB của Supabase free.
   - (c) Đốt lượt của một khách cụ thể: cần biết hash của khách, mà hash là HMAC có khóa bí mật nên không đoán được.
   - Không đọc được gì: hai bảng nằm trong `private`, không policy, hàm chỉ trả ok / mã lỗi.
@@ -261,7 +337,7 @@ select p.proname, has_function_privilege('anon', p.oid, 'execute') anon,
        has_function_privilege('service_role', p.oid, 'execute') service
   from pg_proc p where p.proname in ('consume_chat_quota', 'set_chat_quota_token', 'new_chat_quota_token');
 -- 3. Không token → FORBIDDEN / CHAT_DISABLED (mong đợi lỗi)
-select public.consume_chat_quota('sai', repeat('a', 32), null, '{"visitorPerHour":10,"visitorPerDay":30,"ipPerHour":40,"ipPerDay":120,"globalPerMinute":8,"globalPerDay":400}');
+select public.consume_chat_quota('sai', repeat('a', 32), null, '{"visitorPerHour":10,"visitorPerDay":30,"ipPerHour":40,"ipPerDay":120,"geminiCallsPerMinute":10,"geminiCallsPerDay":400}');
 -- 4. Tạo token cho Vercel (CHỈ chạy khi sẵn sàng đặt env), rồi xem bộ đếm
 select private.new_chat_quota_token();
 select bucket, window_start, used from private.chat_quota order by window_start desc limit 20;
@@ -429,9 +505,25 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 - Ô nhập: `textarea` `maxLength=300`, bộ đếm "x/300", Enter gửi, Shift+Enter xuống dòng.
   - Kiểm độ dài sau `trim` bằng tay ở client (client không import zod); Vitest khớp với schema zod của server.
   - Đang gửi: ô khóa, dòng "Mây đang tìm sách…" (không nhấp nháy).
-- Lỗi, hết lượt, 429, timeout, khu vực: một khối thân thiện "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé", kèm `Link` "Tìm sách" tới `/tim-kiem`. Hết lượt trong ngày có biến thể "…quay lại vào ngày mai nhé". Không bao giờ hiện lỗi thô.
+- **Hết lượt miễn phí** (`CHAT_FREE_QUOTA`: chạm trần chung, Google trả 429, hoặc đang cooldown):
+  - Khối thông báo **song ngữ**: tiếng Việt trước, tiếng Anh ngay dưới (`lang="en"` trên đoạn tiếng Anh).
+  - Nói rõ đây là giới hạn lượt dùng **miễn phí**, web không lỗi; gợi ý dùng ô tìm kiếm hoặc trang thể loại trong lúc chờ.
+  - Trường hợp này **không gọi lại Gemini**. Bản nháp:
+    - Hết trong ngày (`scope = gemini_day`):
+      - vi: "Hôm nay Mây đã dùng hết lượt hỏi miễn phí của trợ lý AI. Đây là giới hạn của gói miễn phí, website vẫn hoạt động bình thường. Lượt mới có lại lúc {time} (giờ Việt Nam). Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại."
+      - en: "Mây has used up today's free AI requests. This is a free-plan limit; the website is working normally. New requests will be available at {time} (Vietnam time). Meanwhile, try the search box or browse by category."
+    - Hết trong phút, hoặc 429 / cooldown (không biết chắc là theo phút hay theo ngày):
+      - vi: "Mây đang nhận quá nhiều câu hỏi cùng lúc và đã chạm giới hạn lượt dùng miễn phí. Website vẫn hoạt động bình thường. Bạn thử lại sau khoảng một phút, hoặc tìm sách bằng ô tìm kiếm / xem theo thể loại nhé."
+      - en: "Mây is getting too many questions right now and has reached its free usage limit. The website is working normally. Please try again in about a minute, or use the search box or browse by category."
+  - `{time}` do server tính từ `resets_at` (14:00, từ 2026-11-01 là 15:00) và điền bằng `fillTemplate`.
+  - Kèm hai link (`Link`):
+    - "Tìm sách / Search" → `/tim-kiem`.
+    - Tối đa 4 danh mục gốc (lấy từ `getCategories()` đã cache, server truyền qua props) → `/danh-muc/<slug>`.
+- **Hết lượt của khách** (`CHAT_QUOTA_EXCEEDED`, 10 / giờ hoặc 30 / ngày): "Bạn đã hỏi Mây {n} câu trong {giờ này | hôm nay}, quay lại sau {thời gian} nhé", kèm cùng các link.
+- Timeout, lỗi khác, khu vực: "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé" + cùng các link.
+- Không bao giờ hiện lỗi thô.
   - Server Action fail ở client (mất mạng) → bắt lỗi như `useFormAction` (`NETWORK_ERROR`) → khối trên, không lên error boundary.
-- Chuỗi: namespace `chat` trong `vi.json` (★ 15: chỉ ở `vi.json`, như `admin`). Server dịch sẵn rồi truyền cho `ChatBubble` qua props, bong bóng truyền tiếp vào panel. Mã lỗi mới `CHAT_QUOTA_EXCEEDED`, `CHAT_UNAVAILABLE`, `CHAT_REGION` vào `ERROR_CODES` + `errors` ở **cả hai** file (quy ước hiện có).
+- Chuỗi: namespace `chat` trong `vi.json` (★ 15: chỉ ở `vi.json`, như `admin`). Server dịch sẵn rồi truyền cho `ChatBubble` qua props, bong bóng truyền tiếp vào panel. Câu song ngữ ở trên cũng nằm trong `chat` của `vi.json` (khung chat chỉ có ở trang tiếng Việt). Mã lỗi mới `CHAT_QUOTA_EXCEEDED`, `CHAT_FREE_QUOTA`, `CHAT_UNAVAILABLE`, `CHAT_REGION` vào `ERROR_CODES` + `errors` ở **cả hai** file (quy ước hiện có).
 
 **Ngân sách JS**
 
@@ -443,11 +535,12 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 
 ## Cần chọn (★ = đề xuất)
 
-1. **Model**:
-   - ★ `gemini-3.5-flash-lite`: chưa có ngày tắt; mặc định suy luận `minimal` nên nhanh, ít token; free tier được báo khoảng 15 RPM / 500 RPD.
-   - `gemini-3.8-flash`: hay hơn, nhưng được báo chỉ 20 RPD.
-   - Model 2.5 không mở cho project mới.
-2. **Số free tier**: ★ chủ dự án đọc AI Studio (Rate limit của project chứa key) rồi điền `freeTier` + `checkedAt`. Trong lúc chờ, code dùng số chưa xác minh ở trên, trần toàn web 8 / phút, 400 / ngày.
+1. **Model** (**đã chốt**):
+   - Mặc định `gemini-3.5-flash-lite`.
+   - `GEMINI_MODEL=gemini-3.1-flash-lite` đổi được không cần sửa code. Bản này tắt vào 2027-05-07.
+   - Không tự đổi model khi 429.
+   - Các model Flash khác chỉ 20 RPD nên không dùng.
+2. **Số free tier** (**đã chốt**, AI Studio 2026-10-18): 15 RPM / 250K TPM / 500 RPD cho cả hai model. Trần chung **10 lượt gọi Gemini / phút, 400 / ngày** (ngày Los Angeles). Trần theo khách 10 câu / giờ, 30 câu / ngày.
 3. **API**:
    - ★ `generateContent` REST bằng `fetch` (0 dependency), structured output qua `responseJsonSchema`.
    - Interactions API mới: tài liệu còn đổi nhiều.
@@ -474,14 +567,14 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
     - ★ Script chỉ đọc `scripts/audit-descriptions.ts`: dùng **khóa publishable** (anon, RLS → chỉ sách đang hiện, đúng phần chatbot thấy), in bảng ra stdout, Claude chép vào `data.md`. Script đọc `.env.local` qua `process.loadEnvFile` như `import:books`, nên cần duyệt theo CLAUDE.md.
     - Phương án khác: Claude đưa câu SQL, chủ dự án chạy trong SQL Editor rồi dán kết quả (gồm cả sách đang ẩn).
 18. **Sách hết hàng**: ★ không gợi ý, trừ cuốn đang xem. Phương án khác: gợi ý kèm nhãn "Hết hàng".
-19. **Timeout Gemini**: ★ 10 giây, không retry ("một lượt gọi AI một lần").
+19. **Timeout Gemini**: ★ 10 giây, không retry ("một lượt gọi AI một lần"). Nếu sau này thêm retry, mỗi lần gọi lại vẫn phải xin vé trần chung (mục Luồng).
 
 ## Checklist
 
 **DB / migration**
 
 - [ ] `supabase/migrations/<ts>_chat_quota.sql`: `pgcrypto`, `private.chat_quota`, `private.chat_settings`, `consume_chat_quota`, `set_chat_quota_token`, `private.new_chat_quota_token`, quyền. Idempotent (`if not exists`, `create or replace`, `drop policy if exists` nếu có).
-- [ ] `schema.sql`: mục 14 + danh sách RPC + mã lỗi `CHAT_QUOTA_EXCEEDED`, `CHAT_DISABLED`, `FORBIDDEN`; `migrations.test.ts` qua.
+- [ ] `schema.sql`: mục 14 + danh sách RPC + mã lỗi `CHAT_QUOTA_EXCEEDED`, `CHAT_FREE_QUOTA`, `CHAT_DISABLED`, `FORBIDDEN`; `migrations.test.ts` qua.
 - [ ] **Dừng**: chủ dự án duyệt SQL, chạy migration, chạy `select private.new_chat_quota_token()` → đặt `CHAT_QUOTA_TOKEN` (Vercel + `.env.local`).
 - [ ] Sinh lại `src/types/database.ts`.
 
@@ -490,10 +583,10 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 - [ ] `config.ts`, `schemas.ts` (input, history, output AI), `visibility.ts` (`isChatHidden`), `env.ts` (`chatEnabled`, mock chỉ khi `VERCEL_ENV !== 'production'`).
 - [ ] `queries.ts`: `getChatCatalog` (cache + tag `chat-catalog`), `getChatBookCards(slugs)` (tag `book:{id}`, RLS bỏ sách ẩn).
 - [ ] `candidates.ts` + `moods.ts`; `crisis.ts`; `quota.ts` (định danh, HMAC, cookie `may_vid`, client anon **không retry**, map lỗi RPC); `validate.ts`.
-- [ ] `gemini.ts` (fetch, `AbortSignal.timeout`, map 429 / 5xx / blockReason / finishReason → mã, cooldown), `mock.ts`.
+- [ ] `gemini.ts`: `callGemini(ticket, request)`, nhận đúng một vé từ `consume_chat_quota` cho mỗi `fetch`. Có `fetch`, `AbortSignal.timeout`, model từ `GEMINI_MODEL` (`ALLOWED_MODELS`, mặc định `gemini-3.5-flash-lite`). Map lỗi → mã: 429 → `CHAT_FREE_QUOTA` + cooldown, không gọi lại; 5xx / `blockReason` / `finishReason` → `CHAT_UNAVAILABLE`. Kèm `mock.ts`.
 - [ ] `actions.ts`: `askMay(input) → Result<ChatReply>`.
 - [ ] `features/admin/cache-tags.ts`: thêm `chat-catalog`.
-- [ ] `lib/errors.ts` + `errors.*` (vi, en); `.env.example` (`GEMINI_API_KEY`, `CHAT_QUOTA_TOKEN`); `scripts/check-env.mjs` (định dạng `AIza…` 39 ký tự, token 64 hex, nhóm 2 biến đi cùng nhau).
+- [ ] `lib/errors.ts` + `errors.*` (vi, en); `.env.example` (`GEMINI_API_KEY`, `CHAT_QUOTA_TOKEN`, `GEMINI_MODEL` tùy chọn); `scripts/check-env.mjs` (định dạng `AIza…` 39 ký tự, token 64 hex, nhóm 2 biến đi cùng nhau, `GEMINI_MODEL` rỗng hoặc thuộc danh sách cho phép).
 
 **Prompt**
 
@@ -527,7 +620,7 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - `src/features/chat/{config,env,schemas,visibility,queries,candidates,moods,crisis,quota,prompt,gemini,mock,validate,actions,labels}.ts`, kèm `*.test.ts` cho các file logic thuần.
   - `src/features/chat/components/{chat-bubble,chat-panel,chat-reply,chat-book-card}.tsx`
   - `scripts/audit-descriptions.ts` (★ 17)
-  - `e2e/chat.spec.ts`, `e2e/chat-account.spec.ts`, `e2e/admin-chat.spec.ts`
+  - `e2e/chat.spec.ts`, `e2e/chat-account.spec.ts`, `e2e/admin-chat.spec.ts`, `e2e/chat-quota.spec.ts`
 - **Sửa**:
   - `supabase/schema.sql`, `src/types/database.ts` (sinh lại)
   - `src/app/[locale]/(shop)/layout.tsx`, trang sách (`data-chat-avoid`), `features/cart/components/cart-view.tsx` (`data-chat-avoid`)
@@ -551,7 +644,7 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 - `candidates`:
   - Câu tâm trạng → có sách của danh mục khớp.
   - Có slug → cuốn đó đứng đầu.
-  - ≤ 36 cuốn, ≤ 6 cuốn / danh mục, bỏ hết hàng.
+  - ≤ 30 cuốn, ≤ 5 cuốn / danh mục, bỏ hết hàng.
   - Ổn định khi chạy lại; "tiếng Anh" thì ưu tiên sách `en`.
 - `crisis`:
   - Dương tính: có dấu, không dấu, tiếng Anh, viết hoa, nhiều khoảng trắng.
@@ -559,11 +652,15 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 - `quota`:
   - HMAC ổn định trong ngày, đổi khi sang ngày (giờ VN), không chứa IP thô.
   - Lấy IP từ header.
-  - Map lỗi RPC → mã (`CHAT_QUOTA_EXCEEDED` + scope, `FORBIDDEN` / `CHAT_DISABLED` → `CHAT_UNAVAILABLE`).
-  - Đọc bucket + cửa sổ: phút / giờ / ngày VN / ngày Thái Bình Dương, gồm cả lúc đổi giờ mùa hè.
-- `config`: trần toàn web < số free tier; giới hạn mock chỉ áp khi mock.
+  - Map lỗi RPC → mã: `CHAT_QUOTA_EXCEEDED` + scope; `CHAT_FREE_QUOTA` + `resets_at` (đổi ra giờ VN); `FORBIDDEN` / `CHAT_DISABLED` → `CHAT_UNAVAILABLE`.
+  - Đọc bucket + cửa sổ: phút / giờ / ngày VN / ngày Los Angeles.
+  - Giờ reset của trần chung hiển thị 14:00 trước 2026-11-01 và 15:00 từ 2026-11-01 (giờ VN).
+  - **Vé**: số lần `fetch` tới Gemini = số vé đã cấp (gồm trường hợp giả lập gọi lại: mỗi lần gọi lại xin vé `p_visitor = null`); không có vé thì không `fetch`.
+- `config`: với mọi model trong `ALLOWED_MODELS`: 10 / phút < RPM, 400 / ngày < RPD, 10 × 8.000 < TPM. `GEMINI_MODEL` rỗng / lạ → mặc định. Giới hạn mock chỉ áp khi mock.
+- `prompt`: `fitPromptBudget` giữ ước tính (số ký tự / 2) ≤ 7.500 với 30 ứng viên dài nhất + 4 lượt lịch sử 300 ký tự + sách đang xem; bớt lịch sử trước, ứng viên sau, không dưới 2 lượt / 24 cuốn.
 - `gemini`:
-  - 429 → `CHAT_UNAVAILABLE` + bật cooldown; timeout (fake timer) → `CHAT_UNAVAILABLE`.
+  - 429 → `CHAT_FREE_QUOTA` + bật cooldown, `fetch` chỉ được gọi **một** lần (không gọi lại, không đổi model); trong cooldown không gọi `fetch`, không trừ lượt. Timeout (fake timer) → `CHAT_UNAVAILABLE`.
+  - URL request dùng model của `GEMINI_MODEL`.
   - 500, `blockReason`, `finishReason: SAFETY` / `MAX_TOKENS` → `CHAT_UNAVAILABLE`.
   - Body request chỉ có system prompt, contents, generationConfig: không user id, không email.
   - Mock: `fetch` không bao giờ được gọi.
@@ -586,8 +683,8 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - Ở `/sach/sapiens`, hỏi "Cuốn này nói về gì?":
     - Câu trả lời nhắc đúng tên sách. Server đã tra theo slug.
     - Payload request chứa slug, không chứa mô tả sách.
-  - Hết lượt: 10 lượt rồi lượt 11 → "Mây hơi mệt rồi…" + link `/tim-kiem` hoạt động. Context mới nên cookie mới.
-  - `[mock:429]` → cùng thông báo, trang không lỗi, console sạch.
+  - Hết lượt của khách: 10 câu rồi câu 11 → "Bạn đã hỏi Mây 10 câu trong giờ này…" + link `/tim-kiem` hoạt động. Context mới nên cookie mới.
+  - `[mock:429]` → khối hết lượt miễn phí **song ngữ** (đoạn vi + đoạn `lang="en"`), có chữ "miễn phí" / "free", link tìm kiếm + link danh mục bấm được, trang không lỗi, console sạch. Câu kế tiếp trong cooldown cũng ra khối đó và mock ghi nhận 0 lượt gọi thêm.
   - Câu tự hại → câu trả lời cố định, không thẻ.
   - Câu > 300 ký tự: textarea không cho gõ thêm; gọi action bằng 301 ký tự → `INVALID_INPUT`, hiện thông báo thân thiện.
   - Mobile: tấm phủ toàn khung, nút Đóng thấy được và hoạt động, focus về bong bóng, nền không cuộn.
@@ -597,6 +694,12 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
   - Có sách trong giỏ → `/thanh-toan` không có bong bóng.
   - Trang thành công `/thanh-toan/thanh-cong/<mã>` không có bong bóng (dùng đơn e2e của user checkout, dọn bằng `cancelAndDeleteOrders`).
 - `admin-chat.spec.ts` (desktop-admin): `/admin`, `/admin/sach` không có bong bóng.
+- `chat-quota.spec.ts` (chỉ project `desktop`, gọi RPC bằng khóa anon + token e2e, không qua UI):
+  - Token sai → `FORBIDDEN`.
+  - Trần chung `geminiCallsPerMinute: 1` gọi hai lần → ít nhất lần thứ hai ra `CHAT_FREE_QUOTA`. Bucket phút dùng chung với spec khác, nên lần đầu cũng có thể đã vượt.
+  - Sau đó gọi lại bằng cùng khách mới, `visitorPerHour: 1`, trần chung lớn → **thành công**. Chứng minh lượt bị chặn trước đó đã rollback, không trừ oan lượt khách.
+  - Gọi lần nữa → `CHAT_QUOTA_EXCEEDED`.
+  - `p_visitor = null` chỉ cộng trần chung.
 - `scripts/e2e-seed.test.ts`: thêm bất biến cho spec chat:
   - `sapiens` còn hàng.
   - Danh mục `ky-nang-song` hoặc `tam-ly-hoc` có ≥ 3 sách còn hàng.
@@ -621,20 +724,20 @@ DANH SÁCH SÁCH: [{"s":…,"t":…,"a":…,"c":…,"l":…,"d":…}, …]
 1. Duyệt plan, chọn ★.
 2. Google AI Studio:
    - Kiểm project của key **không gắn billing**.
-   - Đọc Rate limit của model đã chọn, gửi số cho Claude (hoặc tự sửa `config.ts`).
+   - Rate limit đã đọc (2026-10-18). Đọc lại khi đổi model, hoặc khi thấy 429 sớm hơn trần.
    - `GEMINI_API_KEY` đã có trong `.env.local`.
 3. Sau khi Claude viết migration: duyệt SQL → chạy trên Supabase → chạy các câu SQL kiểm tra → `select private.new_chat_quota_token()` → đặt `CHAT_QUOTA_TOKEN` vào `.env.local` + Vercel (Production).
-4. Vercel → Environment Variables: `GEMINI_API_KEY` (Production). Sau đó `npm run check:env`.
+4. Vercel → Environment Variables: `GEMINI_API_KEY` (Production); `GEMINI_MODEL` chỉ khi muốn đổi sang `gemini-3.1-flash-lite`. Sau đó `npm run check:env`.
 5. ★ Số đường dây hỗ trợ, nếu muốn đưa vào câu trả lời cố định.
-6. Demo cả lớp: dặn mọi người hỏi giãn ra. Trần toàn web 8 lượt / phút (xem rủi ro).
+6. Demo cả lớp: dặn mọi người hỏi giãn ra. Trần chung 10 lượt gọi / phút, 400 / ngày; ngày reset 14h giờ VN (15h từ 2026-11-01).
 
 ## Rủi ro và cách xử lý
 
 | Rủi ro | Xử lý |
 |---|---|
-| **Hết lượt free tier** (RPD) giữa ngày | Trần toàn web 80% RPD, theo ngày giờ Thái Bình Dương. Chạm trần → thông báo thân thiện + link tìm sách; trang không hỏng. Không bật billing nên không phát sinh chi phí. |
-| **Google đổi / hạ giới hạn** mà không báo | Số free tier + ngày kiểm trong `config.ts`, Vitest bắt trần đặt sai. 429 → cooldown 60 s, không trừ lượt khách, không gọi dồn. Model tắt (404) → `CHAT_UNAVAILABLE`. Theo dõi trang deprecations. Đổi model chỉ sửa `config.ts`. |
-| **Nhiều người cùng lúc khi demo** | 8 lượt / phút toàn web: 30 người bấm cùng lúc thì khoảng 22 người nhận "Mây hơi mệt…" trong phút đó. Giới hạn IP 40 / giờ đủ cho một lớp sau NAT. Có thể hạ `candidates` để giảm TPM, nhưng giới hạn thật là RPM. Muốn nhiều hơn: dùng model RPM cao hơn (sau khi đọc AI Studio), hoặc chia nhóm demo. |
+| **Hết lượt free tier** (RPD) giữa ngày | Trần chung 400 / 500 RPD, ngày Los Angeles (reset 14h, từ 2026-11-01 là 15h giờ VN). Chạm trần → khối song ngữ "hết lượt miễn phí, web không lỗi" + giờ có lượt lại + link tìm kiếm / danh mục; trang không hỏng, không gọi Gemini. Không bật billing nên không phát sinh chi phí. |
+| **Google đổi / hạ giới hạn** mà không báo | Số free tier + ngày kiểm trong `config.ts`, Vitest bắt trần đặt sai. 429 → khối hết lượt miễn phí + cooldown 60 s, không trừ lượt, không gọi lại, không tự đổi model. Model tắt (404) → `CHAT_UNAVAILABLE`. `gemini-3.1-flash-lite` tắt 2027-05-07 (nếu đang dùng qua `GEMINI_MODEL` thì bỏ biến trước ngày đó). Theo dõi trang deprecations. |
+| **Nhiều người cùng lúc khi demo** | 10 lượt gọi / phút: 30 người bấm cùng lúc thì khoảng 20 người nhận khối "đang nhận quá nhiều câu hỏi…, thử lại sau khoảng một phút" trong phút đó. Cả lớp hỏi đều đặn vẫn chỉ được 400 câu / ngày cho toàn web. Giới hạn IP 40 / giờ đủ cho một lớp sau NAT. TPM không phải nút thắt (≤ 80K / 250K). Muốn nhiều hơn chỉ có cách chia nhóm demo, vì cả hai model Flash-Lite đều 15 RPM. |
 | **Chất lượng mô tả sách** | Thiếu / ngắn / tiếng Anh → gợi ý dựa vào tên, tác giả, danh mục. Prompt cấm bịa. Rà mô tả và báo trong `data.md`; bổ sung mô tả trong admin là việc riêng. |
 | **AI trả slug lạ / bịa nội dung** | `enum` slug trong schema + lọc ở server + thẻ dựng từ DB. Nội dung `reason` vẫn có thể sai, nên dòng nhắc ghi "có thể sai". |
 | **Prompt injection** | Câu khách nằm trong `<khach>`, prompt coi là dữ liệu. Đầu ra luôn qua schema + validate. Không render HTML / link. AI không có công cụ nào và không thấy dữ liệu riêng tư, nên bị lừa cũng không lộ được gì ngoài system prompt (không chứa bí mật). |
