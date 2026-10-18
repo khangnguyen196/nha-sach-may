@@ -1003,6 +1003,7 @@
     "visitorHour": "Bạn đã hỏi Mây nhiều câu trong giờ này. Mây trả lời tiếp được từ {time} nhé. Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
     "visitorDay": "Hôm nay bạn đã hỏi Mây nhiều câu rồi, mai quay lại nhé. Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
     "region": "Mây chưa phục vụ khu vực của bạn. Bạn vẫn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
-    "tired": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé."
+    "tired": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
+    "chipsLabel": "Câu hỏi gợi ý"
   }
 }

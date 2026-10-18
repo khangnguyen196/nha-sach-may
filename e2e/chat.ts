@@ -6,10 +6,14 @@ import { waitForHydration } from './helpers'
 
 export const CONFIRM_AGE = 'Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây'
 
-export const bubble = (page: Page) => page.getByTestId('chat-bubble')
+// Bong bóng nằm trong <Suspense>: ngay sau hydrate React có thể còn giữ bản sao ẩn của boundary
+// (<div hidden id="S:…">), nên bỏ mọi phần tử nằm trong [hidden]
+const BUBBLE = '[data-testid="chat-bubble"]:not([hidden] *)'
+
+export const bubble = (page: Page) => page.locator(BUBBLE)
 
 export async function openChat(page: Page, { confirm = true } = {}) {
-  await waitForHydration(page, '[data-testid="chat-bubble"]')
+  await waitForHydration(page, BUBBLE)
   await bubble(page).click()
   const panel = page.getByTestId('chat-panel')
   await expect(panel).toBeVisible()

@@ -24,6 +24,7 @@ export async function getChatLabels() {
     aboutBook: t('aboutBook', { title: placeholder('title') }),
     chips: [t('chips.mood'), t('chips.weekend'), t('chips.startup')],
     bookChips: [t('chips.what'), t('chips.who'), t('chips.similar')],
+    chipsLabel: t('chipsLabel'),
     gate: {
       title: t('gate.title'),
       items: [t('gate.ai'), t('gate.personal'), t('gate.freeTier'), t('gate.adult')],

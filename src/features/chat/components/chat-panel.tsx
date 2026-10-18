@@ -165,7 +165,7 @@ export default function ChatPanel({
 
             <p className="text-muted-foreground">{slug ? labels.greetingBook : labels.greeting}</p>
             {entries.length === 0 && (
-              <ul className="flex flex-wrap gap-2" aria-label={labels.inputLabel}>
+              <ul className="flex flex-wrap gap-2" aria-label={labels.chipsLabel}>
                 {chips.map((chip) => (
                   <li key={chip}>
                     <button
