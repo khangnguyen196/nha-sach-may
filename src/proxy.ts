@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import createIntlMiddleware from 'next-intl/middleware'
 import type { Locale } from 'next-intl'
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
 import { ORDER_CODE } from '@/features/orders/params'
 import { localizedPath, matchAddressPath, matchOrderPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
@@ -100,6 +100,17 @@ async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Da
   return NextResponse.rewrite(new URL(`/${missing.locale}/__not-found`, request.url), { request: { headers } })
 }
 
+/**
+ * x-not-found chỉ do proxy đặt (notFoundRewrite). Khách tự gửi header này thì bỏ trước mọi bước: next-intl và
+ * NextResponse.next({ request }) chép header từ request này sang trang, nên giá trị của khách không tới not-found.tsx.
+ */
+export function withoutClientNotFoundKind(request: NextRequest): NextRequest {
+  if (!request.headers.has(NOT_FOUND_HEADER)) return request
+  const headers = new Headers(request.headers)
+  headers.delete(NOT_FOUND_HEADER)
+  return new NextRequest(request, { headers })
+}
+
 const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')
 
 /** Locale của URL nếu nó là (hoặc nằm dưới) một trong các trang `hrefs`, theo pathname đã dịch: /tai-khoan, /en/account… */
@@ -132,7 +143,8 @@ function authRedirect(request: NextRequest, signedIn: boolean) {
   return NextResponse.redirect(new URL(next, request.url))
 }
 
-export async function proxy(request: NextRequest) {
+export async function proxy(incoming: NextRequest) {
+  const request = withoutClientNotFoundKind(incoming)
   // 1. Refresh phiên Supabase TRƯỚC next-intl: cookie mới được ghi vào request, và next-intl
   //    chuyển tiếp nguyên header của request → Server Component đọc được token mới ngay lượt này.
   const { url, publishableKey } = supabaseEnv()
