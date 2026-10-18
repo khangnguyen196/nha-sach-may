@@ -77,6 +77,34 @@ test('xác nhận 18+: chưa bấm thì không hỏi được; đã bấm thì n
   }
 })
 
+test('chip gợi ý chỉ khi chưa hỏi: bấm chip → câu trả lời đầu tới thì hết chip; tải lại trang thì chip hiện lại', async ({ page }) => {
+  await page.goto('/')
+  const panel = await openChat(page)
+  const chips = panel.getByRole('list', { name: 'Câu hỏi gợi ý' })
+  await expect(chips.getByRole('button')).toHaveCount(3)
+  await chips.getByRole('button', { name: 'Sách nhẹ nhàng đọc cuối tuần' }).click()
+  await expect(panel.getByTestId('chat-reply')).toHaveCount(1)
+  await expect(chips).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: 'Sách nhẹ nhàng đọc cuối tuần' })).toHaveCount(0)
+
+  // Câu thứ hai: chip vẫn không quay lại
+  await ask(panel, 'Có cuốn nào ngắn hơn không?')
+  await expect(chips).toHaveCount(0)
+
+  await page.reload()
+  const reopened = await openChat(page, { confirm: false })
+  await expect(reopened.getByRole('list', { name: 'Câu hỏi gợi ý' }).getByRole('button')).toHaveCount(3)
+})
+
+test('chip gợi ý ở trang sách: tự gõ câu đầu → hết chip', async ({ page }) => {
+  await page.goto('/sach/sapiens')
+  const panel = await openChat(page)
+  const chips = panel.getByRole('list', { name: 'Câu hỏi gợi ý' })
+  await expect(chips.getByRole('button', { name: 'Cuốn này nói về gì?' })).toBeVisible()
+  await ask(panel, 'Cuốn này hợp với ai?')
+  await expect(chips).toHaveCount(0)
+})
+
 test('câu tâm trạng → tối đa 3 thẻ sách, bấm thẻ mở đúng trang sách', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')

@@ -90,6 +90,8 @@ export default function ChatPanel({
   const latestBook = [...entries].reverse().find((entry) => entry.role === 'assistant')
   const aboutBook = slug && latestBook?.role === 'assistant' ? latestBook.reply.aboutBook : null
   const chips = slug ? labels.bookChips : labels.chips
+  // Chip gợi ý chỉ khi cuộc trò chuyện còn trống: gửi câu đầu (chip hoặc tự gõ) là ẩn hẳn
+  const started = entries.length > 0 || pending
   const closeOnMobile = () => {
     if (!desktop) onOpenChange(false)
   }
@@ -166,7 +168,7 @@ export default function ChatPanel({
             )}
 
             <p className="text-muted-foreground">{slug ? labels.greetingBook : labels.greeting}</p>
-            {entries.length === 0 && (
+            {!started && (
               <ul className="flex flex-wrap gap-2" aria-label={labels.chipsLabel}>
                 {chips.map((chip) => (
                   <li key={chip}>
@@ -231,7 +233,8 @@ export default function ChatPanel({
                     send(draft)
                   }
                 }}
-                className="min-h-11 flex-1 resize-none rounded-md border border-input bg-surface-raised px-3 py-2 outline-none placeholder:text-subtle focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                // ≥ 16px trên mobile: iOS Safari tự phóng to khi chạm vào ô nhập chữ nhỏ hơn 16px
+                className="min-h-11 flex-1 resize-none rounded-md border border-input bg-surface-raised px-3 py-2 text-base outline-none placeholder:text-subtle focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 sm:text-sm"
               />
               <button
                 type="submit"

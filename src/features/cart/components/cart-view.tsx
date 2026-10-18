@@ -258,7 +258,7 @@ function QuantityStepper({ quantity, max, labels, onChange }: StepperProps) {
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commit}
         onKeyDown={onKeyDown}
-        className="h-full w-11 border-x border-input bg-transparent text-center text-sm tabular-nums outline-none [appearance:textfield] focus-visible:bg-surface-raised [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="h-full w-11 border-x border-input bg-transparent text-center text-base tabular-nums sm:text-sm outline-none [appearance:textfield] focus-visible:bg-surface-raised [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <Button
         variant="ghost"
