@@ -953,11 +953,11 @@ select id, slug, title, language, danh_muc, trang_thai, stock, do_dai,
        left(d, 80) as dau_mo_ta
   from f
  where thieu or ngan or vi_khong_dau or co_html or ky_tu_loi
- order by trang_thai desc, thieu desc, do_dai, title;
+ order by trang_thai = 'hiện' desc, thieu desc, do_dai, title;
 ```
 
 - Dòng cuối của A1 (`danh_muc` trống) là tổng toàn bộ.
-- A2 xếp sách đang hiện trước (`'hiện' > 'ẩn'` theo thứ tự chữ).
+- A2 xếp sách đang hiện trước (sắp theo `trang_thai = 'hiện'`, không phụ thuộc collation của DB).
 - Số sơ bộ (từ `scripts/out/preview-approved*.json` lúc import, **không phải DB**; admin có thể đã sửa):
   - 72 sách Việt: 1 thiếu mô tả, 4 dưới 150 ký tự, 4 không dấu.
   - 117 sách Anh: 3 thiếu mô tả, 12 dưới 150 ký tự.
