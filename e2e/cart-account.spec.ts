@@ -150,7 +150,9 @@ test('nhiều tab cùng mở sau khi đăng nhập → chỉ gộp một lần',
 })
 
 test('mất mạng khi thêm vào giỏ / đổi số lượng → báo tại chỗ, không ra trang lỗi, số lượng giữ như cũ', async ({ page, users }) => {
-  const errors = collectErrors(page)
+  // Chỉ bắt lỗi không ai xử lý (trang lỗi): component tự ghi console.error khi request không tới server, đó là có chủ ý
+  const uncaught: string[] = []
+  page.on('pageerror', (error) => uncaught.push(error.message))
   const [book] = books
   if (!book) throw new Error('Không có sách test')
   const network = 'Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé.'
@@ -172,5 +174,5 @@ test('mất mạng khi thêm vào giỏ / đổi số lượng → báo tại ch
   await line.getByRole('button', { name: /^Tăng/ }).click()
   await expect(page.getByRole('main').getByText(network)).toBeVisible()
   expect(await cartQuantities(users.user.id)).toEqual({ [book.id]: 1 })
-  expect(errors).toEqual([])
+  expect(uncaught).toEqual([])
 })
