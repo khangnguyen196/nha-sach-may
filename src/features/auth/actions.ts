@@ -105,9 +105,11 @@ export async function requestPasswordReset(
   })
   if (error) {
     const failure = authFailure(error)
-    // Báo lỗi không nói gì về tài khoản (giới hạn tần suất, không tới được máy chủ, địa chỉ không nhận thư); lỗi khác
-    // vẫn hiện "đã gửi" để không lộ email nào có tài khoản
-    if (failure.code === 'RATE_LIMITED' || failure.code === 'NETWORK_ERROR' || failure.fieldErrors) {
+    // Chỉ báo lỗi không nói gì về tài khoản: giới hạn tần suất, không tới được máy chủ, địa chỉ sai dạng
+    // (email_address_invalid, GoTrue kiểm trước khi tìm user). email_address_not_authorized chỉ xảy ra khi GoTrue đã
+    // tìm thấy tài khoản và định gửi thư (SMTP mặc định chỉ gửi cho thành viên project) → báo ra là lộ email có tài
+    // khoản. Lỗi đó và mọi lỗi khác vẫn hiện "đã gửi", như email không có tài khoản.
+    if (failure.code === 'RATE_LIMITED' || failure.code === 'NETWORK_ERROR' || error.code === 'email_address_invalid') {
       return withAuthMessage(target, failure)
     }
     console.error('resetPasswordForEmail:', error.code ?? error.message)
