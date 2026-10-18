@@ -159,7 +159,7 @@ describe('gợi ý mã giảm giá + mã lỗi theo lý do (ux-messages)', () =>
     }
     const returns = /returns table \(([^)]*)\)/.exec(body)?.[1] ?? ''
     for (const column of ['id', 'used_count', 'usage_limit', 'starts_at', 'is_active', 'is_public']) {
-      expect(returns).not.toMatch(new RegExp(`\b${column}\b`))
+      expect(returns).not.toMatch(new RegExp(`\\b${column}\\b`))
     }
   })
 
