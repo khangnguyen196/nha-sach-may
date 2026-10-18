@@ -97,6 +97,8 @@ export default function ChatPanel({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} modal={!desktop}>
       <DialogPrimitive.Portal>
+        {/* Radix gắn khóa cuộn nền (RemoveScroll) vào Overlay: tấm modal trên mobile phải có Overlay */}
+        {!desktop && <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background" />}
         <DialogPrimitive.Content
           data-testid="chat-panel"
           aria-describedby="chat-subtitle"
