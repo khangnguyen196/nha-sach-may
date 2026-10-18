@@ -1,4 +1,4 @@
-# Báo cáo cuối: Nhà Sách Mây sau Phase 1 → 10 (+ Phase 11 trên nhánh `phase-11`)
+# Báo cáo cuối: Nhà Sách Mây sau Phase 1 → 11
 
 Trạng thái: Phase 1–10 đã merge vào `main` (2026-10-16). Đã deploy `https://nha-sach-may.vercel.app` (tự deploy từ `main`). Dự án học tập, phi thương mại.
 
@@ -119,9 +119,9 @@ Dùng **tài khoản thường** (không phải admin) cho cả phần B. Tài k
 12. Captcha Turnstile (mục 7); VietQR thật (mục 4, nên giữ demo).
 13. Google Search Console: gửi `sitemap.xml`.
 
-## Phase 11: chatbot gợi ý sách "Mây" (nhánh `phase-11`, chưa merge)
+## Phase 11: chatbot gợi ý sách "Mây" (đã merge `main` 2026-10-18)
 
-Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11". Việc của chủ dự án: `owner-todo.md` mục 8.
+Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari) rồi merge cùng ngày. `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN` ở Vercel Production. Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11"; cấu hình: `owner-todo.md` mục 8.
 
 - Bong bóng chat ở góc phải dưới, chỉ trang cửa hàng tiếng Việt (không có ở `/en`, đăng nhập / đăng ký, `/admin`, thanh toán). Bấm thì tải khung chat: desktop khung nổi 360px, mobile tấm toàn màn hình. Có bước xác nhận 18+ và dòng nhắc về dữ liệu ở gói miễn phí.
 - Gemini `gemini-3.5-flash-lite` (free tier, không billing), một lượt gọi mỗi câu hỏi, tối đa 3 thẻ sách lấy từ DB.
@@ -129,6 +129,12 @@ Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11". Việc của ch�
 - Câu tự hại trả câu hỗ trợ cố định, không gọi AI. Chặn EEA / Anh / Thụy Sĩ.
 - Thử thật 10 lượt: tối đa 4.035 token vào, không `MAX_TOKENS`.
 - JS lúc tải trang: **+1.5KB gzip** (trang chủ + 41.1KB, trang sách + 43.9KB, ngân sách 50KB).
+- Sửa sau test tay: chip / câu hỏi gợi ý chỉ hiện ở lượt mới nhất của Mây; ô nhập trên mobile ≥ 16px (iOS không tự phóng to).
+
+**Việc còn lại cho đợt sửa lỗi sau Phase 11**
+1. Trang đăng nhập mất chữ đã gõ: fallback Suspense là cùng form chưa có `?next=`, bị thay bằng form thật sau khi đã hydrate.
+2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`), có từ trước Phase 11.
+3. Tên tác giả ngược thứ tự (dữ liệu Google Books, VD "Huy Thiệp Nguyễn").
 
 ## 4. Rủi ro còn lại
 

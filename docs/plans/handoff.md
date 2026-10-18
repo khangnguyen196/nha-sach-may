@@ -1,17 +1,19 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, Phase 11 chatbot Mây trên nhánh `phase-11`)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, sau merge Phase 11 chatbot Mây)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
 ## Trạng thái
 
-- **Phase 11 (chatbot gợi ý sách "Mây")**: xong trên nhánh **`phase-11`**, chưa merge (`docs/plans/phase-11.md` → "Báo cáo Phase 11").
-  - Đã chạy migration `chat_quota` + `chat_quota_defaults`.
-  - `CHAT_QUOTA_TOKEN` đã đặt (`.env.local` + Vercel Production).
-  - **`GEMINI_API_KEY` chưa đặt trên Vercel** (chủ dự án giữ), nên production chưa có bong bóng.
-  - `measure:js` (2026-10-18): trang chủ + 41.1KB, trang sách + 43.9KB (bong bóng + 1.5KB, khung chat 9.0KB gzip chỉ tải khi bấm).
-  - Còn mở:
-    - Kiểm số đường dây hỗ trợ trước khi bật chat (`owner-todo.md` mục 8).
-    - Đề xuất sửa trang đăng nhập: form fallback của Suspense bị thay sau khi đã hydrate, chữ đã gõ bị mất. Lỗi có từ trước Phase 11.
+- **Phase 11 (chatbot gợi ý sách "Mây")**: **đã merge vào `main`** (ff, 2026-10-18) sau khi chủ dự án test tay OK trên bản Preview (máy tính + iPhone Safari). Nhánh `phase-11` đã xóa (local + remote). Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11".
+  - Migration `chat_quota` + `chat_quota_defaults` đã chạy trên Supabase.
+  - `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN` đặt ở Vercel **Production** (đã bỏ khỏi Preview).
+  - Số đường dây nóng Ngày Mai trong `chat.crisis` đã được chủ dự án kiểm.
+  - `measure:js` (2026-10-18): trang chủ + 41.1KB, trang sách + 43.9KB. Bong bóng + 1.5KB; khung chat 9.0KB gzip, chỉ tải khi bấm.
+  - CI trước merge (`aec9a37`): check xanh; e2e 345 qua, 1 flaky (`cart-account.spec:94`, request 404 ở mục dưới).
+- **Việc còn lại cho đợt sửa lỗi sau Phase 11** (chưa làm):
+  1. **Trang đăng nhập mất chữ đã gõ**: `login/page.tsx` bọc form trong `<Suspense fallback={<Form …/>}>`, fallback là cùng form nhưng chưa có `?next=`. Sau điều hướng phía client, fallback hiện và hydrate trước, rồi bị thay bằng form thật khoảng 60 ms sau, nên chữ đã gõ bị mất. Tái hiện ở cả `/en`. e2e đã né bằng `fillLogin` chờ form thật; lỗi UX vẫn còn.
+  2. **Request 404 làm e2e đăng nhập / đăng xuất chập chờn**: `account.spec.ts:71`, `cart-account.spec.ts:94`. Console có "Failed to load resource: 404", chưa rõ URL nào; qua ở lần retry; có từ trước Phase 11.
+  3. **Tên tác giả ngược thứ tự**: dữ liệu Google Books, VD "Huy Thiệp Nguyễn". Chatbot và trang sách hiện đúng như trong DB.
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
 - Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build).

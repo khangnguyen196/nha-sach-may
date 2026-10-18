@@ -1,6 +1,6 @@
 # Phase 11: Chatbot gợi ý sách "Mây"
 
-Trạng thái: **xong trên nhánh `phase-11`, chưa merge** (2026-10-18). Xem "Báo cáo Phase 11" ngay dưới. Plan bản 3 (đã duyệt) giữ nguyên ở các mục sau.
+Trạng thái: **đã merge vào `main`** (ff, 2026-10-18) sau khi chủ dự án test tay OK trên Preview (máy tính + iPhone). Xem "Báo cáo Phase 11" ngay dưới. Plan bản 3 (đã duyệt) giữ nguyên ở các mục sau.
 
 Thứ tự đã duyệt:
 1. Cập nhật plan (bản 3).
