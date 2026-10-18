@@ -131,10 +131,19 @@ Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari)
 - JS lúc tải trang: **+1.5KB gzip** (trang chủ + 41.1KB, trang sách + 43.9KB, ngân sách 50KB).
 - Sửa sau test tay: chip / câu hỏi gợi ý chỉ hiện ở lượt mới nhất của Mây; ô nhập trên mobile ≥ 16px (iOS không tự phóng to).
 
-**Việc còn lại cho đợt sửa lỗi sau Phase 11**
-1. Trang đăng nhập mất chữ đã gõ: fallback Suspense là cùng form chưa có `?next=`, bị thay bằng form thật sau khi đã hydrate.
-2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`), có từ trước Phase 11.
-3. Tên tác giả ngược thứ tự (dữ liệu Google Books, VD "Huy Thiệp Nguyễn").
+**Việc còn lại cho đợt sửa lỗi sau Phase 11** (đã làm ở nhánh `ux-messages`, xem mục dưới)
+1. Trang đăng nhập mất chữ đã gõ → đã sửa (một form ngay từ đầu, mục 14).
+2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`) → **chưa xong**: commit chẩn đoán đã bắt được URL (`/dang-nhap?next=%2Ftai-khoan&_rsc=…`, run 39148697724), khác giả thuyết; chờ quyết trước khi sửa.
+3. Tên tác giả ngược thứ tự → SQL `supabase/checks/authors-fix.sql` chờ duyệt (chưa chạy).
+
+## Đợt ux-messages: thông báo cho khách (nhánh `ux-messages`, CHƯA merge)
+
+Plan + báo cáo: `docs/plans/ux-messages.md`. Việc để sau: `docs/progress.md`. Plan đợt giảm JS: `docs/plans/perf-js.md`.
+
+- Mã giảm giá / hủy đơn báo đúng lý do, gợi ý mã ở trang thanh toán, lỗi đăng ký / đăng nhập theo ô, gửi lại email xác nhận, 404 nói rõ thiếu gì (vẫn HTTP 404 thật), link "Đăng nhập lại", form giữ chữ khi mất mạng, trang lỗi có mã tra cứu + email liên hệ.
+- Migration A đã chạy; **migration B chạy sau khi merge + deploy** (app hiểu cả mã cũ lẫn mới, có Vitest cho đường mã cũ).
+- JS (measure:js, gzip ngoài baseline 170KB): trang sách 43.9 → **45.3KB** (ngân sách 50), trang chủ 41.2 → 42.2, `/sach` + danh mục 54.3 → 55.3 (chưa có ngân sách).
+- Bổ sung đêm 2026-10-18: quên mật khẩu không còn lộ email có tài khoản qua `email_address_not_authorized`; proxy bỏ header `x-not-found` do khách gửi; nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
 
 ## 4. Rủi ro còn lại
 
@@ -142,7 +151,8 @@ Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari)
 - **e2e chạy trên DB production**: sách e2e đang bán lộ qua tìm kiếm / `/sach` trong lúc test; user, đơn, voucher test sót lại nếu lần chạy bị ngắt (setup lần sau dọn). Xử lý: project Supabase riêng (mục 3 bước 6).
 - **Thanh toán không đối soát**: admin tự xem sao kê; đơn chuyển khoản chưa trả giữ tồn kho tới khi admin hủy. VietQR đang là thông tin demo.
 - **Email chỉ ghi log** tới khi cấu hình Resend; lỗi gửi chỉ có trong log, không thử lại.
-- Trang danh mục +52KB JS (vượt mức 50KB đặt cho trang sách; do bộ lọc / sheet).
+- `/sach` + trang danh mục 55.3KB JS (chưa có ngân sách; trên mức 50KB của trang sách; do sheet bộ lọc tải ngay). Plan giảm: `docs/plans/perf-js.md`.
+- **Tắt JavaScript**: form gửi Server Action mà action trả kết quả (lỗi, "đã gửi") hiện ra trang trắng trên trang có khung tĩnh prerender (response chỉ có phần động). Action kết thúc bằng redirect vẫn chạy. Chi tiết: `docs/progress.md`.
 - `?page=` vượt quá vẫn là soft 404 (UI 404 + `noindex`, HTTP 200).
 - Dữ liệu Google Books: 65 bìa < 300px (30 sách Việt không có bìa trên Open Library), mô tả tiếng Anh trống (fallback tiếng Việt), giá / tồn kho sinh giả theo ISBN.
 - `experimental.messages.precompile` của next-intl là API thử nghiệm: mỗi lần nâng next-intl phải build + `measure:js` + e2e.

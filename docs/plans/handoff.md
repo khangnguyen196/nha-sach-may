@@ -69,7 +69,7 @@
   - `/tai-khoan/dia-chi/[id]`: proxy trả 404 thật (id sai / không có / của người khác), trang không còn gọi `notFound()` trong Suspense.
   - Trang đặt hàng thành công: tiêu đề "Đặt hàng thành công" nằm trong boundary, đơn không có thì chỉ hiện UI 404 của đơn.
   - `layout.spec.ts:66`: lỗi thật của `LocaleSwitcher` (fallback Suspense ngoài nằm trong HTML tĩnh, thiếu query) → đã sửa.
-  - `account.spec.ts:71` (đăng nhập → đăng xuất) flaky 1 lần trên CI (run 39051786575, qua ở lần retry): console có một "Failed to load resource: 404" chưa rõ request nào; 2 lần chạy sau không lặp lại. Gặp lại thì xem trace (`playwright-report` artifact).
+  - `account.spec.ts:71` (đăng nhập → đăng xuất) flaky 1 lần trên CI (run 39051786575, qua ở lần retry): console có một "Failed to load resource: 404" chưa rõ request nào. **Chưa tái hiện lại, đang theo dõi**: ux-messages chỉ có commit chẩn đoán (`collectErrors` kèm URL, `6b5d566`) và bản sửa theo giả thuyết (kệ trang chủ bỏ sách thuộc danh mục ẩn, `4cd5430`); các lượt CI sau đó không lặp lại nên chưa có URL để xác nhận. Gặp lại thì thông báo fail có URL; xem thêm trace (`playwright-report` artifact).
 - Việc để sau: xem docs/progress.md
 - Sau khi deploy (tùy chọn): đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
 - Bản Preview của Vercel đang bật Vercel Authentication → script đo không vào được bản Preview (muốn đo trước khi merge cần Protection Bypass for Automation, do chủ dự án quyết).

@@ -1,6 +1,6 @@
 # Đợt sửa "ux-messages" (sau Phase 11)
 
-Trạng thái: **code xong, chưa merge** (2026-10-18). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
+Trạng thái: **code xong, chưa merge** (2026-10-18; bổ sung đêm 2026-10-18 → 19, xem "Bổ sung"). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
 
 Mục tiêu: khách luôn hiểu chuyện gì đang xảy ra.
 - Lỗi do khách: nói đúng lý do và cách làm tiếp, đặt ngay chỗ liên quan.
@@ -31,7 +31,7 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 - **12** `toFailure`: JWT bị từ chối → `SESSION_EXPIRED`, RLS chặn → `FORBIDDEN`. Admin: mục vừa bị xóa ở tab khác → `ITEM_DELETED`; lưu sách xong mà lỗi tác giả → `BOOK_AUTHORS_NOT_SAVED`; lỗi query trong bước kiểm tra đi qua `toFailure` (mạng → `NETWORK_ERROR`).
 - **13** `?page=99` danh sách đơn giữ soft 404 (đã quyết) + "Về trang đầu"; `/tai-khoan/dia-chi/[id]` 404 thật ở proxy, hết `notFound()` trong Suspense; trang đặt hàng thành công không còn khối 404 dưới tiêu đề "Đặt hàng thành công"; `layout.spec:66` là lỗi thật của `LocaleSwitcher` (fallback ngoài trong HTML tĩnh thiếu query) → đã sửa.
 - **14** Đăng nhập / quên mật khẩu chỉ có một form ngay từ đầu (`next` đọc ở client, không JS lấy từ Referer; thông báo URL ở Suspense riêng phía trên).
-- **15** Commit chẩn đoán riêng (`6b5d566`: kèm URL vào dòng "Failed to load resource", không lọc dòng nào). 3 lượt e2e sau đó (`e75b18a`, `ecfb2ff`, 1 lượt chạy tay) **không tái hiện** request 404 (`account.spec:71`, `cart-account.spec:94` qua cả 3) → chưa có URL để đối chiếu, cũng không có URL nào khác dự kiến. Bản sửa gốc theo bằng chứng trong trace cũ (kệ "Bán chạy" trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404): kệ trang chủ chỉ lấy sách thuộc danh mục đang hiện (`visibleCategoryIds`, ★12). Commit chẩn đoán giữ lại: nếu còn tái diễn, thông báo fail sẽ có URL.
+- **15** Commit chẩn đoán riêng (`6b5d566`: kèm URL vào dòng "Failed to load resource", không lọc dòng nào). **Cập nhật 2026-10-19**: run 39148697724 bắt được URL ở `cart-account.spec:94` (desktop-account, qua ở retry): `404 /dang-nhap?next=%2Ftai-khoan&_rsc=…` (request RSC tới trang đăng nhập), KHÔNG phải link sách trên kệ → theo ★ "log URL ra request khác thì dừng, báo": chưa sửa, ghi ở `docs/progress.md`. Ghi chú cũ: 3 lượt e2e sau commit chẩn đoán (`e75b18a`, `ecfb2ff`, 1 lượt chạy tay) **không tái hiện** request 404 (`account.spec:71`, `cart-account.spec:94` qua cả 3) → chưa có URL để đối chiếu, cũng không có URL nào khác dự kiến. Bản sửa gốc theo bằng chứng trong trace cũ (kệ "Bán chạy" trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404): kệ trang chủ chỉ lấy sách thuộc danh mục đang hiện (`visibleCategoryIds`, ★12). Commit chẩn đoán giữ lại: nếu còn tái diễn, thông báo fail sẽ có URL.
 - **16** `supabase/checks/authors-fix.sql` (8 tên + gộp 8, 9 → 1, chưa chạy); import dùng lại tác giả cùng tập từ.
 
 **CI (nhánh `ux-messages`)**
@@ -46,7 +46,7 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 - Mục 8: không thêm e2e mất mạng riêng cho form đánh giá (cần đơn đã giao; dùng chung `useFormAction` đã có e2e ở 5 form khác).
 - Mục 13c: không có Vitest render trang (Server Component đọc phiên); e2e đơn thật vẫn kiểm tiêu đề.
 - Thêm ngoài plan: proxy chỉ chuyển hướng GET / HEAD (mục 7), sửa `LocaleSwitcher` (mục 13), import dùng lại tác giả cùng tập từ (mục 16).
-- `measure:js` chưa đo: worktree không có `.env.local` (không tự link / copy theo quy ước). Cần bạn cho phép hard link tạm như Phase 11, hoặc đo sau khi merge. Thay đổi ở trang sách / trang chủ nhỏ (link email ở footer, `SupportEmailText`); dialog gợi ý mã tải lười, chỉ ở trang thanh toán.
+- `measure:js`: đã đo (hard link tạm được cho phép), xem "Bổ sung" ngay dưới.
 
 **Test cũ đổi câu mong đợi (vẫn so chính xác)**
 1. `checkout.spec` mã sai: "Mã giảm giá không hợp lệ hoặc đã hết hạn." → "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé."
@@ -57,6 +57,48 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 6. `admin/vouchers/schemas.test.ts`: object mong đợi thêm `is_public: false`.
 7. `e2e/auth.ts` `fillLogin`: "chờ form có input `next`" → "chờ input `next` có đúng giá trị" (input giờ luôn có, giá trị điền sau hydrate; chặt tương đương).
 8. `layout.spec` đổi ngôn ngữ: thêm kiểm `href` trước khi bấm (cả hai chiều).
+
+## Bổ sung (2026-10-18 tối → 2026-10-19)
+
+**measure:js** (gzip ngoài baseline 170KB, KB; `scripts/measure-js.mjs`; cả hai bản build trong worktree, hard link `.env.local` tạm rồi xóa)
+
+| Route | `main` fa78aab | ux-messages 1d13703 | sau A (e94bfb8) | cuối đêm (3d2e3e1) | Ngân sách |
+|---|---:|---:|---:|---:|---|
+| `vi` | 41.2 | 42.4 | 42.2 | 42.2 | không có |
+| `en` | 41.2 | 42.4 | 42.2 | 42.2 | không có |
+| `vi/books` (`/sach`) | 54.3 | 55.5 | 55.3 | 55.3 | không có |
+| `vi/categories/van-hoc` | 54.3 | 55.5 | 55.3 | 55.3 | không có |
+| `vi/books/sapiens` | 43.9 | 45.3 | 45.3 | 45.3 | ≤ 50 |
+| `vi/cart` | 44.8 | 46.2 | 46.1 | 46.1 | không có |
+| `vi/checkout` (shell) | 43.1 | 44.9 | 44.9 | 45.0 (+122 B, nháp theo tài khoản) | không có |
+| `vi/account` | 37.0 | 38.4 | 38.4 | 38.6 (+219 B, form đăng xuất xóa nháp) | không có |
+| `vi/account/orders` | 40.6 | 41.8 | 41.7 | 41.7 | không có |
+| `vi/login` | 34.9 | 36.7 | 36.6 | 36.6 | không có |
+| `vi/forgot-password` | 34.9 | 36.2 | 36.2 | 36.2 | không có |
+
+- +1.4KB của trang sách (cả đợt), phân rã bằng `next analyze` (có sẵn trong Next 16): ~0.4KB Turbopack chia lại chunk module error boundary khi nhóm global-error đổi; ~0.5KB trang lỗi có mã tra cứu + email; ~0.5KB bản sửa (script `LocaleSwitcher`, nút giỏ bắt lỗi mạng, link đăng nhập lại). JS tải ngay của trang sách KHÔNG có messages / `lib/errors` / voucher / checkout / zod.
+- Phương án A (`e94bfb8`): `ErrorView` tự dựng link mailto, nhóm global-error không còn chép `SupportEmailText` / `fillTemplate`: mọi route giảm 36–151 byte (ước tính trước là 0.3–0.5KB).
+- 45.3KB là JS app tích lũy từ Phase 1 (Phase 6: 38.7, Phase 10: 41.9, Phase 11: 43.9); lớn nhất là gói `cn` (~10KB). `/sach` + danh mục nặng hơn trang sách ~10KB vì sheet bộ lọc (Radix Dialog, react-remove-scroll…) tải ngay. Plan giảm: `docs/plans/perf-js.md`.
+
+**Việc 1 / 2 (2026-10-18 tối)**
+- e2e `admin-locale-switcher.spec.ts` (`7a0b09f`): trang sách / danh mục tạo sau build (slug chưa prerender) render bình thường, nút đổi ngôn ngữ giữ trang + query. Chứng minh: nhánh tạm `tmp/ls-regression` trả `locale-switcher.tsx` về bản `e938cd6` → run 39144225553: test trang sách FAIL ("element(s) not found" ở h1); test danh mục của spec không chạy (serial, bị skip sau fail) nhưng `admin-catalog.spec:33` (trang `/en/categories/<slug mới>`) fail trong cùng run → trường hợp danh mục mới cũng được bảo vệ. Nhánh tạm đã xóa local + remote.
+- Phương án A (`e94bfb8`), docs `progress.md` (`d81a5df`), `/baocao` (`82db1d8`).
+
+**Đêm 2026-10-18 → 19**
+1. `cd7c0ca` `migrations.test.ts`: `\b` trong template literal là ký tự backspace → test "không trả cột nội bộ" của `checkout_vouchers` luôn qua. Sửa thành `\\b`; thêm tạm `used_count` vào `returns table` trong `schema.sql` → test FAIL (`expected '…' not to match /\bused_count\b/`) → trả lại.
+2. `7bbd56a` `requestPasswordReset`: chỉ báo lỗi dưới ô khi `email_address_invalid`; `email_address_not_authorized` (chỉ xảy ra khi đã có tài khoản) và lỗi khác → "đã gửi" như email không có tài khoản. Vitest cho action (fail với code cũ).
+3. `453ac63` proxy bỏ header `x-not-found` do khách gửi trước mọi bước (khớp plan mục 6). Vitest proxy (`src/proxy.test.ts`, next-intl giả lập vì ESM không resolve `next/server` trong Vitest): đúng loại cho sách / danh mục / tác giả / đơn (3 trường hợp cùng loại `order`), trang có thật không bị đụng, header khách bị bỏ (GET, POST), giá trị của proxy thắng.
+4. `a9c9df8` test plan đã hứa: test tĩnh mọi `raise exception '<CODE>'` (+ mã truyền vào `chat_quota_take`) có trong `ERROR_CODES` và có câu vi / en (`CHAT_DISABLED` nội bộ, ghi lý do); đường mã CŨ (`INVALID_VOUCHER`, `VOUCHER_MIN_ORDER` thiếu `shortfall`, `ORDER_NOT_CANCELLABLE`) bằng RPC giả + bản dịch thật; `minOrderShortfall` tách thành hàm thuần (`voucher-errors.ts`); 2 bất biến e2e-seed; "không tìm thấy đơn" bản tiếng Anh.
+5. `6396fc2` nháp ghi chú thanh toán theo tài khoản (`checkout-note-draft:<userId>`), mở trang thanh toán xóa nháp của người khác (kể cả khóa cũ), form đăng xuất (`SignOutForm`) xóa mọi nháp trước khi gửi. e2e 2 test.
+6. Gửi lại email xác nhận khi tắt JS: e2e (`5147b46`) FAIL ngay từ bước đăng nhập. HTML lưu được (`3d2e3e1`, run 39148697724): response POST không JS chỉ có phần động, không có khung tĩnh. Không phải lỗi của login-form → không sửa, gỡ test (`3c618a3`), ghi vào `docs/progress.md`.
+7. Dọn nhỏ + docs (comment `error-view`, `/baocao` tách cú pháp `e1123fa`, handoff, progress, file này, `final-report.md`).
+8. `0403330` `.claude/agents/code-reviewer.md` vào nhánh (3 commit chưa push trên `main` local chỉ có 2 file `.claude`).
+9. Plan đợt giảm JS: `docs/plans/perf-js.md`.
+
+**Khác với plan (thêm)**
+- Mục 4 "chạy được không cần JS": SAI khi action trả kết quả trên trang prerender (xem việc 6); áp cho mọi form, không riêng gửi lại email.
+- Mục 6: proxy giờ xóa header `x-not-found` của khách (trước đây chỉ ghi đè khi rewrite).
+- Mục 15: URL thật khác giả thuyết (xem mục 15 ở trên).
 
 ## ★ Quyết định (đã duyệt 2026-10-18)
 
