@@ -92,3 +92,41 @@ describe('schema.sql chứa mọi migration', () => {
     expect(schemaText).toContain("values ('book-covers', 'book-covers', true, array['image/webp'], 1048576)")
   })
 })
+
+// Phase 11: khóa publishable nằm trên trình duyệt nên ai cũng gọi được consume_chat_quota → chỉ token của server web
+// mở được bộ đếm; bảng đếm không lộ qua PostgREST
+describe('bộ đếm chatbot (Phase 11)', () => {
+  const functionBody = (name: string) => {
+    const statement = schema.find((s) => s.startsWith(`create or replace function ${name}(`))
+    if (!statement) throw new Error(`schema.sql không có hàm ${name}`)
+    return statement
+  }
+
+  it.each(['private.chat_quota', 'private.chat_settings'])('%s nằm trong private, bật RLS, không policy, không cấp quyền', (table) => {
+    expect(createTableBody(table)).toBeTruthy()
+    expect(schema).toContain(`alter table ${table} enable row level security`)
+    expect(schemaText).not.toMatch(new RegExp(`create policy [^;]* on ${table.replace('.', '\\.')}\\b`))
+    expect(schemaText).not.toMatch(new RegExp(`grant [^;]* on (table )?${table.replace('.', '\\.')}\\b`))
+  })
+
+  it('consume_chat_quota kiểm token trước khi cộng bộ đếm', () => {
+    const body = functionBody('public.consume_chat_quota')
+    expect(body).toContain('security definer')
+    const tokenCheck = body.indexOf("raise exception 'forbidden'")
+    expect(tokenCheck).toBeGreaterThan(-1)
+    expect(body.indexOf('private.chat_quota_take(')).toBeGreaterThan(tokenCheck)
+  })
+
+  it('set_chat_quota_token chỉ service_role; consume_chat_quota cho anon + authenticated', () => {
+    expect(schema).toContain('revoke execute on function public.set_chat_quota_token(text) from public, anon, authenticated')
+    expect(schema).toContain('grant execute on function public.set_chat_quota_token(text) to service_role')
+    expect(schemaText).not.toMatch(/grant execute on function public\.set_chat_quota_token\(text\) to [^;]*\b(anon|authenticated)\b/)
+    expect(schema).toContain('grant execute on function public.consume_chat_quota(text, text, text, jsonb) to anon, authenticated')
+  })
+
+  it('cửa sổ ngày của trần chung theo America/Los_Angeles (Google reset RPD lúc 0h giờ Thái Bình Dương)', () => {
+    const body = functionBody('public.consume_chat_quota')
+    expect(body).toContain("date_trunc('day', v_now at time zone 'america/los_angeles')")
+    expect(body).toMatch(/'gemini:day', v_la_day at time zone 'america\/los_angeles'/)
+  })
+})
