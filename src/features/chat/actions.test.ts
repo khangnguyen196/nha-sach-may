@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const state = vi.hoisted(() => ({
   country: null as string | null,
   cooldown: null as null | { scope: 'gemini_minute' | 'gemini_day'; resetsAt: Date; until: number },
+  // null = catalog mặc định (1 cuốn); test đầu vào lớn nhất thay bằng 40 cuốn dài
+  catalog: null as null | unknown[],
+  current: null as null | unknown,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -18,10 +21,10 @@ vi.mock('next-intl/server', () => ({
 vi.mock('@/lib/auth', () => ({ getCurrentUser: async () => null }))
 vi.mock('@/features/books/queries', () => ({
   getCategories: async () => [{ id: 1, parent_id: null, name: 'Văn học', slug: 'truyen-ngan-tan-van' }],
-  getBookBySlug: async () => null,
+  getBookBySlug: async () => state.current,
 }))
 vi.mock('./queries', () => ({
-  getChatCatalog: async () => [
+  getChatCatalog: async () => state.catalog ?? [
     {
       id: 1,
       slug: 'mat-biec',
@@ -63,6 +66,8 @@ const ask = (message: string) => askMay({ message, ageConfirmed: true })
 beforeEach(() => {
   state.country = null
   state.cooldown = null
+  state.catalog = null
+  state.current = null
   consumeQuota.mockReset().mockResolvedValue({ ok: true, ticket: {} })
   callGemini.mockReset().mockResolvedValue({
     ok: true,
@@ -157,5 +162,42 @@ describe('askMay', () => {
     consumeQuota.mockRejectedValue(new Error('boom'))
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(await ask('gợi ý sách')).toEqual({ ok: false, code: 'CHAT_UNAVAILABLE' })
+  })
+
+  it('đầu vào lớn nhất (300 ký tự, 4 lượt lịch sử dài, sách đang xem, 40 sách dài) → vẫn gọi Gemini đúng 1 lần và trả ok', async () => {
+    const longBook = (index: number) => ({
+      id: index + 10,
+      slug: `sach-tieng-viet-co-ten-kha-dai-so-${index}`,
+      title: `Những ngày thơ ấu và những câu chuyện chưa kể số ${index}`,
+      language: 'vi',
+      category_id: 1,
+      stock: 5,
+      sold_count: index,
+      is_featured: false,
+      cover_width: 600,
+      description: 'ứ'.repeat(2000),
+      book_authors: [
+        { role: 'author', authors: { name: 'Nguyễn Văn Một' } },
+        { role: 'author', authors: { name: 'Trần Thị Hai' } },
+      ],
+    })
+    state.catalog = Array.from({ length: 40 }, (_, index) => longBook(index))
+    state.current = { ...longBook(0), description: 'ữ'.repeat(3000), book_authors: [] }
+    const turn = {
+      user: 'ữ'.repeat(300),
+      model: { message: 'ữ'.repeat(600), follow_up: 'ữ'.repeat(200), slugs: ['sach-tieng-viet-co-ten-kha-dai-so-1'] },
+    }
+    const result = await askMay({
+      message: 'ữ'.repeat(300),
+      history: [turn, turn, turn, turn],
+      slug: 'sach-tieng-viet-co-ten-kha-dai-so-0',
+      ageConfirmed: true,
+    })
+    expect(callGemini).toHaveBeenCalledTimes(1)
+    expect(result.ok).toBe(true)
+    const { estimatePromptTokens } = await import('./prompt')
+    const body = callGemini.mock.calls[0]?.[1].body
+    expect(estimatePromptTokens(body)).toBeLessThan(8_000)
+    expect(body.contents.length).toBeGreaterThanOrEqual(1 + 2 * 2)
   })
 })

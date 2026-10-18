@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       addresses: {
@@ -682,6 +707,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      consume_chat_quota: {
+        Args: {
+          p_ip?: string
+          p_limits?: Json
+          p_token: string
+          p_visitor?: string
+        }
+        Returns: Json
+      }
       generate_order_code: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       merge_cart: { Args: { p_items: Json }; Returns: undefined }
@@ -793,6 +827,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_chat_quota_token: { Args: { p_token: string }; Returns: undefined }
       set_default_address: {
         Args: { p_address_id: number }
         Returns: undefined
@@ -935,6 +970,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       book_format: ["paperback", "hardcover", "boxset"],
