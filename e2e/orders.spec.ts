@@ -8,6 +8,7 @@ import {
   seedAddress,
   setCartItem,
   setOrderStatus,
+  setPaymentStatus,
   signedInClient,
   stockOf,
   type E2eBook,
@@ -304,3 +305,68 @@ test('/en/account/orders: giá ₫…, nhãn trạng thái tiếng Anh', async (
   await expect(main(page).getByRole('heading', { level: 1 })).toHaveText(`Order ${newest.order_code}`)
   await expect(main(page).getByText('Cancel order', { exact: true })).toBeVisible()
 })
+
+// Hủy bị từ chối vì trạng thái đổi sau khi trang đã mở (admin giao đơn, nhận tiền, tab khác đã hủy): mỗi lý do một câu
+// riêng nói rõ cần làm gì; lý do cần cửa hàng xử lý kèm link email liên hệ
+const EMAIL = 'nha-sach-may@googlegroups.com'
+const refusals = [
+  {
+    name: 'đang giao',
+    change: async (id: number) => {
+      await setOrderStatus(id, 'confirmed')
+      await setOrderStatus(id, 'shipping')
+    },
+    message: `Cửa hàng đã giao đơn cho bên vận chuyển nên bạn không tự hủy được nữa. Cần hủy, bạn gửi email tới ${EMAIL} kèm mã đơn nhé.`,
+    email: true,
+  },
+  {
+    name: 'đã giao',
+    change: async (id: number) => {
+      await setOrderStatus(id, 'confirmed')
+      await setOrderStatus(id, 'shipping')
+      await setOrderStatus(id, 'delivered')
+    },
+    message: `Đơn đã giao xong nên không hủy được. Cần đổi trả, bạn gửi email tới ${EMAIL} kèm mã đơn nhé.`,
+    email: true,
+  },
+  {
+    name: 'đã thanh toán',
+    change: (id: number) => setPaymentStatus(id, 'paid'),
+    message: `Đơn đã thanh toán nên cần cửa hàng hủy và hoàn tiền. Bạn gửi email tới ${EMAIL} kèm mã đơn nhé.`,
+    email: true,
+  },
+  {
+    name: 'đã hủy ở tab khác',
+    change: (id: number) => setOrderStatus(id, 'cancelled'),
+    message: 'Đơn này đã được hủy trước đó, bạn không cần làm gì thêm.',
+    email: false,
+  },
+] as const
+
+for (const refusal of refusals) {
+  test(`hủy bị từ chối (${refusal.name}) → câu riêng${refusal.email ? ' + email liên hệ' : ''}, nút hủy biến mất`, async ({
+    page,
+    users,
+    projectIndex,
+  }) => {
+    const errors = collectErrors(page)
+    const { orders } = await placeOrders(users, plentyBook(projectIndex), 1)
+    const order = orders[0]
+    if (!order) throw new Error('Không tạo được đơn')
+
+    await page.goto(`/tai-khoan/don-hang/${order.order_code}`)
+    await waitForHydration(page, 'main details form button[type="submit"]')
+    await refusal.change(order.id)
+
+    await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
+    await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()
+    const cancelError = main(page).getByTestId('cancel-error')
+    await expect(cancelError).toHaveText(refusal.message)
+    await expect(cancelError.getByRole('link', { name: EMAIL })).toHaveCount(refusal.email ? 1 : 0)
+    if (refusal.email) {
+      await expect(cancelError.getByRole('link', { name: EMAIL })).toHaveAttribute('href', `mailto:${EMAIL}`)
+    }
+    await expect(main(page).getByText('Hủy đơn hàng', { exact: true })).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+}

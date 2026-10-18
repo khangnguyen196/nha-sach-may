@@ -83,3 +83,26 @@ describe('invalidInput', () => {
     })
   })
 })
+
+describe('câu lỗi hủy đơn / mã giảm giá (ux-messages)', () => {
+  const locales = [vi.errors, en.errors]
+
+  it('lý do cần cửa hàng xử lý (đã xác nhận / đang giao, đã giao, đã thanh toán, tài khoản khóa) có email liên hệ', () => {
+    for (const errors of locales) {
+      for (const code of ['ORDER_IN_PROGRESS', 'ORDER_DELIVERED', 'ORDER_PAID', 'ACCOUNT_LOCKED', 'UNKNOWN'] as const) {
+        expect(errors[code], code).toContain('{email}')
+      }
+    }
+  })
+
+  it('ORDER_IN_PROGRESS phân biệt đã xác nhận / đang giao (detail status của cancel_order)', () => {
+    for (const errors of locales) expect(errors.ORDER_IN_PROGRESS).toMatch(/\{status, select, shipping \{.+\} other \{.+\}\}/)
+  })
+
+  it('mã giảm giá chưa tới ngày / hết hạn nhắc thời điểm (detail starts_at / ends_at)', () => {
+    for (const errors of locales) {
+      expect(errors.VOUCHER_NOT_STARTED).toContain('{starts_at}')
+      expect(errors.VOUCHER_EXPIRED).toContain('{ends_at}')
+    }
+  })
+})
