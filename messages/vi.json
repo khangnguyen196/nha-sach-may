@@ -877,6 +877,10 @@
     "VOUCHER_CODE_TAKEN": "Mã voucher này đã tồn tại.",
     "VOUCHER_IN_USE": "Voucher đã có đơn hàng dùng nên chỉ tắt được, không xóa được.",
     "REVIEW_NOT_ALLOWED": "Chỉ khách đã nhận cuốn sách này mới viết đánh giá được.",
+    "CHAT_QUOTA_EXCEEDED": "Bạn đã hỏi Mây nhiều rồi, quay lại sau ít phút nhé.",
+    "CHAT_FREE_QUOTA": "Mây đã dùng hết lượt hỏi miễn phí, website vẫn hoạt động bình thường.",
+    "CHAT_UNAVAILABLE": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
+    "CHAT_REGION": "Mây chưa hỗ trợ khu vực của bạn.",
     "NETWORK_ERROR": "Không kết nối được máy chủ, thử lại sau ít phút.",
     "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
   },
@@ -955,5 +959,9 @@
     "delete": "Xóa đánh giá",
     "deleting": "Đang xóa…",
     "deleted": "Đã xóa đánh giá."
+  },
+  "chat": {
+    "crisis": "Mây rất tiếc khi bạn đang phải trải qua cảm giác này. Bạn không cần một mình đối mặt với nó: hãy nói chuyện ngay với người thân hoặc một người bạn tin tưởng, hoặc tìm tới chuyên gia tâm lý, bác sĩ gần nhất. Nếu bạn đang gặp nguy hiểm, hãy gọi cấp cứu 115. Bạn cũng có thể gọi đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật).",
+    "languageNotice": "Mây hiện chỉ hỗ trợ tiếng Việt."
   }
 }

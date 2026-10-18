@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdmin } from '../auth'
-import { catalogTagsFor } from '../cache-tags'
+import { adminCatalogTags } from '../cache-tags'
 import { violatedUniqueConstraint } from '../db-errors'
 import { rowIdSchema } from '../schemas'
 import { authorFormSchema } from './schemas'
@@ -36,7 +36,7 @@ export async function createAuthor(_prev: Result<null> | null, formData: FormDat
   const { error } = await supabase.from('authors').insert(parsed.data)
   if (error) return authorWriteFailure(error)
 
-  expire(catalogTagsFor({ kind: 'author', bookIds: [] }))
+  expire(adminCatalogTags({ kind: 'author', bookIds: [] }))
   redirect('/admin/tac-gia')
 }
 
@@ -60,7 +60,7 @@ export async function updateAuthor(id: number, _prev: Result<null> | null, formD
   if (!author) return UNKNOWN
 
   const bookIds = [...new Set(author.book_authors.map((row) => row.book_id))]
-  expire(catalogTagsFor({ kind: 'author', bookIds }))
+  expire(adminCatalogTags({ kind: 'author', bookIds }))
   refresh()
   return { ok: true, data: null }
 }
@@ -86,6 +86,6 @@ export async function deleteAuthor(id: number): Promise<Result<null>> {
   const { error } = await supabase.from('authors').delete().eq('id', authorId.data)
   if (error) return toFailure(error)
 
-  expire(catalogTagsFor({ kind: 'author', bookIds: [] }))
+  expire(adminCatalogTags({ kind: 'author', bookIds: [] }))
   redirect('/admin/tac-gia')
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catalogTagsFor, type BookSnapshot } from './cache-tags'
+import { adminCatalogTags, CHAT_CATALOG_TAG, catalogTagsFor, type BookSnapshot, type CatalogChange } from './cache-tags'
 
 const book: BookSnapshot = {
   id: 7,
@@ -87,5 +87,20 @@ describe('catalogTagsFor: tác giả', () => {
   it('authors + book:{id} các sách của tác giả', () => {
     expect(catalogTagsFor({ kind: 'author', bookIds: [3, 5] })).toEqual(['authors', 'book:3', 'book:5'])
     expect(catalogTagsFor({ kind: 'author', bookIds: [] })).toEqual(['authors'])
+  })
+})
+
+describe('adminCatalogTags: catalog của chatbot', () => {
+  it('mọi thay đổi ở admin (sách, danh mục, tác giả) làm mới chat-catalog, giữ nguyên tag cũ', () => {
+    const changes: CatalogChange[] = [
+      { kind: 'book', before: book, after: { ...book, price: 150_000 } },
+      { kind: 'book', before: book, after: { ...book, is_active: false } },
+      { kind: 'category', before: null, after: { parent_id: null, is_active: true } },
+      { kind: 'author', bookIds: [7] },
+    ]
+    for (const change of changes) {
+      expect(adminCatalogTags(change)).toEqual([...catalogTagsFor(change), CHAT_CATALOG_TAG])
+    }
+    expect(CHAT_CATALOG_TAG).toBe('chat-catalog')
   })
 })

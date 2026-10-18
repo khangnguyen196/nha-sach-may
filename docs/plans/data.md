@@ -100,6 +100,62 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
 
 **Làm mới cache**: script chạy ngoài Next nên không gọi được `updateTag`. Chạy `covers` **trước** khi build / deploy: lần build kế tiếp prerender lại với bìa mới (`next start` local: cache `hours` tự hết hoặc khởi động lại).
 
+## Mô tả sách (Phase 11, 2026-10-18)
+
+Rà bằng hai câu SQL chỉ đọc A1, A2 (`docs/plans/phase-11.md` → "Kiểm tra dữ liệu mô tả"). Chủ dự án chạy trên DB production và dán kết quả. **Không sửa dữ liệu.**
+
+**A1. Theo danh mục** (cả sách ẩn; hiện tại không có sách nào đang ẩn):
+
+| Danh mục | Tổng | Đang hiện | Hiện + còn hàng | Thiếu mô tả | < 150 ký tự | Sách Việt, mô tả không dấu | Trung vị độ dài |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| kinh-te / quan-tri-lanh-dao | 2 | 2 | 2 | 0 | 0 | 0 | 2469 |
+| kinh-te / tai-chinh-ca-nhan | 1 | 1 | 1 | 0 | 0 | 0 | 2049 |
+| lich-su-dia-ly | 25 | 25 | 25 | 0 | 1 | 0 | 1375 |
+| sach-hoc-ngoai-ngu / tieng-anh | 3 | 3 | 3 | 0 | 0 | 0 | 1110 |
+| sach-hoc-ngoai-ngu / tieng-nhat | 1 | 1 | 1 | 0 | 0 | 0 | 938 |
+| sach-ngoai-van / ngoai-van-kinh-doanh | 24 | 24 | 23 | 0 | 0 | 0 | 954 |
+| sach-ngoai-van / ngoai-van-ky-nang-song | 14 | 14 | 11 | 1 | 2 | 0 | 1405 |
+| sach-ngoai-van / ngoai-van-lich-su-khoa-hoc | 29 | 29 | 26 | 2 | 2 | 0 | 1012 |
+| sach-ngoai-van / ngoai-van-thieu-nhi | 21 | 21 | 21 | 0 | 2 | 0 | 424 |
+| sach-ngoai-van / ngoai-van-van-hoc | 29 | 29 | 29 | 0 | 6 | 0 | 581 |
+| tam-ly-ky-nang-song / ky-nang-song | 4 | 4 | **2** | 0 | 1 | 1 | 768 |
+| tam-ly-ky-nang-song / tam-ly-hoc | 1 | 1 | **1** | 0 | 0 | 0 | 965 |
+| thieu-nhi / kien-thuc-bach-khoa | 5 | 5 | 5 | 0 | 0 | 0 | 1665 |
+| thieu-nhi / truyen-tranh | 4 | 4 | 4 | 0 | 0 | 0 | 926 |
+| van-hoc / tho | 2 | 2 | 1 | 0 | 0 | 0 | 620 |
+| van-hoc / tieu-thuyet | 4 | 4 | 4 | 1 | 0 | 2 | 217 |
+| van-hoc / truyen-ngan-tan-van | 20 | 20 | 18 | 0 | 2 | 1 | 692 |
+| **Tổng** | **189** | **189** | **177** | **4** | **16** | **4** | **966** |
+
+Không cuốn nào còn HTML hoặc ký tự lỗi `¿` / `�`.
+
+**Hệ quả cho chatbot**:
+
+- Sách tiếng Việt nhóm kỹ năng / tâm lý rất ít: `ky-nang-song` có 2 cuốn còn hàng, `tam-ly-hoc` có 1.
+- Vì vậy `moods.ts` cho câu tâm trạng **kéo thêm văn học Việt** (`truyen-ngan-tan-van`, `tieu-thuyet`, `tho`), để danh sách ứng viên luôn có sách tiếng Việt chứ không chỉ ngoại văn. Có Vitest riêng cho trường hợp này.
+- `marketing-ban-hang` vẫn 0 sách.
+
+**A2. Sách cần bổ sung trong admin** (chủ dự án sửa sau; chatbot vẫn dùng tên + tác giả + danh mục và được dặn không bịa nội dung):
+
+- **Thiếu mô tả (4)**:
+  - `kien-chuot-va-ruoi` "Kien Chuot Va Ruoi" (vi, tiểu thuyết). Tên cũng không dấu.
+  - `pathways-to-success-in-your-professional-private-lives` (en). Bìa / tên đã nghi không khớp từ Phase 8.
+  - `stephen-hawking-box-set` (en).
+  - `yuval-noah-harari-box-set-sapiens-homo-deus-21-lessons-for-21st-century` (en). Bìa sai đã ghi ở trên.
+- **Sách tiếng Việt có mô tả tiếng Anh (4)**:
+
+| Slug | Tên | Danh mục | Tồn kho | Độ dài |
+|---|---|---|---:|---:|
+| `ha-noi-nho-thuong-cua-toi` | Hà Nội nhớ thương của tôi | truyen-ngan-tan-van | 0 | 67 |
+| `tam-ly-dan-ba-ly-tri-dan-ong` | Tâm lý đàn bà, lý trí đàn ông | ky-nang-song | 0 | 122 |
+| `lam-ban-voi-bau-troi` | Làm bạn với bầu trời | tieu-thuyet | 17 | 217 |
+| `oxford-thuong-yeu` | Oxford thương yêu | tieu-thuyet | 18 | 268 |
+
+- **Mô tả < 150 ký tự (16)**: 12 sách tiếng Anh, 4 sách tiếng Việt.
+  - Tiếng Anh: `murmurs-of-earth` (32 ký tự, hết hàng), `the-speed-of-trust` (45, câu giới thiệu bộ sưu tập, không phải mô tả sách), `eric-carle-s-very-little-library` (52), `f-scott-fitzgerald-the-great-gatsby` (61), `agatha-christie` (66), `men-without-women` (85), `next-to-a-dog-an-agatha-christie-short-story` (93), `like-the-flowing-river` (103), `carl-sagan-s-cosmic-connection` (112), `dr-seuss-s-sleep-book` (118), `fitzgerald-the-love-of-the-last-tycoon` (132), `make-yourself-unforgettable` (133).
+  - Tiếng Việt: `vong-buom` (94), `tu-lieu-van-hien-thang-long-ha-noi` (126), cùng `ha-noi-nho-thuong-cua-toi`, `tam-ly-dan-ba-ly-tri-dan-ong` (đã liệt kê ở bảng trên).
+- Việc của chủ dự án: thêm vào mục "Việc tiếp theo" bên dưới.
+
 ## Việc tiếp theo
 
 - [x] **Tôi (chủ dự án)**: chạy `supabase/seed-foreign-books.sql` trên Supabase TRƯỚC lượt A + D.
@@ -114,3 +170,4 @@ Số là chỉ mục trong `scripts/out/preview-hires.json` của lượt này.
 - [x] Phase 8: Open Library một lần (12 bìa thay, xem trên). Sau migration `cover_width`: **chủ dự án** chạy `npm run covers -- --measure`.
 - [ ] **Chủ dự án** (tùy chọn): xem lại 6 bìa "Bỏ qua khi tự duyệt" ở trên, thay trong admin nếu muốn.
 - [x] Lọc tên summary / workbook / study guide / analysis of cho danh mục `en` (`isDerivativeTitle`, commit D).
+- [ ] **Chủ dự án** (Phase 11, tùy chọn, giúp chatbot gợi ý tốt hơn): bổ sung trong admin mô tả cho 4 sách thiếu mô tả và mô tả tiếng Việt cho 4 sách tiếng Việt đang có mô tả tiếng Anh (mục "Mô tả sách (Phase 11)"); xem lại 16 mô tả < 150 ký tự.

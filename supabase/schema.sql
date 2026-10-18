@@ -1188,9 +1188,9 @@ $$;
 --   TimeZone của phiên.
 create or replace function public.consume_chat_quota(
   p_token   text,
-  p_visitor text,
-  p_ip      text,
-  p_limits  jsonb
+  p_visitor text  default null,
+  p_ip      text  default null,
+  p_limits  jsonb default null
 )
 returns jsonb
 language plpgsql volatile security definer set search_path = '' as $$

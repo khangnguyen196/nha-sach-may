@@ -7,7 +7,7 @@ import { COVER_MAX_BYTES, toCoverWebp } from '@/lib/cover-image'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdmin } from '../auth'
-import { catalogTagsFor, type BookSnapshot } from '../cache-tags'
+import { adminCatalogTags, type BookSnapshot } from '../cache-tags'
 import { storageObjectPath, violatedUniqueConstraint } from '../db-errors'
 import { rowIdSchema } from '../schemas'
 import { bookActiveSchema, bookFormInput, bookFormSchema } from './schemas'
@@ -110,7 +110,7 @@ export async function updateBook(id: number, _prev: Result<null> | null, formDat
   // Thông tin sách đã lưu: làm mới cache kể cả khi đồng bộ tác giả lỗi (tác giả định đổi ≠ hiện có → có `books`)
   const before = current.snapshot
   const after: BookSnapshot = { ...before, ...fields, authors: authors.map(authorKey) }
-  expire(catalogTagsFor({ kind: 'book', before, after }))
+  expire(adminCatalogTags({ kind: 'book', before, after }))
   refresh()
   return authorsResult === null ? { ok: true, data: null } : UNKNOWN
 }
@@ -136,7 +136,7 @@ export async function setBookActive(id: number, active: boolean): Promise<Result
   if (data.length === 0) return UNKNOWN
 
   const before = current.snapshot
-  expire(catalogTagsFor({ kind: 'book', before, after: { ...before, is_active: isActive.data } }))
+  expire(adminCatalogTags({ kind: 'book', before, after: { ...before, is_active: isActive.data } }))
   refresh()
   return { ok: true, data: null }
 }

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { invalidInput, toFailure, type Failure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import { assertAdmin } from '../auth'
-import { catalogTagsFor, type CategorySnapshot } from '../cache-tags'
+import { adminCatalogTags, type CategorySnapshot } from '../cache-tags'
 import { violatedUniqueConstraint } from '../db-errors'
 import { rowIdSchema } from '../schemas'
 import { categoryFormSchema } from './schemas'
@@ -70,7 +70,7 @@ export async function createCategory(_prev: Result<null> | null, formData: FormD
   const { error } = await supabase.from('categories').insert(parsed.data)
   if (error) return categoryWriteFailure(error)
 
-  expire(catalogTagsFor({ kind: 'category', before: null, after: parsed.data }))
+  expire(adminCatalogTags({ kind: 'category', before: null, after: parsed.data }))
   redirect('/admin/danh-muc')
 }
 
@@ -95,7 +95,7 @@ export async function updateCategory(id: number, _prev: Result<null> | null, for
   if (data.length === 0) return UNKNOWN
 
   const before: CategorySnapshot = current.data
-  expire(catalogTagsFor({ kind: 'category', before, after: parsed.data }))
+  expire(adminCatalogTags({ kind: 'category', before, after: parsed.data }))
   refresh()
   return { ok: true, data: null }
 }

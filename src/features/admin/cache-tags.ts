@@ -75,3 +75,11 @@ export function catalogTagsFor(change: CatalogChange): string[] {
       return ['authors', ...change.bookIds.map((id) => `book:${id}`)]
   }
 }
+
+/** Catalog rút gọn của chatbot Mây (features/chat/queries.ts): không gắn tag từng sách, nên mọi thay đổi ở admin làm mới */
+export const CHAT_CATALOG_TAG = 'chat-catalog'
+
+/** Tag cần làm mới sau một thay đổi ở admin: tag của catalog công khai + catalog của chatbot */
+export function adminCatalogTags(change: CatalogChange): string[] {
+  return [...catalogTagsFor(change), CHAT_CATALOG_TAG]
+}

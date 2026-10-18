@@ -464,6 +464,10 @@
     "VOUCHER_CODE_TAKEN": "This voucher code already exists.",
     "VOUCHER_IN_USE": "This voucher has been used in orders, so it can only be turned off, not deleted.",
     "REVIEW_NOT_ALLOWED": "Only customers who have received this book can review it.",
+    "CHAT_QUOTA_EXCEEDED": "You have asked Mây a lot already, please come back in a few minutes.",
+    "CHAT_FREE_QUOTA": "Mây has used up its free requests; the website is working normally.",
+    "CHAT_UNAVAILABLE": "Mây is a bit tired, please come back in a few minutes.",
+    "CHAT_REGION": "Mây is not available in your region yet.",
     "NETWORK_ERROR": "Could not reach the server. Please try again in a few minutes.",
     "UNKNOWN": "Something went wrong. Please try again."
   },

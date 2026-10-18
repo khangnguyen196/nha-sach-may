@@ -34,6 +34,12 @@ export const ERROR_CODES = [
   'VOUCHER_IN_USE',
   // Phase 9: viết đánh giá khi chưa nhận sách (RLS reviews_insert_if_purchased)
   'REVIEW_NOT_ALLOWED',
+  // Phase 11, chatbot Mây: hết lượt của khách (consume_chat_quota), hết lượt miễn phí của Gemini (trần chung / 429),
+  // không dùng được (chưa cấu hình, lỗi AI / mạng), khu vực không được phục vụ (EEA / Anh / Thụy Sĩ)
+  'CHAT_QUOTA_EXCEEDED',
+  'CHAT_FREE_QUOTA',
+  'CHAT_UNAVAILABLE',
+  'CHAT_REGION',
   // Không tới được máy chủ: request Server Action fail ở client, hoặc server không gọi được Supabase
   'NETWORK_ERROR',
   'UNKNOWN',
