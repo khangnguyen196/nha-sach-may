@@ -4,7 +4,12 @@ export function collectErrors(page: Page) {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
+    if (message.type() !== 'error') return
+    // "Failed to load resource" của Chromium không ghi URL trong chữ: kèm URL của request lỗi để biết request nào
+    // (chẩn đoán mục 15 ux-messages). Không bỏ / lọc dòng nào: mọi lỗi console vẫn làm test fail như cũ.
+    const { url } = message.location()
+    const resource = message.text().startsWith('Failed to load resource') && url ? ` [${url}]` : ''
+    errors.push(`${message.text()}${resource}`)
   })
   return errors
 }
