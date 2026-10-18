@@ -50,9 +50,10 @@ test('giỏ → "Thanh toán" (điều hướng phía client) → gõ email ngay
     await expect(page).toHaveURL(/\/dang-nhap\?next=%2Fthanh-toan$/)
     const email = page.getByRole('main').getByLabel('Email')
     await email.fill(`khach-${round}@example.com`)
-    await page.waitForLoadState('networkidle')
-    await expect(email, `lượt ${round}`).toHaveValue(`khach-${round}@example.com`)
+    // Trang đã hydrate xong và phần chạy ở client đã chạy (next điền sau hydrate): lỗi cũ thay form đúng khoảng này
+    await waitForHydration(page, 'main form button[type="submit"]')
     await expect(page.getByRole('main').locator('form input[type="hidden"][name="next"]')).toHaveValue('/thanh-toan')
+    await expect(email, `lượt ${round}`).toHaveValue(`khach-${round}@example.com`)
     expect(await addedForms(page), `lượt ${round}`).toBe(1)
   }
   expect(errors).toEqual([])
@@ -70,7 +71,7 @@ test('đăng nhập → "Quên mật khẩu?" (điều hướng phía client) �
     await expect(page).toHaveURL(/\/quen-mat-khau$/)
     const email = page.getByRole('main').getByLabel('Email')
     await email.fill(`quen-${round}@example.com`)
-    await page.waitForLoadState('networkidle')
+    await waitForHydration(page, 'main form button[type="submit"]')
     await expect(email, `lượt ${round}`).toHaveValue(`quen-${round}@example.com`)
     expect(await addedForms(page), `lượt ${round}`).toBe(1)
   }

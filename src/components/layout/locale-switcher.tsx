@@ -13,15 +13,23 @@ type Labels = { short: string; full: string }
 /**
  * Chuyển sang ngôn ngữ còn lại, giữ nguyên trang, params và query. Hai lớp Suspense:
  * - ngoài: useParams chưa có giá trị khi HTML tĩnh được gửi (App Shell của slug chưa biết lúc build, và cả trang đã
- *   prerender như `/`: CI thấy fallback này trong HTML, nội dung thật tới sau trong `<div hidden id="S:…">`). Fallback là
- *   link của trang hiện tại theo pathname (trang có tham số động thì về trang chủ), kèm script gắn query như lớp trong.
+ *   prerender như `/`: CI thấy fallback này trong HTML, nội dung thật tới sau trong `<div hidden id="S:…">`) → link về
+ *   trang chủ của ngôn ngữ kia. Fallback nằm ngoài Suspense nên không đọc được URL (usePathname ở đây làm App Shell lỗi);
+ *   đang ở trang chủ thì script ngay sau link gắn query hiện tại (đổi ngôn ngữ ở `/?x=1` sớm từng mất `?x=1`).
  * - trong: useSearchParams cần Suspense để trang vẫn prerender được; fallback là cùng link nhưng chưa có query.
  * Cả hai fallback là link trong HTML tĩnh, bấm được trước khi hydrate / stream xong → inline script ngay sau link gắn
  * query hiện tại (location.search) vào href, không thì đổi ngôn ngữ sớm mất ?page=, ?q=…
  */
 export function LocaleSwitcher({ labels }: { labels: Labels }) {
   return (
-    <Suspense fallback={<LocaleLinkWithoutParams labels={labels} />}>
+    <Suspense
+      fallback={
+        <>
+          <LocaleAnchor labels={labels} href={(target) => getPathname({ href: '/', locale: target })} />
+          <script dangerouslySetInnerHTML={{ __html: PATCH_HOME_QUERY }} />
+        </>
+      }
+    >
       <LocaleLinkWithParams labels={labels} />
     </Suspense>
   )
@@ -31,17 +39,9 @@ export function LocaleSwitcher({ labels }: { labels: Labels }) {
 // Suspense của useSearchParams thay cả link lẫn script bằng link có query do React tính.
 const PATCH_QUERY = `(()=>{const a=document.currentScript?.previousElementSibling;if(a instanceof HTMLAnchorElement&&location.search)a.search=location.search})()`
 
-function LocaleLinkWithoutParams({ labels }: { labels: Labels }) {
-  const pathname = usePathname()
-  // Trang có tham số động ([slug]…): chưa có params nên link về trang chủ, không gắn query của trang này vào đó
-  const dynamic = pathname.includes('[')
-  return (
-    <>
-      <LocaleLink labels={labels} params={{}} />
-      {!dynamic && <script dangerouslySetInnerHTML={{ __html: PATCH_QUERY }} />}
-    </>
-  )
-}
+// Như PATCH_QUERY nhưng chỉ khi đang ở trang chủ (link của fallback ngoài luôn trỏ trang chủ ngôn ngữ kia)
+const HOME_PATHS = JSON.stringify(routing.locales.map((locale) => getPathname({ href: '/', locale })))
+const PATCH_HOME_QUERY = `(()=>{const a=document.currentScript?.previousElementSibling;if(a instanceof HTMLAnchorElement&&location.search&&${HOME_PATHS}.includes(location.pathname))a.search=location.search})()`
 
 function LocaleLinkWithParams({ labels }: { labels: Labels }) {
   const params = useParams()
