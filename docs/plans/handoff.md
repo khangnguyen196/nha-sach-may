@@ -1,9 +1,17 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-17, sau merge e2e Supabase local)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, Phase 11 chatbot Mây trên nhánh `phase-11`)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
 ## Trạng thái
 
+- **Phase 11 (chatbot gợi ý sách "Mây")**: xong trên nhánh **`phase-11`**, chưa merge (`docs/plans/phase-11.md` → "Báo cáo Phase 11").
+  - Đã chạy migration `chat_quota` + `chat_quota_defaults`.
+  - `CHAT_QUOTA_TOKEN` đã đặt (`.env.local` + Vercel Production).
+  - **`GEMINI_API_KEY` chưa đặt trên Vercel** (chủ dự án giữ), nên production chưa có bong bóng.
+  - Còn mở:
+    - `measure:js` (cần env để build).
+    - Kiểm số đường dây hỗ trợ trước khi bật chat (`owner-todo.md` mục 8).
+    - Đề xuất sửa trang đăng nhập: form fallback của Suspense bị thay sau khi đã hydrate, chữ đã gõ bị mất. Lỗi có từ trước Phase 11.
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
 - Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build).

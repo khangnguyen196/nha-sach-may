@@ -1,6 +1,6 @@
 # Phase 11: Chatbot gợi ý sách "Mây"
 
-Trạng thái: **plan đã duyệt** (bản 2 `062f1a0` + quyết định ★ và chỉnh sửa của chủ dự án, 2026-10-18 → bản 3). Đang ở bước migration: viết file migration + `schema.sql`, **chưa chạy** trên Supabase. Chưa code server / UI cho tới khi chủ dự án báo đã chạy migration và đặt token.
+Trạng thái: **xong trên nhánh `phase-11`, chưa merge** (2026-10-18). Xem "Báo cáo Phase 11" ngay dưới. Plan bản 3 (đã duyệt) giữ nguyên ở các mục sau.
 
 Thứ tự đã duyệt:
 1. Cập nhật plan (bản 3).
@@ -33,6 +33,64 @@ Bản 2 cập nhật theo góp ý của chủ dự án:
 - `main` (local + `origin/main`) ở **`5ef1eb5`** "docs(handoff): grid ?page= stays a soft 404 on purpose; production TTFB after perf-grid-404". Lịch sử thẳng (merge ff).
 - Nhánh chưa merge: **không có**. `origin` chỉ còn `main`. `fix-manual-test`, `e2e-project`, `fix-soft-404`, `perf-grid-404` đã merge và đã xóa (local + remote). Nhánh worktree cũ `claude/unruffled-merkle-5c3162` đã nằm trọn trong `main`.
 - Nhánh **`phase-11`** tạo từ `origin/main` `5ef1eb5`. Chỉ có commit của file plan này, đã push lên `origin/phase-11` (chưa có code).
+
+## Báo cáo Phase 11 (2026-10-18)
+
+Trạng thái: **xong trên nhánh `phase-11`, chưa merge**. Server API, UI, Vitest, e2e đã xong; CI kết quả ở cuối mục này. `GEMINI_API_KEY` chưa đặt lên Vercel (chủ dự án giữ), nên production chưa có bong bóng.
+
+**Đã làm**
+- DB:
+  - `20261018100000_chat_quota.sql` + `20261018110000_chat_quota_defaults.sql`. Chủ dự án đã chạy cả hai; K1–K4 khớp.
+  - Migration bổ sung chỉ thêm `default null` cho `p_visitor`, `p_ip`, `p_limits`, để types sinh tự động cho phép bỏ trường; không cần ép kiểu.
+- Server (`src/features/chat/`):
+  - `askMay` theo đúng thứ tự trong plan; vé `GeminiTicket` cho mỗi lượt gọi Gemini.
+  - 429 phân loại theo `quotaId`.
+  - AI giả chỉ bật khi Supabase là local và không có `VERCEL`.
+  - Lọc ứng viên kéo thêm văn học Việt cho câu tâm trạng.
+  - Admin sửa catalog thì làm mới tag `chat-catalog`.
+- UI:
+  - Bong bóng chỉ ở layout `(shop)` khi locale là `vi` và có đủ env; ẩn ở `/checkout*`; tự ẩn khi CTA có `data-chat-avoid` đi vào dải đáy màn hình.
+  - Khung chat tải lười. Desktop là khung nổi 360px, không modal; mobile là tấm toàn màn hình, modal, khóa cuộn nền.
+  - Có bước xác nhận 18+; khối lỗi song ngữ kèm link tìm sách và link danh mục.
+- Thử thật ★ 12: xem "Báo cáo thử thật" ở trên.
+- Tài liệu: `CLAUDE.md` (ngoại lệ khóa ★ 16, mục chatbot, quy ước safe-area, e2e AI giả), `owner-todo.md` mục 8, `data.md` (rà mô tả), `handoff.md`.
+
+**Chênh lệch so với plan**
+- Cooldown sau 429: với Gemini thật dùng một cooldown chung; với AI giả thì tính **theo khách**, để 429 giả của một test không chặn các test chạy song song.
+- Bước kiểm cooldown chuyển xuống sau khi tính định danh, vẫn trước `consume_chat_quota`, nên vẫn không trừ lượt.
+- e2e trang "đặt hàng thành công" không kiểm bong bóng: đơn không tồn tại thì proxy trả 404 ngoài `(shop)`, mà tạo đơn thật thì giẫm dữ liệu của spec khác. `isChatHidden('/checkout/success/…')` có Vitest.
+- Gọi action với câu 301 ký tự chỉ kiểm bằng Vitest. e2e kiểm `maxLength` của ô nhập và bộ đếm 300/300.
+
+**Lỗi thật do e2e bắt được (đã sửa)**
+- Nhóm chip gợi ý trùng `aria-label` "Câu hỏi cho Mây" với ô nhập (lỗi accessibility). Đã đặt tên riêng "Câu hỏi gợi ý" (`chat.chipsLabel`) ở component.
+- Tấm chat trên mobile không khóa cuộn nền: radix gắn `RemoveScroll` vào `Dialog.Overlay`, mà tấm modal không render Overlay. Đã thêm Overlay khi ở chế độ modal.
+
+**Bản sao ẩn của bong bóng**: cơ chế của React / Next, không phải code render 2 lần.
+- Cách đo: MutationObserver cài từ trước mọi script của trang, 5 lần tải mới × 2 project, cùng một lần điều hướng phía client.
+- Boundary Suspense quanh bong bóng (bong bóng đọc `usePathname` / `useParams`) được **stream sau shell** trong `<div hidden id="S:4">` cuối `<body>`, rồi React chuyển vào chỗ.
+- Thường việc chuyển xong trong ~1 ms. Có 3/12 lần, bản đã hydrate được thêm vào `<body>` trong khi bản trong `div[hidden][id=S:4]` vẫn còn, khoảng **120–220 ms**, rồi bản ẩn bị gỡ.
+- DOM cuối cùng luôn có đúng 1 bong bóng. Không liên quan Activity: không có phần tử `display:none` nào bao quanh.
+- e2e khóa lại hành vi: "đúng 1 bong bóng nhìn thấy được, mỗi lần gửi đúng 1 request Server Action". Locator dùng `getByRole` (bỏ qua bản ẩn), không dùng `.first()` / `nth()` để né bản sao.
+
+**Test đăng nhập chập chờn** (`checkout.spec:98`, cả `cart-account.spec:94` khi đăng nhập lại): lỗi có từ trước Phase 11, chatbot không phải nguyên nhân.
+- Triệu chứng: ô Email trống lúc bấm "Đăng nhập", ô Mật khẩu đã có giá trị.
+- Lịch sử: đã từng lỗi y hệt ở run `39045373298` (2026-10-17, trước bản sửa `df891fb`). Ở Phase 11 gặp 3 trong 5 run đầu.
+- Thí nghiệm đối chứng: cùng luồng khách → giỏ → Thanh toán → đăng nhập, 6 lần × 2 ngôn ngữ × 2 project.
+  - Mất email ở **cả `/en` (không có chatbot) 2/12 lẫn tiếng Việt 1/12**, chỉ ở mobile.
+  - Lần nào mất cũng có một `<form>` mới được thêm vào `<main>` khoảng 60 ms sau khi form đã hydrate.
+  - Khoảng từ lúc URL đổi tới lúc hydrate như nhau giữa hai bên: trung bình desktop 37 / 37 ms, mobile 32 / 31 ms (vi / en). Bong bóng không làm trang hydrate chậm hơn.
+- Nguyên nhân: `login/page.tsx` bọc form trong `<Suspense fallback={<Form …/>}>`, fallback là cùng form nhưng chưa có `?next=`. Sau điều hướng phía client, fallback hiện và hydrate trước, rồi phần đọc `searchParams` stream tới và **thay bằng form mới**. Chữ gõ vào fallback bị mất; người dùng thật gõ thật nhanh cũng gặp.
+- Kèm theo: Next 16 giữ `<main>` của trang trước ở dạng `display:none` (Activity) sau điều hướng phía client.
+- Sửa test: `fillLogin` (`e2e/auth.ts`) chỉ nhắm form **đang hiển thị** trong `<main>` (`getByRole`). URL có `?next=` thì chờ form thật, tức form có input ẩn `next`, rồi chờ nút đó hydrate. Không tăng timeout, không thêm retry.
+- Đề xuất riêng (chưa làm, ngoài phạm vi Phase 11): sửa ở trang đăng nhập để fallback không nhận gõ phím (input `disabled`), hoặc không thay form khi `searchParams` tới.
+
+**Commit chẩn đoán tạm** (đã gỡ file `e2e/chat-diagnostic.spec.ts` trước báo cáo): `283c626`, `460f453`, `e28dabe`, `5cdfaa3`.
+
+**`measure:js`**: **chưa đo**.
+- Cần `next build` có env Supabase thật, mà worktree không có `.env.local`; hard link chỉ được cho phép cho lượt thử ★ 12 và đã xóa.
+- Theo chỉ dẫn của chủ dự án, chỉ đo khi thấy bản có chatbot hydrate chậm hơn rõ rệt; thí nghiệm cho thấy không khác biệt.
+- Bong bóng lúc tải trang gồm nút + `IntersectionObserver` / `MutationObserver` + icon lucide (đã có sẵn trong bundle). Khung chat là chunk riêng, chỉ tải khi rê chuột / bấm.
+- Muốn có số thật thì cần chủ dự án cho phép tạo lại hard link để `build` + `measure:js -- vi`, `-- en`, `-- vi/books/sapiens`, `-- vi/login`.
 
 ## Báo cáo thử thật ★ 12 (2026-10-18)
 
@@ -1026,14 +1084,13 @@ select id, slug, title, language, danh_muc, trang_thai, stock, do_dai,
 
 ## Tiến độ
 
-- [x] Plan (file này), bản 3 đã duyệt
-- [x] Duyệt ★
-- [x] Câu SQL rà mô tả (mục Kiểm tra dữ liệu mô tả)
-- [ ] Chủ dự án chạy câu SQL rà mô tả → dán kết quả → `data.md`
-- [x] Migration `20261018100000_chat_quota.sql` + `schema.sql` mục 14 (chưa chạy)
-- [ ] Chủ dự án kiểm + chạy migration + câu SQL kiểm tra → đặt `CHAT_QUOTA_TOKEN` → báo Claude
-- [ ] Sinh lại types
-- [ ] Server API + prompt + thử thật ≤ 10 lượt
-- [ ] UI desktop + mobile
-- [ ] Vitest + e2e (CI xanh), `measure:js`
-- [ ] Tài liệu + báo cáo
+- [x] Plan, bản 3 đã duyệt
+- [x] Câu SQL rà mô tả; chủ dự án chạy, kết quả ghi vào `data.md`
+- [x] Migration (2 file), chủ dự án đã chạy + K1–K4; `CHAT_QUOTA_TOKEN` đã đặt (`.env.local` + Vercel Production)
+- [x] Sinh lại types
+- [x] Server API + prompt + thử thật 10 lượt
+- [x] UI desktop + mobile
+- [x] Vitest + e2e trên CI
+- [ ] `measure:js` (cần env để build, chờ chủ dự án cho phép)
+- [ ] `GEMINI_API_KEY` trên Vercel + kiểm số đường dây hỗ trợ (chủ dự án, `owner-todo.md` mục 8)
+- [x] Tài liệu + báo cáo

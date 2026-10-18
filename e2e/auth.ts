@@ -1,7 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { z } from 'zod'
-import { waitForHydration } from './helpers'
 
 // Mỗi project tài khoản (playwright.config.ts) một user chính + một user cho checkout + một user cho đơn hàng: trên CI
 // hai project (và các file spec) chạy song song, dùng chung user thì test sổ địa chỉ / giỏ / đặt hàng / đơn hàng giẫm
@@ -58,12 +57,24 @@ export function readShopBooks(project: string) {
 
 export const NO_SESSION = { cookies: [], origins: [] }
 
-/** Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang) */
+/**
+ * Đăng nhập qua form (chờ hydrate để lỗi hiện tại chỗ thay vì POST cả trang). Chỉ nhắm form ĐANG HIỂN THỊ trong
+ * <main> (getByRole bỏ qua <main> ẩn của trang trước mà Next 16 giữ bằng Activity, và bản sao ẩn của boundary).
+ * Trang đăng nhập bọc form trong Suspense, fallback là cùng form nhưng chưa có ?next= (login/page.tsx): sau điều
+ * hướng phía client, fallback hiện + hydrate trước rồi bị thay bằng form thật → điền vào fallback thì mất email
+ * (thí nghiệm Phase 11). URL có ?next= → chờ form thật (có input ẩn next) rồi mới điền.
+ */
 export async function fillLogin(page: Page, { email, password }: { email: string; password: string }) {
-  // Trong <main>: ngay sau điều hướng, bản sao ẩn của boundary (cuối body) có thể hydrate trước form thật → điền vào
-  // form chưa hydrate thì React thay nội dung và mất email đã điền
-  await waitForHydration(page, 'main form button[type="submit"]')
-  await page.getByRole('main').getByLabel('Email').fill(email)
+  const main = page.getByRole('main')
+  const submit = main.getByRole('button', { name: 'Đăng nhập' })
+  await expect(submit).toBeVisible()
+  if (new URL(page.url()).searchParams.has('next')) {
+    await expect(main.locator('form').filter({ has: page.locator('input[type="hidden"][name="next"]') })).toHaveCount(1)
+  }
+  await expect
+    .poll(() => submit.evaluate((element) => Object.keys(element).some((key) => key.startsWith('__reactProps'))))
+    .toBe(true)
+  await main.getByLabel('Email').fill(email)
   await page.getByRole('main').getByLabel('Mật khẩu', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Đăng nhập' }).click()
 }
