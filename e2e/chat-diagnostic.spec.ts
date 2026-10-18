@@ -58,8 +58,10 @@ async function snapshot(page: Page, selector: string) {
 }
 
 test('chẩn đoán: bong bóng lúc tải trang + sau điều hướng phía client; nút submit sau khi sang trang đăng nhập', async ({ page }, testInfo) => {
+  test.setTimeout(180_000)
   await page.addInitScript(RECORDER)
   const result: Record<string, unknown> = {}
+  const save = () => writeFileSync(testInfo.outputPath('dom-diagnostic.json'), JSON.stringify(result, null, 1))
 
   // 1. Tải mới trang chủ 5 lần, ghi liên tục
   const loads: unknown[] = []
@@ -69,6 +71,7 @@ test('chẩn đoán: bong bóng lúc tải trang + sau điều hướng phía cl
     loads.push(await page.evaluate(() => Reflect.get(window, '__chatLog')))
   }
   result.freshLoads = loads
+  save()
 
   // 2. Điều hướng phía client: trang chủ → "Xem tất cả sách" (/sach) → một trang sách
   await page.goto('/')
@@ -76,6 +79,7 @@ test('chẩn đoán: bong bóng lúc tải trang + sau điều hướng phía cl
   await page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách' }).click()
   await expect(page).toHaveURL(/\/sach$/)
   result.afterClientNavToBooks = { log: await page.evaluate(() => Reflect.get(window, '__chatLog')), bubbles: await snapshot(page, '[data-testid="chat-bubble"]') }
+  save()
 
   // 3. Giỏ (khách) → "Thanh toán" (Link) → proxy chuyển sang /dang-nhap: nút submit nào khớp selector của fillLogin
   await page.goto('/sach/sapiens')
@@ -90,11 +94,12 @@ test('chẩn đoán: bong bóng lúc tải trang + sau điều hướng phía cl
     await expect(page).toHaveURL(/\/dang-nhap/)
     result.loginSubmitRightAfterNav = await snapshot(page, 'main form button[type="submit"]')
     result.mainsRightAfterNav = await snapshot(page, 'main')
+    save()
     await page.waitForLoadState('networkidle')
     result.loginSubmitAfterIdle = await snapshot(page, 'main form button[type="submit"]')
   } else {
     result.cart = 'giỏ trống, không có link Thanh toán'
   }
 
-  writeFileSync(testInfo.outputPath('dom-diagnostic.json'), JSON.stringify(result, null, 1))
+  save()
 })
