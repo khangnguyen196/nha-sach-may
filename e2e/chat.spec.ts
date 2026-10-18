@@ -27,6 +27,22 @@ test.describe('bong bóng chỉ có ở trang tiếng Việt (trừ thanh toán)
   }
 })
 
+test('trang chỉ có đúng 1 bong bóng nhìn thấy được; mỗi lần gửi đúng 1 request Server Action', async ({ page }) => {
+  await page.goto('/')
+  await expect(bubble(page)).toHaveCount(1)
+  await expect(page.getByTestId('chat-bubble').filter({ visible: true })).toHaveCount(1)
+
+  const panel = await openChat(page)
+  const actions: string[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && 'next-action' in request.headers()) actions.push(request.url())
+  })
+  await ask(panel, 'Gợi ý sách lịch sử')
+  await ask(panel, 'Có cuốn nào ngắn hơn không?')
+  expect(actions).toHaveLength(2)
+  await expect(page.getByTestId('chat-panel').filter({ visible: true })).toHaveCount(1)
+})
+
 test('xác nhận 18+: chưa bấm thì không hỏi được; đã bấm thì nhớ trong tab, tab mới hỏi lại', async ({ page, browser }) => {
   await page.goto('/')
   const panel = await openChat(page, { confirm: false })
@@ -154,13 +170,15 @@ test('mobile: tấm toàn màn hình, nút Đóng rõ ràng, nền không cuộn
     expect(box?.width).toBe(viewport?.width)
     expect(box?.height).toBe(viewport?.height)
     await expect(panel.getByRole('button', { name: 'Đóng' })).toBeVisible()
-    await expect(page.locator('body')).toHaveAttribute('data-scroll-locked', /.*/)
+    // Dialog modal khóa cuộn nền (react-remove-scroll của radix): body không cuộn được khi tấm đang mở
+    await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden')
   } else {
     expect(box?.width).toBe(360)
   }
   await panel.getByRole('button', { name: 'Đóng' }).click()
   await expect(panel).toBeHidden()
   await expect(bubble(page)).toBeFocused()
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden')
 })
 
 async function assertNotCovering(page: Page, target: Locator) {

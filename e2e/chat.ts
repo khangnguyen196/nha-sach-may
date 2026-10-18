@@ -1,19 +1,19 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import { waitForHydration } from './helpers'
 
 // Chatbot Mây trên e2e: server chạy AI giả (CHAT_AI_MOCK=1, playwright.config.ts), không bao giờ gọi Gemini thật.
 // AI giả trả 3 ứng viên đầu; cụm [mock:…] trong câu hỏi điều khiển lỗi giả (src/features/chat/mock.ts).
 
 export const CONFIRM_AGE = 'Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây'
 
-// Bong bóng nằm trong <Suspense>: ngay sau hydrate React có thể còn giữ bản sao ẩn của boundary
-// (<div hidden id="S:…">), nên bỏ mọi phần tử nằm trong [hidden]
-const BUBBLE = '[data-testid="chat-bubble"]:not([hidden] *)'
-
-export const bubble = (page: Page) => page.locator(BUBBLE)
+// Theo vai trò + tên (cây accessibility): bỏ qua bản sao không hiển thị của bong bóng nếu có (xem báo cáo Phase 11)
+export const bubble = (page: Page) => page.getByRole('button', { name: 'Hỏi Mây gợi ý sách' })
 
 export async function openChat(page: Page, { confirm = true } = {}) {
-  await waitForHydration(page, BUBBLE)
+  await expect(bubble(page)).toBeVisible()
+  // Chờ React gắn handler lên đúng nút đang hiển thị (bấm trước hydrate thì không mở)
+  await expect
+    .poll(() => bubble(page).evaluate((element) => Object.keys(element).some((key) => key.startsWith('__reactProps'))))
+    .toBe(true)
   await bubble(page).click()
   const panel = page.getByTestId('chat-panel')
   await expect(panel).toBeVisible()
