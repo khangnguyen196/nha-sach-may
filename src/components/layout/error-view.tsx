@@ -1,9 +1,7 @@
 'use client'
 
-import { createContext, use, useEffect, useRef, type ReactNode } from 'react'
+import { createContext, Fragment, use, useEffect, useRef, type ReactNode } from 'react'
 import { SUPPORT_EMAIL } from '@/lib/support'
-import { fillTemplate } from '@/lib/template'
-import { SupportEmailText } from './support-email-text'
 
 /**
  * Chuỗi của trang lỗi, đã dịch (namespace `errorPage`). Giữ nguyên chỗ trống `{email}`, `{digest}` (điền ở đây):
@@ -71,13 +69,11 @@ export function ErrorView({ messages, digest, onRetry, homeLink }: Props) {
         {messages.title}
       </h1>
       <p className="mt-4 text-muted-foreground">
-        <SupportEmailText
-          text={fillTemplate(digest ? messages.description : messages.descriptionNoRef, { email: SUPPORT_EMAIL })}
-        />
+        <WithSupportEmail text={digest ? messages.description : messages.descriptionNoRef} />
       </p>
       {digest && (
         <p className="mt-3 text-sm text-subtle" data-testid="error-reference">
-          {fillTemplate(messages.reference, { digest })}
+          {messages.reference.replace('{digest}', () => digest)}
         </p>
       )}
       <div className="mt-8 flex flex-wrap gap-3">
@@ -98,6 +94,28 @@ export function ErrorView({ messages, digest, onRetry, homeLink }: Props) {
       </div>
     </div>
   )
+}
+
+/**
+ * Chỗ trống `{email}` → link mailto. Cùng kết quả với SupportEmailText + fillTemplate nhưng viết riêng ở đây: module
+ * nào ErrorView import cũng bị chép thêm một bản vào nhóm chunk global-error (tải ở mọi trang).
+ */
+function WithSupportEmail({ text }: { text: string }) {
+  return text.split('{email}').map((part, index) => (
+    <Fragment key={index}>
+      {index > 0 && (
+        <a
+          // mailto: không phải link nội bộ
+          // eslint-disable-next-line no-restricted-syntax
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="rounded-sm break-all underline underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {SUPPORT_EMAIL}
+        </a>
+      )}
+      {part}
+    </Fragment>
+  ))
 }
 
 function Icon({ className, children }: { className: string; children: ReactNode }) {
