@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto'
+import { writeFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { canSignIn, createE2eUser, deleteE2eUsers, findUserIdByEmail } from '../scripts/e2e-user'
 import { fillLogin, NO_SESSION } from './auth'
@@ -81,7 +82,7 @@ test('không có JavaScript: chưa xác nhận email → "Gửi lại email xác
   page,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   const email = `e2e+${randomBytes(6).toString('hex')}-resend-nojs@example.com`
   const password = `E2e-${randomBytes(9).toString('base64url')}`
   const noJs = await browser.newContext({ baseURL, storageState: NO_SESSION, javaScriptEnabled: false })
@@ -104,6 +105,11 @@ test('không có JavaScript: chưa xác nhận email → "Gửi lại email xác
     await main.getByLabel('Email').fill(email)
     await main.getByLabel('Mật khẩu', { exact: true }).fill(password)
     await main.getByRole('button', { name: 'Đăng nhập' }).click()
+    // Context không JS không có trace: lưu HTML trang sau khi gửi (test-results) để biết server render gì khi fail
+    await noJsPage.waitForLoadState()
+    const snapshot = testInfo.outputPath('no-js-after-login.html')
+    writeFileSync(snapshot, `<!-- ${noJsPage.url()} -->\n${await noJsPage.content()}`)
+    await testInfo.attach('no-js-after-login', { path: snapshot, contentType: 'text/html' })
     await expect(main.getByRole('alert').first()).toHaveText(
       'Email này chưa được xác nhận. Bạn mở thư xác nhận trong hộp thư (cả mục Spam), hoặc bấm gửi lại bên dưới.',
     )
