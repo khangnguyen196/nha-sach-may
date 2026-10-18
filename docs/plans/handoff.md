@@ -1,16 +1,21 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, sau merge Phase 11 chatbot Mây)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, đợt sửa ux-messages trên nhánh riêng)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
 ## Trạng thái
 
+- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **chưa merge**. Plan + báo cáo: `docs/plans/ux-messages.md`.
+  - Migration **A** (`20261018120000_voucher_suggestions.sql`: `vouchers.is_public`, RPC `checkout_vouchers`) **đã chạy** trên production, KA1–KA6 khớp.
+  - Migration **B** (`20261018130000_error_reasons.sql`: mã lỗi voucher / hủy đơn theo lý do) **CHƯA chạy**: chạy **sau** khi bản app của nhánh này đã merge + deploy production, rồi chạy `supabase/checks/ux-messages-b.sql`. Bản app mới hiểu cả mã cũ (`INVALID_VOUCHER`, `ORDER_NOT_CANCELLABLE`) lẫn mã mới.
+  - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` (đổi 8 tên, gộp id 8 + 9 vào id 1) **chưa chạy**, chờ chủ dự án duyệt; chạy xong phải **Redeploy** trên Vercel.
+  - Sau khi B đã chạy: xóa `INVALID_VOUCHER` khỏi `ERROR_CODES` / messages / `VOUCHER_ERRORS` (đợt sau).
 - **Phase 11 (chatbot gợi ý sách "Mây")**: **đã merge vào `main`** (ff, 2026-10-18) sau khi chủ dự án test tay OK trên bản Preview (máy tính + iPhone Safari). Nhánh `phase-11` đã xóa (local + remote). Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11".
   - Migration `chat_quota` + `chat_quota_defaults` đã chạy trên Supabase.
   - `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN` đặt ở Vercel **Production** (đã bỏ khỏi Preview).
   - Số đường dây nóng Ngày Mai trong `chat.crisis` đã được chủ dự án kiểm.
   - `measure:js` (2026-10-18): trang chủ + 41.1KB, trang sách + 43.9KB. Bong bóng + 1.5KB; khung chat 9.0KB gzip, chỉ tải khi bấm.
   - CI trước merge (`aec9a37`): check xanh; e2e 345 qua, 1 flaky (`cart-account.spec:94`, request 404 ở mục dưới).
-- **Việc còn lại cho đợt sửa lỗi sau Phase 11** (chưa làm):
+- **Việc còn lại cho đợt sửa lỗi sau Phase 11**: đã làm ở nhánh `ux-messages` (mục 14, 15, 16 của `docs/plans/ux-messages.md`); ghi chú cũ giữ dưới đây để tra:
   1. **Trang đăng nhập mất chữ đã gõ**: `login/page.tsx` bọc form trong `<Suspense fallback={<Form …/>}>`, fallback là cùng form nhưng chưa có `?next=`. Sau điều hướng phía client, fallback hiện và hydrate trước, rồi bị thay bằng form thật khoảng 60 ms sau, nên chữ đã gõ bị mất. Tái hiện ở cả `/en`. e2e đã né bằng `fillLogin` chờ form thật; lỗi UX vẫn còn.
   2. **Request 404 làm e2e đăng nhập / đăng xuất chập chờn**: `account.spec.ts:71`, `cart-account.spec.ts:94`. Console có "Failed to load resource: 404", chưa rõ URL nào; qua ở lần retry; có từ trước Phase 11.
   3. **Tên tác giả ngược thứ tự**: dữ liệu Google Books, VD "Huy Thiệp Nguyễn". Chatbot và trang sách hiện đúng như trong DB.
@@ -59,12 +64,19 @@
   - `npm run test:e2e` toàn bộ (gồm `crawl.spec`): **261/261 qua ngay lượt đầu** (20,9 phút), kể cả các test `checkout.spec` trước đây chưa chạy được (voucher sai / đủ tối thiểu, VietQR, RPC không tự hủy đơn đã trả). Log `fetch failed (e2e fault injection)` là của `error-page.spec`, có chủ đích.
   - CI trên `main` xanh; Vercel Production `f4899ab` deploy xong.
   - Kiểm 3 điểm trên https://nha-sach-may.vercel.app bằng dữ liệu e2e tạm (user khách + admin, danh mục / sách `e2e-admin-…`, 1 đơn đã giao của khách + 1 đơn của admin; script tạm đã xóa): admin ở `/tai-khoan/don-hang` chỉ thấy đơn của mình ✔; admin mở `/thanh-toan/thanh-cong/<mã đơn khách>` → UI "Không tìm thấy trang" ✔ nhưng **HTTP 200** (soft 404: Cache Components stream trước khi `notFound()` chạy; trang cần đăng nhập nên không ảnh hưởng SEO, không lộ dữ liệu). **Đã sửa** (`fix-soft-404`, merge `main` 2026-10-18): proxy đếm đơn theo mã + `user_id` bằng client theo phiên → HTTP 404; đơn đã giao của khách có nút "Đánh giá" ✔. Dọn xong `measure.ts --check-leftovers`: 0 sót mọi loại.
-- Còn lại sau `fix-soft-404` / `perf-grid-404` (proxy chỉ còn trả 404 thật cho slug và trang một đơn của người khác):
-  - `/tai-khoan/don-hang?page=99` (danh sách đơn, trang vượt quá): đã hết lỗi #419 (`InlineNotFound`) nhưng vẫn **HTTP 200**, proxy không kiểm route này (giống trang lưới).
-  - `/tai-khoan/dia-chi/[id]` (địa chỉ không có / của người khác) còn gọi `notFound()` trong Suspense → soft 404 + có thể lỗi #419.
-  - UI dự phòng của trang đặt hàng thành công (chỉ khi proxy không hỏi được DB): khối "Không tìm thấy trang" hiện bên dưới tiêu đề "Đặt hàng thành công" đã prerender.
-  - `layout.spec.ts:66` (mobile, đổi ngôn ngữ giữ query: URL về `/en` thiếu `?x=1`) flaky 1 lần trên CI (run 39088263454, qua ở retry).
+- Còn lại sau `fix-soft-404` / `perf-grid-404` — đã xử lý ở nhánh `ux-messages`:
+  - `/tai-khoan/don-hang?page=99`: **đã quyết giữ soft 404** (HTTP 200 + `noindex`), có link "Về trang đầu" giữ bộ lọc. Lý do: trang riêng tư, không index, 404 thật không có lợi mà thêm một query ở proxy. **Đóng.**
+  - `/tai-khoan/dia-chi/[id]`: proxy trả 404 thật (id sai / không có / của người khác), trang không còn gọi `notFound()` trong Suspense.
+  - Trang đặt hàng thành công: tiêu đề "Đặt hàng thành công" nằm trong boundary, đơn không có thì chỉ hiện UI 404 của đơn.
+  - `layout.spec.ts:66`: lỗi thật của `LocaleSwitcher` (fallback Suspense ngoài nằm trong HTML tĩnh, thiếu query) → đã sửa.
   - `account.spec.ts:71` (đăng nhập → đăng xuất) flaky 1 lần trên CI (run 39051786575, qua ở lần retry): console có một "Failed to load resource: 404" chưa rõ request nào; 2 lần chạy sau không lặp lại. Gặp lại thì xem trace (`playwright-report` artifact).
+- **Đợt sau** (chủ dự án ghi, chưa làm):
+  - `/sach`, tìm kiếm **và** catalog chatbot (`getChatCatalog`) chưa loại sách thuộc danh mục đang ẩn (ux-messages chỉ lọc kệ trang chủ) → cần quyết một quy tắc chung.
+  - Tác giả nước ngoài trùng: Peter Drucker (id 86 / 87 / 88), Stephen Hawking (113 / 114), Jim Collins (90 / 92), Jerry Porras (93 / 94).
+  - id 75 gộp hai người: "Trần Tuyết Nhung và Anthony Reid".
+  - Tổ chức ghi là tác giả: Nhà xuất bản Kim Đồng, Harvard Business Review, Ladybird.
+  - Tên sách lỗi: "Kien Chuot Va Ruoi" (không dấu), "Mười chín chân dùng nhà văn…" (sai chính tả), tên còn dính "(hardcover)" / "(soft cover…)".
+  - Xóa `INVALID_VOUCHER` sau khi migration B đã chạy.
 - Sau khi deploy (tùy chọn): đo lại production (`npx tsx scripts/perf/measure.ts --out perf-after.json`) và kiểm Fluid Compute trên Vercel (chuyển trang trang chủ → trang sách 1,4–3 s ở lượt đầu, nghi function khởi động lạnh).
 - Bản Preview của Vercel đang bật Vercel Authentication → script đo không vào được bản Preview (muốn đo trước khi merge cần Protection Bypass for Automation, do chủ dự án quyết).
 - **Lỗi #3 (build) chưa hết**: một lần build vẫn fail "`use cache` took too long" ở `getRelatedBooks` dù đã có timeout + retry (tối đa 33 s, dưới giới hạn 54 s của Next; `fetch` của Next có chuyển `signal`). Chưa tìm ra chỗ treo; hướng xem tiếp: giảm số trang prerender đồng thời, tăng `staticPageGenerationTimeout`, log thời gian từng lượt thử lúc build.

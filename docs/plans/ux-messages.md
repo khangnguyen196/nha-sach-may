@@ -1,6 +1,6 @@
 # Đợt sửa "ux-messages" (sau Phase 11)
 
-Trạng thái: **plan đã duyệt (2026-10-18)**, đang ở bước 2 (migration + SQL kiểm tra, chưa code app). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`.
+Trạng thái: **code xong, chưa merge** (2026-10-18). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
 
 Mục tiêu: khách luôn hiểu chuyện gì đang xảy ra.
 - Lỗi do khách: nói đúng lý do và cách làm tiếp, đặt ngay chỗ liên quan.
@@ -11,6 +11,47 @@ Quy ước trong file này:
 - Câu mới ghi **vi / en**. Riêng namespace `chat` chỉ có vi.
 - `{email}` là hằng `SUPPORT_EMAIL` (mục 10).
 - Mã lỗi mới đều thêm vào `ERROR_CODES` (`src/lib/errors.ts`) và `errors.*` ở cả hai file messages (test so key).
+
+## Báo cáo (2026-10-18)
+
+Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge**. Migration A đã chạy (KA1–KA6 khớp); **B chưa chạy** (chạy sau khi merge + deploy, rồi `supabase/checks/ux-messages-b.sql`); `supabase/checks/authors-fix.sql` chờ duyệt.
+
+**Đã làm theo mục**
+- **10** `SUPPORT_EMAIL` (`lib/support.ts`) ở cả hai footer; câu lỗi có `{email}` tự thành link `mailto:` (`SupportEmailText`, dùng trong `FormAlert`, giỏ, nút thêm vào giỏ). Vitest: không chép địa chỉ ở chỗ khác.
+- **11** Trang lỗi: "Có lỗi phía Nhà Sách Mây, không phải do bạn…", mã tra cứu (`error.digest`), email; bỏ câu "chập chờn". `CLAUDE.md` sửa quy ước digest.
+- **1** Mã giảm giá báo đúng lý do (không có / tắt / chưa tới ngày + ngày giờ / hết hạn + ngày / hết lượt / thiếu bao nhiêu tiền); mã sai dạng (có dấu, quá ngắn) không còn bị bỏ qua im lặng.
+- **1b** "Chọn mã giảm giá": RPC `checkout_vouchers`, mã đủ điều kiện giảm nhiều nhất lên đầu, mã chưa đủ mờ + "Mua thêm … để dùng mã này", "Áp dụng" điền ô + gửi đúng form GET cũ. Tấm trượt dưới `sm` (chữ 16px, nút 44px), dialog từ `sm`; code dialog tải khi bấm. Admin: ô "Hiện trong gợi ý ở trang thanh toán", nhãn "Gợi ý" ở danh sách.
+- **2** Hủy đơn báo đúng lý do (đã xác nhận / đang giao, đã giao, đã thanh toán, đã hủy), lý do cần cửa hàng xử lý kèm email.
+- **3** Lỗi Supabase Auth: email bị từ chối → dưới ô Email; mật khẩu yếu / trùng → dưới ô Mật khẩu; tắt đăng ký, tài khoản khóa, phiên hết hạn có mã riêng. Quên mật khẩu không còn báo "đã gửi" khi mất mạng. Link xác nhận gặp lỗi mạng không còn báo "hết hạn".
+- **4** Đăng nhập khi chưa xác nhận email: câu rõ + "Gửi lại email xác nhận" (form riêng, chạy không cần JS, khóa 60 giây đếm ngược, luôn báo "đã gửi" để không lộ email).
+- **5** `RATE_LIMITED` trung tính, có số giây khi GoTrue báo.
+- **6 / 9** 404 theo loại (proxy gắn `x-not-found`): sách ngừng bán, danh mục ẩn, tác giả, đơn hàng (CÙNG một câu cho mã sai / không có / của tài khoản khác), địa chỉ; link tìm sách / danh mục / đơn hàng của tôi. Vẫn HTTP 404 thật.
+- **7** `AUTH_REQUIRED`: "Phiên đăng nhập đã hết…" + "Đăng nhập lại" về đúng trang (form địa chỉ, ngôn ngữ email, đánh giá, giỏ). Tìm ra lỗi gốc: proxy chuyển hướng cả POST (Server Action) về trang đăng nhập → client báo nhầm "Không kết nối được máy chủ"; nay proxy chỉ chuyển hướng GET / HEAD.
+- **8** `NETWORK_ERROR` câu mới; mọi form qua `useFormAction` giữ chữ (e2e kiểm); thêm vào giỏ / đổi số lượng / chatbot tự bắt lỗi mạng (trước đây giỏ ra trang lỗi, chatbot xóa câu hỏi và báo "Mây hơi mệt"); ghi chú đơn hàng giữ khi áp mã.
+- **12** `toFailure`: JWT bị từ chối → `SESSION_EXPIRED`, RLS chặn → `FORBIDDEN`. Admin: mục vừa bị xóa ở tab khác → `ITEM_DELETED`; lưu sách xong mà lỗi tác giả → `BOOK_AUTHORS_NOT_SAVED`; lỗi query trong bước kiểm tra đi qua `toFailure` (mạng → `NETWORK_ERROR`).
+- **13** `?page=99` danh sách đơn giữ soft 404 (đã quyết) + "Về trang đầu"; `/tai-khoan/dia-chi/[id]` 404 thật ở proxy, hết `notFound()` trong Suspense; trang đặt hàng thành công không còn khối 404 dưới tiêu đề "Đặt hàng thành công"; `layout.spec:66` là lỗi thật của `LocaleSwitcher` (fallback ngoài trong HTML tĩnh thiếu query) → đã sửa.
+- **14** Đăng nhập / quên mật khẩu chỉ có một form ngay từ đầu (`next` đọc ở client, không JS lấy từ Referer; thông báo URL ở Suspense riêng phía trên).
+- **15** Commit chẩn đoán riêng (`6b5d566`: kèm URL vào dòng "Failed to load resource", không lọc dòng nào). 3 lượt e2e sau đó (`e75b18a`, `ecfb2ff`, 1 lượt chạy tay) **không tái hiện** request 404 (`account.spec:71`, `cart-account.spec:94` qua cả 3) → chưa có URL để đối chiếu, cũng không có URL nào khác dự kiến. Bản sửa gốc theo bằng chứng trong trace cũ (kệ "Bán chạy" trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404): kệ trang chủ chỉ lấy sách thuộc danh mục đang hiện (`visibleCategoryIds`, ★12). Commit chẩn đoán giữ lại: nếu còn tái diễn, thông báo fail sẽ có URL.
+- **16** `supabase/checks/authors-fix.sql` (8 tên + gộp 8, 9 → 1, chưa chạy); import dùng lại tác giả cùng tập từ.
+
+**Khác với plan**
+- e2e voucher / gợi ý mã nằm trong `checkout.spec` (cùng user checkout, chạy tuần tự) thay vì spec riêng: spec riêng chạy song song sẽ giẫm giỏ của user checkout.
+- Dialog gợi ý: một Radix Dialog với class responsive (không cần hook đo màn hình).
+- Mục 3: chưa có e2e "email bị GoTrue từ chối" (Supabase local nhận cả `@example.com`, không tìm được email zod nhận mà GoTrue từ chối mà không giả lập) → chỉ Vitest.
+- Mục 8: không thêm e2e mất mạng riêng cho form đánh giá (cần đơn đã giao; dùng chung `useFormAction` đã có e2e ở 5 form khác).
+- Mục 13c: không có Vitest render trang (Server Component đọc phiên); e2e đơn thật vẫn kiểm tiêu đề.
+- Thêm ngoài plan: proxy chỉ chuyển hướng GET / HEAD (mục 7), sửa `LocaleSwitcher` (mục 13), import dùng lại tác giả cùng tập từ (mục 16).
+- `measure:js` chưa đo: worktree không có `.env.local` (không tự link / copy theo quy ước). Cần bạn cho phép hard link tạm như Phase 11, hoặc đo sau khi merge. Thay đổi ở trang sách / trang chủ nhỏ (link email ở footer, `SupportEmailText`); dialog gợi ý mã tải lười, chỉ ở trang thanh toán.
+
+**Test cũ đổi câu mong đợi (vẫn so chính xác)**
+1. `checkout.spec` mã sai: "Mã giảm giá không hợp lệ hoặc đã hết hạn." → "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé."
+2. `orders.spec` hủy sau khi cửa hàng xác nhận: "Đơn hàng này không thể hủy." → câu `ORDER_IN_PROGRESS` + kiểm link `mailto:`.
+3. `error-page.spec`: tiêu đề mới (vi / en) + kiểm mã tra cứu, `mailto:`, không còn "chập chờn"; thứ tự Tab có thêm link email trước nút "Thử lại".
+4. `checkout.spec` RPC hủy đơn đã trả: `ORDER_NOT_CANCELLABLE` → `ORDER_PAID`.
+5. `checkout.spec` mất mạng (2 chỗ): câu `NETWORK_ERROR` mới; thêm kiểm ghi chú còn nguyên.
+6. `admin/vouchers/schemas.test.ts`: object mong đợi thêm `is_public: false`.
+7. `e2e/auth.ts` `fillLogin`: "chờ form có input `next`" → "chờ input `next` có đúng giá trị" (input giờ luôn có, giá trị điền sau hydrate; chặt tương đương).
+8. `layout.spec` đổi ngôn ngữ: thêm kiểm `href` trước khi bấm (cả hai chiều).
 
 ## ★ Quyết định (đã duyệt 2026-10-18)
 
@@ -41,8 +82,8 @@ Bảng đề xuất ban đầu (giữ để tra):
 
 1. ✅ Bạn duyệt plan + trả lời ★.
 2. ✅ Migration A + B, `schema.sql`, `seed.sql`, `migrations.test.ts`, câu SQL kiểm tra (`supabase/checks/ux-messages-a.sql`, `ux-messages-b.sql`), 2 câu chỉ đọc mục 16 (`supabase/checks/authors-reversed-names.sql`). Push, **dừng**.
-3. Bạn review, chạy **A** + `ux-messages-a.sql`, chạy R1 / R2 mục 16 rồi dán kết quả. Mình sinh lại types. (**B chưa chạy.**)
-4. Code theo thứ tự: 10 → 11 → 1/1b → 2 → 3/4/5 → 6/9 → 7 → 8 → 12 → 13 → 14 → 15. Câu UPDATE mục 16 gửi riêng.
+3. ✅ Bạn chạy **A** + `ux-messages-a.sql` (KA1–KA6 khớp), R1 / R2 mục 16. Types cập nhật tay theo định dạng `supabase gen types`. (**B chưa chạy.**)
+4. ✅ Code theo thứ tự: 10 → 11 → 1/1b → 2 → 3/4/5 → 6/9 → 7 → 8 → 12 → 13 → 14 → 15 → 16.
 5. `typecheck`, `lint`, `build`, Vitest, `measure:js` (trang sách, trang chủ, `vi/login`, `vi/checkout` không prerender nên đo bằng chunk), e2e trên CI. Push, báo.
 6. Merge xong + deploy: bạn chạy **B** + `ux-messages-b.sql`.
 
@@ -534,12 +575,13 @@ Nguồn chung: `toFailure` (lỗi PostgREST có `message` không phải mã đã
 - **R1**: tác giả có từ cuối là họ Việt phổ biến, từ đầu không phải họ. Họ chia 2 mức: **chắc** (hầu như không dùng làm tên riêng) và **cần xem** (cũng là tên riêng: Mai, Hà, Lâm, Hoàng…). So khớp trên slug (đã bỏ dấu). Cột `co_dau_viet = false` đánh dấu tên có thể là tên nước ngoài; `ten_de_xuat` đưa từ cuối lên đầu để tham khảo.
 - **R2**: cặp tác giả cùng tập từ nhưng khác thứ tự (một người bị tách đôi).
 
-**Bước 2: câu UPDATE** (viết sau khi có kết quả, gửi riêng để bạn review + tự chạy)
-- Chỉ đổi `name` theo danh sách id bạn duyệt (không suy tự động trong UPDATE): `update public.authors set name = v.name from (values (12, 'Nguyễn Huy Thiệp'), …) v(id, name) where authors.id = v.id and authors.name = <tên cũ>;` (điều kiện tên cũ chống chạy hai lần / chạy nhầm). Bọc `begin; … commit;`, kèm `select` kiểm trước / sau.
-- **Slug giữ nguyên** (★7): link cũ chạy tiếp.
-- Cặp trùng người (nếu có): gộp `book_authors` sang một id rồi xóa id kia; slug của id bị xóa sẽ 404 → nếu có cặp như vậy, mình báo trước và đề xuất giữ id có slug đúng thứ tự.
-- Cache: SQL chạy ngoài app nên không gọi `updateTag`; lưu một tác giả trong admin chỉ làm mới tag sách của tác giả đó. → Sau khi chạy UPDATE: **Redeploy** trên Vercel để mọi trang prerender (và catalog rút gọn của chatbot) lấy tên mới. Ghi rõ trong câu gửi kèm.
-- Import sau này: Google vẫn trả tên ngược → `slugify` ra slug cũ → khớp tác giả đã có (upsert theo slug, `ignoreDuplicates`), tên đã sửa không bị ghi đè. Rủi ro: một cuốn khác có tên đúng thứ tự → slug mới → tác giả trùng. Thêm vào `scripts/import-books.ts`: trước khi tạo tác giả mới, tìm tác giả có cùng tập từ trong slug → dùng lại (Vitest). Làm trong đợt này (nhỏ, chặn tái phát).
+**Bước 2 (đã chốt 2026-10-18)**: chủ dự án chạy R1 / R2 + danh sách đầy đủ, **duyệt tay** (R1 lọc chưa chuẩn: sót "Tá Nhí Nguyễn" vì "ta" nằm trong danh sách họ; nhầm "Nguyên" với "Nguyễn" vì so trên slug không dấu → không dùng kết quả R1).
+- Đổi 8 tên (giữ slug, ★7): 3 "Thụy Dương" → "Dương Thụy"; 5 "Tá Nhí Nguyễn" → "Nguyễn Tá Nhí"; 6 "Huy Thiệp Nguyễn" → "Nguyễn Huy Thiệp"; 13 "Luan Hoan" → "Luân Hoán"; 14 "Dong Ngac Nguyen" → "Nguyễn Đông Ngạc"; 28 "Bach Thao Ho" → "Hồ Bạch Thảo"; 31 "Nguyen Phuong Ngoc" → "Nguyễn Phương Ngọc"; 63 "Thế Dân Quan" → "Quan Thế Dân".
+- Gộp id 8 "Lap Nguyen" và id 9 "Quang Lập Nguyễn" vào id 1 "Nguyễn Quang Lập" (cả hai chỉ gắn "Kien Chuot Va Ruoi").
+- Giữ nguyên: id 4 "Hà Thủy Nguyên", id 20 "Cao Nguyệt Nguyên" ("Nguyên" là tên riêng), id 69 "Dr. Tung Phan", id 73 "Việt Lê", các tác giả còn lại.
+- File: `supabase/checks/authors-fix.sql` (một transaction, mỗi update có `where id = X and name = '<tên cũ>'`, lệch số dòng / id 8, 9 gắn sách khác / vai trò khác → `raise exception` rollback cả khối; phần 2 là câu kiểm tra chỉ đọc có cột mong đợi: 8 tên mới, id 8 / 9 không còn, id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần, `search_text` của sách liên quan có tên mới, slug không đổi). **Chưa chạy**, chờ duyệt.
+- **Sau khi chạy: Redeploy trên Vercel** để xóa cache trang (SQL chạy ngoài app nên không gọi `updateTag`; trang prerender + catalog rút gọn của chatbot giữ tên cũ tới khi build lại).
+- Import sau này: Google vẫn trả tên ngược → slug cũ → khớp tác giả đã có (tên đã sửa không bị ghi đè). Tên đúng thứ tự (slug mới, cùng tập từ) → `reuseByNameTokens` dùng lại tác giả đã có thay vì tạo bản trùng.
 
 **Test**: Vitest cho hàm so tập từ của slug (`sameNameTokens`) dùng ở import. SQL không có test tự động (bạn chạy tay).
 
