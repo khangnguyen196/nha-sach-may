@@ -34,6 +34,38 @@ Bản 2 cập nhật theo góp ý của chủ dự án:
 - Nhánh chưa merge: **không có**. `origin` chỉ còn `main`. `fix-manual-test`, `e2e-project`, `fix-soft-404`, `perf-grid-404` đã merge và đã xóa (local + remote). Nhánh worktree cũ `claude/unruffled-merkle-5c3162` đã nằm trọn trong `main`.
 - Nhánh **`phase-11`** tạo từ `origin/main` `5ef1eb5`. Chỉ có commit của file plan này, đã push lên `origin/phase-11` (chưa có code).
 
+## Báo cáo thử thật ★ 12 (2026-10-18)
+
+- Cách thử: `npm run dev` trong worktree, `.env.local` là **hard link** tới file gốc (chủ dự án cho phép; tạo symlink cần quyền admin). Gọi `askMay` qua một route tạm chỉ chạy ở dev, **không commit**. Sau khi thử: đã xóa route tạm và hard link; `fsutil hardlink list D:\Bán sách\.env.local` chỉ còn 1 đường dẫn.
+- **10 lượt gọi Gemini thật**, model `gemini-3.5-flash-lite`. Cả 10 đều `finishReason: STOP`; không có 400 / 401 / 403, 429 hay `MAX_TOKENS`. Dữ liệu là DB production; bộ đếm thật cộng 10 lượt.
+- **Structured output đã chốt**: `generationConfig.responseMimeType: "application/json"` + `responseJsonSchema` (JSON Schema, có `enum` slug ứng viên), kèm `thinkingConfig.thinkingLevel: "minimal"`. Cả 10 câu trả lời parse đúng `aiReplySchema`, không slug lạ.
+
+| # | Trường hợp | `promptTokenCount` | `candidatesTokenCount` | `thoughtsTokenCount` |
+|---|---|---:|---:|---:|
+| 1 | **Câu đầu** ("Tôi đang thấy mông lung, lạc hướng") | **3.636** | **299** | — (không trả về = 0) |
+| 2 | Tâm trạng: đọc nhẹ cuối tuần | 3.513 | 192 | — |
+| 3 | Tâm trạng: động lực sau thất bại | 3.640 | 295 | — |
+| 4 | **Trang sách** (`sapiens`, "Cuốn này nói về gì?") | **3.727** | **117** | — |
+| 5 | Trang sách (`vong-buom`, "Cuốn này hợp với ai?") | 3.787 | 110 | — |
+| 6 | Tiếng Anh ("…a book about leadership?") | 3.344 | 253 | — |
+| 7 | Không dấu ("toi muon doc sach ve lich su viet nam") | 3.840 | 281 | — |
+| 8 | Ngoài phạm vi (giải phương trình) | 3.752 | 88 | — |
+| 9 | Prompt injection (đòi in system prompt, markdown, link) | 4.035 | 93 | — |
+| 10 | **Câu thứ 5** (đủ 4 lượt lịch sử) | **4.019** | **198** | — |
+
+- Đầu vào thật lớn nhất 4.035 token, khoảng một nửa mục tiêu 8K. Ước tính bi quan (2 ký tự / token) gấp khoảng 2 lần số thật, nên `fitPromptBudget` gần như không phải bớt gì. Đầu ra lớn nhất 299 / 1.200.
+- Hành vi:
+  - Câu tâm trạng ra sách tiếng Việt (văn học + kỹ năng).
+  - Trang sách trả lời về đúng cuốn, `about_book`, không kèm thẻ.
+  - Câu tiếng Anh được trả lời bằng tiếng Việt, `non_vietnamese = true`.
+  - Câu không dấu được hiểu đúng.
+  - Ngoài phạm vi bị từ chối, không thẻ.
+  - Injection bị từ chối, không lộ prompt, không link.
+  - Câu thứ 5 dùng đúng ngữ cảnh ("ngắn hơn, dễ đọc hơn").
+- Ghi nhận nhỏ:
+  - Một lỗi chính tả do model viết ("tâm lòng").
+  - Tên tác giả lấy nguyên từ DB, nên có chỗ ngược thứ tự ("Huy Thiệp Nguyễn" là dữ liệu Google Books).
+
 ## Tóm tắt
 
 Có một bong bóng chat ở góc phải dưới, chỉ hiện trên các trang cửa hàng tiếng Việt. Bấm vào thì mới tải khung chat (dynamic import). Mỗi lượt chat đi qua một Server Action `askMay`:
