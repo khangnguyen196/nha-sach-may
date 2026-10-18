@@ -127,3 +127,29 @@ test('admin gọi thẳng PostgREST: không sửa được used_count (do place_
     await deleteE2eVouchers([voucher.code])
   }
 })
+
+test('"Hiện trong gợi ý ở trang thanh toán": mặc định không chọn; chọn + lưu → is_public, danh sách có nhãn "Gợi ý"', async ({
+  page,
+}) => {
+  const errors = collectErrors(page)
+  const voucher = await createE2eVoucher()
+  try {
+    await openForm(page, `/admin/voucher/${voucher.id}`)
+    const checkbox = field(page, 'Hiện trong gợi ý ở trang thanh toán')
+    await expect(checkbox).not.toBeChecked()
+    await checkbox.check()
+    await save(page)
+    expect(await voucherRow(voucher.code)).toMatchObject({ is_public: true })
+
+    await page.goto(`/admin/voucher?q=${voucher.code}`)
+    await expect(main(page).getByRole('row').filter({ hasText: voucher.code })).toContainText('Gợi ý')
+
+    await openForm(page, `/admin/voucher/${voucher.id}`)
+    await field(page, 'Hiện trong gợi ý ở trang thanh toán').uncheck()
+    await save(page)
+    expect(await voucherRow(voucher.code)).toMatchObject({ is_public: false })
+    expect(errors).toEqual([])
+  } finally {
+    await deleteE2eVouchers([voucher.code])
+  }
+})

@@ -228,7 +228,19 @@
     "voucherRemove": "Remove code",
     "discount": "Discount",
     "recalculating": "Recalculating the total…",
-    "voucherMinOrderShortfall": "Add {shortfall, number, price} more to use this code (orders from {min_order_value, number, price})."
+    "voucherMinOrderShortfall": "Add {shortfall, number, price} more to use this code (orders from {min_order_value, number, price}).",
+    "voucherPick": "Choose a voucher",
+    "voucherListTitle": "Vouchers for this order",
+    "voucherPercent": "{value}% off",
+    "voucherPercentCapped": "{value}% off, up to {max}",
+    "voucherFixed": "{amount} off",
+    "voucherMinOrder": "Orders from {amount}",
+    "voucherNoMin": "Any order",
+    "voucherExpires": "Expires {date}",
+    "voucherNoExpiry": "No expiry date",
+    "voucherShortfall": "Add {amount} more to use this code",
+    "voucherUse": "Apply",
+    "voucherClose": "Close"
   },
   "order": {
     "successTitle": "Order placed",

@@ -34,6 +34,8 @@ export async function getVoucherFormProps(mode: 'create' | 'edit') {
     periodHint: t('periodHint'),
     active: t('active'),
     activeHint: t('activeHint'),
+    public: t('public'),
+    publicHint: t('publicHint'),
     submit: mode === 'edit' ? tCommon('save') : tCommon('create'),
     pending: mode === 'edit' ? tCommon('saving') : tCommon('creating'),
     saved: tCommon('saved'),
@@ -54,6 +56,7 @@ export const EMPTY_VOUCHER: VoucherFormValues = {
   starts_at: '',
   ends_at: '',
   is_active: true,
+  is_public: false,
 }
 
 const text = (value: number | string | null) => (value === null ? '' : String(value))
@@ -71,5 +74,6 @@ export function voucherFormValues(voucher: AdminVoucher): VoucherFormValues {
     starts_at: isoToVnInput(voucher.starts_at),
     ends_at: isoToVnInput(voucher.ends_at),
     is_active: voucher.is_active,
+    is_public: voucher.is_public,
   }
 }

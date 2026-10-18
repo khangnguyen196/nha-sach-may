@@ -9,7 +9,7 @@ import type { VoucherListParams } from './params'
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 
 const VOUCHER_COLUMNS =
-  'id, code, description, description_en, discount_type, discount_value, max_discount, min_order_value, usage_limit, used_count, starts_at, ends_at, is_active'
+  'id, code, description, description_en, discount_type, discount_value, max_discount, min_order_value, usage_limit, used_count, starts_at, ends_at, is_active, is_public'
 
 /** Danh sách voucher, mới tạo trước. Tìm theo mã (mã luôn viết HOA → so không phân biệt hoa thường). */
 export async function listAdminVouchers(params: VoucherListParams) {

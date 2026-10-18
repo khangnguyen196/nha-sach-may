@@ -14,9 +14,10 @@ import { CheckoutSkeleton } from '@/features/checkout/components/checkout-skelet
 import { CartProblems, isProblemLine, OrderSummary } from '@/features/checkout/components/order-summary'
 import { PaymentMethod } from '@/features/checkout/components/payment-method'
 import { VOUCHER_FORM_ID, VoucherField } from '@/features/checkout/components/voucher-field'
-import { getCheckoutQuote } from '@/features/checkout/queries'
+import { getCheckoutQuote, getCheckoutVouchers } from '@/features/checkout/queries'
 import { NOTE_MAX } from '@/features/checkout/schemas'
-import { normalizeVoucherCode } from '@/features/checkout/voucher'
+import { parseVoucherInput } from '@/features/checkout/voucher'
+import { rankVouchers } from '@/features/checkout/voucher-suggestions'
 import { localeAlternates } from '@/i18n/alternates'
 import { getPathname, Link } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
@@ -51,10 +52,11 @@ export default async function CheckoutPage({ searchParams }: Props) {
 async function CheckoutContent({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
   await requireUser(locale, '/checkout')
   const query = await searchParams
-  // ?voucher= : mã nằm trên URL (form GET "Áp dụng"); sai dạng coi như không có
-  const [lines, { quote, voucher }, addresses, t, tCart, messages] = await Promise.all([
+  // ?voucher= : mã nằm trên URL (form GET "Áp dụng"); sai dạng → báo dưới ô như mã không tồn tại
+  const [lines, { quote, voucher }, suggestions, addresses, t, tCart, messages] = await Promise.all([
     getCart(),
-    getCheckoutQuote(locale, normalizeVoucherCode(query.voucher)),
+    getCheckoutQuote(locale, parseVoucherInput(query.voucher)),
+    getCheckoutVouchers(),
     getAddresses(),
     getTranslations('checkout'),
     getTranslations('cart'),
@@ -110,7 +112,7 @@ async function CheckoutContent({ locale, searchParams }: { locale: Locale; searc
         address={<AddressOptions addresses={addresses} selectedId={selectedId} locale={locale} />}
         payment={<PaymentMethod />}
         summary={<OrderSummary lines={lines} quote={quote} voucherCode={voucherCode} />}
-        voucher={<VoucherField voucher={voucher} addressId={selectedId} />}
+        voucher={<VoucherField voucher={voucher} addressId={selectedId} suggestions={rankVouchers(suggestions)} />}
         problems={hasProblems ? <CartProblems /> : undefined}
       />
       {/* Form GET của ô mã giảm giá (ô + nút nằm trong form đặt hàng, gắn bằng form="…"); giữ địa chỉ đang chọn */}

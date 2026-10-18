@@ -549,6 +549,124 @@ test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đ�
   }
 })
 
+test('voucher: mỗi lý do không dùng được có câu riêng dưới ô, tổng không đổi', async ({ page, users, projectIndex }) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  const book = pick(regular, projectIndex)
+  const [off, future, expired, exhausted] = await Promise.all([
+    createE2eVoucher({ isActive: false }),
+    createE2eVoucher({ startsAt: '2099-01-02T03:04:00+07:00' }),
+    createE2eVoucher({ endsAt: '2020-01-02T03:04:00+07:00' }),
+    createE2eVoucher({ usageLimit: 1, usedCount: 1 }),
+  ])
+  try {
+    await seedAddress(users.checkout.id)
+    await setCartItem(users.checkout.id, book.id, 1)
+    await openCheckout(page)
+    const total = main(page).getByTestId('checkout-total')
+    const voucherError = main(page).getByTestId('voucher-error')
+
+    const cases: [string, string | RegExp][] = [
+      ['AB', 'Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.'],
+      ['giảm10', 'Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.'],
+      [off.code, 'Mã này hiện đã ngừng áp dụng. Bạn thử mã khác nhé.'],
+      [future.code, /^Mã này dùng được từ [^T]*2099[^T]*\. Bạn quay lại lúc đó nhé\.$/],
+      [expired.code, /^Mã này đã hết hạn lúc [^T]*2020[^T]*\. Bạn thử mã khác nhé\.$/],
+      [exhausted.code, 'Mã này đã hết lượt dùng. Bạn thử mã khác nhé.'],
+    ]
+    for (const [code, message] of cases) {
+      await applyVoucher(page, code)
+      await expect(voucherError, code).toHaveText(message)
+      // Lỗi gắn với ô nhập (trình đọc màn hình đọc kèm ô)
+      await expect(main(page).getByLabel('Mã giảm giá')).toHaveAttribute('aria-describedby', 'voucher-error')
+      await expect(total, code).toHaveText(vnd(totalOf(book.price)))
+    }
+    expect(errors).toEqual([])
+  } finally {
+    await deleteE2eVouchers([off.code, future.code, expired.code, exhausted.code])
+  }
+})
+
+test('gợi ý mã: chỉ mã public; mã chưa đủ điều kiện mờ + lý do; Áp dụng cập nhật tổng; mã không public vẫn gõ tay được', async ({
+  page,
+  users,
+  projectIndex,
+}, testInfo) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  const book = pick(regular, projectIndex)
+  const [eligible, highMin, hidden] = await Promise.all([
+    createE2eVoucher({ isPublic: true }),
+    createE2eVoucher({ isPublic: true, minOrderValue: 50_000_000 }),
+    createE2eVoucher({ isPublic: false }),
+  ])
+  try {
+    await seedAddress(users.checkout.id)
+    await setCartItem(users.checkout.id, book.id, 1)
+    await openCheckout(page)
+    await waitForHydration(page, 'main [data-testid="checkout-voucher"] button[aria-haspopup="dialog"]')
+
+    await main(page).getByRole('button', { name: 'Chọn mã giảm giá' }).click()
+    const picker = page.getByRole('dialog', { name: 'Mã giảm giá cho đơn này' })
+    await expect(picker).toBeVisible()
+    const option = (code: string) => picker.getByTestId('voucher-option').filter({ hasText: code })
+
+    // Chỉ mã public; mã đủ điều kiện đứng trước mã chưa đủ
+    await expect(option(hidden.code)).toHaveCount(0)
+    await expect(option(eligible.code)).toHaveAttribute('data-eligible', 'true')
+    await expect(option(eligible.code)).toContainText('Giảm 10%')
+    await expect(option(eligible.code).getByRole('button', { name: 'Áp dụng' })).toBeEnabled()
+    const shortfall = 50_000_000 - book.price
+    await expect(option(highMin.code)).toHaveAttribute('data-eligible', 'false')
+    await expect(option(highMin.code).getByTestId('voucher-reason')).toHaveText(`Mua thêm ${vnd(shortfall)} để dùng mã này`)
+    await expect(option(highMin.code).getByRole('button', { name: 'Áp dụng' })).toBeDisabled()
+    const codes = await picker.getByTestId('voucher-option').evaluateAll((items) =>
+      items.map((item) => [item.getAttribute('data-eligible'), item.querySelector('.font-mono')?.textContent]),
+    )
+    expect(codes.findIndex(([, code]) => code === eligible.code)).toBeLessThan(
+      codes.findIndex(([, code]) => code === highMin.code),
+    )
+
+    if (testInfo.project.name.startsWith('mobile')) {
+      // Tấm trượt sát đáy màn hình, nút ≥ 44px, chữ ≥ 16px
+      const viewport = page.viewportSize()
+      // Chờ hiệu ứng trượt lên xong
+      await expect
+        .poll(async () => {
+          const box = await picker.boundingBox()
+          return box && Math.round(box.y + box.height)
+        })
+        .toBe(viewport?.height)
+      const apply = option(eligible.code).getByRole('button', { name: 'Áp dụng' })
+      expect((await apply.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+      const fontSize = await option(eligible.code)
+        .getByText('Giảm 10%')
+        .evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
+      expect(fontSize).toBeGreaterThanOrEqual(16)
+      expect((await picker.getByRole('button', { name: 'Đóng' }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    }
+
+    await option(eligible.code).getByRole('button', { name: 'Áp dụng' }).click()
+    await expect(page).toHaveURL(new RegExp(`[?&]voucher=${eligible.code}`))
+    await expect(main(page).getByText(`Đã áp dụng mã ${eligible.code}`)).toBeVisible()
+    const discount = Math.floor(book.price / 10)
+    await expect(main(page).getByTestId('checkout-discount')).toHaveText(`−${vnd(discount)}`)
+    await expect(main(page).getByTestId('checkout-total')).toHaveText(vnd(totalOf(book.price) - discount))
+    // Đã áp mã → không còn ô nhập / nút chọn mã
+    await expect(main(page).getByRole('button', { name: 'Chọn mã giảm giá' })).toHaveCount(0)
+
+    // Mã không public: không có trong gợi ý nhưng gõ tay vẫn dùng được
+    await main(page).getByRole('link', { name: 'Bỏ mã' }).click()
+    await expect(main(page).getByLabel('Mã giảm giá')).toBeVisible()
+    await applyVoucher(page, hidden.code.toLowerCase())
+    await expect(main(page).getByText(`Đã áp dụng mã ${hidden.code}`)).toBeVisible()
+    await expect(main(page).getByTestId('checkout-discount')).toHaveText(`−${vnd(discount)}`)
+    expect(errors).toEqual([])
+  } finally {
+    await deleteE2eVouchers([eligible.code, highMin.code, hidden.code])
+  }
+})
+
 test('chuyển khoản VietQR: trang thành công + chi tiết đơn có mã QR, số tiền, nội dung = mã đơn; đã trả → ẩn QR, không hủy', async ({
   page,
   users,

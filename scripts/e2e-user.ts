@@ -566,9 +566,26 @@ export async function unlinkAuthor(bookId: number, authorId: number) {
 
 /**
  * Voucher test giảm 10% (service role); `usedCount` > 0 giả lập voucher đã có người dùng, `minOrderValue` để thử
- * VOUCHER_MIN_ORDER ở checkout.
+ * VOUCHER_MIN_ORDER ở checkout; `isActive`, `startsAt`, `endsAt`, `usageLimit` để thử từng lý do mã không dùng được;
+ * `isPublic` để thử gợi ý mã ở trang thanh toán.
  */
-export async function createE2eVoucher({ usedCount = 0, minOrderValue = 0 }: { usedCount?: number; minOrderValue?: number } = {}) {
+export async function createE2eVoucher({
+  usedCount = 0,
+  minOrderValue = 0,
+  isActive = true,
+  isPublic = false,
+  startsAt = null,
+  endsAt = null,
+  usageLimit = null,
+}: {
+  usedCount?: number
+  minOrderValue?: number
+  isActive?: boolean
+  isPublic?: boolean
+  startsAt?: string | null
+  endsAt?: string | null
+  usageLimit?: number | null
+} = {}) {
   const { data, error } = await adminClient()
     .from('vouchers')
     .insert({
@@ -577,6 +594,11 @@ export async function createE2eVoucher({ usedCount = 0, minOrderValue = 0 }: { u
       discount_value: 10,
       used_count: usedCount,
       min_order_value: minOrderValue,
+      is_active: isActive,
+      is_public: isPublic,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      usage_limit: usageLimit,
     })
     .select('id, code')
     .single()
@@ -587,7 +609,7 @@ export async function createE2eVoucher({ usedCount = 0, minOrderValue = 0 }: { u
 export async function voucherRow(code: string) {
   const { data, error } = await adminClient()
     .from('vouchers')
-    .select('id, code, discount_type, discount_value, max_discount, min_order_value, starts_at, ends_at, is_active')
+    .select('id, code, discount_type, discount_value, max_discount, min_order_value, starts_at, ends_at, is_active, is_public')
     .eq('code', code)
     .maybeSingle()
   if (error) throw new Error(`voucherRow: ${error.message}`)

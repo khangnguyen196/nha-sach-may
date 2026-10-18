@@ -35,6 +35,7 @@ export const voucherFormSchema = z
     starts_at: optionalDateTime,
     ends_at: optionalDateTime,
     is_active: checkbox,
+    is_public: checkbox,
   })
   // Ràng buộc giữa các ô (cùng check của bảng vouchers): % ≤ 100; trần giảm chỉ có nghĩa với loại %
   .transform((data, ctx) => {

@@ -30,6 +30,8 @@ export type VoucherFormLabels = {
   periodHint: string
   active: string
   activeHint: string
+  public: string
+  publicHint: string
   submit: string
   pending: string
   saved: string
@@ -49,6 +51,7 @@ export type VoucherFormValues = {
   starts_at: string
   ends_at: string
   is_active: boolean
+  is_public: boolean
 }
 
 type Props = {
@@ -162,6 +165,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
         />
       </div>
       <CheckboxField name="is_active" label={labels.active} hint={labels.activeHint} defaultChecked={initial.is_active} />
+      <CheckboxField name="is_public" label={labels.public} hint={labels.publicHint} defaultChecked={initial.is_public} />
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.submit}

@@ -35,7 +35,13 @@ describe('voucherFormSchema', () => {
       starts_at: '2026-10-20T01:00:00.000Z',
       ends_at: null,
       is_active: true,
+      is_public: false,
     })
+  })
+
+  it('"Hiện trong gợi ý ở trang thanh toán": tick → is_public = true, không tick → false', () => {
+    expect(voucherFormSchema.parse({ ...valid, is_public: 'on' }).is_public).toBe(true)
+    expect(voucherFormSchema.parse(valid).is_public).toBe(false)
   })
 
   it('giảm theo số tiền: bỏ trần giảm; bỏ chọn → tắt', () => {

@@ -379,7 +379,9 @@
         "endsAt": "Kết thúc",
         "periodHint": "Giờ Việt Nam. Để trống: không giới hạn.",
         "active": "Đang bật",
-        "activeHint": "Bỏ chọn để tắt: khách không dùng được mã này nữa."
+        "activeHint": "Bỏ chọn để tắt: khách không dùng được mã này nữa.",
+        "public": "Hiện trong gợi ý ở trang thanh toán",
+        "publicHint": "Khách thấy mã này khi bấm “Chọn mã giảm giá” lúc đặt hàng. Không chọn: mã vẫn dùng được nếu khách tự gõ."
       },
       "types": {
         "percent": "Theo phần trăm (%)",
@@ -392,7 +394,8 @@
         "inUse": "Voucher đã có đơn dùng: tắt đi thay vì xóa.",
         "submit": "Xóa voucher",
         "pending": "Đang xóa…"
-      }
+      },
+      "publicBadge": "Gợi ý"
     },
     "validation": {
       "title": "Tên sách cần từ 1 đến 300 ký tự.",
@@ -641,7 +644,19 @@
     "voucherRemove": "Bỏ mã",
     "discount": "Giảm giá",
     "recalculating": "Đang tính lại tổng tiền…",
-    "voucherMinOrderShortfall": "Mua thêm {shortfall, number, price} để dùng mã này (đơn từ {min_order_value, number, price})."
+    "voucherMinOrderShortfall": "Mua thêm {shortfall, number, price} để dùng mã này (đơn từ {min_order_value, number, price}).",
+    "voucherPick": "Chọn mã giảm giá",
+    "voucherListTitle": "Mã giảm giá cho đơn này",
+    "voucherPercent": "Giảm {value}%",
+    "voucherPercentCapped": "Giảm {value}%, tối đa {max}",
+    "voucherFixed": "Giảm {amount}",
+    "voucherMinOrder": "Đơn từ {amount}",
+    "voucherNoMin": "Mọi đơn hàng",
+    "voucherExpires": "HSD {date}",
+    "voucherNoExpiry": "Không giới hạn thời gian",
+    "voucherShortfall": "Mua thêm {amount} để dùng mã này",
+    "voucherUse": "Áp dụng",
+    "voucherClose": "Đóng"
   },
   "order": {
     "successTitle": "Đặt hàng thành công",

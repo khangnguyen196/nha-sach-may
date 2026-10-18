@@ -148,6 +148,11 @@ async function VoucherList({ searchParams }: { searchParams: PageProps<'/admin/v
                       >
                         {voucher.code}
                       </AdminLink>
+                      {voucher.is_public && (
+                        <span className="ml-2 inline-flex rounded-sm bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
+                          {t('publicBadge')}
+                        </span>
+                      )}
                       {voucher.description && (
                         <span className="block text-xs text-muted-foreground">{voucher.description}</span>
                       )}
