@@ -5,9 +5,8 @@ import { ask, bubble, CONFIRM_AGE, openChat } from './chat'
 import { collectErrors } from './helpers'
 
 // Chatbot Mây (Phase 11), desktop + mobile, khách chưa đăng nhập. AI giả, không gọi Gemini thật.
-const fixture: { slug: string; description: string }[] = JSON.parse(
-  readFileSync(new URL('./fixtures/books.json', import.meta.url), 'utf8'),
-)
+// Playwright chạy từ thư mục gốc repo và biên dịch spec sang CommonJS (không có import.meta)
+const fixture: { slug: string; description: string }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
 const sapiens = fixture.find((book) => book.slug === 'sapiens')
 if (!sapiens) throw new Error('e2e/fixtures/books.json thiếu sapiens')
 

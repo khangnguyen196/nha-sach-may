@@ -124,3 +124,16 @@ Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`,
 ## 7. (Tùy chọn) Captcha cho đăng ký / quên mật khẩu
 
 Chưa làm (Supabase đã giới hạn tần suất). Muốn bật: Cloudflare Turnstile → lấy site key + secret → Supabase Authentication → Attack Protection → bật CAPTCHA (Turnstile, dán secret) → nhờ Claude thêm widget vào form đăng ký / đăng nhập / quên mật khẩu (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, gửi `captchaToken` khi gọi Supabase Auth).
+
+## 8. Chatbot Mây (Phase 11)
+
+Trạng thái: migration `20261018100000_chat_quota.sql` + `20261018110000_chat_quota_defaults.sql` ✅ đã chạy (2026-10-18), K1–K4 khớp; `CHAT_QUOTA_TOKEN` ✅ đã đặt vào `.env.local` + Vercel (Production). `GEMINI_API_KEY` **chưa** đặt lên Vercel (giữ tới khi chủ dự án quyết bật chat trên web thật).
+
+Trước khi bật chat trên web thật:
+
+1. **Kiểm số đường dây hỗ trợ** trong câu trả lời cố định (`messages/vi.json` → `chat.crisis`): cấp cứu 115 và đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật). Đối chiếu trên duongdaynongngaymai.vn; sai thì sửa chuỗi trong `vi.json`.
+2. Google AI Studio: project của key **không gắn billing** (chi phí = 0). Rate limit đã đọc 2026-10-18 (15 RPM / 250K TPM / 500 RPD cho `gemini-3.5-flash-lite` và `gemini-3.1-flash-lite`). Đổi model hoặc thấy 429 sớm hơn trần thì đọc lại và sửa `FREE_TIER` trong `src/features/chat/config.ts` (Vitest kiểm trần chung 10 / phút, 400 / ngày luôn thấp hơn).
+3. Vercel → Environment Variables → `GEMINI_API_KEY` (chỉ Production). `GEMINI_MODEL` chỉ đặt khi muốn đổi sang `gemini-3.1-flash-lite` (tắt 2027-05-07). Redeploy: bong bóng chỉ hiện khi build có đủ `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN`.
+4. Sau khi bật: xem bộ đếm bằng K6 (`docs/plans/phase-11.md` → "Câu SQL kiểm tra sau migration"). Đổi token: `select private.new_chat_quota_token();` rồi cập nhật Vercel + `.env.local`.
+5. Demo cả lớp: trần chung 10 lượt gọi / phút, 400 / ngày (ngày reset 14h giờ VN, 15h từ 2/11/2026). Dặn mọi người hỏi giãn ra.
+6. (Tùy chọn) Bổ sung mô tả sách trong admin: 4 sách thiếu mô tả, 4 sách tiếng Việt có mô tả tiếng Anh (`docs/plans/data.md` → "Mô tả sách (Phase 11)").
