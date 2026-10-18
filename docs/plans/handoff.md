@@ -8,8 +8,8 @@
   - Đã chạy migration `chat_quota` + `chat_quota_defaults`.
   - `CHAT_QUOTA_TOKEN` đã đặt (`.env.local` + Vercel Production).
   - **`GEMINI_API_KEY` chưa đặt trên Vercel** (chủ dự án giữ), nên production chưa có bong bóng.
+  - `measure:js` (2026-10-18): trang chủ + 41.1KB, trang sách + 43.9KB (bong bóng + 1.5KB, khung chat 9.0KB gzip chỉ tải khi bấm).
   - Còn mở:
-    - `measure:js` (cần env để build).
     - Kiểm số đường dây hỗ trợ trước khi bật chat (`owner-todo.md` mục 8).
     - Đề xuất sửa trang đăng nhập: form fallback của Suspense bị thay sau khi đã hydrate, chữ đã gõ bị mất. Lỗi có từ trước Phase 11.
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).

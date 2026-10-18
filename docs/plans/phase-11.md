@@ -86,11 +86,25 @@ Trạng thái: **xong trên nhánh `phase-11`, chưa merge**. Server API, UI, Vi
 
 **Commit chẩn đoán tạm** (đã gỡ file `e2e/chat-diagnostic.spec.ts` trước báo cáo): `283c626`, `460f453`, `e28dabe`, `5cdfaa3`.
 
-**`measure:js`**: **chưa đo**.
-- Cần `next build` có env Supabase thật, mà worktree không có `.env.local`; hard link chỉ được cho phép cho lượt thử ★ 12 và đã xóa.
-- Theo chỉ dẫn của chủ dự án, chỉ đo khi thấy bản có chatbot hydrate chậm hơn rõ rệt; thí nghiệm cho thấy không khác biệt.
-- Bong bóng lúc tải trang gồm nút + `IntersectionObserver` / `MutationObserver` + icon lucide (đã có sẵn trong bundle). Khung chat là chunk riêng, chỉ tải khi rê chuột / bấm.
-- Muốn có số thật thì cần chủ dự án cho phép tạo lại hard link để `build` + `measure:js -- vi`, `-- en`, `-- vi/books/sapiens`, `-- vi/login`.
+**`measure:js`** (trước / sau):
+
+| Route (`measure:js`) | `main` `5ef1eb5` (trước) | `phase-11` `c426638` (sau) | Chênh lệch |
+|---|---:|---:|---:|
+| `vi` (trang chủ) | 209.6KB = baseline + **39.6KB** | 211.1KB = baseline + **41.1KB** | **+1.5KB** |
+| `en` (trang chủ tiếng Anh, không có bong bóng) | 209.6KB = + 39.6KB | 211.1KB = + 41.1KB | +1.5KB |
+| `vi/books/sapiens` (trang sách) | 212.4KB = + 42.4KB | 213.9KB = + **43.9KB** | +1.5KB (ngân sách ≤ +50KB: còn 6.1KB) |
+| `vi/login` (đăng nhập, layout `(auth)`) | 205.2KB = + 35.2KB | 204.9KB = + 34.9KB | −0.3KB |
+
+- Đo 2026-10-18, gzip level 9, `scripts/measure-js.mjs`, baseline framework 170KB.
+- Cả hai bản build trong worktree với `.env.local` là hard link tới file gốc (chủ dự án cho phép; đã xóa sau khi đo, `fsutil hardlink list` chỉ còn 1 đường dẫn). Bản `main` checkout detached ngay trong worktree, không đụng checkout chính.
+- Bản `phase-11` build với đủ env nên bong bóng thật sự render: HTML prerender của `vi` và `vi/books/sapiens` có 1 `data-testid="chat-bubble"`, `en` và `vi/login` có 0.
+- Build không gọi Gemini: không có dòng log `[chat]` nào; prerender chỉ đọc chuỗi + danh mục.
+- **Phần bong bóng lúc tải trang: +1.5KB gzip**, đúng mức plan (~1.5KB).
+  - Chunk mới `06x014mytcutz.js`: 3.3KB raw / 1.8KB gzip, gồm `chat-bubble.tsx`, `chat-state.ts`, `config.ts`, `visibility.ts`.
+  - Chunk dùng chung được Turbopack chia lại (26.4 + 51.8KB raw → 44.9 + 33.2KB raw), nên tổng chỉ tăng 1.5KB.
+- `/en` cũng tăng 1.5KB: module bong bóng là client reference của layout `(shop)`, Next đưa vào chunk của layout dù `/en` không render nó (plan đã dự kiến).
+- `vi/login` −0.3KB: chunk 0.3KB không còn sau khi chia lại; layout `(auth)` không có chatbot.
+- Khung chat (`chat-panel.tsx`, Dialog, thẻ sách, Server Action) ở chunk riêng `1sk_h_flof_f4.js`, **9.0KB gzip**, chỉ tải khi rê chuột / focus / bấm bong bóng, không tính vào lúc tải trang.
 
 ## Báo cáo thử thật ★ 12 (2026-10-18)
 
@@ -1091,6 +1105,6 @@ select id, slug, title, language, danh_muc, trang_thai, stock, do_dai,
 - [x] Server API + prompt + thử thật 10 lượt
 - [x] UI desktop + mobile
 - [x] Vitest + e2e trên CI
-- [ ] `measure:js` (cần env để build, chờ chủ dự án cho phép)
+- [x] `measure:js` trước / sau (trang sách + 43.9KB ≤ 50KB, bong bóng +1.5KB)
 - [ ] `GEMINI_API_KEY` trên Vercel + kiểm số đường dây hỗ trợ (chủ dự án, `owner-todo.md` mục 8)
 - [x] Tài liệu + báo cáo

@@ -1,4 +1,4 @@
-# Báo cáo cuối: Nhà Sách Mây sau Phase 1 → 10
+# Báo cáo cuối: Nhà Sách Mây sau Phase 1 → 10 (+ Phase 11 trên nhánh `phase-11`)
 
 Trạng thái: Phase 1–10 đã merge vào `main` (2026-10-16). Đã deploy `https://nha-sach-may.vercel.app` (tự deploy từ `main`). Dự án học tập, phi thương mại.
 
@@ -27,7 +27,7 @@ Trạng thái: Phase 1–10 đã merge vào `main` (2026-10-16). Đã deploy `ht
 - Bảo mật: RLS mọi bảng, quyền cột (`books`, `orders`, `vouchers`, `reviews`), luồng trạng thái đơn chặn ở DB, mỗi Server Action admin tự kiểm quyền, header bảo mật, không có service role trong app.
 - Dữ liệu: 189 sách thật (Google Books), 124 bìa ≥ 300px (12 bìa lấy từ Open Library).
 - Kiểm thử: Vitest 370 test; Playwright 218 test (desktop + mobile, khách / tài khoản / admin, luồng mua trọn vẹn, SEO); GitHub Actions CI (typecheck, lint, Vitest, build; e2e bật bằng biến).
-- Hiệu năng: JS ngoài framework trang chủ +39.1KB, trang sách +41.9KB (ngân sách 50KB). Lighthouse mobile (mô phỏng): A11y / Best practices 100, Performance 77–88, LCP 3.6–5.1 s (chưa đạt 2.5 s).
+- Hiệu năng: JS ngoài framework trang chủ +39.1KB, trang sách +41.9KB (ngân sách 50KB). Đo lại 2026-10-18 (Phase 11): trang chủ +39.6KB → **+41.1KB**, trang sách +42.4KB → **+43.9KB** (bong bóng chat +1.5KB; khung chat 9.0KB gzip chỉ tải khi bấm). Lighthouse mobile (mô phỏng): A11y / Best practices 100, Performance 77–88, LCP 3.6–5.1 s (chưa đạt 2.5 s).
 
 ## 2. Checklist test tay
 
@@ -118,6 +118,17 @@ Dùng **tài khoản thường** (không phải admin) cho cả phần B. Tài k
 11. Thay bìa còn mờ / sai trong admin: 5 bìa cũ + 6 bìa Open Library bỏ qua (`data.md`), 65 bìa < 300px.
 12. Captcha Turnstile (mục 7); VietQR thật (mục 4, nên giữ demo).
 13. Google Search Console: gửi `sitemap.xml`.
+
+## Phase 11: chatbot gợi ý sách "Mây" (nhánh `phase-11`, chưa merge)
+
+Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11". Việc của chủ dự án: `owner-todo.md` mục 8.
+
+- Bong bóng chat ở góc phải dưới, chỉ trang cửa hàng tiếng Việt (không có ở `/en`, đăng nhập / đăng ký, `/admin`, thanh toán). Bấm thì tải khung chat: desktop khung nổi 360px, mobile tấm toàn màn hình. Có bước xác nhận 18+ và dòng nhắc về dữ liệu ở gói miễn phí.
+- Gemini `gemini-3.5-flash-lite` (free tier, không billing), một lượt gọi mỗi câu hỏi, tối đa 3 thẻ sách lấy từ DB.
+- Giới hạn: khách 10 / giờ, 30 / ngày; IP 60 / 200; trần chung 10 lượt gọi / phút, 400 / ngày (ngày theo giờ Los Angeles).
+- Câu tự hại trả câu hỗ trợ cố định, không gọi AI. Chặn EEA / Anh / Thụy Sĩ.
+- Thử thật 10 lượt: tối đa 4.035 token vào, không `MAX_TOKENS`.
+- JS lúc tải trang: **+1.5KB gzip** (trang chủ + 41.1KB, trang sách + 43.9KB, ngân sách 50KB).
 
 ## 4. Rủi ro còn lại
 
