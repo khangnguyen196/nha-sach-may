@@ -43,7 +43,7 @@ describe('requestPasswordReset', () => {
     })
   })
 
-  it('địa chỉ bị GoTrue từ chối vì sai dạng (email_address_invalid) → lỗi dưới ô Email', async () => {
+  it('GoTrue từ chối địa chỉ khi gửi thư (email_address_invalid) → lỗi dưới ô Email (giữ theo yêu cầu, chờ quyết)', async () => {
     resetPasswordForEmail.mockResolvedValue({ data: null, error: authError('email_address_invalid', 400) })
     expect(await requestPasswordReset('vi', null, form())).toEqual({
       ok: false,

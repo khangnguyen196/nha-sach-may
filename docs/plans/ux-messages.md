@@ -399,7 +399,7 @@ grant execute on function public.checkout_vouchers() to authenticated;
 - Fallback trong trang (proxy lỗi mạng → cho qua) `books/[slug]/page.tsx:112` gọi `notFound()` sau stream.
 
 **Cách sửa**
-- Proxy giữ nguyên quyết định, chỉ thêm loại: rewrite kèm request header `x-not-found: book | category | author | order | address` (`NextResponse.rewrite(url, { request: { headers } })`). Header đặt ở proxy, khách không tự đặt được cho request đã qua rewrite (proxy xóa header này ở mọi request đi vào trước khi xử lý).
+- Proxy giữ nguyên quyết định, chỉ thêm loại: rewrite kèm request header `x-not-found: book | category | author | order | address` (`NextResponse.rewrite(url, { request: { headers } })`). Header đặt ở proxy, khách không tự đặt được cho request đã qua rewrite (proxy xóa header này ở mọi request đi vào trước khi xử lý; ngoại lệ: đường dẫn matcher của proxy bỏ qua, VD có dấu chấm).
 - `not-found.tsx`: khung tĩnh (tiêu đề chung + link) và một leaf trong `<Suspense>` đọc `headers()` để chọn câu theo loại. Fallback của Suspense là câu chung (cùng chiều cao, không CLS). Status 404 đã quyết trước khi stream nên không ảnh hưởng.
 - Component dùng chung `NotFoundView({ kind })` cho cả `not-found.tsx` và `InlineNotFound` (soft 404 truyền `kind` thẳng).
 - Link: "Tìm sách" (`/tim-kiem`), "Xem danh mục" (`/sach`), "Về trang chủ".
