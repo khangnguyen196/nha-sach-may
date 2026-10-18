@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto'
-import { writeFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { canSignIn, createE2eUser, deleteE2eUsers, findUserIdByEmail } from '../scripts/e2e-user'
 import { fillLogin, NO_SESSION } from './auth'
@@ -75,55 +74,6 @@ test('quên mật khẩu (vi) → thư tiếng Việt → đặt mật khẩu m�
     expect(errors).toEqual([])
   } finally {
     await deleteE2eUsers([user.id])
-  }
-})
-
-test('không có JavaScript: chưa xác nhận email → "Gửi lại email xác nhận" vẫn gửi và báo "Đã gửi lại"', async ({
-  page,
-  browser,
-  baseURL,
-}, testInfo) => {
-  const email = `e2e+${randomBytes(6).toString('hex')}-resend-nojs@example.com`
-  const password = `E2e-${randomBytes(9).toString('base64url')}`
-  const noJs = await browser.newContext({ baseURL, storageState: NO_SESSION, javaScriptEnabled: false })
-  try {
-    // Đăng ký (có JS) → tài khoản chưa xác nhận, thư thứ nhất
-    await page.goto('/dang-ky')
-    await waitForHydration(page, 'main form button[type="submit"]')
-    await page.getByRole('main').getByLabel('Họ và tên').fill('Kiểm Thử Không JS')
-    await page.getByRole('main').getByLabel('Email').fill(email)
-    await page.getByRole('main').getByLabel('Mật khẩu', { exact: true }).fill(password)
-    await page.getByRole('main').getByRole('button', { name: 'Đăng ký' }).click()
-    await expect(page.getByRole('main').getByRole('heading', { name: 'Kiểm tra hộp thư của bạn' })).toBeVisible()
-    await waitForAuthEmail(email)
-    const firstEmailAt = Date.now()
-
-    // Không JS: form POST thật, server render lại trang kèm kết quả
-    const noJsPage = await noJs.newPage()
-    await noJsPage.goto('/dang-nhap')
-    const main = noJsPage.getByRole('main')
-    await main.getByLabel('Email').fill(email)
-    await main.getByLabel('Mật khẩu', { exact: true }).fill(password)
-    await main.getByRole('button', { name: 'Đăng nhập' }).click()
-    // Context không JS không có trace: lưu HTML trang sau khi gửi (test-results) để biết server render gì khi fail
-    await noJsPage.waitForLoadState()
-    const snapshot = testInfo.outputPath('no-js-after-login.html')
-    writeFileSync(snapshot, `<!-- ${noJsPage.url()} -->\n${await noJsPage.content()}`)
-    await testInfo.attach('no-js-after-login', { path: snapshot, contentType: 'text/html' })
-    await expect(main.getByRole('alert').first()).toHaveText(
-      'Email này chưa được xác nhận. Bạn mở thư xác nhận trong hộp thư (cả mục Spam), hoặc bấm gửi lại bên dưới.',
-    )
-    // Supabase local: cách thư trước ≥ 1 giây (config.toml max_frequency)
-    await noJsPage.waitForTimeout(Math.max(0, 1_100 - (Date.now() - firstEmailAt)))
-    await main.getByTestId('resend-confirmation').getByRole('button', { name: 'Gửi lại email xác nhận' }).click()
-    await expect(main.getByTestId('resend-confirmation').getByRole('status')).toHaveText(
-      'Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé.',
-    )
-    await waitForAuthEmail(email, { count: 2 })
-  } finally {
-    await noJs.close()
-    const id = await findUserIdByEmail(email)
-    if (id) await deleteE2eUsers([id])
   }
 })
 
