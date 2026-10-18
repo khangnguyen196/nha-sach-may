@@ -36,7 +36,7 @@ async function AllBooksResults({ locale, searchParams }: { locale: Locale; searc
   const [raw, t, categories] = await Promise.all([searchParams, getTranslations('catalog'), getCategories()])
   const { params, parents, input } = withCategoryFilter(catalogParamsSchema.parse(raw), categories, 'browse')
   const result = await listBooks(input)
-  // Proxy đã trả 404 cho trang vượt quá; còn tới đây (proxy không hỏi được) thì hiện UI 404 trong boundary
+  // Trang vượt quá → UI 404 (soft 404)
   if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
 
   return (

@@ -55,8 +55,5 @@ export const catalogParamsSchema = z.object({
 })
 
 export type CatalogParams = z.infer<typeof catalogParamsSchema>
-
-/** Hợp đồng JSON giữa /api/catalog/page-exists và proxy */
-export const pageExistsResponseSchema = z.object({ ok: z.literal(true), data: z.object({ exists: z.boolean() }) })
 export type Sort = (typeof SORTS)[number]
 export type PriceRange = (typeof PRICE_RANGES)[number]

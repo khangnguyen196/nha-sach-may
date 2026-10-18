@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { collectErrors, collectErrorsAllow404, openPalette, waitForHydration } from './helpers'
+import { collectErrors, openPalette, waitForHydration } from './helpers'
 
 // Không phụ thuộc một cuốn cụ thể: lấy sách từ lưới rồi đi tiếp. Chỉ giả định danh mục "Văn học" có sách
 // ở ít nhất hai danh mục con, và mọi sách có ISBN-13 bắt đầu bằng 978/979 (như layout.spec).
@@ -112,13 +112,13 @@ test('phân trang: trang 2 không trùng trang 1', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
-// Trang tự kiểm thì đã stream (Cache Components) → chỉ trả được 200; proxy hỏi /api/catalog/page-exists khi page > 1
-// rồi rewrite sang 404 thật. Trước đây notFound() trong Suspense → React error #419 ở console (lúc hydrate).
+// Kết quả stream sau static shell → HTTP 200 (soft 404, không kiểm ở proxy để trang > 1 không chậm thêm): UI 404 +
+// noindex trong <head>. Trước đây notFound() trong Suspense → React error #419 ở console (lúc hydrate).
 for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-kiem?q=978&page=999']) {
-  test(`${url} → HTTP 404 + noindex, không lỗi console`, async ({ page }) => {
-    const errors = collectErrorsAllow404(page)
+  test(`${url} → UI 404 + noindex, không lỗi console`, async ({ page }) => {
+    const errors = collectErrors(page)
     const response = await page.goto(url)
-    expect(response?.status()).toBe(404)
+    expect(response?.status()).toBe(200)
     await expect(page.getByRole('main').getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
     await expect(page.locator('head meta[name="robots"][content*="noindex"]').first()).toBeAttached()
     await waitForHydration(page, 'main a[href="/"]')
@@ -126,7 +126,7 @@ for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-
   })
 }
 
-test('trang lưới hợp lệ qua proxy (page=1, page=2) vẫn 200', async ({ page }) => {
+test('trang lưới hợp lệ (page=1, page=2) vẫn 200', async ({ page }) => {
   for (const url of ['/sach', '/sach?page=2', '/danh-muc/van-hoc', '/danh-muc/van-hoc?page=1']) {
     const response = await page.goto(url)
     expect(response?.status(), url).toBe(200)

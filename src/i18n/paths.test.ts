@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { localizedPath, localizedSlugPath, matchListingPath, matchOrderPath, matchSlugPath } from './paths'
+import { localizedPath, localizedSlugPath, matchOrderPath, matchSlugPath } from './paths'
 
 describe('localizedPath', () => {
   it('vi không prefix, en có /en, pathname đã dịch', () => {
@@ -44,24 +44,6 @@ describe('matchSlugPath', () => {
   it('giải mã %; chuỗi % hỏng → null', () => {
     expect(matchSlugPath('/sach/s%C3%A1ch')?.slug).toBe('sách')
     expect(matchSlugPath('/sach/%E0%A4%A')).toBeNull()
-  })
-})
-
-describe('matchListingPath', () => {
-  it('tất cả sách, tìm kiếm, danh mục, tác giả ở cả hai locale', () => {
-    expect(matchListingPath('/sach')).toEqual({ kind: '/books', locale: 'vi' })
-    expect(matchListingPath('/en/books')).toEqual({ kind: '/books', locale: 'en' })
-    expect(matchListingPath('/tim-kiem')).toEqual({ kind: '/search', locale: 'vi' })
-    expect(matchListingPath('/en/search')).toEqual({ kind: '/search', locale: 'en' })
-    expect(matchListingPath('/danh-muc/van-hoc')).toEqual({ kind: '/categories/[slug]', slug: 'van-hoc', locale: 'vi' })
-    expect(matchListingPath('/en/authors/to-hoai')).toEqual({ kind: '/authors/[slug]', slug: 'to-hoai', locale: 'en' })
-  })
-
-  it('không khớp trang sách, trang chủ, trang khác', () => {
-    expect(matchListingPath('/sach/sapiens')).toBeNull()
-    expect(matchListingPath('/')).toBeNull()
-    expect(matchListingPath('/gio-hang')).toBeNull()
-    expect(matchListingPath('/sach/')).toBeNull()
   })
 })
 

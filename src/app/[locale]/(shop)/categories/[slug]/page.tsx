@@ -4,10 +4,10 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
+import { resolveSort } from '@/features/books/catalog-params'
 import { CatalogSkeleton, PageHeaderSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { Breadcrumb, type Crumb } from '@/features/books/components/breadcrumb'
 import { CatalogView } from '@/features/books/components/catalog-view'
-import { withSubcategoryFilter } from '@/features/books/listing'
 import { getCategories, getCategoryBySlug, listBooks, type Category } from '@/features/books/queries'
 import { catalogParamsSchema } from '@/features/books/schemas'
 import { localeAlternates } from '@/i18n/alternates'
@@ -91,10 +91,22 @@ type ResultsProps = {
 
 async function CategoryResults({ category, subcategories, locale, searchParams }: ResultsProps) {
   const [raw, t] = await Promise.all([searchParams, getTranslations('catalog')])
-  const { params, input } = withSubcategoryFilter(catalogParamsSchema.parse(raw), category, subcategories)
-  const result = await listBooks(input)
-  // Không dựa vào count 'estimated': trang > 1 mà không có dòng nào là trang không tồn tại. Proxy đã trả 404;
-  // còn tới đây (proxy không hỏi được) thì hiện UI 404 trong boundary
+  const parsed = catalogParamsSchema.parse(raw)
+  // `cat` chỉ nhận danh mục con của chính danh mục này; slug khác → bỏ qua như không có
+  const selected = subcategories.find((c) => c.slug === parsed.cat)
+  const params = selected ? parsed : { ...parsed, cat: undefined }
+  // Sách chỉ gắn vào danh mục lá: danh mục cha lọc theo id các danh mục con
+  const categoryIds = selected ? [selected.id] : subcategories.length > 0 ? subcategories.map((c) => c.id) : [category.id]
+
+  const result = await listBooks({
+    categoryIds,
+    price: params.price,
+    lang: params.lang,
+    inStock: Boolean(params.stock),
+    sort: resolveSort(params, 'browse'),
+    page: params.page,
+  })
+  // Không dựa vào count 'estimated': trang > 1 mà không có dòng nào là trang không tồn tại → UI 404 (soft 404)
   if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
 
   return (

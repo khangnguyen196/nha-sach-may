@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 
 /**
- * UI 404 trong một boundary đã stream (trang lưới `?page=` vượt quá, đơn không thuộc người đang đăng nhập). Proxy
- * trả 404 thật cho các trường hợp này trước khi render; khối này chỉ là dự phòng khi proxy không hỏi được (lỗi mạng).
+ * UI 404 trong một boundary đã stream, HTTP 200 (soft 404); React đưa `<meta>` lên `<head>`. Dùng cho trang lưới
+ * `?page=` vượt quá (không kiểm ở proxy: mỗi lượt kiểm thêm ~100 ms cho mọi trang > 1), danh sách đơn vượt quá, và làm
+ * dự phòng cho trang một đơn khi proxy không hỏi được DB (bình thường proxy trả 404 thật).
  * Không gọi `notFound()` ở đây: throw sau static shell làm React bỏ SSR của boundary (console: React error #419) rồi
- * dựng lại ở client. HTTP vẫn 200 (soft 404); React đưa `<meta>` lên `<head>`.
+ * dựng lại ở client.
  */
 export async function InlineNotFound() {
   const t = await getTranslations('notFound')

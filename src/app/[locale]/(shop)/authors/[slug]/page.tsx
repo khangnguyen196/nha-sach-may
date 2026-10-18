@@ -3,10 +3,10 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
+import { resolveSort } from '@/features/books/catalog-params'
 import { CatalogSkeleton, PageHeaderSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { CatalogView } from '@/features/books/components/catalog-view'
-import { authorListing } from '@/features/books/listing'
 import { getAllAuthorSlugs, getAuthorBySlug, listBooks } from '@/features/books/queries'
 import { catalogParamsSchema } from '@/features/books/schemas'
 import { splitParagraphs, truncateText } from '@/features/books/utils'
@@ -83,10 +83,16 @@ type ResultsProps = { slug: string; bookIds: number[]; searchParams: Props['sear
 
 async function AuthorResults({ slug, bookIds, searchParams }: ResultsProps) {
   const [raw, t] = await Promise.all([searchParams, getTranslations('catalog')])
-  const { params, input } = authorListing(catalogParamsSchema.parse(raw), bookIds)
-  const result = input ? await listBooks(input) : { books: [], total: 0 }
-  // Proxy đã trả 404 cho trang vượt quá; còn tới đây (proxy không hỏi được) thì hiện UI 404 trong boundary
-  if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
+  // Trang tác giả không có bộ lọc: chỉ giữ sort và trang
+  const { sort, page } = catalogParamsSchema.parse(raw)
+  const params = { sort, page }
+
+  const result =
+    bookIds.length > 0
+      ? await listBooks({ bookIds, sort: resolveSort(params, 'browse'), page })
+      : { books: [], total: 0 }
+  // Trang vượt quá → UI 404 (soft 404)
+  if (page > 1 && result.books.length === 0) return <InlineNotFound />
 
   return (
     <CatalogView

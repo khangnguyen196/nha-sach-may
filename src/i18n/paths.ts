@@ -59,22 +59,6 @@ export function matchSlugPath(pathname: string): { kind: SlugPathname; slug: str
   return match && { kind: match.kind, slug: match.value, locale: match.locale }
 }
 
-export type ListingMatch =
-  | { kind: '/books' | '/search'; locale: Locale }
-  | { kind: '/categories/[slug]' | '/authors/[slug]'; slug: string; locale: Locale }
-
-/** Trang lưới có phân trang (tất cả sách, tìm kiếm, danh mục, tác giả) theo URL đã dịch */
-export function matchListingPath(pathname: string): ListingMatch | null {
-  for (const locale of routing.locales) {
-    for (const kind of ['/books', '/search'] as const) {
-      if (pathname === localizedPath(kind, locale)) return { kind, locale }
-    }
-  }
-  const match = matchSlugPath(pathname)
-  if (!match || match.kind === '/books/[slug]') return null
-  return { kind: match.kind, slug: match.slug, locale: match.locale }
-}
-
 /** Trang một đơn hàng (đặt hàng thành công, chi tiết đơn) → mã đơn (chưa kiểm định dạng), locale */
 export function matchOrderPath(pathname: string): { code: string; locale: Locale } | null {
   const match = matchParamPath(pathname, ['/checkout/success/[code]', '/account/orders/[code]'] as const)
