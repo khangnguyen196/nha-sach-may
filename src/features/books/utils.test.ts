@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { discountPercent, fillShelf, paginationRange, splitParagraphs, truncateText } from './utils'
+import { discountPercent, fillShelf, paginationRange, splitParagraphs, truncateText, visibleCategoryIds } from './utils'
 
 describe('discountPercent', () => {
   it('làm tròn % giảm', () => {
@@ -72,5 +72,18 @@ describe('fillShelf', () => {
 
   it('không có bìa nét (chưa đo / trước migration) → giữ thứ tự thường', () => {
     expect(fillShelf([], books(3, 1, 2), 12).map((b) => b.id)).toEqual([3, 1, 2])
+  })
+})
+
+describe('visibleCategoryIds', () => {
+  it('giữ gốc đang hiện và con có cha đang hiện; bỏ con của gốc đang ẩn (gốc ẩn không có trong danh sách công khai)', () => {
+    const categories = [
+      { id: 1, parent_id: null },
+      { id: 2, parent_id: 1 },
+      { id: 3, parent_id: 1 },
+      // Con đang hiện của gốc 9 đang ẩn (như danh mục test e2e)
+      { id: 10, parent_id: 9 },
+    ]
+    expect(visibleCategoryIds(categories)).toEqual([1, 2, 3])
   })
 })

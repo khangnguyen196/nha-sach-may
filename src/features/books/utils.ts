@@ -66,3 +66,14 @@ export function truncateText(text: string, max: number): string {
   const head = endsOnWord || lastSpace <= max / 2 ? cut : cut.slice(0, lastSpace)
   return `${head.replace(/[\s,.;:!?-]+$/, '')}…`
 }
+
+/**
+ * Danh mục khách đang thấy: danh sách công khai (RLS chỉ trả danh mục đang hiện) bỏ danh mục con có cha đang ẩn. Sách
+ * thuộc danh mục ngoài cây này không lên kệ trang chủ (admin ẩn một nhánh thì sách của nhánh đó cũng biến khỏi kệ).
+ */
+export function visibleCategoryIds(categories: { id: number; parent_id: number | null }[]) {
+  const ids = new Set(categories.map((category) => category.id))
+  return categories
+    .filter((category) => category.parent_id === null || ids.has(category.parent_id))
+    .map((category) => category.id)
+}

@@ -66,20 +66,24 @@ function rows({ data, error }: BookCardResult, context: string) {
  * Các kệ trang chủ (docs/plans/phase-8.md): Nổi bật (admin chọn), Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn
  * (cây danh mục `foreignCategoryIds`). Kệ có bìa nét trước (`cover_width`), thiếu thì lấp bằng sách bìa mờ cùng thứ
  * tự. Bán chạy giữ đúng thứ tự số bán. Tất cả query chạy song song.
+ * Chỉ sách thuộc danh mục đang hiện (`visibleCategoryIds`): sách đang bán nhưng nằm trong danh mục admin ẩn không lên
+ * kệ (trước đây kệ Bán chạy trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404).
  */
-export async function getHomeShelves(foreignCategoryIds: number[]) {
+export async function getHomeShelves(visibleCategoryIds: number[], foreignCategoryIds: number[]) {
   'use cache'
   cacheTag('books')
   cacheLife('hours')
 
-  const featured = () => bookCards().eq('is_featured', true)
-  const vietnamese = () => bookCards().eq('language', 'vi')
-  const foreign = () => bookCards().in('category_id', foreignCategoryIds)
+  const visible = new Set(visibleCategoryIds)
+  const shelfBooks = () => bookCards().in('category_id', visibleCategoryIds)
+  const featured = () => shelfBooks().eq('is_featured', true)
+  const vietnamese = () => shelfBooks().eq('language', 'vi')
+  const foreign = () => bookCards().in('category_id', foreignCategoryIds.filter((id) => visible.has(id)))
 
   const [featuredSharp, featuredAll, bestselling, newSharp, newAll, foreignSharp, foreignAll] = await Promise.all([
     newestFirst(sharpOnly(featured())),
     newestFirst(featured()),
-    bookCards()
+    shelfBooks()
       .gt('sold_count', 0)
       .order('sold_count', { ascending: false })
       .order('created_at', { ascending: false })

@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { buttonVariants } from '@/components/ui/button'
 import { Shelf } from '@/features/books/components/shelf'
 import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
+import { visibleCategoryIds } from '@/features/books/utils'
 import { Link } from '@/i18n/navigation'
 import { localizedPath } from '@/i18n/paths'
 import { localize } from '@/lib/i18n-db'
@@ -32,7 +33,10 @@ export default async function HomePage() {
     getCategories(),
   ])
   const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
-  const shelves = await getHomeShelves(foreignRoot ? leafIds(categories, foreignRoot) : [])
+  const shelves = await getHomeShelves(
+    visibleCategoryIds(categories),
+    foreignRoot ? leafIds(categories, foreignRoot) : [],
+  )
   const parents = categories.filter((c) => c.parent_id === null)
 
   return (
