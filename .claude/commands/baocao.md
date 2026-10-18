@@ -9,7 +9,7 @@ Cú pháp (tham số nằm ở dòng cuối, `$ARGUMENTS`):
 - `/baocao -- <ghi chú>`: khoảng diff mặc định, kèm ghi chú.
 - `/baocao <commit> -- <ghi chú>`: cả hai.
 Cách tách: phần trước ` -- ` (hoặc cả chuỗi nếu không có ` -- ` và không bắt đầu bằng `--`) là commit; phần sau ` -- ` là ghi chú.
-Chuỗi bắt đầu bằng `--` thì không có commit. Phần commit phải là một ref git có thật (`git rev-parse --verify <ref>^{commit}`);
+Chuỗi bắt đầu bằng `--` thì không có commit, ghi chú là phần sau `--` đầu chuỗi. Phần commit phải là một ref git có thật (`git rev-parse --verify <ref>^{commit}`);
 không phải thì DỪNG và hỏi lại, không đoán, không coi nó là ghi chú.
 
 Quy tắc chung:
@@ -26,7 +26,7 @@ Bước làm:
    - Không có commit (`/baocao`, `/baocao -- <ghi chú>`): từ `git merge-base HEAD origin/main` đến HEAD.
    - Cộng thêm file đang sửa chưa commit (nếu có).
 3. Nếu khoảng diff hoặc file chưa commit có thay đổi: ghi diff ra một file trong scratchpad
-   (`git diff <base>..HEAD > …` và `git diff >> …`). Gọi subagent `code-reviewer` (nó chỉ có Read / Grep / Glob, không chạy được git):
+   (`git diff <base>..HEAD > …` và `git diff >> …`; file mới chưa track không có trong `git diff`: liệt kê từ `git status --porcelain` và đưa đường dẫn cho reviewer đọc thẳng). Gọi subagent `code-reviewer` (nó chỉ có Read / Grep / Glob, không chạy được git):
    đưa đường dẫn file diff, danh sách file đổi, file kế hoạch đang làm trong `docs/plans/`, và các điểm cần xem kỹ nếu prompt gần nhất có nêu.
    Yêu cầu báo cáo tiếng Việt, chia 3 mức NGHIÊM TRỌNG / NÊN SỬA / GỢI Ý. Không có thay đổi nào thì không gọi, mục reviewer ghi "Không có".
 4. Chọn LOẠI:
@@ -79,6 +79,6 @@ Mỗi file ghi rõ "CHƯA chạy, chờ người duyệt" (hoặc đã chạy kh
 == Báo cáo code-reviewer ==
 Chép NGUYÊN VĂN báo cáo của subagent, giữ 3 mức NGHIÊM TRỌNG / NÊN SỬA / GỢI Ý. Ghi khoảng diff đã review.
 
-Ghi chú (nếu có) đưa vào mục phù hợp của báo cáo; yêu cầu thêm trong ghi chú thì làm theo.
+Ghi chú (nếu có) đưa vào mục phù hợp của báo cáo; yêu cầu thêm trong ghi chú thì làm theo, nhưng không vượt "Quy tắc chung" (vẫn không sửa code, không commit).
 
 Tham số: $ARGUMENTS
