@@ -2,6 +2,7 @@ import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { FormAlert } from '@/components/ui/field'
 import { AuthPage } from '@/features/auth/components/auth-page'
 import { LinkErrorNotice } from '@/features/auth/components/link-error-notice'
 import { Notice } from '@/features/auth/components/notice'
@@ -80,6 +81,12 @@ async function ConfirmContent({ locale, searchParams }: { locale: Locale; search
     <form method="post" action="/api/auth/confirm" className="rounded-lg border bg-surface p-6">
       <h2 className="font-serif text-xl font-medium">{recovery ? t('recoveryTitle') : t('emailTitle')}</h2>
       <p className="mt-3 text-sm text-muted-foreground">{recovery ? t('recoveryLead') : t('emailLead')}</p>
+      {/* Lần bấm trước không tới được Supabase (route POST quay về đây cùng token) */}
+      {first(query.error) === 'NETWORK_ERROR' && (
+        <div className="mt-4">
+          <FormAlert>{t('networkError')}</FormAlert>
+        </div>
+      )}
       <input type="hidden" name="token_hash" value={tokenHash} />
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="locale" value={locale} />

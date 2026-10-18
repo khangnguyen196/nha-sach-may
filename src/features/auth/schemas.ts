@@ -39,4 +39,7 @@ export const signUpSchema = z.object({
 
 export const passwordResetRequestSchema = z.object({ email })
 
+/** Gửi lại email xác nhận đăng ký (nút ở trang đăng nhập khi EMAIL_NOT_CONFIRMED) */
+export const resendConfirmationSchema = z.object({ email })
+
 export const updatePasswordSchema = z.object({ password: newPassword })

@@ -755,7 +755,10 @@
     "invalid": "Giá trị không hợp lệ.",
     "reason": "Lý do hủy tối đa 500 ký tự.",
     "rating": "Vui lòng chọn số sao (1–5).",
-    "reviewContent": "Nhận xét tối đa 2.000 ký tự."
+    "reviewContent": "Nhận xét tối đa 2.000 ký tự.",
+    "emailRejected": "Email này không nhận được thư. Bạn kiểm tra lại địa chỉ (VD ten@gmail.com) nhé.",
+    "passwordWeak": "Mật khẩu này dễ đoán hoặc đã từng bị lộ. Bạn chọn mật khẩu khác, dài hơn nhé.",
+    "passwordSame": "Mật khẩu mới phải khác mật khẩu đang dùng."
   },
   "auth": {
     "email": "Email",
@@ -814,7 +817,15 @@
       "invalid": "Liên kết thiếu thông tin. Hãy mở lại liên kết trong email hoặc yêu cầu một liên kết mới.",
       "backToLogin": "Về trang đăng nhập",
       "expiredTitle": "Liên kết đã hết hạn",
-      "requestNew": "Yêu cầu liên kết mới"
+      "requestNew": "Yêu cầu liên kết mới",
+      "networkError": "Chưa kết nối được máy chủ để xác nhận. Liên kết vẫn dùng được: bạn kiểm tra mạng rồi thử lại nhé."
+    },
+    "rateLimitedSeconds": "Hệ thống đang tạm giới hạn số yêu cầu để bảo vệ tài khoản. Bạn thử lại sau {seconds} giây nhé.",
+    "resend": {
+      "submit": "Gửi lại email xác nhận",
+      "pending": "Đang gửi…",
+      "sent": "Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé.",
+      "wait": "Gửi lại sau {seconds} giây"
     }
   },
   "account": {
@@ -881,10 +892,10 @@
     "CART_CHANGED": "Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng.",
     "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
     "EMAIL_TAKEN": "Email này đã được dùng để đăng ký.",
-    "EMAIL_NOT_CONFIRMED": "Email chưa được xác nhận. Vui lòng mở thư xác nhận trong hộp thư của bạn.",
+    "EMAIL_NOT_CONFIRMED": "Email này chưa được xác nhận. Bạn mở thư xác nhận trong hộp thư (cả mục Spam), hoặc bấm gửi lại bên dưới.",
     "WEAK_PASSWORD": "Mật khẩu quá yếu. Hãy dùng mật khẩu dài hơn, khó đoán hơn.",
     "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu cũ.",
-    "RATE_LIMITED": "Bạn thao tác quá nhanh. Vui lòng đợi vài phút rồi thử lại.",
+    "RATE_LIMITED": "Hệ thống đang tạm giới hạn số yêu cầu để bảo vệ tài khoản. Bạn thử lại sau vài phút nhé.",
     "LINK_EXPIRED": "Liên kết đã hết hạn hoặc đã được dùng. Vui lòng yêu cầu liên kết mới.",
     "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
     "SLUG_TAKEN": "Đường dẫn (slug) này đã được dùng.",

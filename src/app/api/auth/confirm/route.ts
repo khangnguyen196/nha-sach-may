@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { parseConfirmLink } from '@/features/auth/confirm-link'
+import { isAuthUnreachable } from '@/features/auth/errors'
 import { toOtpType, toTokenHash } from '@/features/auth/otp'
 import { safeNextPath } from '@/features/auth/next-path'
 import { parseLocale } from '@/features/auth/schemas'
@@ -16,10 +17,21 @@ import { createClient } from '@/lib/supabase/server'
 //   verifier PKCE trong cookie của trình duyệt đã yêu cầu link, trình quét link không có).
 // Nằm dưới /api: proxy bỏ qua /api nên next-intl không rewrite sang /vi/… .
 
-function retryUrl(request: NextRequest, recovery: boolean, locale: ReturnType<typeof parseLocale>) {
-  // Link hỏng / hết hạn / đã dùng → trang yêu cầu lại kèm thông báo
-  return new URL(localizedPath(recovery ? '/forgot-password' : '/login', locale, { error: 'LINK_EXPIRED' }), request.url)
+type ConfirmError = 'LINK_EXPIRED' | 'NETWORK_ERROR'
+
+function retryUrl(
+  request: NextRequest,
+  recovery: boolean,
+  locale: ReturnType<typeof parseLocale>,
+  error: ConfirmError = 'LINK_EXPIRED',
+) {
+  // Link hỏng / hết hạn / đã dùng → trang yêu cầu lại kèm thông báo. Không tới được Supabase → link chưa bị dùng, báo
+  // lỗi mạng (khách mở lại link) thay vì bảo xin link mới
+  return new URL(localizedPath(recovery ? '/forgot-password' : '/login', locale, { error }), request.url)
 }
+
+const confirmError = (error: { name?: string; status?: number }): ConfirmError =>
+  isAuthUnreachable(error) ? 'NETWORK_ERROR' : 'LINK_EXPIRED'
 
 export async function GET(request: NextRequest) {
   const link = parseConfirmLink(request.nextUrl.searchParams)
@@ -37,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (!link.recovery && error.code === 'pkce_code_verifier_not_found') {
       return NextResponse.redirect(new URL(localizedPath('/login', link.locale, { confirmed: '1' }), request.url))
     }
-    return NextResponse.redirect(retryUrl(request, link.recovery, link.locale))
+    return NextResponse.redirect(retryUrl(request, link.recovery, link.locale, confirmError(error)))
   }
   const fallback = localizedPath(link.recovery ? '/reset-password' : '/account', link.locale)
   return NextResponse.redirect(new URL(safeNextPath(link.next, fallback), request.url))
@@ -63,6 +75,13 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient()
   // verifyOtp tạo phiên; cookie ghi qua cookies() được Next gắn vào response chuyển hướng
   const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+  if (error && isAuthUnreachable(error)) {
+    // Token chưa bị dùng: quay lại trang xác nhận (cùng token) để bấm lại khi có mạng
+    const query: Record<string, string> = { token_hash: tokenHash, type, locale, error: 'NETWORK_ERROR' }
+    const next = form.get('next')
+    if (typeof next === 'string' && next) query.next = next
+    return redirect(new URL(localizedPath('/confirm', locale, query), request.url))
+  }
   if (error) return redirect(retryUrl(request, recovery, locale))
 
   const fallback = localizedPath(recovery ? '/reset-password' : '/account', locale)

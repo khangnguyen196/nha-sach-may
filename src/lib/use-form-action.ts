@@ -53,8 +53,11 @@ export function useFormAction<T>(action: FormAction<T>, messages: FormMessages) 
     state,
     pending,
     formProps: { action: formAction, onSubmit },
-    /** Lỗi chung; có lỗi tại ô (nhập liệu, VD SLUG_TAKEN của admin) thì `quiet` (lỗi đã hiện ở từng ô) */
-    formError: failure ? (messages.errors[failure.code] ?? messages.errors.UNKNOWN) : undefined,
+    /**
+     * Lỗi chung; có lỗi tại ô (nhập liệu, VD SLUG_TAKEN của admin) thì `quiet` (lỗi đã hiện ở từng ô).
+     * Action đã dịch sẵn (câu có tham số, VD RATE_LIMITED kèm số giây) → dùng `message`.
+     */
+    formError: failure ? (failure.message ?? messages.errors[failure.code] ?? messages.errors.UNKNOWN) : undefined,
     quietError: fieldKeys !== undefined && Object.keys(fieldKeys).length > 0,
     fieldError(name: string) {
       const key = fieldKeys?.[name]

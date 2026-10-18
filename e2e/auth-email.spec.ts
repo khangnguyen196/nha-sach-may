@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 import { canSignIn, createE2eUser, deleteE2eUsers, findUserIdByEmail } from '../scripts/e2e-user'
-import { NO_SESSION } from './auth'
+import { fillLogin, NO_SESSION } from './auth'
 import { collectErrors, waitForHydration } from './helpers'
 import { waitForAuthEmail } from './mailbox'
 
@@ -74,5 +74,44 @@ test('quên mật khẩu (vi) → thư tiếng Việt → đặt mật khẩu m�
     expect(errors).toEqual([])
   } finally {
     await deleteE2eUsers([user.id])
+  }
+})
+
+test('đăng nhập khi chưa xác nhận email (vi) → báo rõ + "Gửi lại email xác nhận" → nút khóa đếm ngược, thư mới dùng được', async ({
+  page,
+}) => {
+  const errors = collectErrors(page)
+  const email = `e2e+${randomBytes(6).toString('hex')}-resend@example.com`
+  const password = `E2e-${randomBytes(9).toString('base64url')}`
+  try {
+    await page.goto('/dang-ky')
+    await waitForHydration(page, 'main form button[type="submit"]')
+    await page.getByRole('main').getByLabel('Họ và tên').fill('Kiểm Thử Gửi Lại')
+    await page.getByRole('main').getByLabel('Email').fill(email)
+    await page.getByRole('main').getByLabel('Mật khẩu', { exact: true }).fill(password)
+    await page.getByRole('main').getByRole('button', { name: 'Đăng ký' }).click()
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Kiểm tra hộp thư của bạn' })).toBeVisible()
+    await waitForAuthEmail(email)
+
+    await page.goto('/dang-nhap')
+    await fillLogin(page, { email, password })
+    await expect(page.getByRole('main').getByRole('alert').first()).toHaveText(
+      'Email này chưa được xác nhận. Bạn mở thư xác nhận trong hộp thư (cả mục Spam), hoặc bấm gửi lại bên dưới.',
+    )
+    const resend = page.getByRole('main').getByTestId('resend-confirmation')
+    await resend.getByRole('button', { name: 'Gửi lại email xác nhận' }).click()
+    await expect(resend.getByRole('status')).toHaveText('Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé.')
+    // Khóa 60 giây, đếm ngược trên nút (Supabase giới hạn gửi lại mỗi email)
+    const waiting = resend.getByRole('button', { name: /^Gửi lại sau \d+ giây$/ })
+    await expect(waiting).toBeDisabled()
+
+    const mail = await waitForAuthEmail(email, { count: 2 })
+    await page.goto(mail.link)
+    await page.getByRole('main').getByRole('button', { name: 'Xác nhận email' }).click()
+    await expect(page).toHaveURL(/\/tai-khoan$/)
+    expect(errors).toEqual([])
+  } finally {
+    const id = await findUserIdByEmail(email)
+    if (id) await deleteE2eUsers([id])
   }
 })

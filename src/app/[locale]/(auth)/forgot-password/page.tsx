@@ -63,14 +63,16 @@ async function FormWithError({
   messages: FormMessages
   labels: Parameters<typeof ForgotPasswordForm>[0]['labels']
 }) {
-  const { error } = await searchParams
+  const [{ error }, t] = await Promise.all([searchParams, getTranslations('auth')])
   return (
     <ForgotPasswordForm
       // locale bind sẵn: link trong email (template mặc định) quay về trang đặt mật khẩu đúng ngôn ngữ
       action={requestPasswordReset.bind(null, locale)}
       messages={messages}
       labels={labels}
-      initialError={error === 'LINK_EXPIRED' ? messages.errors.LINK_EXPIRED : undefined}
+      initialError={
+        error === 'LINK_EXPIRED' ? messages.errors.LINK_EXPIRED : error === 'NETWORK_ERROR' ? t('confirm.networkError') : undefined
+      }
     />
   )
 }

@@ -339,7 +339,10 @@
     "invalid": "Invalid value.",
     "reason": "The reason can be at most 500 characters.",
     "rating": "Please choose a rating (1–5 stars).",
-    "reviewContent": "Your review can be up to 2,000 characters."
+    "reviewContent": "Your review can be up to 2,000 characters.",
+    "emailRejected": "This email can’t receive mail. Please check the address (e.g. name@gmail.com).",
+    "passwordWeak": "This password is easy to guess or has appeared in a data leak. Please choose a different, longer one.",
+    "passwordSame": "Your new password must be different from the current one."
   },
   "auth": {
     "email": "Email",
@@ -398,7 +401,15 @@
       "invalid": "This link is missing information. Open the link in your email again or request a new one.",
       "backToLogin": "Back to sign in",
       "expiredTitle": "Link expired",
-      "requestNew": "Request a new link"
+      "requestNew": "Request a new link",
+      "networkError": "We couldn’t reach the server to confirm. The link still works: check your connection and try again."
+    },
+    "rateLimitedSeconds": "We’re limiting requests for a moment to keep accounts safe. Please try again in {seconds} seconds.",
+    "resend": {
+      "submit": "Resend confirmation email",
+      "pending": "Sending…",
+      "sent": "Sent again. Please check your inbox (and Spam).",
+      "wait": "Resend in {seconds}s"
     }
   },
   "account": {
@@ -465,10 +476,10 @@
     "CART_CHANGED": "Your cart has just changed. Check the new total, then place your order.",
     "INVALID_CREDENTIALS": "Incorrect email or password.",
     "EMAIL_TAKEN": "This email is already registered.",
-    "EMAIL_NOT_CONFIRMED": "Your email is not confirmed yet. Please open the confirmation email in your inbox.",
+    "EMAIL_NOT_CONFIRMED": "This email isn’t confirmed yet. Open the confirmation email (check Spam too), or send it again below.",
     "WEAK_PASSWORD": "This password is too weak. Use a longer, harder to guess password.",
     "SAME_PASSWORD": "Your new password must be different from the old one.",
-    "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
+    "RATE_LIMITED": "We’re limiting requests for a moment to keep accounts safe. Please try again in a few minutes.",
     "LINK_EXPIRED": "This link has expired or was already used. Please request a new one.",
     "FORBIDDEN": "You do not have permission to do this.",
     "SLUG_TAKEN": "This slug is already in use.",

@@ -1,13 +1,14 @@
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
-import { signIn } from '@/features/auth/actions'
+import { resendConfirmation, signIn } from '@/features/auth/actions'
 import { AuthPage, authLinkClass } from '@/features/auth/components/auth-page'
 import { LoginForm } from '@/features/auth/components/login-form'
 import { authPageMetadata } from '@/features/auth/metadata'
 import { safeNextPath } from '@/features/auth/next-path'
 import { Link } from '@/i18n/navigation'
 import { getFormMessages, type FormMessages } from '@/lib/form-messages'
+import { placeholder } from '@/lib/template'
 
 type Props = PageProps<'/[locale]/login'>
 
@@ -19,7 +20,14 @@ export default async function LoginPage({ searchParams }: Props) {
   const [t, locale, messages] = await Promise.all([
     getTranslations('auth'),
     getLocale(),
-    getFormMessages(['INVALID_CREDENTIALS', 'EMAIL_NOT_CONFIRMED', 'RATE_LIMITED', 'LINK_EXPIRED']),
+    getFormMessages([
+      'INVALID_CREDENTIALS',
+      'EMAIL_NOT_CONFIRMED',
+      'RATE_LIMITED',
+      'LINK_EXPIRED',
+      'ACCOUNT_LOCKED',
+      'SESSION_EXPIRED',
+    ]),
   ])
   const form = {
     locale,
@@ -30,6 +38,12 @@ export default async function LoginPage({ searchParams }: Props) {
       submit: t('login.submit'),
       pending: t('pending'),
       forgot: t('login.forgot'),
+    },
+    resendLabels: {
+      submit: t('resend.submit'),
+      pending: t('resend.pending'),
+      sent: t('resend.sent'),
+      wait: t('resend.wait', { seconds: placeholder('seconds') }),
     },
   }
 
@@ -58,12 +72,13 @@ type FormProps = {
   locale: Locale
   messages: FormMessages
   labels: Parameters<typeof LoginForm>[0]['labels']
+  resendLabels: Parameters<typeof LoginForm>[0]['resendLabels']
   next?: string
   initialError?: string
 }
 
 function Form({ locale, ...props }: FormProps) {
-  return <LoginForm action={signIn.bind(null, locale)} {...props} />
+  return <LoginForm action={signIn.bind(null, locale)} resend={resendConfirmation.bind(null, locale)} {...props} />
 }
 
 async function FormWithParams({ searchParams, ...form }: FormProps & { searchParams: Props['searchParams'] }) {
@@ -80,7 +95,13 @@ async function FormWithParams({ searchParams, ...form }: FormProps & { searchPar
       <Form
         {...form}
         next={safeNext || undefined}
-        initialError={error === 'LINK_EXPIRED' ? form.messages.errors.LINK_EXPIRED : undefined}
+        initialError={
+          error === 'LINK_EXPIRED'
+            ? form.messages.errors.LINK_EXPIRED
+            : error === 'NETWORK_ERROR'
+              ? t('confirm.networkError')
+              : undefined
+        }
       />
     </>
   )

@@ -30,7 +30,7 @@ async function ResetPasswordContent() {
   const [t, user, messages] = await Promise.all([
     getTranslations('auth'),
     getCurrentUser(),
-    getFormMessages(['WEAK_PASSWORD', 'SAME_PASSWORD', 'LINK_EXPIRED', 'RATE_LIMITED']),
+    getFormMessages(['WEAK_PASSWORD', 'SAME_PASSWORD', 'LINK_EXPIRED', 'RATE_LIMITED', 'SESSION_EXPIRED']),
   ])
 
   if (!user) {

@@ -13,14 +13,17 @@ async function mailpit<T>(path: string): Promise<T> {
   return body
 }
 
-/** Thư mới nhất gửi tới `email` (chờ tối đa 15 s): tiêu đề + link /api/auth/confirm trong thân thư */
-export async function waitForAuthEmail(email: string) {
+/**
+ * Thư mới nhất gửi tới `email` (chờ tối đa 15 s tới khi hộp thư có ít nhất `count` thư): tiêu đề + link
+ * /api/auth/confirm trong thân thư
+ */
+export async function waitForAuthEmail(email: string, { count = 1 }: { count?: number } = {}) {
   let latest: Summary | undefined
   await expect
     .poll(
       async () => {
         const result = await mailpit<{ messages: Summary[] }>(`/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`)
-        latest = result.messages[0]
+        latest = result.messages.length >= count ? result.messages[0] : undefined
         return latest !== undefined
       },
       { timeout: 15_000, message: `Không có thư gửi tới ${email}` },

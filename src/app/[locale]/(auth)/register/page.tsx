@@ -14,7 +14,7 @@ export default async function RegisterPage() {
   const [t, locale, messages] = await Promise.all([
     getTranslations('auth'),
     getLocale(),
-    getFormMessages(['WEAK_PASSWORD', 'RATE_LIMITED']),
+    getFormMessages(['WEAK_PASSWORD', 'RATE_LIMITED', 'SIGNUP_DISABLED']),
   ])
 
   return (
