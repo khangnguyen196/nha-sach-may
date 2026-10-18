@@ -11,7 +11,7 @@ import { askMay, type ChatBookCard, type ChatReply } from '../actions'
 import { CHAT_INPUT } from '../config'
 import { checkMessage } from '../input'
 import type { ChatBrowseCategory, ChatLabels } from '../labels'
-import { recentTurns, type ChatEntry } from './chat-state'
+import { recentTurns, visibleSuggestion, type ChatEntry } from './chat-state'
 
 // Khung chat, tải lười từ chat-bubble.tsx. ≥ 640px: khung nổi 360px, dialog KHÔNG modal (vẫn đọc trang được);
 // < 640px: tấm toàn màn hình, modal (khóa cuộn nền, giữ focus). Chỉ render chữ thuần (React tự escape), không HTML /
@@ -90,8 +90,8 @@ export default function ChatPanel({
   const latestBook = [...entries].reverse().find((entry) => entry.role === 'assistant')
   const aboutBook = slug && latestBook?.role === 'assistant' ? latestBook.reply.aboutBook : null
   const chips = slug ? labels.bookChips : labels.chips
-  // Chip gợi ý chỉ khi cuộc trò chuyện còn trống: gửi câu đầu (chip hoặc tự gõ) là ẩn hẳn
-  const started = entries.length > 0 || pending
+  // Gợi ý (chip ban đầu / follow_up) chỉ ở lượt mới nhất của Mây, khi khách chưa trả lời (chat-state.ts)
+  const suggestion = visibleSuggestion(entries, pending)
   const closeOnMobile = () => {
     if (!desktop) onOpenChange(false)
   }
@@ -168,7 +168,7 @@ export default function ChatPanel({
             )}
 
             <p className="text-muted-foreground">{slug ? labels.greetingBook : labels.greeting}</p>
-            {!started && (
+            {suggestion.kind === 'chips' && (
               <ul className="flex flex-wrap gap-2" aria-label={labels.chipsLabel}>
                 {chips.map((chip) => (
                   <li key={chip}>
@@ -193,7 +193,13 @@ export default function ChatPanel({
                   {entry.text}
                 </p>
               ) : entry.role === 'assistant' ? (
-                <Reply key={entry.id} reply={entry.reply} labels={labels} onNavigate={closeOnMobile} />
+                <Reply
+                  key={entry.id}
+                  reply={entry.reply}
+                  labels={labels}
+                  showFollowUp={suggestion.kind === 'followUp' && suggestion.entryId === entry.id}
+                  onNavigate={closeOnMobile}
+                />
               ) : (
                 <ErrorBlock key={entry.id} entry={entry} labels={labels} categories={categories} onNavigate={closeOnMobile} />
               ),
@@ -255,7 +261,17 @@ export default function ChatPanel({
   )
 }
 
-function Reply({ reply, labels, onNavigate }: { reply: ChatReply; labels: ChatLabels; onNavigate: () => void }) {
+function Reply({
+  reply,
+  labels,
+  showFollowUp,
+  onNavigate,
+}: {
+  reply: ChatReply
+  labels: ChatLabels
+  showFollowUp: boolean
+  onNavigate: () => void
+}) {
   return (
     <div className="space-y-3" data-testid="chat-reply">
       <p className="whitespace-pre-line">{reply.message}</p>
@@ -269,7 +285,11 @@ function Reply({ reply, labels, onNavigate }: { reply: ChatReply; labels: ChatLa
           ))}
         </ul>
       )}
-      {reply.followUp && <p className="text-muted-foreground">{reply.followUp}</p>}
+      {showFollowUp && reply.followUp && (
+        <p className="text-muted-foreground" data-testid="chat-follow-up">
+          {reply.followUp}
+        </p>
+      )}
     </div>
   )
 }

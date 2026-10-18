@@ -16,6 +16,22 @@ export function recentTurns(entries: readonly ChatEntry[]): ChatTurn[] {
     .slice(-CHAT_INPUT.historyTurns)
 }
 
+/**
+ * Gợi ý nào được hiện (chỉ giao diện; lịch sử gửi server vẫn giữ follow_up của mọi lượt):
+ * - chưa hỏi gì → chip ban đầu;
+ * - đang chờ trả lời → không gợi ý nào;
+ * - lượt mới nhất là câu trả lời của Mây (khách chưa trả lời) → follow_up của đúng lượt đó;
+ * - còn lại (lượt cuối là lỗi / câu của khách) → không gợi ý nào.
+ */
+export type Suggestion = { kind: 'chips' } | { kind: 'followUp'; entryId: number } | { kind: 'none' }
+
+export function visibleSuggestion(entries: readonly ChatEntry[], pending: boolean): Suggestion {
+  if (pending) return { kind: 'none' }
+  const last = entries.at(-1)
+  if (!last) return { kind: 'chips' }
+  return last.role === 'assistant' && last.reply.followUp ? { kind: 'followUp', entryId: last.id } : { kind: 'none' }
+}
+
 export const AGE_KEY = 'may-age-ok'
 
 /** sessionStorage có thể bị chặn (chế độ riêng tư, cookie bị tắt) → lỗi thì chỉ nhớ trong tab này */

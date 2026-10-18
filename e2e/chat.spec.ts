@@ -96,6 +96,23 @@ test('chip gợi ý chỉ khi chưa hỏi: bấm chip → câu trả lời đầ
   await expect(reopened.getByRole('list', { name: 'Câu hỏi gợi ý' }).getByRole('button')).toHaveCount(3)
 })
 
+test('follow_up chỉ hiện ở lượt mới nhất; lịch sử gửi server vẫn giữ follow_up cũ', async ({ page }) => {
+  await page.goto('/')
+  const panel = await openChat(page)
+  const first = await ask(panel, 'Gợi ý sách kinh doanh')
+  await expect(first.getByTestId('chat-follow-up')).toHaveCount(1)
+  const followUp = (await first.getByTestId('chat-follow-up').textContent()) ?? ''
+  expect(followUp).not.toBe('')
+
+  const request = page.waitForRequest((r) => r.method() === 'POST' && 'next-action' in r.headers())
+  const second = await ask(panel, 'tư duy kinh doanh')
+  // Lượt 1 không còn follow_up trên giao diện; chỉ lượt 2 (mới nhất) có
+  await expect(first.getByTestId('chat-follow-up')).toHaveCount(0)
+  await expect(second.getByTestId('chat-follow-up')).toHaveCount(1)
+  await expect(panel.getByTestId('chat-follow-up')).toHaveCount(1)
+  expect((await request).postData() ?? '').toContain(`"follow_up":"${followUp}"`)
+})
+
 test('chip gợi ý ở trang sách: tự gõ câu đầu → hết chip', async ({ page }) => {
   await page.goto('/sach/sapiens')
   const panel = await openChat(page)
