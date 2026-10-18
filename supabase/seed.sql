@@ -33,6 +33,7 @@ from (values
 join public.categories p on p.slug = c.parent_slug;
 
 -- ---------- Mã giảm giá mẫu ----------
-insert into public.vouchers (code, description, description_en, discount_type, discount_value, max_discount, min_order_value) values
-  ('CHAOBAN10', 'Giảm 10% tối đa 50.000đ cho đơn từ 150.000đ', '10% off (up to 50,000₫) on orders from 150,000₫', 'percent', 10,    50000, 150000),
-  ('GIAM20K',   'Giảm 20.000đ cho đơn từ 200.000đ',            '20,000₫ off on orders from 200,000₫',               'fixed',   20000, null,  200000);
+-- is_public: hiện trong gợi ý ở trang thanh toán (cột mặc định false; production bật từng mã trong admin)
+insert into public.vouchers (code, description, description_en, discount_type, discount_value, max_discount, min_order_value, is_public) values
+  ('CHAOBAN10', 'Giảm 10% tối đa 50.000đ cho đơn từ 150.000đ', '10% off (up to 50,000₫) on orders from 150,000₫', 'percent', 10,    50000, 150000, true),
+  ('GIAM20K',   'Giảm 20.000đ cho đơn từ 200.000đ',            '20,000₫ off on orders from 200,000₫',               'fixed',   20000, null,  200000, true);

@@ -1,6 +1,6 @@
 # Đợt sửa "ux-messages" (sau Phase 11)
 
-Trạng thái: **plan, chưa code**. Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`.
+Trạng thái: **plan đã duyệt (2026-10-18)**, đang ở bước 2 (migration + SQL kiểm tra, chưa code app). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`.
 
 Mục tiêu: khách luôn hiểu chuyện gì đang xảy ra.
 - Lỗi do khách: nói đúng lý do và cách làm tiếp, đặt ngay chỗ liên quan.
@@ -12,7 +12,15 @@ Quy ước trong file này:
 - `{email}` là hằng `SUPPORT_EMAIL` (mục 10).
 - Mã lỗi mới đều thêm vào `ERROR_CODES` (`src/lib/errors.ts`) và `errors.*` ở cả hai file messages (test so key).
 
-## ★ Cần bạn quyết
+## ★ Quyết định (đã duyệt 2026-10-18)
+
+- ★1 `false` · ★2 hiện mờ · ★3 tách 2 file A / B · ★4 tách · ★5 không thêm · ★7 giữ slug · ★8 hiện digest, sửa `CLAUDE.md` · ★9, ★10, ★11 đồng ý.
+- **★6 đổi**: **không** thêm query ở proxy cho `/tai-khoan/don-hang?page>1`. Giữ soft 404 (HTTP 200) như trang lưới, dùng `NotFoundView kind="page"` (câu chung + link "Về trang đầu", `notFound.firstPage`). Lý do: trang riêng tư, không index; 404 thật không có lợi mà thêm một query. Ghi vào handoff là đã quyết, đóng mục mở.
+- **★12** đồng ý: chỉ lọc kệ trang chủ. Handoff "đợt sau": `/sach`, tìm kiếm **và** catalog chatbot (`getChatCatalog`) cũng chưa loại sách thuộc danh mục ẩn → cần quyết quy tắc chung.
+- Thêm: mỗi migration kèm câu SQL kiểm tra (chỉ đọc hoặc tự rollback bằng lỗi cố ý, có cột "mong đợi"): `supabase/checks/ux-messages-a.sql`, `ux-messages-b.sql`.
+- Thêm: mục 15 làm commit chẩn đoán trước; log URL ra request khác thì **dừng, báo** trước khi sửa.
+
+Bảng đề xuất ban đầu (giữ để tra):
 
 | # | Câu hỏi | Đề xuất |
 |---|---|---|
@@ -31,12 +39,12 @@ Quy ước trong file này:
 
 ## Thứ tự làm (đề xuất)
 
-1. Bạn duyệt plan + trả lời ★.
-2. Viết migration A (+ B nếu ★3 chọn tách) + `schema.sql` + `migrations.test.ts`, câu SQL chỉ đọc cho mục 16. Push, **dừng**.
-3. Bạn review, chạy A, chạy câu SQL mục 16 rồi dán kết quả. Mình sinh lại types.
+1. ✅ Bạn duyệt plan + trả lời ★.
+2. ✅ Migration A + B, `schema.sql`, `seed.sql`, `migrations.test.ts`, câu SQL kiểm tra (`supabase/checks/ux-messages-a.sql`, `ux-messages-b.sql`), 2 câu chỉ đọc mục 16 (`supabase/checks/authors-reversed-names.sql`). Push, **dừng**.
+3. Bạn review, chạy **A** + `ux-messages-a.sql`, chạy R1 / R2 mục 16 rồi dán kết quả. Mình sinh lại types. (**B chưa chạy.**)
 4. Code theo thứ tự: 10 → 11 → 1/1b → 2 → 3/4/5 → 6/9 → 7 → 8 → 12 → 13 → 14 → 15. Câu UPDATE mục 16 gửi riêng.
 5. `typecheck`, `lint`, `build`, Vitest, `measure:js` (trang sách, trang chủ, `vi/login`, `vi/checkout` không prerender nên đo bằng chunk), e2e trên CI. Push, báo.
-6. Merge xong + deploy: bạn chạy B (nếu tách).
+6. Merge xong + deploy: bạn chạy **B** + `ux-messages-b.sql`.
 
 ---
 
@@ -94,7 +102,7 @@ end if;
 - e2e `checkout.spec` (desktop + mobile): tạo voucher bằng service role cho từng trường hợp (tắt, `starts_at` mai, `ends_at` hôm qua, `usage_limit = used_count`, đơn tối thiểu lớn) → đúng câu dưới ô, tổng không đổi; mã sai định dạng (`AB`) → "Không có mã…". `createE2eVoucher` thêm tham số `isActive`, `startsAt`, `endsAt`, `usageLimit`, `isPublic`.
 - Test cũ "mã sai → `Mã giảm giá không hợp lệ hoặc đã hết hạn.`" đổi câu mong đợi sang câu mới của `VOUCHER_NOT_FOUND` (cùng kịch bản, vẫn so chính xác cả câu: không nới). Test "đơn tối thiểu → chứa 50.000.000" giữ nguyên, thêm kiểm số tiền còn thiếu.
 
-**Migration**: có (B; hoặc file chung nếu ★3 chọn một file).
+**Migration**: có (B, `20261018130000_error_reasons.sql`; kiểm tra `supabase/checks/ux-messages-b.sql`).
 
 ## 1b. Gợi ý mã ở trang thanh toán
 
@@ -167,7 +175,7 @@ grant execute on function public.checkout_vouchers() to authenticated;
   - Mã test tên `E2E-ADMIN-…`, dọn bằng `deleteE2eVouchers(codes)`. Seed thật (`CHAOBAN10`, `GIAM20K`) có thể hiện chung: spec chỉ kiểm mã của mình có / không có, không đếm tổng.
   - Bất biến mới trong `scripts/e2e-seed.test.ts`: `seed.sql` có ít nhất 1 mã public.
 
-**Migration**: có (A).
+**Migration**: có (A, `20261018120000_voucher_suggestions.sql`; kiểm tra `supabase/checks/ux-messages-a.sql`).
 
 ## 2. Hủy đơn: tách `ORDER_NOT_CANCELLABLE`
 
@@ -202,7 +210,7 @@ grant execute on function public.checkout_vouchers() to authenticated;
 - Vitest: map mã → câu có `{email}`; `SUPPORT_CODES`; `migrations.test.ts`.
 - e2e `orders.spec` (desktop + mobile, user orders riêng, sách e2e riêng): mở trang đơn `pending` → service role đổi sang `confirmed` (rồi `paid` với đơn chuyển khoản; rồi `cancelled`) → bấm Hủy → đúng câu + link `mailto:` + nút hủy biến mất. Dọn bằng `cancelAndDeleteOrders`.
 
-**Migration**: có (B).
+**Migration**: có (B, cùng file với mục 1).
 
 ## 3. Đăng ký / đăng nhập: lỗi auth rơi vào `INVALID_INPUT` / `UNKNOWN`
 
@@ -462,7 +470,7 @@ Nguồn chung: `toFailure` (lỗi PostgREST có `message` không phải mã đã
 
 ## 13. Lỗi web còn mở trong handoff
 
-**a. `/tai-khoan/don-hang?page=99` trả 200** → theo ★6: proxy (chỉ khi `page > 1`) đếm đơn theo `user_id` + bộ lọc trạng thái (`parseOrderListParams` dùng chung, file thuần không import `next/root-params`) → vượt quá thì rewrite 404 `x-not-found: page`. Lỗi query → cho qua, trang giữ `InlineNotFound`. Câu: `notFound.description` chung + link "Về trang đầu" (`notFound.firstPage`: "Về trang đầu" / "Go to first page"). Test: Vitest điều kiện `page > 1` (trang 1 không có query thêm); e2e `?page=99` → HTTP 404, `?page=1` → 200.
+**a. `/tai-khoan/don-hang?page=99` trả 200** → **đã quyết giữ soft 404** (★6): không kiểm ở proxy. Trang đổi `InlineNotFound` → `NotFoundView kind="page"` (câu chung + link "Về trang đầu" / "Go to first page", `notFound.firstPage`, giữ bộ lọc trạng thái trên link). Handoff: đóng mục mở này, ghi lý do. Test: e2e `?page=99` → HTTP 200, có `noindex`, câu + link "Về trang đầu" trỏ đúng trang 1 (giữ `status`).
 
 **b. `/tai-khoan/dia-chi/[id]` gọi `notFound()` trong Suspense** → proxy kiểm (id sai định dạng → 404; đếm `addresses` theo `id` + `user_id` bằng client theo phiên, như đơn) → rewrite 404 `x-not-found: address`. Trang đổi `notFound()` → `<InlineNotFound kind="address" />`. Câu `notFound.address`: "Không tìm thấy địa chỉ này. Bạn xem lại trong Sổ địa chỉ nhé." / "We couldn't find this address. Please check your address book." + link "Sổ địa chỉ" / "Address book". e2e: id không có, id của user khác → HTTP 404 + câu; console không có React #419.
 
@@ -522,44 +530,9 @@ Nguồn chung: `toFailure` (lỗi PostgREST có `message` không phải mã đã
 
 **Hiện trạng**: Google Books trả "Huy Thiệp Nguyễn" (tên trước, họ sau). `slugify(name)` sinh slug từ tên lúc import → slug cũng ngược (`huy-thiep-nguyen`). Đổi tên trong DB: trigger "đổi tên tác giả → tính lại `search_text`" (`schema.sql:276`) cập nhật tìm kiếm.
 
-**Bước 1: câu chỉ đọc** (bạn chạy, dán kết quả). Họ phổ biến chia 2 mức: **chắc** (hầu như không dùng làm tên) và **cần xem** (cũng là tên riêng: Mai, Hà, Lâm, Hoàng…).
-```sql
--- CHỈ ĐỌC: tác giả có từ cuối là họ Việt phổ biến, từ đầu không phải họ
-with surnames(s, level) as (values
-  ('nguyen','chắc'),('tran','chắc'),('pham','chắc'),('huynh','chắc'),('phan','chắc'),('vu','chắc'),('vo','chắc'),
-  ('dang','chắc'),('bui','chắc'),('do','chắc'),('ngo','chắc'),('dinh','chắc'),('doan','chắc'),('trinh','chắc'),
-  ('truong','chắc'),('le','chắc'),('luong','chắc'),('quach','chắc'),('ta','chắc'),
-  ('hoang','cần xem'),('duong','cần xem'),('ho','cần xem'),('ly','cần xem'),('mai','cần xem'),('ha','cần xem'),
-  ('lam','cần xem'),('cao','cần xem'),('to','cần xem'),('chau','cần xem'),('thai','cần xem'),('luu','cần xem'),
-  ('kieu','cần xem'),('chu','cần xem'),('trieu','cần xem'),('van','cần xem')
-),
-a as (
-  select au.id, au.name, au.slug,
-         split_part(au.slug, '-', 1) as first_word,
-         regexp_replace(au.slug, '^.*-', '') as last_word,
-         array_length(regexp_split_to_array(btrim(au.name), '\s+'), 1) as words,
-         (select count(*) from public.book_authors ba where ba.author_id = au.id) as books
-    from public.authors au
-)
-select a.id, a.name, a.slug, s.level, a.books,
-       -- tên đề xuất: đưa từ cuối lên đầu
-       regexp_replace(btrim(a.name), '^(.*)\s+(\S+)$', '\2 \1') as suggested_name
-  from a
-  join surnames s on s.s = a.last_word
- where a.words between 2 and 4
-   and a.first_word not in (select s from surnames where level = 'chắc')
-   and a.name ~ '[À-ỹ]'                -- có dấu tiếng Việt (bỏ tên nước ngoài)
- order by s.level, a.name;
-```
-- So khớp trên slug (đã bỏ dấu, chữ thường) để không phải xử lý dấu. Điều kiện `name ~ '[À-ỹ]'` loại tên Tây không dấu.
-- Kiểm thêm: có tác giả **trùng người** do Google trả cả hai thứ tự (VD "Nguyễn Huy Thiệp" và "Huy Thiệp Nguyễn" là 2 dòng)? Câu phụ:
-```sql
--- CHỈ ĐỌC: cặp tác giả có cùng tập từ (khác thứ tự)
-select a1.id, a1.name, a2.id, a2.name
-  from public.authors a1 join public.authors a2 on a1.id < a2.id
- where (select array_agg(w order by w) from unnest(string_to_array(a1.slug, '-')) w)
-     = (select array_agg(w order by w) from unnest(string_to_array(a2.slug, '-')) w);
-```
+**Bước 1: 2 câu chỉ đọc** trong `supabase/checks/authors-reversed-names.sql` (bạn chạy, dán kết quả):
+- **R1**: tác giả có từ cuối là họ Việt phổ biến, từ đầu không phải họ. Họ chia 2 mức: **chắc** (hầu như không dùng làm tên riêng) và **cần xem** (cũng là tên riêng: Mai, Hà, Lâm, Hoàng…). So khớp trên slug (đã bỏ dấu). Cột `co_dau_viet = false` đánh dấu tên có thể là tên nước ngoài; `ten_de_xuat` đưa từ cuối lên đầu để tham khảo.
+- **R2**: cặp tác giả cùng tập từ nhưng khác thứ tự (một người bị tách đôi).
 
 **Bước 2: câu UPDATE** (viết sau khi có kết quả, gửi riêng để bạn review + tự chạy)
 - Chỉ đổi `name` theo danh sách id bạn duyệt (không suy tự động trong UPDATE): `update public.authors set name = v.name from (values (12, 'Nguyễn Huy Thiệp'), …) v(id, name) where authors.id = v.id and authors.name = <tên cũ>;` (điều kiện tên cũ chống chạy hai lần / chạy nhầm). Bọc `begin; … commit;`, kèm `select` kiểm trước / sau.

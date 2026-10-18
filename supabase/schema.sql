@@ -355,6 +355,7 @@ create table public.vouchers (
   starts_at        timestamptz,
   ends_at          timestamptz,
   is_active        boolean not null default true,
+  is_public        boolean not null default false,             -- hiện trong gợi ý ở trang thanh toán
   created_at       timestamptz not null default now(),
   check (discount_type <> 'percent' or discount_value <= 100)
 );
@@ -365,18 +366,34 @@ returns int language plpgsql stable set search_path = '' as $$
 declare
   v_discount bigint;
 begin
-  if p_voucher.id is null
-     or not p_voucher.is_active
-     or (p_voucher.starts_at   is not null and now() < p_voucher.starts_at)
-     or (p_voucher.ends_at     is not null and now() > p_voucher.ends_at)
-     or (p_voucher.usage_limit is not null and p_voucher.used_count >= p_voucher.usage_limit)
-  then
-    raise exception 'INVALID_VOUCHER';
+  if p_voucher.id is null then
+    raise exception 'VOUCHER_NOT_FOUND';
+  end if;
+
+  if not p_voucher.is_active then
+    raise exception 'VOUCHER_INACTIVE';
+  end if;
+
+  if p_voucher.starts_at is not null and now() < p_voucher.starts_at then
+    raise exception 'VOUCHER_NOT_STARTED'
+      using detail = json_build_object('starts_at', p_voucher.starts_at)::text;
+  end if;
+
+  if p_voucher.ends_at is not null and now() > p_voucher.ends_at then
+    raise exception 'VOUCHER_EXPIRED'
+      using detail = json_build_object('ends_at', p_voucher.ends_at)::text;
+  end if;
+
+  if p_voucher.usage_limit is not null and p_voucher.used_count >= p_voucher.usage_limit then
+    raise exception 'VOUCHER_EXHAUSTED';
   end if;
 
   if p_subtotal < p_voucher.min_order_value then
     raise exception 'VOUCHER_MIN_ORDER'
-      using detail = json_build_object('min_order_value', p_voucher.min_order_value)::text;
+      using detail = json_build_object(
+        'min_order_value', p_voucher.min_order_value,
+        'shortfall', p_voucher.min_order_value - p_subtotal
+      )::text;
   end if;
 
   if p_voucher.discount_type = 'percent' then
@@ -662,6 +679,15 @@ begin
 end;
 $$;
 
+-- Tạm tính giỏ của một user: chỉ cộng sách đang bán. Dùng chung cho quote_order và checkout_vouchers.
+create or replace function private.cart_subtotal(p_user uuid, out item_count int, out subtotal int)
+language sql stable set search_path = '' as $$
+  select count(*)::int, coalesce(sum(b.price * c.quantity), 0)::int
+    from public.cart_items c
+    join public.books b on b.id = c.book_id and b.is_active
+   where c.user_id = p_user;
+$$;
+
 -- Tiền tạm tính cho checkout (không khóa, không tăng used_count).
 -- Giỏ trống → trả về toàn 0 để trang giỏ vẫn hiển thị được mốc freeship.
 -- Chỉ cộng sách đang bán: sách đã ẩn hiện "Ngừng bán" ở trang giỏ, place_order chặn bằng BOOK_UNAVAILABLE.
@@ -687,11 +713,7 @@ begin
     raise exception 'AUTH_REQUIRED';
   end if;
 
-  select count(*)::int, coalesce(sum(b.price * c.quantity), 0)::int
-    into v_count, v_subtotal
-    from public.cart_items c
-    join public.books b on b.id = c.book_id and b.is_active
-   where c.user_id = v_user;
+  select s.item_count, s.subtotal into v_count, v_subtotal from private.cart_subtotal(v_user) s;
 
   if v_count = 0 then
     return query select 0, 0, 0, 0, 0, private.free_ship_from();
@@ -708,6 +730,55 @@ begin
 
   return query select v_count, v_subtotal, v_shipping, v_discount,
                       v_subtotal + v_shipping - v_discount, private.free_ship_from();
+end;
+$$;
+
+-- Mã gợi ý ở trang thanh toán: public, đang bật, đã tới ngày, chưa hết hạn, còn lượt.
+--    discount: mức giảm với giỏ hiện tại (null khi chưa đủ đơn tối thiểu); shortfall: số tiền còn thiếu (0 = đủ).
+--    Biên thời gian khớp private.voucher_discount (now() < starts_at hoặc now() > ends_at mới bị từ chối).
+--    Giỏ trống → không trả dòng nào. Tối đa 20 mã, giảm nhiều nhất lên đầu.
+create or replace function public.checkout_vouchers()
+returns table (
+  code            text,
+  description     text,
+  description_en  text,
+  discount_type   public.discount_type,
+  discount_value  int,
+  max_discount    int,
+  min_order_value int,
+  ends_at         timestamptz,
+  discount        int,
+  shortfall       int
+)
+language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_user     uuid := auth.uid();
+  v_count    int;
+  v_subtotal int;
+begin
+  if v_user is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+
+  select s.item_count, s.subtotal into v_count, v_subtotal from private.cart_subtotal(v_user) s;
+
+  if v_count = 0 then
+    return;
+  end if;
+
+  return query
+    select v.code, v.description, v.description_en, v.discount_type, v.discount_value, v.max_discount,
+           v.min_order_value, v.ends_at,
+           case when v_subtotal >= v.min_order_value then private.voucher_discount(v, v_subtotal) end,
+           greatest(v.min_order_value - v_subtotal, 0)
+      from public.vouchers v
+     where v.is_public
+       and v.is_active
+       and (v.starts_at is null or v.starts_at <= now())
+       and (v.ends_at is null or v.ends_at >= now())
+       and (v.usage_limit is null or v.used_count < v.usage_limit)
+     order by 9 desc nulls last, 10, 1
+     limit 20;
 end;
 $$;
 
@@ -757,7 +828,8 @@ end;
 $$;
 
 -- Khách tự hủy đơn: chỉ khi đơn còn 'pending' và chưa thanh toán (đơn chuyển khoản đã trả phải qua cửa hàng:
--- chưa có quy trình hoàn tiền). Đơn COD luôn 'unpaid' tới khi giao.
+-- chưa có quy trình hoàn tiền). Đơn COD luôn 'unpaid' tới khi giao. Không hủy được thì báo đúng lý do; đơn không có /
+-- của tài khoản khác cùng một mã ORDER_NOT_CANCELLABLE (không lộ đơn nào tồn tại).
 create or replace function public.cancel_order(p_order_id bigint, p_reason text default null)
 returns public.orders
 language plpgsql security definer set search_path = '' as $$
@@ -770,18 +842,39 @@ begin
       using detail = json_build_object('field', 'reason', 'max', 500)::text;
   end if;
 
-  update public.orders
-     set status = 'cancelled',
-         cancelled_reason = v_reason
+  select * into v_order
+    from public.orders
    where id = p_order_id
      and user_id = auth.uid()
-     and status = 'pending'
-     and payment_status <> 'paid'
-  returning * into v_order;
+     for update;
 
+  -- Không có hoặc của tài khoản khác: cùng một mã, không lộ đơn nào tồn tại
   if not found then
     raise exception 'ORDER_NOT_CANCELLABLE';
   end if;
+
+  if v_order.status = 'cancelled' then
+    raise exception 'ORDER_ALREADY_CANCELLED';
+  end if;
+
+  if v_order.status = 'delivered' then
+    raise exception 'ORDER_DELIVERED';
+  end if;
+
+  if v_order.status <> 'pending' then
+    raise exception 'ORDER_IN_PROGRESS'
+      using detail = json_build_object('status', v_order.status)::text;
+  end if;
+
+  if v_order.payment_status = 'paid' then
+    raise exception 'ORDER_PAID';
+  end if;
+
+  update public.orders
+     set status = 'cancelled',
+         cancelled_reason = v_reason
+   where id = v_order.id
+  returning * into v_order;
 
   return v_order;
 end;
@@ -1009,7 +1102,7 @@ create policy "vouchers_admin_all" on public.vouchers
 revoke update on public.vouchers from anon, authenticated;
 grant  update (
   code, description, description_en, discount_type, discount_value, max_discount,
-  min_order_value, usage_limit, starts_at, ends_at, is_active
+  min_order_value, usage_limit, starts_at, ends_at, is_active, is_public
 ) on public.vouchers to authenticated;
 
 -- ORDERS: khách xem đơn của mình; chỉ admin cập nhật. Tạo đơn qua place_order().
@@ -1078,6 +1171,9 @@ grant  execute on function public.cancel_order(bigint, text) to authenticated;
 
 revoke execute on function public.quote_order(text) from public, anon;
 grant  execute on function public.quote_order(text) to authenticated;
+
+revoke execute on function public.checkout_vouchers() from public, anon;
+grant  execute on function public.checkout_vouchers() to authenticated;
 
 revoke execute on function public.quote_items(jsonb) from public;
 grant  execute on function public.quote_items(jsonb) to anon, authenticated;
@@ -1307,6 +1403,7 @@ grant  execute on function public.set_chat_quota_token(text) to service_role;
 --   search_books(q)                         — anon + authenticated
 --   quote_order(p_voucher_code)             — tiền tạm tính ở giỏ / checkout
 --   quote_items(p_items jsonb)              — tạm tính giỏ khách (anon + authenticated)
+--   checkout_vouchers()                     — mã public dùng được + mức giảm / số tiền còn thiếu với giỏ hiện tại
 --   place_order(p_address_id, p_payment_method, p_voucher_code, p_note,
 --               p_idempotency_key, p_expected_total)
 --   cancel_order(p_order_id, p_reason)
@@ -1319,7 +1416,12 @@ grant  execute on function public.set_chat_quota_token(text) to service_role;
 --
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
 --   AUTH_REQUIRED, INVALID_ADDRESS, BOOK_UNAVAILABLE, OUT_OF_STOCK, CART_EMPTY,
---   INVALID_VOUCHER, VOUCHER_MIN_ORDER, ORDER_NOT_CANCELLABLE, ORDER_REOPEN_FORBIDDEN,
+--   VOUCHER_NOT_FOUND, VOUCHER_INACTIVE, VOUCHER_NOT_STARTED (detail: {"starts_at": ...}),
+--   VOUCHER_EXPIRED (detail: {"ends_at": ...}), VOUCHER_EXHAUSTED,
+--   VOUCHER_MIN_ORDER (detail: {"min_order_value": ..., "shortfall": ...}),
+--   INVALID_VOUCHER (bản cũ trước ux-messages B, không còn hàm nào trả),
+--   ORDER_NOT_CANCELLABLE (đơn không có / của tài khoản khác), ORDER_ALREADY_CANCELLED, ORDER_DELIVERED,
+--   ORDER_IN_PROGRESS (detail: {"status": ...}), ORDER_PAID, ORDER_REOPEN_FORBIDDEN,
 --   ORDER_INVALID_TRANSITION (trigger trạng thái đơn; detail: {"from": ..., "to": ...}),
 --   INVALID_INPUT (detail: {"field": ..., "max": ...}),
 --   CART_CHANGED (place_order, p_expected_total khác tổng thật; detail: {"total": ...})

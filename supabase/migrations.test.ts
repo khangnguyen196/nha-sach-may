@@ -130,3 +130,63 @@ describe('bộ đếm chatbot (Phase 11)', () => {
     expect(body).toMatch(/'gemini:day', v_la_day at time zone 'america\/los_angeles'/)
   })
 })
+
+// ux-messages: mã gợi ý ở trang thanh toán chỉ lộ mã admin cho phép; lỗi voucher / hủy đơn báo đúng lý do
+describe('gợi ý mã giảm giá + mã lỗi theo lý do (ux-messages)', () => {
+  const functionBody = (name: string) => {
+    const statement = schema.find((s) => s.startsWith(`create or replace function ${name}(`))
+    if (!statement) throw new Error(`schema.sql không có hàm ${name}`)
+    return statement
+  }
+
+  it('vouchers.is_public mặc định false (mã đang có không tự hiện trong gợi ý)', () => {
+    expect(createTableBody('public.vouchers')).toContain('is_public boolean not null default false')
+  })
+
+  it('checkout_vouchers: security definer, search_path rỗng, chỉ authenticated gọi được', () => {
+    const body = functionBody('public.checkout_vouchers')
+    expect(body).toContain('security definer')
+    expect(body).toContain("set search_path = ''")
+    expect(schema).toContain('revoke execute on function public.checkout_vouchers() from public, anon')
+    expect(schema).toContain('grant execute on function public.checkout_vouchers() to authenticated')
+    expect(schemaText).not.toMatch(/grant execute on function public\.checkout_vouchers\(\) to [^;]*\banon\b/)
+  })
+
+  it('checkout_vouchers chỉ trả mã public đang dùng được, không trả cột nội bộ', () => {
+    const body = functionBody('public.checkout_vouchers')
+    for (const condition of ['v.is_public', 'v.is_active', 'v.starts_at <= now()', 'v.ends_at >= now()', 'v.used_count < v.usage_limit']) {
+      expect(body).toContain(condition)
+    }
+    const returns = /returns table \(([^)]*)\)/.exec(body)?.[1] ?? ''
+    for (const column of ['id', 'used_count', 'usage_limit', 'starts_at', 'is_active', 'is_public']) {
+      expect(returns).not.toMatch(new RegExp(`\b${column}\b`))
+    }
+  })
+
+  it('quote_order và checkout_vouchers tính tạm tính bằng cùng private.cart_subtotal', () => {
+    expect(functionBody('private.cart_subtotal')).toContain('b.is_active')
+    expect(functionBody('public.quote_order')).toContain('private.cart_subtotal(v_user)')
+    expect(functionBody('public.checkout_vouchers')).toContain('private.cart_subtotal(v_user)')
+  })
+
+  it('voucher_discount báo từng lý do, không còn INVALID_VOUCHER', () => {
+    const body = functionBody('private.voucher_discount')
+    const codes = ['voucher_not_found', 'voucher_inactive', 'voucher_not_started', 'voucher_expired', 'voucher_exhausted', 'voucher_min_order']
+    const positions = codes.map((code) => body.indexOf(`raise exception '${code}'`))
+    expect(positions.every((position) => position > -1)).toBe(true)
+    // Cùng thứ tự với voucherState() của admin
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+    expect(body).toContain("'shortfall', p_voucher.min_order_value - p_subtotal")
+    expect(schemaText).not.toContain("raise exception 'invalid_voucher'")
+  })
+
+  it('cancel_order: đơn không có / của người khác cùng một mã, kiểm trước mọi lý do khác', () => {
+    const body = functionBody('public.cancel_order')
+    expect(body).toContain('user_id = auth.uid()')
+    const notFound = body.indexOf("raise exception 'order_not_cancellable'")
+    expect(notFound).toBeGreaterThan(-1)
+    for (const code of ['order_already_cancelled', 'order_delivered', 'order_in_progress', 'order_paid']) {
+      expect(body.indexOf(`raise exception '${code}'`)).toBeGreaterThan(notFound)
+    }
+  })
+})
