@@ -105,10 +105,12 @@ test('follow_up chỉ hiện ở lượt mới nhất; lịch sử gửi server 
   expect(followUp).not.toBe('')
 
   const request = page.waitForRequest((r) => r.method() === 'POST' && 'next-action' in r.headers())
-  const second = await ask(panel, 'tư duy kinh doanh')
-  // Lượt 1 không còn follow_up trên giao diện; chỉ lượt 2 (mới nhất) có
-  await expect(first.getByTestId('chat-follow-up')).toHaveCount(0)
-  await expect(second.getByTestId('chat-follow-up')).toHaveCount(1)
+  await ask(panel, 'tư duy kinh doanh')
+  // ask() trả locator "câu trả lời cuối" (đổi theo DOM) → chọn theo thứ tự: lượt 1 hết follow_up, chỉ lượt 2 có
+  const replies = panel.getByTestId('chat-reply')
+  await expect(replies).toHaveCount(2)
+  await expect(replies.nth(0).getByTestId('chat-follow-up')).toHaveCount(0)
+  await expect(replies.nth(1).getByTestId('chat-follow-up')).toHaveCount(1)
   await expect(panel.getByTestId('chat-follow-up')).toHaveCount(1)
   expect((await request).postData() ?? '').toContain(`"follow_up":"${followUp}"`)
 })
