@@ -113,14 +113,15 @@ test('phân trang: trang 2 không trùng trang 1', async ({ page }) => {
 })
 
 // Kết quả stream sau static shell → HTTP 200 (soft 404, không kiểm ở proxy để trang > 1 không chậm thêm): UI 404 +
-// noindex trong <head>. Trước đây notFound() trong Suspense → React error #419 ở console (lúc hydrate).
+// noindex. Meta nằm ở <head> hay <body> tùy boundary xong trước hay sau shell (React ghi hoistable stream muộn vào body)
+// → kiểm cả tài liệu. Trước đây notFound() trong Suspense → React error #419 ở console (lúc hydrate).
 for (const url of ['/danh-muc/van-hoc?page=999', '/sach?lang=en&page=99', '/tim-kiem?q=978&page=999']) {
   test(`${url} → UI 404 + noindex, không lỗi console`, async ({ page }) => {
     const errors = collectErrors(page)
     const response = await page.goto(url)
     expect(response?.status()).toBe(200)
     await expect(page.getByRole('main').getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
-    await expect(page.locator('head meta[name="robots"][content*="noindex"]').first()).toBeAttached()
+    await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
     await waitForHydration(page, 'main a[href="/"]')
     expect(errors).toEqual([])
   })
