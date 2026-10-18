@@ -3,6 +3,15 @@ description: Soạn báo cáo việc vừa làm (kết quả, kế hoạch hoặ
 ---
 Mục đích: người đọc báo cáo là một phiên review KHÔNG xem được cuộc trò chuyện này. Báo cáo phải tự đủ.
 
+Cú pháp (tham số nằm ở dòng cuối, `$ARGUMENTS`):
+- `/baocao`: review từ `git merge-base HEAD origin/main` đến HEAD, không có ghi chú.
+- `/baocao <commit>`: review từ `<commit>` đến HEAD.
+- `/baocao -- <ghi chú>`: khoảng diff mặc định, kèm ghi chú.
+- `/baocao <commit> -- <ghi chú>`: cả hai.
+Cách tách: phần trước ` -- ` (hoặc cả chuỗi nếu không có ` -- ` và không bắt đầu bằng `--`) là commit; phần sau ` -- ` là ghi chú.
+Chuỗi bắt đầu bằng `--` thì không có commit. Phần commit phải là một ref git có thật (`git rev-parse --verify <ref>^{commit}`);
+không phải thì DỪNG và hỏi lại, không đoán, không coi nó là ghi chú.
+
 Quy tắc chung:
 - Xuất đúng khung bên dưới, đủ mọi mục, đúng thứ tự, trong MỘT khối code duy nhất để mình copy.
 - Ghi đầy đủ, không tóm tắt, không viết "như đã báo ở trên / tin nhắn trước": chép lại nội dung vào đây.
@@ -13,8 +22,8 @@ Quy tắc chung:
 Bước làm:
 1. Chạy `git status`, `git log -1`, `git status -sb` (đã push chưa), và xem nhánh đã merge vào `origin/main` chưa.
 2. Xác định khoảng diff để review:
-   - Có tham số commit (`/baocao <commit>`): từ `<commit>` đến HEAD.
-   - Không có: từ `git merge-base HEAD origin/main` đến HEAD.
+   - Có commit (`/baocao <commit>` hoặc `/baocao <commit> -- <ghi chú>`): từ `<commit>` đến HEAD.
+   - Không có commit (`/baocao`, `/baocao -- <ghi chú>`): từ `git merge-base HEAD origin/main` đến HEAD.
    - Cộng thêm file đang sửa chưa commit (nếu có).
 3. Nếu khoảng diff hoặc file chưa commit có thay đổi: ghi diff ra một file trong scratchpad
    (`git diff <base>..HEAD > …` và `git diff >> …`). Gọi subagent `code-reviewer` (nó chỉ có Read / Grep / Glob, không chạy được git):
@@ -70,4 +79,6 @@ Mỗi file ghi rõ "CHƯA chạy, chờ người duyệt" (hoặc đã chạy kh
 == Báo cáo code-reviewer ==
 Chép NGUYÊN VĂN báo cáo của subagent, giữ 3 mức NGHIÊM TRỌNG / NÊN SỬA / GỢI Ý. Ghi khoảng diff đã review.
 
-Tham số / ghi chú thêm của mình: $ARGUMENTS
+Ghi chú (nếu có) đưa vào mục phù hợp của báo cáo; yêu cầu thêm trong ghi chú thì làm theo.
+
+Tham số: $ARGUMENTS
