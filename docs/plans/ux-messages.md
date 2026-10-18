@@ -87,7 +87,7 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 **Đêm 2026-10-18 → 19**
 1. `cd7c0ca` `migrations.test.ts`: `\b` trong template literal là ký tự backspace → test "không trả cột nội bộ" của `checkout_vouchers` luôn qua. Sửa thành `\\b`; thêm tạm `used_count` vào `returns table` trong `schema.sql` → test FAIL (`expected '…' not to match /\bused_count\b/`) → trả lại.
 2. `7bbd56a` `requestPasswordReset`: chỉ báo lỗi dưới ô khi `email_address_invalid`; `email_address_not_authorized` (chỉ xảy ra khi đã có tài khoản) và lỗi khác → "đã gửi" như email không có tài khoản. Vitest cho action (fail với code cũ).
-3. `453ac63` proxy bỏ header `x-not-found` do khách gửi trước mọi bước (khớp plan mục 6). Vitest proxy (`src/proxy.test.ts`, next-intl giả lập vì ESM không resolve `next/server` trong Vitest): đúng loại cho sách / danh mục / tác giả / đơn (3 trường hợp cùng loại `order`), trang có thật không bị đụng, header khách bị bỏ (GET, POST), giá trị của proxy thắng.
+3. `453ac63` proxy bỏ header `x-not-found` do khách gửi trước mọi bước của proxy (khớp plan mục 6). Đường dẫn proxy không chạy (matcher bỏ qua đường dẫn có dấu chấm, VD `/en/foo.bar`) vẫn mang header khách tới `not-found.tsx`: chấp nhận, chỉ đổi câu giải thích của chính request đó. Vitest proxy (`src/proxy.test.ts`, next-intl giả lập vì ESM không resolve `next/server` trong Vitest): đúng loại cho sách / danh mục / tác giả / đơn (3 trường hợp cùng loại `order`), trang có thật không bị đụng, header khách bị bỏ (GET, POST), giá trị của proxy thắng.
 4. `a9c9df8` test plan đã hứa: test tĩnh mọi `raise exception '<CODE>'` (+ mã truyền vào `chat_quota_take`) có trong `ERROR_CODES` và có câu vi / en (`CHAT_DISABLED` nội bộ, ghi lý do); đường mã CŨ (`INVALID_VOUCHER`, `VOUCHER_MIN_ORDER` thiếu `shortfall`, `ORDER_NOT_CANCELLABLE`) bằng RPC giả + bản dịch thật; `minOrderShortfall` tách thành hàm thuần (`voucher-errors.ts`); 2 bất biến e2e-seed; "không tìm thấy đơn" bản tiếng Anh.
 5. `6396fc2` nháp ghi chú thanh toán theo tài khoản (`checkout-note-draft:<userId>`), mở trang thanh toán xóa nháp của người khác (kể cả khóa cũ), form đăng xuất (`SignOutForm`) xóa mọi nháp trước khi gửi. e2e 2 test.
 6. Gửi lại email xác nhận khi tắt JS: e2e (`5147b46`) FAIL ngay từ bước đăng nhập. HTML lưu được (`3d2e3e1`, run 39148697724): response POST không JS chỉ có phần động, không có khung tĩnh. Không phải lỗi của login-form → không sửa, gỡ test (`3c618a3`), ghi vào `docs/progress.md`.
@@ -97,7 +97,8 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 
 **Khác với plan (thêm)**
 - Mục 4 "chạy được không cần JS": SAI khi action trả kết quả trên trang prerender (xem việc 6); áp cho mọi form, không riêng gửi lại email.
-- Mục 6: proxy giờ xóa header `x-not-found` của khách (trước đây chỉ ghi đè khi rewrite).
+- Mục 6: proxy giờ xóa header `x-not-found` của khách ở mọi request đi qua proxy (trước đây chỉ ghi đè khi rewrite); đường dẫn có dấu chấm không qua proxy (xem việc 3).
+- Mục 3 (`requestPasswordReset`): theo mã nguồn GoTrue (`internal/api/recover.go`, `mail.go`), email sai dạng trả `validation_failed` TRƯỚC khi tìm user; `email_address_invalid` chỉ sinh trong `sendEmail`, tức là SAU khi đã tìm thấy tài khoản. Báo `email_address_invalid` dưới ô (theo yêu cầu Việc 2) vì vậy vẫn có thể lộ email có tài khoản khi GoTrue kiểm tên miền / DNS. Giữ đúng yêu cầu, chờ quyết (`docs/progress.md`).
 - Mục 15: URL thật khác giả thuyết (xem mục 15 ở trên).
 
 ## ★ Quyết định (đã duyệt 2026-10-18)

@@ -143,7 +143,7 @@ Plan + báo cáo: `docs/plans/ux-messages.md`. Việc để sau: `docs/progress.
 - Mã giảm giá / hủy đơn báo đúng lý do, gợi ý mã ở trang thanh toán, lỗi đăng ký / đăng nhập theo ô, gửi lại email xác nhận, 404 nói rõ thiếu gì (vẫn HTTP 404 thật), link "Đăng nhập lại", form giữ chữ khi mất mạng, trang lỗi có mã tra cứu + email liên hệ.
 - Migration A đã chạy; **migration B chạy sau khi merge + deploy** (app hiểu cả mã cũ lẫn mới, có Vitest cho đường mã cũ).
 - JS (measure:js, gzip ngoài baseline 170KB): trang sách 43.9 → **45.3KB** (ngân sách 50), trang chủ 41.2 → 42.2, `/sach` + danh mục 54.3 → 55.3 (chưa có ngân sách).
-- Bổ sung đêm 2026-10-18: quên mật khẩu không còn lộ email có tài khoản qua `email_address_not_authorized`; proxy bỏ header `x-not-found` do khách gửi; nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
+- Bổ sung đêm 2026-10-18: quên mật khẩu không còn lộ email có tài khoản qua `email_address_not_authorized`; proxy bỏ header `x-not-found` do khách gửi (request đi qua proxy); nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
 
 ## 4. Rủi ro còn lại
 
