@@ -11,7 +11,7 @@ import './globals.css'
 // font và chuỗi (xem i18n/global-error-messages.ts). /admin không có [locale] → tiếng Việt.
 // Không import next-intl, next-themes, routing hay Button: global-error tải ở mọi trang dưới dạng nhóm chunk riêng,
 // mọi module nó import bị chép thêm một bản (xem components/layout/error-view.tsx).
-export default function GlobalError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
+export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   const { locale } = useParams()
   const lang = isGlobalErrorLocale(locale) ? locale : 'vi'
   const messages = GLOBAL_ERROR_MESSAGES[lang]
@@ -32,6 +32,7 @@ export default function GlobalError({ retry }: { error: Error & { digest?: strin
         <main id="main" className="flex-1">
           <ErrorView
             messages={messages}
+            digest={error.digest}
             onRetry={retry}
             homeLink={(className) => (
               // Không còn provider của next-intl cho Link; tải lại cả trang là đúng ý sau lỗi root layout.

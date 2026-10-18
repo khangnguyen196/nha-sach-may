@@ -10,16 +10,23 @@ import type { ErrorPageMessages } from '@/components/layout/error-view'
  */
 export const GLOBAL_ERROR_MESSAGES: Record<Locale, ErrorPageMessages & { homeHref: string }> = {
   vi: {
-    title: 'Không tải được trang',
-    description: 'Đã có lỗi khi tải nội dung. Có thể kết nối đang chập chờn, bạn thử lại sau ít phút nhé.',
+    title: 'Có lỗi phía Nhà Sách Mây',
+    description:
+      'Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn bấm “Thử lại” nhé; nếu vẫn lỗi, gửi mã tra cứu bên dưới tới {email} để nhóm kiểm tra.',
+    descriptionNoRef:
+      'Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn bấm “Thử lại” nhé; nếu vẫn lỗi, gửi email tới {email} kèm đường dẫn trang này.',
+    reference: 'Mã tra cứu: {digest}',
     retry: 'Thử lại',
     backHome: 'Về trang chủ',
     homeHref: '/',
   },
   en: {
-    title: 'This page could not be loaded',
+    title: 'Something went wrong on our side',
     description:
-      'Something went wrong while loading this page. The connection may be unstable, so please try again in a moment.',
+      'This is a problem at Nhà Sách Mây, not something you did. Please press “Try again”; if it keeps happening, send the reference code below to {email}.',
+    descriptionNoRef:
+      'This is a problem at Nhà Sách Mây, not something you did. Please press “Try again”; if it keeps happening, email {email} with the link to this page.',
+    reference: 'Reference code: {digest}',
     retry: 'Try again',
     backHome: 'Back to home',
     homeHref: '/en',

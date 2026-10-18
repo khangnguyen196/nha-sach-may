@@ -1,5 +1,6 @@
 import { ChevronDownIcon } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
+import { SupportEmailText } from '@/components/layout/support-email-text'
 import { cn } from '@/lib/utils'
 
 // Không có 'use client' và không dùng hook → dùng được cả trong Server Component lẫn form client.
@@ -135,7 +136,10 @@ export function TextAreaField({
   )
 }
 
-/** Lỗi chung của form. `quiet`: chỉ đọc cho trình đọc màn hình (đã có lỗi hiện tại từng ô) */
+/**
+ * Lỗi chung của form. `quiet`: chỉ đọc cho trình đọc màn hình (đã có lỗi hiện tại từng ô).
+ * Chuỗi có email liên hệ (UNKNOWN, đơn đã thanh toán…) → email thành link mailto.
+ */
 export function FormAlert({ children, quiet = false }: { children: ReactNode; quiet?: boolean }) {
   return (
     <p
@@ -146,7 +150,7 @@ export function FormAlert({ children, quiet = false }: { children: ReactNode; qu
           : 'rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive'
       }
     >
-      {children}
+      {typeof children === 'string' ? <SupportEmailText text={children} /> : children}
     </p>
   )
 }

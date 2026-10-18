@@ -2,6 +2,8 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { getCategories } from '@/features/books/queries'
 import { Link } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
+import { SUPPORT_EMAIL } from '@/lib/support'
+import { SupportEmailText } from './support-email-text'
 
 export async function Footer() {
   const [t, tCommon, locale, categories] = await Promise.all([
@@ -30,6 +32,7 @@ export async function Footer() {
               ),
             })}
           </p>
+          <Contact text={t('footerContact', { email: SUPPORT_EMAIL })} className="mt-3 text-sm text-muted-foreground" />
         </div>
         {parents.length > 0 && (
           <nav aria-labelledby="footer-browse">
@@ -52,7 +55,7 @@ export async function Footer() {
         )}
       </div>
       <div className="border-t">
-        <Copyright text={t('copyright')} />
+        <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-subtle sm:px-6">{t('copyright')}</p>
       </div>
     </footer>
   )
@@ -63,11 +66,19 @@ export async function CompactFooter() {
   const t = await getTranslations('layout')
   return (
     <footer className="border-t">
-      <Copyright text={t('copyright')} />
+      <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-x-6 gap-y-2 px-4 py-6 text-xs text-subtle sm:px-6">
+        <p>{t('copyright')}</p>
+        <Contact text={t('footerContact', { email: SUPPORT_EMAIL })} />
+      </div>
     </footer>
   )
 }
 
-function Copyright({ text }: { text: string }) {
-  return <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-subtle sm:px-6">{text}</p>
+function Contact({ text, className }: { text: string; className?: string }) {
+  return (
+    <p className={className}>
+      <SupportEmailText text={text} />
+    </p>
+  )
 }
+

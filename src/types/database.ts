@@ -629,6 +629,7 @@ export type Database = {
           ends_at: string | null
           id: number
           is_active: boolean
+          is_public: boolean
           max_discount: number | null
           min_order_value: number
           starts_at: string | null
@@ -645,6 +646,7 @@ export type Database = {
           ends_at?: string | null
           id?: number
           is_active?: boolean
+          is_public?: boolean
           max_discount?: number | null
           min_order_value?: number
           starts_at?: string | null
@@ -661,6 +663,7 @@ export type Database = {
           ends_at?: string | null
           id?: number
           is_active?: boolean
+          is_public?: boolean
           max_discount?: number | null
           min_order_value?: number
           starts_at?: string | null
@@ -706,6 +709,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      checkout_vouchers: {
+        Args: never
+        Returns: {
+          code: string
+          description: string
+          description_en: string
+          discount: number
+          discount_type: Database["public"]["Enums"]["discount_type"]
+          discount_value: number
+          ends_at: string
+          max_discount: number
+          min_order_value: number
+          shortfall: number
+        }[]
       }
       consume_chat_quota: {
         Args: {

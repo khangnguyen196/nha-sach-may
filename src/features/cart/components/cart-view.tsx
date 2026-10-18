@@ -4,6 +4,7 @@ import { BookIcon, MinusIcon, PlusIcon, ShoppingBagIcon, Trash2Icon } from 'luci
 import Image from 'next/image'
 import type { Locale } from 'next-intl'
 import { useState, type KeyboardEvent } from 'react'
+import { SupportEmailText } from '@/components/layout/support-email-text'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { formats } from '@/i18n/formats'
 import { Link } from '@/i18n/navigation'
@@ -339,7 +340,7 @@ function CartSummary({ lines, quote, updating, error, labels, formatPrice }: Sum
       </div>
 
       <p role="status" className="mt-3 min-h-5 text-sm">
-        {error ? <span className="text-sale">{error}</span> : updating ? <span className="text-muted-foreground">{labels.updating}</span> : null}
+        {error ? <span className="text-sale"><SupportEmailText text={error} /></span> : updating ? <span className="text-muted-foreground">{labels.updating}</span> : null}
       </p>
 
       {canCheckout ? (

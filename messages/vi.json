@@ -24,10 +24,12 @@
     "backHome": "Về trang chủ"
   },
   "errorPage": {
-    "title": "Không tải được trang",
-    "description": "Đã có lỗi khi tải nội dung. Có thể kết nối đang chập chờn, bạn thử lại sau ít phút nhé.",
+    "title": "Có lỗi phía Nhà Sách Mây",
+    "description": "Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn bấm “Thử lại” nhé; nếu vẫn lỗi, gửi mã tra cứu bên dưới tới {email} để nhóm kiểm tra.",
     "retry": "Thử lại",
-    "backHome": "Về trang chủ"
+    "backHome": "Về trang chủ",
+    "descriptionNoRef": "Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn bấm “Thử lại” nhé; nếu vẫn lỗi, gửi email tới {email} kèm đường dẫn trang này.",
+    "reference": "Mã tra cứu: {digest}"
   },
   "admin": {
     "title": "Quản trị",
@@ -454,7 +456,8 @@
     "footerBrowse": "Khám phá",
     "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books, một số ảnh bìa từ <openLibrary>Open Library</openLibrary>; giá bán chỉ để minh họa.",
     "copyright": "© Nhà Sách Mây",
-    "admin": "Quản trị"
+    "admin": "Quản trị",
+    "footerContact": "Liên hệ: {email}"
   },
   "search": {
     "title": "Tìm kiếm sách",
@@ -637,7 +640,8 @@
     "voucherApplied": "Đã áp dụng mã {code}",
     "voucherRemove": "Bỏ mã",
     "discount": "Giảm giá",
-    "recalculating": "Đang tính lại tổng tiền…"
+    "recalculating": "Đang tính lại tổng tiền…",
+    "voucherMinOrderShortfall": "Mua thêm {shortfall, number, price} để dùng mã này (đơn từ {min_order_value, number, price})."
   },
   "order": {
     "successTitle": "Đặt hàng thành công",
@@ -855,7 +859,7 @@
     "CART_EMPTY": "Giỏ hàng đang trống.",
     "INVALID_VOUCHER": "Mã giảm giá không hợp lệ hoặc đã hết hạn.",
     "VOUCHER_MIN_ORDER": "Mã này áp dụng cho đơn từ {min_order_value, number, price}.",
-    "ORDER_NOT_CANCELLABLE": "Đơn hàng này không thể hủy.",
+    "ORDER_NOT_CANCELLABLE": "Không hủy được đơn này. Bạn tải lại trang để xem trạng thái mới nhất.",
     "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",
     "ORDER_INVALID_TRANSITION": "Không thể chuyển đơn hàng sang trạng thái này.",
     "INVALID_INPUT": "Dữ liệu không hợp lệ.",
@@ -882,7 +886,21 @@
     "CHAT_UNAVAILABLE": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
     "CHAT_REGION": "Mây chưa hỗ trợ khu vực của bạn.",
     "NETWORK_ERROR": "Không kết nối được máy chủ, thử lại sau ít phút.",
-    "UNKNOWN": "Đã có lỗi xảy ra. Vui lòng thử lại."
+    "UNKNOWN": "Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn thử lại nhé; nếu vẫn lỗi, gửi email tới {email}.",
+    "VOUCHER_NOT_FOUND": "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.",
+    "VOUCHER_INACTIVE": "Mã này hiện đã ngừng áp dụng. Bạn thử mã khác nhé.",
+    "VOUCHER_NOT_STARTED": "Mã này dùng được từ {starts_at}. Bạn quay lại lúc đó nhé.",
+    "VOUCHER_EXPIRED": "Mã này đã hết hạn lúc {ends_at}. Bạn thử mã khác nhé.",
+    "VOUCHER_EXHAUSTED": "Mã này đã hết lượt dùng. Bạn thử mã khác nhé.",
+    "ORDER_ALREADY_CANCELLED": "Đơn này đã được hủy trước đó, bạn không cần làm gì thêm.",
+    "ORDER_DELIVERED": "Đơn đã giao xong nên không hủy được. Cần đổi trả, bạn gửi email tới {email} kèm mã đơn nhé.",
+    "ORDER_IN_PROGRESS": "Cửa hàng đã {status, select, shipping {giao đơn cho bên vận chuyển} other {xác nhận đơn}} nên bạn không tự hủy được nữa. Cần hủy, bạn gửi email tới {email} kèm mã đơn nhé.",
+    "ORDER_PAID": "Đơn đã thanh toán nên cần cửa hàng hủy và hoàn tiền. Bạn gửi email tới {email} kèm mã đơn nhé.",
+    "SIGNUP_DISABLED": "Nhà Sách Mây đang tạm ngừng nhận đăng ký mới. Bạn quay lại sau nhé.",
+    "ACCOUNT_LOCKED": "Tài khoản này đang bị khóa. Bạn gửi email tới {email} để được hỗ trợ nhé.",
+    "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Bạn đăng nhập lại rồi thử lại nhé.",
+    "ITEM_DELETED": "Mục này vừa bị xóa ở nơi khác. Bạn tải lại danh sách để xem dữ liệu mới nhất.",
+    "BOOK_AUTHORS_NOT_SAVED": "Đã lưu thông tin sách nhưng chưa lưu được tác giả. Bạn bấm Lưu lại một lần nữa nhé."
   },
   "allBooks": {
     "title": "Tất cả sách",

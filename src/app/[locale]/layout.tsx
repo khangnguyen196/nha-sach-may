@@ -3,6 +3,7 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locale as rootLocale } from 'next/root-params'
+import { getErrorPageMessages } from '@/components/layout/error-page-messages'
 import { ErrorMessagesProvider } from '@/components/layout/error-view'
 import { Header } from '@/components/layout/header'
 import { ThemeProvider } from '@/components/layout/theme-provider'
@@ -31,9 +32,9 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
   const locale = await rootLocale()
   if (!hasLocale(routing.locales, locale)) notFound()
 
-  const [t, tError, messages] = await Promise.all([
+  const [t, errorMessages, messages] = await Promise.all([
     getTranslations('common'),
-    getTranslations('errorPage'),
+    getErrorPageMessages(),
     getMessages(),
   ])
 
@@ -53,14 +54,7 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
             <Header />
             {/* <main> + footer do layout của từng route group dựng: (shop) có footer đầy đủ, (auth) chỉ dòng bản quyền */}
             {/* Chuỗi cho error.tsx (client, không nhận props từ server): xem components/layout/error-view.tsx */}
-            <ErrorMessagesProvider
-              messages={{
-                title: tError('title'),
-                description: tError('description'),
-                retry: tError('retry'),
-                backHome: tError('backHome'),
-              }}
-            >
+            <ErrorMessagesProvider messages={errorMessages}>
               {children}
             </ErrorMessagesProvider>
           </NextIntlClientProvider>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { Suspense, type ReactNode } from 'react'
 import { AdminShell } from '@/components/admin/admin-shell'
+import { getErrorPageMessages } from '@/components/layout/error-page-messages'
 import { ErrorMessagesProvider } from '@/components/layout/error-view'
 import { ThemeProvider } from '@/components/layout/theme-provider'
 import { requireAdmin } from '@/features/admin/auth'
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
-  const [t, tCommon] = await Promise.all([getTranslations('errorPage'), getTranslations('common')])
+  const [errorMessages, tCommon] = await Promise.all([getErrorPageMessages(), getTranslations('common')])
   return (
     <html lang="vi" className={fontVariables} suppressHydrationWarning>
       <body className="min-h-dvh">
@@ -26,9 +27,7 @@ export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
           {tCommon('skipToContent')}
         </a>
         <ThemeProvider>
-          <ErrorMessagesProvider
-            messages={{ title: t('title'), description: t('description'), retry: t('retry'), backHome: t('backHome') }}
-          >
+          <ErrorMessagesProvider messages={errorMessages}>
             <Suspense>
               <AdminGate>
                 <AdminShell>{children}</AdminShell>

@@ -29,6 +29,7 @@ import { localizedSlugPath } from '@/i18n/paths'
 import { localize } from '@/lib/i18n-db'
 import { bookJsonLd, serializeJsonLd } from '@/lib/json-ld'
 import { siteUrl } from '@/lib/site-url'
+import { SUPPORT_EMAIL } from '@/lib/support'
 
 type Props = PageProps<'/[locale]/books/[slug]'>
 
@@ -347,7 +348,7 @@ async function AddToCart({ book }: { book: BookDetail }) {
         limitReached: tCart('limitReached', { max: limit }),
         cartFull: tCart('cartFull', { max: MAX_LINES }),
         storageError: tCart('storageError'),
-        error: tErrors('UNKNOWN'),
+        error: tErrors('UNKNOWN', { email: SUPPORT_EMAIL }),
       }}
     />
   )

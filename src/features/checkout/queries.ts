@@ -1,7 +1,8 @@
 import 'server-only'
 import type { Locale } from 'next-intl'
+import { getTranslations } from 'next-intl/server'
 import { withMessage } from '@/lib/error-message'
-import { toFailure, type Failure } from '@/lib/errors'
+import { toFailure, type ErrorCode, type Failure } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 
@@ -10,7 +11,16 @@ export type CheckoutQuote = Database['public']['Functions']['quote_order']['Retu
 /** Mã trên URL: đã áp dụng (failure null) hoặc bị từ chối kèm lỗi đã dịch (quote tính không voucher) */
 export type VoucherState = { code: string; failure: Failure | null }
 
-const VOUCHER_ERRORS = new Set(['INVALID_VOUCHER', 'VOUCHER_MIN_ORDER'])
+// INVALID_VOUCHER: bản DB trước migration B (ux-messages) gộp mọi lý do vào một mã
+const VOUCHER_ERRORS = new Set<ErrorCode>([
+  'VOUCHER_NOT_FOUND',
+  'VOUCHER_INACTIVE',
+  'VOUCHER_NOT_STARTED',
+  'VOUCHER_EXPIRED',
+  'VOUCHER_EXHAUSTED',
+  'INVALID_VOUCHER',
+  'VOUCHER_MIN_ORDER',
+])
 
 async function quote(code: string | null) {
   const supabase = await createClient()
@@ -32,5 +42,15 @@ export async function getCheckoutQuote(
   if (!code || !VOUCHER_ERRORS.has(failure.code)) throw new Error(`getCheckoutQuote: ${first.error.message}`)
   const plain = await quote(null)
   if (plain.error) throw new Error(`getCheckoutQuote: ${plain.error.message}`)
-  return { quote: plain.data, voucher: { code, failure: await withMessage(locale, failure) } }
+  return { quote: plain.data, voucher: { code, failure: await voucherFailure(locale, failure, plain.data.subtotal) } }
+}
+
+/** Chưa đủ đơn tối thiểu → nói rõ còn thiếu bao nhiêu (DB trước migration B không gửi shortfall: tính từ tạm tính) */
+async function voucherFailure(locale: Locale, failure: Failure, subtotal: number): Promise<Failure> {
+  const min = failure.details?.min_order_value
+  if (failure.code !== 'VOUCHER_MIN_ORDER' || typeof min !== 'number') return withMessage(locale, failure)
+  const fromDb = failure.details?.shortfall
+  const shortfall = typeof fromDb === 'number' ? fromDb : Math.max(min - subtotal, 0)
+  const t = await getTranslations({ locale, namespace: 'checkout' })
+  return { ...failure, message: t('voucherMinOrderShortfall', { shortfall, min_order_value: min }) }
 }

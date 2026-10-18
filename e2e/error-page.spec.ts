@@ -24,7 +24,8 @@ const cases = [
   {
     locale: 'vi',
     path: '/tai-khoan/don-hang',
-    title: 'Không tải được trang',
+    title: 'Có lỗi phía Nhà Sách Mây',
+    reference: 'Mã tra cứu: ',
     retry: 'Thử lại',
     home: 'Về trang chủ',
     recovered: 'Đơn hàng của tôi',
@@ -32,7 +33,8 @@ const cases = [
   {
     locale: 'en',
     path: '/en/account/orders',
-    title: 'This page could not be loaded',
+    title: 'Something went wrong on our side',
+    reference: 'Reference code: ',
     retry: 'Try again',
     home: 'Back to home',
     recovered: 'My orders',
@@ -51,6 +53,13 @@ for (const c of cases) {
     await expect(page.getByRole('banner')).toBeVisible()
     await expect(page.getByRole('contentinfo')).toBeVisible()
     await expect(errorPage.getByRole('link', { name: c.home })).toHaveAttribute('href', c.locale === 'vi' ? '/' : '/en')
+    // Lỗi ở server → có mã tra cứu (digest của Next) + email liên hệ; không còn câu đổ cho mạng
+    await expect(errorPage.getByTestId('error-reference')).toHaveText(new RegExp(`^${c.reference}[\\w-]+$`))
+    await expect(errorPage.getByRole('link', { name: 'nha-sach-may@googlegroups.com' })).toHaveAttribute(
+      'href',
+      'mailto:nha-sach-may@googlegroups.com',
+    )
+    await expect(errorPage).not.toContainText('chập chờn')
     // Không lộ chi tiết lỗi
     await expect(errorPage).not.toContainText('fetch failed')
     await expect(errorPage).not.toContainText('listOrders')

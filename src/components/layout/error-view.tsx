@@ -1,9 +1,24 @@
 'use client'
 
 import { createContext, use, useEffect, useRef, type ReactNode } from 'react'
+import { SUPPORT_EMAIL } from '@/lib/support'
+import { fillTemplate } from '@/lib/template'
+import { SupportEmailText } from './support-email-text'
 
-/** Chuỗi của trang lỗi, đã dịch (namespace `errorPage`) */
-export type ErrorPageMessages = { title: string; description: string; retry: string; backHome: string }
+/**
+ * Chuỗi của trang lỗi, đã dịch (namespace `errorPage`). Giữ nguyên chỗ trống `{email}`, `{digest}` (điền ở đây):
+ * global-error dùng bản chép của messages/*.json, không qua next-intl.
+ */
+export type ErrorPageMessages = {
+  title: string
+  /** Có mã tra cứu */
+  description: string
+  /** Không có mã tra cứu (lỗi chỉ xảy ra ở trình duyệt, Next không gắn digest) */
+  descriptionNoRef: string
+  reference: string
+  retry: string
+  backHome: string
+}
 
 // error.tsx bắt buộc là client component và Next không truyền props từ server vào nó. Layout (server) dịch sẵn
 // 4 chuỗi và đặt vào context này, error.tsx đọc lại: vẫn là "client leaf nhận chuỗi đã dịch từ server", không kéo
@@ -22,6 +37,8 @@ export function useErrorMessages() {
 
 type Props = {
   messages: ErrorPageMessages
+  /** `error.digest`: mã Next gắn cho lỗi ở server, cùng mã trong log server (Vercel → Logs) */
+  digest?: string
   /** `retry` của Next: tải lại dữ liệu server của segment rồi render lại */
   onRetry: () => void
   /** Link về trang chủ: Link của next-intl khi còn layout, `<a>` ở global-error / admin */
@@ -29,13 +46,13 @@ type Props = {
 }
 
 /**
- * Nội dung trang lỗi dùng chung các boundary. Không hiện error.message / digest: lỗi Server Component đã được Next
- * log ở server, production chỉ gửi xuống client một thông báo chung.
+ * Nội dung trang lỗi dùng chung các boundary: câu trung tính (lỗi phía web), mã tra cứu (digest) + email liên hệ.
+ * Không hiện error.message (có thể lộ chi tiết nội bộ); digest chỉ là chuỗi băm, tra được trong log server.
  * Chỉ dùng React + class Tailwind (không Button / radix / next-intl / lucide-react): global-error là một nhóm chunk
  * riêng nhưng tải ở mọi trang, và Turbopack chép lại mọi module nó import thay vì dùng chung với layout (+~21KB gzip
  * khi còn import; lõi lucide ~1KB nên 2 icon là SVG inline, cùng path với CloudOff / RotateCcw của lucide).
  */
-export function ErrorView({ messages, onRetry, homeLink }: Props) {
+export function ErrorView({ messages, digest, onRetry, homeLink }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   // Nội dung trang vừa bị thay bằng trang lỗi → đưa focus về tiêu đề để trình đọc màn hình đọc ngay
@@ -53,7 +70,16 @@ export function ErrorView({ messages, onRetry, homeLink }: Props) {
       <h1 ref={headingRef} tabIndex={-1} className="mt-6 font-serif text-3xl font-medium outline-none">
         {messages.title}
       </h1>
-      <p className="mt-4 text-muted-foreground">{messages.description}</p>
+      <p className="mt-4 text-muted-foreground">
+        <SupportEmailText
+          text={fillTemplate(digest ? messages.description : messages.descriptionNoRef, { email: SUPPORT_EMAIL })}
+        />
+      </p>
+      {digest && (
+        <p className="mt-3 text-sm text-subtle" data-testid="error-reference">
+          {fillTemplate(messages.reference, { digest })}
+        </p>
+      )}
       <div className="mt-8 flex flex-wrap gap-3">
         <button
           type="button"

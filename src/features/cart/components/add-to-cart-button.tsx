@@ -2,6 +2,7 @@
 
 import { ShoppingBagIcon } from 'lucide-react'
 import { useState, useTransition, type FormEvent } from 'react'
+import { SupportEmailText } from '@/components/layout/support-email-text'
 import { Button } from '@/components/ui/button'
 import { Link, useRouter } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
@@ -94,7 +95,11 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction }: Prop
             </Link>
           </>
         )}
-        {status?.kind === 'error' && <span className="text-sale">{status.message}</span>}
+        {status?.kind === 'error' && (
+          <span className="text-sale">
+            <SupportEmailText text={status.message} />
+          </span>
+        )}
       </p>
     </form>
   )

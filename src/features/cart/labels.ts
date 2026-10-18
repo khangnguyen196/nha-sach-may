@@ -1,5 +1,6 @@
 import 'server-only'
 import { getTranslations } from 'next-intl/server'
+import { SUPPORT_EMAIL } from '@/lib/support'
 import { placeholder } from '@/lib/template'
 import type { CartViewLabels } from './components/cart-view'
 
@@ -34,6 +35,6 @@ export async function getCartViewLabels(): Promise<CartViewLabels> {
     freeShipProgress: t('freeShipProgress'),
     checkout: t('checkout'),
     updating: t('updating'),
-    error: tErrors('UNKNOWN'),
+    error: tErrors('UNKNOWN', { email: SUPPORT_EMAIL }),
   }
 }

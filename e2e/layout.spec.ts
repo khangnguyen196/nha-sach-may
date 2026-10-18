@@ -133,3 +133,19 @@ test('footer nằm dưới màn hình đầu ở trang có nội dung stream (kh
     expect(top, path).toBeGreaterThanOrEqual(viewport - 1)
   }
 })
+
+test('footer có email liên hệ (mailto), cả footer rút gọn ở trang đăng nhập', async ({ page }) => {
+  for (const [path, label] of [
+    ['/', 'Liên hệ: nha-sach-may@googlegroups.com'],
+    ['/dang-nhap', 'Liên hệ: nha-sach-may@googlegroups.com'],
+    ['/en', 'Contact: nha-sach-may@googlegroups.com'],
+  ] as const) {
+    await page.goto(path)
+    const footer = page.getByRole('contentinfo')
+    await expect(footer.getByText(label), path).toBeVisible()
+    await expect(footer.getByRole('link', { name: 'nha-sach-may@googlegroups.com' }), path).toHaveAttribute(
+      'href',
+      'mailto:nha-sach-may@googlegroups.com',
+    )
+  }
+})

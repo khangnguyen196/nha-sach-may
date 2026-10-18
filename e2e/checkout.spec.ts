@@ -519,7 +519,7 @@ test('voucher: mã sai / chưa đủ tối thiểu → lỗi dưới ô; mã đ�
     // Form GET: mã nằm trên URL, server tính lại bằng quote_order
     await applyVoucher(page, 'KHONG-CO-MA-NAY')
     await expect(page).toHaveURL(/[?&]voucher=KHONG-CO-MA-NAY/)
-    await expect(voucherError).toHaveText('Mã giảm giá không hợp lệ hoặc đã hết hạn.')
+    await expect(voucherError).toHaveText('Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.')
     await expect(total).toHaveText(vnd(totalOf(book.price)))
 
     await applyVoucher(page, highMin.code)

@@ -8,5 +8,6 @@ export const formats = {
   },
   dateTime: {
     short: { day: 'numeric', month: 'short', year: 'numeric' },
+    withTime: { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' },
   },
 } satisfies Formats

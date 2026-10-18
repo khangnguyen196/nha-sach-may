@@ -240,7 +240,7 @@ test('đặt qua checkout → "Xem đơn hàng" → hủy kèm lý do: Đã hủ
   expect(errors).toEqual([])
 })
 
-test('cửa hàng xác nhận sau khi trang đã mở → hủy báo không thể hủy, trang hiện "Đã xác nhận"', async ({
+test('cửa hàng xác nhận sau khi trang đã mở → hủy báo đã xác nhận + email liên hệ, trang hiện "Đã xác nhận"', async ({
   page,
   users,
   projectIndex,
@@ -255,7 +255,14 @@ test('cửa hàng xác nhận sau khi trang đã mở → hủy báo không th�
 
   await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
   await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()
-  await expect(main(page).getByTestId('cancel-error')).toHaveText('Đơn hàng này không thể hủy.')
+  const cancelError = main(page).getByTestId('cancel-error')
+  await expect(cancelError).toHaveText(
+    'Cửa hàng đã xác nhận đơn nên bạn không tự hủy được nữa. Cần hủy, bạn gửi email tới nha-sach-may@googlegroups.com kèm mã đơn nhé.',
+  )
+  await expect(cancelError.getByRole('link', { name: 'nha-sach-may@googlegroups.com' })).toHaveAttribute(
+    'href',
+    'mailto:nha-sach-may@googlegroups.com',
+  )
   await expect(main(page).getByTestId('order-status').first()).toHaveText('Đã xác nhận')
   await expect(main(page).getByText('Hủy đơn hàng', { exact: true })).toHaveCount(0)
   expect((await ordersOf(users.orders.id))[0]?.status).toBe('confirmed')

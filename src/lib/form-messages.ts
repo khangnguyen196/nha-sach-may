@@ -1,6 +1,7 @@
 import 'server-only'
 import { getTranslations } from 'next-intl/server'
 import { VALIDATION_KEYS, type ErrorCode, type ValidationKey } from './errors'
+import { SUPPORT_EMAIL } from './support'
 
 /** Chuỗi lỗi đã dịch truyền xuống form client (client leaf không dùng useTranslations, xem CLAUDE.md → i18n) */
 export type FormMessages = {
@@ -14,8 +15,13 @@ export async function getFormMessages(codes: ErrorCode[]): Promise<FormMessages>
   const [tErrors, tValidation] = await Promise.all([getTranslations('errors'), getTranslations('validation')])
   const all: ErrorCode[] = [...codes, 'INVALID_INPUT']
   const errors: Partial<Record<ErrorCode, string>> = {}
-  for (const code of all) errors[code] = tErrors(code)
+  // Câu cần hỗ trợ (UNKNOWN…) có {email}; câu khác bỏ qua tham số thừa
+  const values = { email: SUPPORT_EMAIL }
+  for (const code of all) errors[code] = tErrors(code, values)
   const validation: Partial<Record<ValidationKey, string>> = {}
   for (const key of VALIDATION_KEYS) validation[key] = tValidation(key)
-  return { errors: { ...errors, UNKNOWN: tErrors('UNKNOWN'), NETWORK_ERROR: tErrors('NETWORK_ERROR') }, validation }
+  return {
+    errors: { ...errors, UNKNOWN: tErrors('UNKNOWN', values), NETWORK_ERROR: tErrors('NETWORK_ERROR', values) },
+    validation,
+  }
 }

@@ -35,7 +35,7 @@ type Props = {
 /**
  * Khối hủy đơn. Xác nhận bằng <details> (không cần JS, bàn phím mở / đóng được, không thêm dialog vào bundle) như
  * xóa địa chỉ. Page luôn render component này ở cùng vị trí, kể cả khi đơn không còn hủy được: action hủy xong (hoặc
- * gặp ORDER_NOT_CANCELLABLE) thì refresh() → server render lại với `cancellable = false`, component không bị gỡ nên
+ * bị từ chối, VD ORDER_IN_PROGRESS) thì refresh() → server render lại với `cancellable = false`, component không bị gỡ nên
  * thông báo kết quả trong state vẫn còn để hiện.
  */
 export function CancelOrderForm({ action, messages, labels, cancellable, reasonMax }: Props) {

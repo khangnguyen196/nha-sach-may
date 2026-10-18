@@ -7,9 +7,22 @@ export const ERROR_CODES = [
   'BOOK_UNAVAILABLE',
   'OUT_OF_STOCK',
   'CART_EMPTY',
+  // Mã giảm giá không dùng được, theo lý do (ux-messages B). INVALID_VOUCHER: mã gộp của bản DB trước migration B,
+  // giữ để app chạy được cả trước lẫn sau khi chạy B; xóa ở đợt sau.
+  'VOUCHER_NOT_FOUND',
+  'VOUCHER_INACTIVE',
+  'VOUCHER_NOT_STARTED',
+  'VOUCHER_EXPIRED',
+  'VOUCHER_EXHAUSTED',
   'INVALID_VOUCHER',
   'VOUCHER_MIN_ORDER',
+  // Khách tự hủy đơn không được, theo lý do (ux-messages B). ORDER_NOT_CANCELLABLE: đơn không có / của tài khoản khác
+  // (và mọi trường hợp ở bản DB trước migration B)
   'ORDER_NOT_CANCELLABLE',
+  'ORDER_ALREADY_CANCELLED',
+  'ORDER_DELIVERED',
+  'ORDER_IN_PROGRESS',
+  'ORDER_PAID',
   'ORDER_REOPEN_FORBIDDEN',
   'ORDER_INVALID_TRANSITION',
   'INVALID_INPUT',
@@ -21,6 +34,10 @@ export const ERROR_CODES = [
   'SAME_PASSWORD',
   'RATE_LIMITED',
   'LINK_EXPIRED',
+  // Auth (ux-messages): Supabase tắt đăng ký, tài khoản bị khóa, phiên đăng nhập hết hạn giữa chừng
+  'SIGNUP_DISABLED',
+  'ACCOUNT_LOCKED',
+  'SESSION_EXPIRED',
   // Admin (Phase 7): không có quyền, slug trùng, ảnh bìa, xóa / đổi cha khi còn sách
   'FORBIDDEN',
   'SLUG_TAKEN',
@@ -32,6 +49,9 @@ export const ERROR_CODES = [
   'ORDER_STATUS_CHANGED',
   'VOUCHER_CODE_TAKEN',
   'VOUCHER_IN_USE',
+  // Admin (ux-messages): mục vừa bị xóa ở tab / máy khác (update khớp 0 dòng); lưu sách xong nhưng lỗi bảng tác giả
+  'ITEM_DELETED',
+  'BOOK_AUTHORS_NOT_SAVED',
   // Phase 9: viết đánh giá khi chưa nhận sách (RLS reviews_insert_if_purchased)
   'REVIEW_NOT_ALLOWED',
   // Phase 11, chatbot Mây: hết lượt của khách (consume_chat_quota), hết lượt miễn phí của Gemini (trần chung / 429),

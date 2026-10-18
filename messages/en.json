@@ -24,10 +24,12 @@
     "backHome": "Back to home"
   },
   "errorPage": {
-    "title": "This page could not be loaded",
-    "description": "Something went wrong while loading this page. The connection may be unstable, so please try again in a moment.",
+    "title": "Something went wrong on our side",
+    "description": "This is a problem at Nhà Sách Mây, not something you did. Please press “Try again”; if it keeps happening, send the reference code below to {email}.",
     "retry": "Try again",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "descriptionNoRef": "This is a problem at Nhà Sách Mây, not something you did. Please press “Try again”; if it keeps happening, email {email} with the link to this page.",
+    "reference": "Reference code: {digest}"
   },
   "layout": {
     "searchPlaceholder": "Search books, authors…",
@@ -41,7 +43,8 @@
     "footerBrowse": "Browse",
     "footerAbout": "A non-commercial learning project. Book data comes from Google Books, some covers from <openLibrary>Open Library</openLibrary>; prices are for illustration only.",
     "copyright": "© Nhà Sách Mây",
-    "admin": "Admin"
+    "admin": "Admin",
+    "footerContact": "Contact: {email}"
   },
   "search": {
     "title": "Search books",
@@ -224,7 +227,8 @@
     "voucherApplied": "Code {code} applied",
     "voucherRemove": "Remove code",
     "discount": "Discount",
-    "recalculating": "Recalculating the total…"
+    "recalculating": "Recalculating the total…",
+    "voucherMinOrderShortfall": "Add {shortfall, number, price} more to use this code (orders from {min_order_value, number, price})."
   },
   "order": {
     "successTitle": "Order placed",
@@ -442,7 +446,7 @@
     "CART_EMPTY": "Your cart is empty.",
     "INVALID_VOUCHER": "This voucher code is invalid or has expired.",
     "VOUCHER_MIN_ORDER": "This code applies to orders from {min_order_value, number, price}.",
-    "ORDER_NOT_CANCELLABLE": "This order can no longer be cancelled.",
+    "ORDER_NOT_CANCELLABLE": "This order can’t be cancelled. Reload the page to see its latest status.",
     "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",
     "ORDER_INVALID_TRANSITION": "This order cannot be moved to that status.",
     "INVALID_INPUT": "Some of the information is invalid.",
@@ -469,7 +473,21 @@
     "CHAT_UNAVAILABLE": "Mây is a bit tired, please come back in a few minutes.",
     "CHAT_REGION": "Mây is not available in your region yet.",
     "NETWORK_ERROR": "Could not reach the server. Please try again in a few minutes.",
-    "UNKNOWN": "Something went wrong. Please try again."
+    "UNKNOWN": "Something went wrong on our side, not yours. Please try again; if it keeps happening, email {email}.",
+    "VOUCHER_NOT_FOUND": "We couldn’t find this code. Please check it letter by letter.",
+    "VOUCHER_INACTIVE": "This code is no longer active. Please try another one.",
+    "VOUCHER_NOT_STARTED": "This code can be used from {starts_at}. Please come back then.",
+    "VOUCHER_EXPIRED": "This code expired on {ends_at}. Please try another one.",
+    "VOUCHER_EXHAUSTED": "This code has been fully redeemed. Please try another one.",
+    "ORDER_ALREADY_CANCELLED": "This order was already cancelled. Nothing else to do.",
+    "ORDER_DELIVERED": "This order has been delivered, so it can’t be cancelled. For returns, email {email} with your order code.",
+    "ORDER_IN_PROGRESS": "The store has already {status, select, shipping {handed this order to the courier} other {confirmed this order}}, so it can no longer be cancelled here. To cancel, email {email} with your order code.",
+    "ORDER_PAID": "This order is already paid, so the store needs to cancel and refund it. Email {email} with your order code.",
+    "SIGNUP_DISABLED": "Nhà Sách Mây isn’t accepting new sign-ups right now. Please come back later.",
+    "ACCOUNT_LOCKED": "This account is locked. Email {email} for help.",
+    "SESSION_EXPIRED": "Your session has expired. Please sign in again and retry.",
+    "ITEM_DELETED": "This item was just deleted elsewhere. Reload the list to see the latest data.",
+    "BOOK_AUTHORS_NOT_SAVED": "The book was saved, but its authors weren’t. Please press Save again."
   },
   "allBooks": {
     "title": "All books",
