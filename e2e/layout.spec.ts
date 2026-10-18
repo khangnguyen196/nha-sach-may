@@ -65,10 +65,13 @@ test('trang không có query: link đổi ngôn ngữ không có dấu ? thừa 
 
 test('đổi ngôn ngữ giữ nguyên query', async ({ page }) => {
   await page.goto('/?x=1')
+  // Link trong HTML tĩnh (cả fallback Suspense lúc trang chưa stream xong) đã có query trước khi bấm
+  await expect(page.getByRole('link', { name: /Xem bằng tiếng Anh/ })).toHaveAttribute('href', '/en?x=1')
   await page.getByRole('link', { name: /Xem bằng tiếng Anh/ }).click()
   await expect(page).toHaveURL(/\/en\?x=1$/)
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
+  await expect(page.getByRole('link', { name: /View in Vietnamese/ })).toHaveAttribute('href', '/?x=1')
   await page.getByRole('link', { name: /View in Vietnamese/ }).click()
   await expect(page).toHaveURL(/\/\?x=1$/)
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
