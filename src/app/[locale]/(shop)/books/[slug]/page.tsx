@@ -3,8 +3,8 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import type { Locale } from 'next-intl'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Fragment, Suspense } from 'react'
+import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb, type Crumb } from '@/features/books/components/breadcrumb'
 import { Shelf, ShelfSkeleton } from '@/features/books/components/shelf'
@@ -110,7 +110,8 @@ async function BookContent({ params }: { params: Props['params'] }) {
     getLocale(),
     getTranslations('book'),
   ])
-  if (!book) notFound()
+  // Proxy đã trả 404 thật; tới được đây là proxy không hỏi được DB → UI 404 trong boundary (không throw sau stream)
+  if (!book) return <InlineNotFound kind="book" heading="h1" />
 
   const leaf = categories.find((c) => c.id === book.category_id)
   const parent = leaf && categories.find((c) => c.id === leaf.parent_id)

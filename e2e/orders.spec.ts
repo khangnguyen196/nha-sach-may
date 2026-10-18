@@ -370,3 +370,48 @@ for (const refusal of refusals) {
     expect(errors).toEqual([])
   })
 }
+
+test('không tìm thấy đơn: mã sai dạng, mã không có, đơn của tài khoản khác → HTTP 404, CÙNG một câu', async ({
+  browser,
+  baseURL,
+  users,
+  projectIndex,
+}, testInfo) => {
+  test.setTimeout(60_000)
+  const { orders } = await placeOrders(users, plentyBook(projectIndex), 1)
+  const order = orders[0]
+  if (!order) throw new Error('Không tạo được đơn')
+
+  // User chính của project: không phải chủ đơn
+  const other = await browser.newContext({ baseURL, storageState: storageStatePath(testInfo.project.name) })
+  const page = await other.newPage()
+  const errors = collectErrorsAllow404(page)
+  const message =
+    'Không tìm thấy đơn hàng này. Có thể mã đơn chưa đúng, hoặc đơn này thuộc một tài khoản khác. Bạn kiểm tra lại trong Tài khoản → Đơn hàng.'
+  const texts = new Set<string>()
+  for (const code of ['NS-khong-hop-le', 'NS00000000000', order.order_code]) {
+    for (const path of [`/tai-khoan/don-hang/${code}`, `/thanh-toan/thanh-cong/${code}`]) {
+      const response = await page.goto(path)
+      expect(response?.status(), path).toBe(404)
+      const view = main(page).getByTestId('not-found')
+      await expect(view, path).toContainText(message)
+      await expect(view.getByRole('link', { name: 'Đơn hàng của tôi' }), path).toHaveAttribute('href', '/tai-khoan/don-hang')
+      texts.add((await view.textContent()) ?? '')
+    }
+  }
+  // Không để lộ mã đơn nào tồn tại: mọi trường hợp hiện y hệt nhau
+  expect(texts.size).toBe(1)
+  expect(errors).toEqual([])
+  await other.close()
+})
+
+test('danh sách đơn ?page vượt quá → soft 404 (200, noindex), "Về trang đầu" giữ bộ lọc', async ({ page }) => {
+  const response = await page.goto('/tai-khoan/don-hang?status=cancelled&page=99')
+  expect(response?.status()).toBe(200)
+  await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
+  await expect(main(page).getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
+  await expect(main(page).getByRole('link', { name: 'Về trang đầu' })).toHaveAttribute(
+    'href',
+    '/tai-khoan/don-hang?status=cancelled',
+  )
+})

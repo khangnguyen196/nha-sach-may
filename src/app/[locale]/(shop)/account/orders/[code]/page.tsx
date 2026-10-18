@@ -52,7 +52,7 @@ async function Order({ locale, params }: { locale: Locale; params: Props['params
   ])
   // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
   // được) thì hiện UI 404 trong boundary
-  if (!order) return <InlineNotFound />
+  if (!order) return <InlineNotFound kind="order" heading="h1" />
 
   // Đơn đã giao: đánh giá từng cuốn ngay trên trang đơn (sách đã xóa khỏi catalog thì không còn chỗ đánh giá)
   const delivered = order.status === 'delivered'

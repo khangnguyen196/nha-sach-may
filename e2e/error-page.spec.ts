@@ -79,6 +79,9 @@ test('trang lỗi: focus vào tiêu đề, điều hướng được bằng bàn
   await page.goto('/tai-khoan/don-hang')
   const heading = main(page).getByTestId('error-page').getByRole('heading', { level: 1 })
   await expect(heading).toBeFocused()
+  // Email liên hệ nằm trong câu mô tả, trước nút "Thử lại"
+  await page.keyboard.press('Tab')
+  await expect(main(page).getByRole('link', { name: 'nha-sach-may@googlegroups.com' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(main(page).getByRole('button', { name: 'Thử lại' })).toBeFocused()
   await page.keyboard.press('Tab')

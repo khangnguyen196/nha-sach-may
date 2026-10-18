@@ -95,7 +95,7 @@ async function SearchResults({ locale, searchParams }: { locale: Locale; searchP
   const { params, parents, input } = withCategoryFilter(parsed, categories, 'search')
   const result = await listBooks(input)
   // Trang vượt quá → UI 404 (soft 404)
-  if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
+  if (params.page > 1 && result.books.length === 0) return <InlineNotFound kind="page" />
 
   return (
     <>

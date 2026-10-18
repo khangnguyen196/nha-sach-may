@@ -46,7 +46,7 @@ async function OrderSuccess({ locale, params }: { locale: Locale; params: Props[
   const [order, t, format] = await Promise.all([getOrderByCode(code, user.id), getTranslations('order'), getFormatter()])
   // Không có hoặc của người khác (lọc theo user_id) → 404 như nhau. Proxy đã trả 404; còn tới đây (proxy không hỏi
   // được) thì hiện UI 404 trong boundary
-  if (!order) return <InlineNotFound />
+  if (!order) return <InlineNotFound kind="order" />
 
   return (
     <>

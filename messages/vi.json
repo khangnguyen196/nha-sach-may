@@ -20,8 +20,19 @@
   },
   "notFound": {
     "title": "Không tìm thấy trang",
-    "description": "Trang bạn tìm không tồn tại hoặc đã được chuyển đi.",
-    "backHome": "Về trang chủ"
+    "description": "Trang bạn tìm không có hoặc đã được chuyển đi. Bạn thử tìm sách hoặc xem danh mục nhé.",
+    "backHome": "Về trang chủ",
+    "book": "Cuốn sách này không có hoặc đã ngừng bán. Bạn thử tìm tên sách hoặc xem các danh mục nhé.",
+    "category": "Danh mục này không có hoặc đang tạm ẩn. Bạn xem các danh mục khác nhé.",
+    "author": "Không có tác giả này trong nhà sách. Bạn thử tìm theo tên nhé.",
+    "order": "Không tìm thấy đơn hàng này. Có thể mã đơn chưa đúng, hoặc đơn này thuộc một tài khoản khác. Bạn kiểm tra lại trong Tài khoản → Đơn hàng.",
+    "address": "Không tìm thấy địa chỉ này. Bạn xem lại trong Sổ địa chỉ nhé.",
+    "search": "Tìm sách",
+    "browse": "Xem danh mục",
+    "myOrders": "Đơn hàng của tôi",
+    "addressBook": "Sổ địa chỉ",
+    "account": "Tài khoản",
+    "firstPage": "Về trang đầu"
   },
   "errorPage": {
     "title": "Có lỗi phía Nhà Sách Mây",

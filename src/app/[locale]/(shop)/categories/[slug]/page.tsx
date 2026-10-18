@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { resolveSort } from '@/features/books/catalog-params'
@@ -50,7 +49,8 @@ async function CategoryContent({ params, searchParams }: Pick<Props, 'params' | 
   const { slug } = await params
   const [categories, locale] = await Promise.all([getCategories(), getLocale()])
   const category = categories.find((c) => c.slug === slug)
-  if (!category) notFound()
+  // Proxy đã trả 404 thật; tới được đây là proxy không hỏi được DB → UI 404 trong boundary (không throw sau stream)
+  if (!category) return <InlineNotFound kind="category" heading="h1" />
 
   const parent = categories.find((c) => c.id === category.parent_id)
   const subcategories = categories.filter((c) => c.parent_id === category.id)
@@ -107,7 +107,7 @@ async function CategoryResults({ category, subcategories, locale, searchParams }
     page: params.page,
   })
   // Không dựa vào count 'estimated': trang > 1 mà không có dòng nào là trang không tồn tại → UI 404 (soft 404)
-  if (params.page > 1 && result.books.length === 0) return <InlineNotFound />
+  if (params.page > 1 && result.books.length === 0) return <InlineNotFound kind="page" />
 
   return (
     <CatalogView

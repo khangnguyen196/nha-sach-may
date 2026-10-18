@@ -8,6 +8,7 @@ import { ORDER_CODE } from '@/features/orders/params'
 import { localizedPath, matchOrderPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
+import { NOT_FOUND_HEADER, type NotFoundKind } from '@/lib/not-found-kind'
 import { createSlugGuard } from '@/lib/slug-guard'
 import { createPublicClient } from '@/lib/supabase/public'
 import { supabaseEnv } from '@/lib/supabase/env'
@@ -15,6 +16,9 @@ import { supabaseEnv } from '@/lib/supabase/env'
 const handleI18nRouting = createIntlMiddleware(routing)
 
 const SLUG_TABLES = { '/books/[slug]': 'books', '/categories/[slug]': 'categories', '/authors/[slug]': 'authors' } as const
+const SLUG_KINDS = { '/books/[slug]': 'book', '/categories/[slug]': 'category', '/authors/[slug]': 'author' } as const
+
+type Missing = { locale: Locale; kind: NotFoundKind }
 
 // Client anon: RLS chỉ trả sách / danh mục đang hiện → sách ẩn cũng là 404, như trang tự gọi notFound()
 const slugExists = createSlugGuard({
@@ -30,19 +34,21 @@ const slugExists = createSlugGuard({
   },
 })
 
-async function missingSlug(pathname: string) {
+async function missingSlug(pathname: string): Promise<Missing | null> {
   const match = matchSlugPath(pathname)
-  return match && !(await slugExists(match.kind, match.slug)) ? match.locale : null
+  return match && !(await slugExists(match.kind, match.slug)) ? { locale: match.locale, kind: SLUG_KINDS[match.kind] } : null
 }
 
 /**
  * Trang một đơn (đặt hàng thành công, chi tiết đơn) mà đơn không có hoặc của người khác. Lọc user_id như
  * getOrderByCode (RLS cho admin đọc mọi đơn). Lỗi → cho qua: trang tự hiện UI 404 + noindex.
  */
-async function missingOrder(pathname: string, supabase: SupabaseClient<Database>, userId: string) {
+async function missingOrder(pathname: string, supabase: SupabaseClient<Database>, userId: string): Promise<Missing | null> {
   const match = matchOrderPath(pathname)
   if (!match) return null
-  if (!ORDER_CODE.test(match.code)) return match.locale
+  // Mã sai dạng, không có, của tài khoản khác: cùng một trang 404 (không lộ mã đơn nào tồn tại)
+  const missing = { locale: match.locale, kind: 'order' } as const
+  if (!ORDER_CODE.test(match.code)) return missing
   const { count, error } = await supabase
     .from('orders')
     .select('id', { count: 'exact', head: true })
@@ -52,19 +58,23 @@ async function missingOrder(pathname: string, supabase: SupabaseClient<Database>
     console.error('order-guard:', error.message)
     return null
   }
-  return count === 0 ? match.locale : null
+  return count === 0 ? missing : null
 }
 
 /**
  * Slug không tồn tại, đơn không thuộc người đang đăng nhập → rewrite sang một đường dẫn không khớp
  * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
  * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
+ * Header x-not-found cho not-found.tsx biết thiếu cái gì (sách ngừng bán, đơn của tài khoản khác…).
  */
 async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Database>, userId: string | undefined) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null
   const { pathname } = request.nextUrl
-  const locale = (await missingSlug(pathname)) ?? (userId ? await missingOrder(pathname, supabase, userId) : null)
-  return locale ? NextResponse.rewrite(new URL(`/${locale}/__not-found`, request.url)) : null
+  const missing = (await missingSlug(pathname)) ?? (userId ? await missingOrder(pathname, supabase, userId) : null)
+  if (!missing) return null
+  const headers = new Headers(request.headers)
+  headers.set(NOT_FOUND_HEADER, missing.kind)
+  return NextResponse.rewrite(new URL(`/${missing.locale}/__not-found`, request.url), { request: { headers } })
 }
 
 const isAdminPath = (pathname: string) => pathname === '/admin' || pathname.startsWith('/admin/')

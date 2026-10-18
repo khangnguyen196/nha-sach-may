@@ -20,8 +20,19 @@
   },
   "notFound": {
     "title": "Page not found",
-    "description": "The page you are looking for does not exist or has been moved.",
-    "backHome": "Back to home"
+    "description": "The page you’re looking for doesn’t exist or has moved. Try searching or browsing categories.",
+    "backHome": "Back to home",
+    "book": "This book doesn’t exist or is no longer sold. Try searching for the title or browse categories.",
+    "category": "This category doesn’t exist or is hidden for now. Browse other categories.",
+    "author": "We don’t have this author. Try searching by name.",
+    "order": "We couldn’t find this order. The order code may be wrong, or the order belongs to another account. Please check under Account → Orders.",
+    "address": "We couldn’t find this address. Please check your address book.",
+    "search": "Search books",
+    "browse": "Browse categories",
+    "myOrders": "My orders",
+    "addressBook": "Address book",
+    "account": "Account",
+    "firstPage": "Go to first page"
   },
   "errorPage": {
     "title": "Something went wrong on our side",

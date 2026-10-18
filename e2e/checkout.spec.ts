@@ -710,7 +710,7 @@ test('chuyển khoản VietQR: trang thành công + chi tiết đơn có mã QR,
   expect(errors).toEqual([])
 })
 
-// Chờ migration 20261016020000_payments_email.sql: trước đó cancel_order chưa kiểm tra payment_status → test này fail.
+// cancel_order kiểm payment_status (payments_email.sql); từ ux-messages B báo đúng lý do ORDER_PAID.
 test('RPC: khách không tự hủy được đơn đã thanh toán (cancel_order chặn ở DB)', async ({ users, projectIndex }) => {
   const client = await signedInClient(users.checkout)
   const addressId = await seedAddress(users.checkout.id)
@@ -722,6 +722,6 @@ test('RPC: khách không tự hủy được đơn đã thanh toán (cancel_orde
   })
   await setPaymentStatus(order.id, 'paid')
   const { error } = await client.rpc('cancel_order', { p_order_id: order.id })
-  expect(error?.message).toBe('ORDER_NOT_CANCELLABLE')
+  expect(error?.message).toBe('ORDER_PAID')
   expect(await orderRow(order.id)).toMatchObject({ status: 'pending', payment_status: 'paid' })
 })

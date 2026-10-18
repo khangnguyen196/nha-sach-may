@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { resolveSort } from '@/features/books/catalog-params'
@@ -50,7 +49,8 @@ export default function AuthorPage({ params, searchParams }: Props) {
 async function AuthorContent({ params, searchParams }: Pick<Props, 'params' | 'searchParams'>) {
   const { slug } = await params
   const [author, locale, t] = await Promise.all([getAuthorBySlug(slug), getLocale(), getTranslations('author')])
-  if (!author) notFound()
+  // Proxy đã trả 404 thật; tới được đây là proxy không hỏi được DB → UI 404 trong boundary (không throw sau stream)
+  if (!author) return <InlineNotFound kind="author" heading="h1" />
   const bio = splitParagraphs(localize(author, 'bio', locale))
 
   return (
@@ -92,7 +92,7 @@ async function AuthorResults({ slug, bookIds, searchParams }: ResultsProps) {
       ? await listBooks({ bookIds, sort: resolveSort(params, 'browse'), page })
       : { books: [], total: 0 }
   // Trang vượt quá → UI 404 (soft 404)
-  if (page > 1 && result.books.length === 0) return <InlineNotFound />
+  if (page > 1 && result.books.length === 0) return <InlineNotFound kind="page" />
 
   return (
     <CatalogView

@@ -49,10 +49,18 @@ export default async function OrdersPage({ searchParams }: Props) {
 async function Orders({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
   const params = parseOrderListParams(await searchParams)
   const user = await requireUser(locale, { pathname: '/account/orders', query: orderListQuery(params) })
-  const [{ orders, total }, t] = await Promise.all([listOrders(params, user.id), getTranslations('orders')])
+  const [{ orders, total }, t, tNotFound] = await Promise.all([
+    listOrders(params, user.id),
+    getTranslations('orders'),
+    getTranslations('notFound'),
+  ])
   const totalPages = Math.ceil(total / ORDERS_PAGE_SIZE)
-  // Trang vượt quá số đơn (URL sửa tay / đơn vừa bị xóa) → UI 404 như catalog
-  if (params.page > 1 && params.page > totalPages) return <InlineNotFound />
+  // Trang vượt quá số đơn (URL sửa tay / đơn vừa bị xóa) → soft 404 như catalog (đã quyết: trang riêng tư, không index,
+  // không thêm query ở proxy); link về trang đầu giữ bộ lọc trạng thái
+  if (params.page > 1 && params.page > totalPages) {
+    const firstPage = { pathname: '/account/orders', query: orderListQuery({ status: params.status, page: 1 }) } as const
+    return <InlineNotFound kind="page" primary={{ href: firstPage, label: tNotFound('firstPage') }} />
+  }
 
   return (
     <>
