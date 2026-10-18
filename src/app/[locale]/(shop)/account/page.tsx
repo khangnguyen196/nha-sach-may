@@ -10,6 +10,7 @@ import { accountPageMetadata } from '@/features/account/metadata'
 import { getProfile } from '@/features/account/queries'
 import { isAdmin } from '@/features/admin/auth'
 import { signOut } from '@/features/auth/actions'
+import { SignOutForm } from '@/features/auth/components/sign-out-form'
 import { getPathname, Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
 import { requireUser } from '@/lib/auth'
@@ -84,11 +85,11 @@ async function AccountContent({ locale }: { locale: Locale }) {
       </section>
 
       {/* Form + Server Action: đăng xuất chạy được cả khi không có JS */}
-      <form action={signOut.bind(null, locale)} className="mt-10">
+      <SignOutForm action={signOut.bind(null, locale)} className="mt-10">
         <SubmitButton variant="outline" size="lg" className="h-11 px-5" pendingLabel={tAuth('pending')}>
           {t('signOut')}
         </SubmitButton>
-      </form>
+      </SignOutForm>
     </>
   )
 }

@@ -562,6 +562,35 @@ test('ghi chú đã gõ còn nguyên sau khi áp mã giảm giá (form GET tải
   await expect(main(page).getByLabel('Ghi chú cho đơn hàng')).toHaveValue('Gọi trước khi giao')
 })
 
+test('nháp ghi chú theo tài khoản: nháp của người trước trong cùng tab không hiện và bị xóa', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  await seedAddress(users.checkout.id)
+  await setCartItem(users.checkout.id, pick(regular, projectIndex).id, 1)
+  // Người A dùng tab này trước (đăng xuất không qua form đăng xuất, hoặc bản cũ lưu khóa không gắn tài khoản)
+  await page.goto('/')
+  await page.evaluate(() => {
+    sessionStorage.setItem('checkout-note-draft:00000000-0000-0000-0000-00000000000a', 'Nháp của A')
+    sessionStorage.setItem('checkout-note-draft', 'Nháp cũ của A')
+  })
+  await openCheckout(page)
+  const note = main(page).getByLabel('Ghi chú cho đơn hàng')
+  await expect(note).toHaveValue('')
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('checkout-note-draft'))))
+    .toEqual([])
+
+  // Nháp của chính người đang đăng nhập vẫn giữ qua lần tải lại
+  await note.fill('Giao giờ hành chính')
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('checkout-note-draft'))))
+    .toEqual([`checkout-note-draft:${users.checkout.id}`])
+  await page.reload()
+  await expect(main(page).getByLabel('Ghi chú cho đơn hàng')).toHaveValue('Giao giờ hành chính')
+})
+
 test('voucher: mỗi lý do không dùng được có câu riêng dưới ô, tổng không đổi', async ({ page, users, projectIndex }) => {
   test.setTimeout(90_000)
   const errors = collectErrors(page)

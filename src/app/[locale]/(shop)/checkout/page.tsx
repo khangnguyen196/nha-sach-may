@@ -50,7 +50,7 @@ export default async function CheckoutPage({ searchParams }: Props) {
 }
 
 async function CheckoutContent({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
-  await requireUser(locale, '/checkout')
+  const user = await requireUser(locale, '/checkout')
   const query = await searchParams
   // ?voucher= : mã nằm trên URL (form GET "Áp dụng"); sai dạng → báo dưới ô như mã không tồn tại
   const [lines, { quote, voucher }, suggestions, addresses, t, tCart, messages] = await Promise.all([
@@ -89,6 +89,7 @@ async function CheckoutContent({ locale, searchParams }: { locale: Locale; searc
   return (
     <>
       <CheckoutForm
+        userId={user.id}
         action={placeOrder.bind(null, locale)}
         messages={messages}
         labels={{

@@ -10,27 +10,7 @@ import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
 import { useFormAction } from '@/lib/use-form-action'
 import { useGuestCart } from '@/features/cart/store'
-
-// Nháp ghi chú trong tab này: áp mã giảm giá / chọn địa chỉ khác là form GET tải lại trang, không để mất chữ đã gõ.
-// Xóa khi bấm đặt hàng, ghi lại nếu đặt không được (đơn đặt xong thì đã sang trang khác).
-const NOTE_DRAFT_KEY = 'checkout-note-draft'
-
-function readNoteDraft() {
-  try {
-    return sessionStorage.getItem(NOTE_DRAFT_KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-function writeNoteDraft(value: string) {
-  try {
-    if (value) sessionStorage.setItem(NOTE_DRAFT_KEY, value)
-    else sessionStorage.removeItem(NOTE_DRAFT_KEY)
-  } catch {
-    // sessionStorage bị chặn → chỉ mất tiện ích giữ nháp
-  }
-}
+import { clearNoteDrafts, readNoteDraft, writeNoteDraft } from '../note-draft'
 
 /** Chuỗi đã dịch từ server; `{count}` của noteCount điền ở client */
 export type CheckoutFormLabels = {
@@ -46,6 +26,8 @@ export type CheckoutFormLabels = {
 }
 
 type Props = {
+  /** Khóa nháp ghi chú theo tài khoản (note-draft.ts) */
+  userId: string
   /** placeOrder đã bind locale; thành công thì redirect sang trang đặt hàng thành công */
   action: (prev: Result<null> | null, formData: FormData) => Promise<Result<null>>
   messages: FormMessages
@@ -94,6 +76,7 @@ function FixAction({ code, labels }: { code: ErrorCode; labels: CheckoutFormLabe
  * tóm tắt là Server Component truyền vào qua props. Không JS vẫn đặt được (radio + textarea gốc).
  */
 export function CheckoutForm({
+  userId,
   action,
   messages,
   labels,
@@ -124,20 +107,22 @@ export function CheckoutForm({
   useEffect(() => {
     if (failure) alertRef.current?.focus()
     // Đặt không được: giữ nháp ghi chú cho lần tải lại trang sau (đã xóa lúc bấm đặt hàng)
-    if (failure && noteRef.current) writeNoteDraft(noteRef.current.value)
-  }, [failure])
+    if (failure && noteRef.current) writeNoteDraft(userId, noteRef.current.value)
+  }, [failure, userId])
 
   // Khôi phục nháp sau khi tải lại trang (áp mã giảm giá…); ô đang có chữ (khách gõ trước khi hydrate) thì giữ chữ đó
+  // Nháp của tài khoản khác trong cùng tab (đăng xuất không qua form đăng xuất…) bị xóa, không bao giờ hiện
   useEffect(() => {
+    clearNoteDrafts(userId)
     const note = noteRef.current
-    const draft = readNoteDraft()
+    const draft = readNoteDraft(userId)
     if (!note || !draft || note.value) return
     note.value = draft.slice(0, noteMax)
     setNoteLength(note.value.length)
-  }, [noteMax])
+  }, [noteMax, userId])
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    writeNoteDraft('')
+    writeNoteDraft(userId, '')
     formProps.onSubmit(event)
   }
 
@@ -163,7 +148,7 @@ export function CheckoutForm({
           ref={noteRef}
           onChange={(event) => {
             setNoteLength(event.target.value.length)
-            writeNoteDraft(event.target.value)
+            writeNoteDraft(userId, event.target.value)
           }}
           error={noteError}
         />

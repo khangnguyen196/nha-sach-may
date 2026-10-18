@@ -89,6 +89,22 @@ test.describe('khách (chưa đăng nhập)', () => {
     expect(errors).toEqual([])
   })
 
+  test('đăng xuất xóa nháp ghi chú thanh toán của tab (người đăng nhập sau không thấy)', async ({ page, users }) => {
+    // Phiên riêng của test này (như test đăng xuất ở trên)
+    await login(page, users.user)
+    await page.goto('/tai-khoan')
+    await page.evaluate(() => sessionStorage.setItem('checkout-note-draft:nguoi-a', 'Gọi số 0901 234 567'))
+    // Chờ chính form đăng xuất hydrate (onSubmit xóa nháp chỉ có sau hydrate)
+    await page.waitForFunction(() => {
+      const button = [...document.querySelectorAll('main form button')].find((b) => b.textContent?.includes('Đăng xuất'))
+      const form = button?.closest('form')
+      return form !== null && form !== undefined && Object.keys(form).some((key) => key.startsWith('__reactProps'))
+    })
+    await page.getByRole('button', { name: 'Đăng xuất' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('checkout-note-draft')))).toEqual([])
+  })
+
   test('đã đăng nhập vào /dang-nhap → chuyển tới next', async ({ page, users }) => {
     await login(page, users.user)
     await page.goto('/dang-nhap?next=%2Ftai-khoan%2Fdia-chi')
