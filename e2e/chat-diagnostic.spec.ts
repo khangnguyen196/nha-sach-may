@@ -1,34 +1,31 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { writeFileSync } from 'node:fs'
 import { NO_SESSION } from './auth'
 import { badge } from './cart'
+import { waitForHydration } from './helpers'
 
-// TẠM THỜI (Phase 11): tìm nguồn bản sao ẩn của bong bóng chat và của nút submit sau điều hướng phía client.
-// Ghi chuỗi phần tử cha (tên thẻ, id, hidden, style, display, data-*; KHÔNG ghi nội dung text) ra test-results/
-// (artifact của CI). Gỡ file này sau khi đọc kết quả.
+// TẠM THỜI (Phase 11): thí nghiệm đối chứng cho flaky checkout.spec:98 (ô Email bị reset sau khi form đăng nhập
+// hydrate). Cùng luồng khách → giỏ → Thanh toán → đăng nhập, ở tiếng Việt (có chatbot) và /en (không có chatbot).
+// Ghi: form / input trong <main> có bị thay sau khi đã hydrate không, email còn giữ sau 1,5 s không. Không ghi nội
+// dung text của trang. Kết quả ra test-results/ (artifact CI). Gỡ file này sau khi đọc.
 
-test.use({ storageState: NO_SESSION })
+const FLOWS = {
+  vi: { book: '/sach/sapiens', add: 'Thêm vào giỏ', cart: '/gio-hang', checkout: 'Thanh toán', login: /\/dang-nhap\?next=/ },
+  en: { book: '/en/books/sapiens', add: 'Add to cart', cart: '/en/cart', checkout: 'Checkout', login: /\/en\/login\?next=/ },
+} as const
 
-// MutationObserver cài trước mọi script của trang: ghi mọi lần một bong bóng được thêm / gỡ khỏi DOM
+const ITERATIONS = 6
+
+// MutationObserver: mọi lần <form> / <input> trong <main> bị thêm / gỡ, kèm thời điểm
 const RECORDER = () => {
-  const log: unknown[] = []
-  Object.assign(window, { __chatLog: log })
-  const describe = (element: Element) => {
-    const chain: string[] = []
-    for (let node: Element | null = element; node && node !== document.documentElement; node = node.parentElement) {
-      const data = [...node.attributes].filter((a) => a.name.startsWith('data-') || a.name === 'hidden' || a.name === 'id')
-      const style = node.getAttribute('style')
-      chain.push(
-        `${node.tagName.toLowerCase()}${data.map((a) => `[${a.name}=${a.value.slice(0, 40)}]`).join('')}${style ? `(style:${style.slice(0, 80)})` : ''}`,
-      )
-    }
-    return chain.join(' < ')
-  }
+  const log: { t: number; kind: string; tag: string; hidden: boolean }[] = []
+  Object.assign(window, { __formLog: log })
   const visit = (node: Node, kind: string) => {
     if (!(node instanceof Element)) return
-    const bubbles = node.matches('[data-testid="chat-bubble"]') ? [node] : [...node.querySelectorAll('[data-testid="chat-bubble"]')]
-    for (const bubble of bubbles) {
-      log.push({ t: Math.round(performance.now()), kind, total: document.querySelectorAll('[data-testid="chat-bubble"]').length, chain: kind === 'added' ? describe(bubble) : undefined })
+    const targets = node.matches('form, input') ? [node] : [...node.querySelectorAll('form, input')]
+    for (const target of targets) {
+      if (!target.closest('main')) continue
+      log.push({ t: Math.round(performance.now()), kind, tag: target.tagName.toLowerCase(), hidden: !target.closest('main')?.checkVisibility() })
     }
   }
   new MutationObserver((records) => {
@@ -39,67 +36,38 @@ const RECORDER = () => {
   }).observe(document, { childList: true, subtree: true })
 }
 
-async function snapshot(page: Page, selector: string) {
-  return page.evaluate((sel) => {
-    return [...document.querySelectorAll(sel)].map((element) => {
-      const chain: string[] = []
-      for (let node: Element | null = element; node && node !== document.documentElement; node = node.parentElement) {
-        const attrs = [...node.attributes].filter((a) => a.name.startsWith('data-') || a.name === 'hidden' || a.name === 'id')
-        const display = getComputedStyle(node).display
-        chain.push(`${node.tagName.toLowerCase()}${attrs.map((a) => `[${a.name}=${a.value.slice(0, 40)}]`).join('')}${display === 'none' ? '{none}' : ''}`)
+test('chẩn đoán: form đăng nhập sau điều hướng từ giỏ, có chatbot (vi) và không có (en)', async ({ browser, baseURL }, testInfo) => {
+  test.setTimeout(300_000)
+  const results: unknown[] = []
+  const save = () => writeFileSync(testInfo.outputPath('login-diagnostic.json'), JSON.stringify(results, null, 1))
+
+  for (let iteration = 0; iteration < ITERATIONS; iteration++) {
+    for (const [locale, flow] of Object.entries(FLOWS)) {
+      const context = await browser.newContext({ baseURL, storageState: NO_SESSION })
+      const page = await context.newPage()
+      await page.addInitScript(RECORDER)
+      try {
+        await page.goto(flow.book)
+        await page.getByRole('main').getByRole('button', { name: flow.add }).click()
+        await expect(badge(page)).toHaveText('1')
+        await page.goto(flow.cart)
+        await page.getByRole('main').getByTestId('cart-summary').getByRole('link', { name: flow.checkout }).click()
+        await expect(page).toHaveURL(flow.login)
+        const navigatedAt = await page.evaluate(() => Math.round(performance.now()))
+        // Như fillLogin (e2e/auth.ts)
+        await waitForHydration(page, 'main form button[type="submit"]')
+        const hydratedAt = await page.evaluate(() => Math.round(performance.now()))
+        await page.getByRole('main').getByLabel('Email').fill('chan-doan@example.com')
+        await page.waitForTimeout(1_500)
+        const kept = (await page.getByRole('main').getByLabel('Email').inputValue()) === 'chan-doan@example.com'
+        const log = await page.evaluate(() => Reflect.get(window, '__formLog'))
+        results.push({ iteration, locale, navigatedAt, hydratedAt, emailKept: kept, formLog: log })
+      } catch (error) {
+        results.push({ iteration, locale, error: error instanceof Error ? error.message.slice(0, 300) : 'lỗi' })
+      } finally {
+        await context.close()
       }
-      return {
-        visible: element.checkVisibility(),
-        hydrated: Object.keys(element).some((key) => key.startsWith('__reactProps')),
-        chain: chain.join(' < '),
-      }
-    })
-  }, selector)
-}
-
-test('chẩn đoán: bong bóng lúc tải trang + sau điều hướng phía client; nút submit sau khi sang trang đăng nhập', async ({ page }, testInfo) => {
-  test.setTimeout(180_000)
-  await page.addInitScript(RECORDER)
-  const result: Record<string, unknown> = {}
-  const save = () => writeFileSync(testInfo.outputPath('dom-diagnostic.json'), JSON.stringify(result, null, 1))
-
-  // 1. Tải mới trang chủ 5 lần, ghi liên tục
-  const loads: unknown[] = []
-  for (let index = 0; index < 5; index++) {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-    loads.push(await page.evaluate(() => Reflect.get(window, '__chatLog')))
+      save()
+    }
   }
-  result.freshLoads = loads
-  save()
-
-  // 2. Điều hướng phía client: trang chủ → "Xem tất cả sách" (/sach) → một trang sách
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
-  await page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách' }).click()
-  await expect(page).toHaveURL(/\/sach$/)
-  result.afterClientNavToBooks = { log: await page.evaluate(() => Reflect.get(window, '__chatLog')), bubbles: await snapshot(page, '[data-testid="chat-bubble"]') }
-  save()
-
-  // 3. Giỏ (khách) → "Thanh toán" (Link) → proxy chuyển sang /dang-nhap: nút submit nào khớp selector của fillLogin
-  await page.goto('/sach/sapiens')
-  await page.waitForLoadState('networkidle')
-  await page.getByRole('main').getByRole('button', { name: 'Thêm vào giỏ' }).click()
-  await expect(badge(page)).toHaveText('1')
-  await page.goto('/gio-hang')
-  await page.waitForLoadState('networkidle')
-  const checkout = page.getByRole('main').getByRole('link', { name: 'Thanh toán' })
-  if (await checkout.count()) {
-    await checkout.click()
-    await expect(page).toHaveURL(/\/dang-nhap/)
-    result.loginSubmitRightAfterNav = await snapshot(page, 'main form button[type="submit"]')
-    result.mainsRightAfterNav = await snapshot(page, 'main')
-    save()
-    await page.waitForLoadState('networkidle')
-    result.loginSubmitAfterIdle = await snapshot(page, 'main form button[type="submit"]')
-  } else {
-    result.cart = 'giỏ trống, không có link Thanh toán'
-  }
-
-  save()
 })
