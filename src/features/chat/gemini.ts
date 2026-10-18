@@ -82,17 +82,21 @@ export function classify429(body: unknown, now: Date): Cooldown {
   return { until, scope: 'gemini_minute', resetsAt: new Date(until) }
 }
 
-// Cooldown trong bộ nhớ instance (không cần DB): mỗi instance tự học sau 429 đầu tiên của nó
-let cooldown: Cooldown | null = null
+// Cooldown trong bộ nhớ instance (không cần DB): mỗi instance tự học sau 429 đầu tiên của nó. Khóa 'global' với Gemini
+// thật (quota của Google là của cả project). AI giả (e2e) dùng khóa theo khách: 429 giả của một test không chặn các
+// test khác chạy song song trên cùng server.
+export const GLOBAL_COOLDOWN = 'global'
+const cooldowns = new Map<string, Cooldown>()
 
-export function activeCooldown(now: Date = new Date()): Cooldown | null {
+export function activeCooldown(key: string = GLOBAL_COOLDOWN, now: Date = new Date()): Cooldown | null {
+  const cooldown = cooldowns.get(key)
   if (cooldown && cooldown.until > now.getTime()) return cooldown
-  cooldown = null
+  cooldowns.delete(key)
   return null
 }
 
 export function resetCooldownForTests() {
-  cooldown = null
+  cooldowns.clear()
 }
 
 function quotaIdsForLog(body: unknown) {
@@ -135,12 +139,13 @@ export type GeminiCall = {
   body: GeminiRequestBody
   fetchImpl?: typeof fetch
   now?: () => Date
+  cooldownKey?: string
 }
 
 /** Một lượt gọi generateContent. Log chỉ status / quotaId / finishReason / số token, không log nội dung. */
 export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promise<GeminiOutcome> {
   ticket.use()
-  const { model, apiKey, body, fetchImpl = fetch, now = () => new Date() } = call
+  const { model, apiKey, body, fetchImpl = fetch, now = () => new Date(), cooldownKey = GLOBAL_COOLDOWN } = call
   let response: Response
   try {
     response = await fetchImpl(`${GEMINI.endpoint}/${model}:generateContent`, {
@@ -158,7 +163,8 @@ export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promis
 
   const json = await readJson(response)
   if (response.status === 429) {
-    cooldown = classify429(json, now())
+    const cooldown = classify429(json, now())
+    cooldowns.set(cooldownKey, cooldown)
     console.warn(`[chat] gemini 429 quotaId=${quotaIdsForLog(json)}`)
     return { ok: false, kind: 'quota', scope: cooldown.scope, resetsAt: cooldown.resetsAt }
   }

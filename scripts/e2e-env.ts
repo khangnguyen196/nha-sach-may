@@ -11,6 +11,12 @@ import { execSync } from 'node:child_process'
 
 /** Project production: e2e tạo / xóa user, đơn, sách test → không bao giờ chạy trên đó */
 export const PRODUCTION_SUPABASE_REF = 'ylfgwcxddxvfxwldmwtf'
+
+/**
+ * CHAT_QUOTA_TOKEN của e2e (chatbot Mây): token cố định cho Supabase local, KHÔNG phải bí mật. Playwright đặt vào
+ * webServer.env; e2e-seed.ts ghi sha256 vào DB local qua set_chat_quota_token (chỉ service_role).
+ */
+export const E2E_CHAT_QUOTA_TOKEN = '0123456789abcdef'.repeat(4)
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost'])
 
 /** URL Supabase của e2e: từ chối production và mọi host không phải 127.0.0.1 / localhost */

@@ -57,7 +57,7 @@ vi.mock('./env', () => ({ resolveChatMode: () => ({ kind: 'gemini', apiKey: 'k',
 const consumeQuota = vi.fn()
 const callGemini = vi.fn()
 vi.mock('./quota', async (importOriginal) => ({ ...(await importOriginal<typeof import('./quota')>()), consumeQuota }))
-vi.mock('./gemini', () => ({ activeCooldown: () => state.cooldown, callGemini }))
+vi.mock('./gemini', () => ({ activeCooldown: () => state.cooldown, callGemini, GLOBAL_COOLDOWN: 'global' }))
 
 const { askMay } = await import('./actions')
 

@@ -22,6 +22,18 @@ describe('e2e/fixtures/books.json', () => {
     expect(books.find((b) => b.slug === 'sapiens')?.title).toMatch(/^Sapiens/)
   })
 
+  it('chat.spec: sapiens còn hàng (thêm vào giỏ), có mô tả ≥ 40 ký tự (kiểm mô tả không đi lên từ client)', () => {
+    const sapiens = books.find((b) => b.slug === 'sapiens')
+    expect(sapiens?.stock).toBeGreaterThan(0)
+    expect(sapiens?.description?.length ?? 0).toBeGreaterThanOrEqual(40)
+  })
+
+  it('chat.spec: câu tâm trạng có sách tiếng Việt còn hàng ở nhóm kỹ năng / tâm lý và văn học Việt (≥ 3 thẻ)', () => {
+    const inStock = (slugs: string[]) => books.filter((b) => b.stock > 0 && b.language === 'vi' && slugs.includes(b.category_slug))
+    expect(inStock(['ky-nang-song', 'tam-ly-hoc']).length).toBeGreaterThanOrEqual(1)
+    expect(inStock(['truyen-ngan-tan-van', 'tieu-thuyet', 'tho']).length).toBeGreaterThanOrEqual(3)
+  })
+
   it('kệ "Mới về" (sách tiếng Việt) tràn kệ, có sách tiếng Anh cho kệ / bộ lọc ngoại văn (home.spec)', () => {
     expect(books.filter((b) => b.language === 'vi').length).toBeGreaterThan(SHELF_SIZE)
     expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(0)

@@ -962,6 +962,47 @@
   },
   "chat": {
     "crisis": "Mây rất tiếc khi bạn đang phải trải qua cảm giác này. Bạn không cần một mình đối mặt với nó: hãy nói chuyện ngay với người thân hoặc một người bạn tin tưởng, hoặc tìm tới chuyên gia tâm lý, bác sĩ gần nhất. Nếu bạn đang gặp nguy hiểm, hãy gọi cấp cứu 115. Bạn cũng có thể gọi đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật).",
-    "languageNotice": "Mây hiện chỉ hỗ trợ tiếng Việt."
+    "languageNotice": "Mây hiện chỉ hỗ trợ tiếng Việt.",
+    "open": "Hỏi Mây gợi ý sách",
+    "title": "Mây",
+    "subtitle": "Trợ lý gợi ý sách",
+    "close": "Đóng",
+    "greeting": "Chào bạn, Mây có thể gợi ý sách theo tâm trạng hay nhu cầu của bạn. Bạn đang muốn đọc gì?",
+    "greetingBook": "Bạn muốn hỏi gì về cuốn sách đang xem?",
+    "aboutBook": "Đang hỏi về: {title}",
+    "chips": {
+      "mood": "Mình đang thấy mông lung, lạc hướng",
+      "weekend": "Sách nhẹ nhàng đọc cuối tuần",
+      "startup": "Sách cho người mới khởi nghiệp",
+      "what": "Cuốn này nói về gì?",
+      "who": "Cuốn này hợp với ai?",
+      "similar": "Có cuốn nào tương tự không?"
+    },
+    "gate": {
+      "title": "Trước khi hỏi Mây",
+      "ai": "Mây dùng AI (Google Gemini) nên có thể sai.",
+      "personal": "Đừng nhập thông tin cá nhân (tên, số điện thoại, địa chỉ, email…).",
+      "freeTier": "Ở gói miễn phí, Google có thể dùng nội dung bạn gửi, và người của Google có thể đọc, để cải thiện dịch vụ.",
+      "adult": "Mây dành cho người từ 18 tuổi.",
+      "confirm": "Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây"
+    },
+    "disclaimer": "AI có thể sai · Đừng nhập thông tin cá nhân · Gói miễn phí: Google có thể dùng nội dung bạn gửi · Từ 18 tuổi",
+    "inputLabel": "Câu hỏi cho Mây",
+    "placeholder": "Hỏi Mây về sách…",
+    "counter": "{count}/{max} ký tự",
+    "send": "Gửi",
+    "sending": "Mây đang tìm sách…",
+    "you": "Bạn",
+    "suggestions": "Sách Mây gợi ý",
+    "search": "Tìm sách",
+    "browse": "Xem theo thể loại",
+    "freeDay": "Hôm nay Mây đã dùng hết lượt hỏi miễn phí của trợ lý AI. Đây là giới hạn của gói miễn phí, website vẫn hoạt động bình thường. Lượt mới có lại lúc {time} (giờ Việt Nam). Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
+    "freeDayEn": "Mây has used up today's free AI requests. This is a free-plan limit; the website is working normally. New requests will be available at {time} (Vietnam time). Meanwhile, try the search box or browse by category.",
+    "freeMinute": "Mây đang nhận quá nhiều câu hỏi cùng lúc và đã chạm giới hạn lượt dùng miễn phí. Website vẫn hoạt động bình thường. Bạn thử lại sau khoảng một phút, hoặc tìm sách bằng ô tìm kiếm / xem theo thể loại nhé.",
+    "freeMinuteEn": "Mây is getting too many questions right now and has reached its free usage limit. The website is working normally. Please try again in about a minute, or use the search box or browse by category.",
+    "visitorHour": "Bạn đã hỏi Mây nhiều câu trong giờ này. Mây trả lời tiếp được từ {time} nhé. Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
+    "visitorDay": "Hôm nay bạn đã hỏi Mây nhiều câu rồi, mai quay lại nhé. Trong lúc chờ, bạn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
+    "region": "Mây chưa phục vụ khu vực của bạn. Bạn vẫn có thể tìm sách bằng ô tìm kiếm hoặc xem theo thể loại.",
+    "tired": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé."
   }
 }

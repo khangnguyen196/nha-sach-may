@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
-import { loadLocalSupabase } from './scripts/e2e-env'
+import { E2E_CHAT_QUOTA_TOKEN, loadLocalSupabase } from './scripts/e2e-env'
 
 // e2e chỉ chạy trên Supabase local (npx supabase start): khóa lấy từ `supabase status`, từ chối production / host cloud.
 // Chạy ở main process lẫn từng worker (Playwright nạp lại config) → mọi process đều trỏ cùng DB local.
@@ -78,6 +78,12 @@ export default defineConfig({
       SUPABASE_SERVICE_ROLE_KEY: '',
       // Cho phép error-page.spec.ts làm hỏng request Supabase bằng cookie (src/lib/supabase/fault-injection.ts)
       E2E_FAULT_INJECTION: '1',
+      // Chatbot Mây: AI giả (không bao giờ gọi Gemini thật; env.ts chỉ bật mock với Supabase local, ngoài Vercel),
+      // key Gemini để trống, token bộ đếm cố định (e2e-seed.ts đặt vào DB local)
+      CHAT_AI_MOCK: '1',
+      GEMINI_API_KEY: '',
+      GEMINI_MODEL: '',
+      CHAT_QUOTA_TOKEN: E2E_CHAT_QUOTA_TOKEN,
     },
   },
 })

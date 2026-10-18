@@ -308,7 +308,8 @@ async function PriceBlock({ book }: { book: BookDetail }) {
       <p className={book.stock > 0 ? 'mt-2 text-sm text-success' : 'mt-2 text-sm text-muted-foreground'}>
         {stockLabel}
       </p>
-      <div className="mt-6">
+      {/* data-chat-avoid: bong bóng chat ẩn khi nút này đi vào dải đáy màn hình (không che CTA) */}
+      <div className="mt-6" data-chat-avoid>
         <AddToCart book={book} />
       </div>
     </div>

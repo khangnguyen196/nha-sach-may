@@ -343,12 +343,12 @@ function CartSummary({ lines, quote, updating, error, labels, formatPrice }: Sum
       </p>
 
       {canCheckout ? (
-        <Link href="/checkout" className={buttonVariants({ size: 'lg', className: 'mt-2 h-11 w-full text-base' })}>
+        <Link href="/checkout" data-chat-avoid className={buttonVariants({ size: 'lg', className: 'mt-2 h-11 w-full text-base' })}>
           <ShoppingBagIcon aria-hidden />
           {labels.checkout}
         </Link>
       ) : (
-        <Button size="lg" className="mt-2 h-11 w-full text-base" disabled>
+        <Button size="lg" className="mt-2 h-11 w-full text-base" disabled data-chat-avoid>
           <ShoppingBagIcon aria-hidden />
           {labels.checkout}
         </Button>

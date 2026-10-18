@@ -1,4 +1,8 @@
+import { locale as rootLocale } from 'next/root-params'
 import { Footer } from '@/components/layout/footer'
+import { ChatBubble } from '@/features/chat/components/chat-bubble'
+import { chatEnabled } from '@/features/chat/env'
+import { getChatBrowseCategories, getChatLabels } from '@/features/chat/labels'
 
 export default function ShopLayout({ children }: LayoutProps<'/[locale]'>) {
   return (
@@ -9,6 +13,17 @@ export default function ShopLayout({ children }: LayoutProps<'/[locale]'>) {
         {children}
       </main>
       <Footer />
+      <Chat />
     </>
   )
+}
+
+/**
+ * Chatbot Mây: chỉ trang tiếng Việt (không có markup ở /en), không có ở (auth) và /admin (layout khác), ẩn ở trang
+ * thanh toán (client, visibility.ts). Thiếu GEMINI_API_KEY / CHAT_QUOTA_TOKEN → không có bong bóng.
+ */
+async function Chat() {
+  if ((await rootLocale()) !== 'vi' || !chatEnabled()) return null
+  const [labels, categories] = await Promise.all([getChatLabels(), getChatBrowseCategories()])
+  return <ChatBubble labels={labels} categories={categories} />
 }

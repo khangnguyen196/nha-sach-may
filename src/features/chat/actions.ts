@@ -11,7 +11,7 @@ import { selectCandidates, type Candidate } from './candidates'
 import { CHAT_INPUT, DEFAULT_MODEL, VISITOR_COOKIE } from './config'
 import { isCrisisMessage } from './crisis'
 import { resolveChatMode } from './env'
-import { activeCooldown, callGemini } from './gemini'
+import { activeCooldown, callGemini, GLOBAL_COOLDOWN } from './gemini'
 import { mockFetch } from './mock'
 import { buildRequestBody, fitPromptBudget, type CurrentBook } from './prompt'
 import { getChatBookCards, getChatCatalog, type ChatBookCardRow } from './queries'
@@ -21,8 +21,8 @@ import { askSchema } from './schemas'
 import { validateReply, type ValidReply } from './validate'
 
 // Chatbot chỉ có ở trang tiếng Việt → chuỗi / định dạng giá luôn theo 'vi' (Server Action không đọc được root params).
-// Thứ tự (docs/plans/phase-11.md → Luồng): input → bật? → tự hại (trước khu vực) → khu vực → cooldown → dữ liệu →
-// trừ lượt (vé) → Gemini một lần → validate → thẻ sách từ DB. Không throw ra UI, không log nội dung chat.
+// Thứ tự (docs/plans/phase-11.md → Luồng): input → bật? → tự hại (trước khu vực) → khu vực → dữ liệu + định danh →
+// cooldown → trừ lượt (vé) → Gemini một lần → validate → thẻ sách từ DB. Không throw ra UI, không log nội dung chat.
 const LOCALE = 'vi'
 
 export type ChatBookCard = {
@@ -138,9 +138,6 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   const requestHeaders = await headers()
   if (isBlockedCountry(requestHeaders.get('x-vercel-ip-country'))) return { ok: false, code: 'CHAT_REGION' }
 
-  const cooling = activeCooldown()
-  if (cooling) return quotaFailure('CHAT_FREE_QUOTA', cooling.scope, cooling.resetsAt)
-
   const [user, catalog, categories, current] = await Promise.all([
     getCurrentUser(),
     getChatCatalog(),
@@ -155,6 +152,11 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
         visitor: hashId(mode.quotaToken, 'visitor', await visitorCookie(), now),
         ip: hashId(mode.quotaToken, 'ip', clientIp(requestHeaders) ?? 'unknown', now),
       }
+  // Sau 429: không gọi Gemini, không trừ lượt. AI giả: cooldown theo khách (gemini.ts)
+  const cooldownKey = mode.kind === 'mock' ? identity.visitor : GLOBAL_COOLDOWN
+  const cooling = activeCooldown(cooldownKey)
+  if (cooling) return quotaFailure('CHAT_FREE_QUOTA', cooling.scope, cooling.resetsAt)
+
   const quota = await consumeQuota({ token: mode.quotaToken, ...identity, limits: quotaLimits(mode.kind === 'mock') })
   if (!quota.ok) {
     return quota.code === 'CHAT_UNAVAILABLE' ? unavailable : quotaFailure(quota.code, quota.scope, quota.resetsAt)
@@ -178,8 +180,8 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   const outcome = await callGemini(
     quota.ticket,
     mode.kind === 'mock'
-      ? { model: DEFAULT_MODEL, apiKey: 'mock', body, fetchImpl: mockFetch }
-      : { model: mode.model, apiKey: mode.apiKey, body },
+      ? { model: DEFAULT_MODEL, apiKey: 'mock', body, fetchImpl: mockFetch, cooldownKey }
+      : { model: mode.model, apiKey: mode.apiKey, body, cooldownKey },
   )
   if (!outcome.ok) {
     return outcome.kind === 'quota' ? quotaFailure('CHAT_FREE_QUOTA', outcome.scope, outcome.resetsAt) : unavailable

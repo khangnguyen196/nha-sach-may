@@ -7,14 +7,17 @@
  *   scripts/e2e-seed.test.ts.
  * - Bìa giả sinh bằng sharp (màu theo ISBN) → Storage local, không gọi mạng ngoài, không gọi Google Books.
  * - Ghi qua save() của import-books.ts (cùng đường ghi với dữ liệu thật). Sách đã có (ISBN) bị bỏ qua → chạy lại an toàn.
+ * - Token bộ đếm của chatbot (E2E_CHAT_QUOTA_TOKEN, cố định, không bí mật) → set_chat_quota_token.
  * - Chỉ chạy trên Supabase local (loadLocalSupabase từ chối production / host cloud).
  */
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { z } from 'zod'
 import { toCoverWebp } from '../src/lib/cover-image'
-import { loadLocalSupabase } from './e2e-env'
+import type { Database } from '../src/types/database'
+import { E2E_CHAT_QUOTA_TOKEN, loadLocalSupabase } from './e2e-env'
 import {
   bookFieldsSchema,
   ORIGINAL_PRICE_MESSAGE,
@@ -56,10 +59,15 @@ const placeholderCover: CoverSource = async (book) => {
 }
 
 async function main() {
-  const { url } = loadLocalSupabase()
+  const { url, serviceRoleKey } = loadLocalSupabase()
   const books = readFixture()
   console.log(`Nạp ${books.length} sách test vào Supabase local ${url}`)
   await save(books, placeholderCover)
+
+  const admin = createClient<Database>(url, serviceRoleKey, { auth: { persistSession: false } })
+  const { error } = await admin.rpc('set_chat_quota_token', { p_token: E2E_CHAT_QUOTA_TOKEN })
+  if (error) throw new Error(`set_chat_quota_token: ${error.message}`)
+  console.log('Đặt token bộ đếm chatbot cho e2e')
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

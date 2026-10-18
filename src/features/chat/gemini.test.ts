@@ -108,15 +108,23 @@ describe('callGemini', () => {
     const outcome = await callGemini(GeminiTicket.issue(), call(fetchImpl))
     expect(outcome).toMatchObject({ ok: false, kind: 'quota', scope: 'gemini_day' })
     expect(fetchImpl).toHaveBeenCalledTimes(1)
-    expect(activeCooldown(NOW)).toMatchObject({ scope: 'gemini_day' })
+    expect(activeCooldown('global', NOW)).toMatchObject({ scope: 'gemini_day' })
     expect(vi.mocked(console.warn).mock.calls.flat().join(' ')).toBe(`[chat] gemini 429 quotaId=${PER_MINUTE},${PER_DAY}`)
+  })
+
+  it('cooldown theo khóa: 429 của khóa này không chặn khóa khác (AI giả theo khách)', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body429([PER_MINUTE], '30s')), { status: 429 }))
+    await callGemini(GeminiTicket.issue(), { ...call(fetchImpl), cooldownKey: 'khach-a' })
+    expect(activeCooldown('khach-a', NOW)).not.toBeNull()
+    expect(activeCooldown('khach-b', NOW)).toBeNull()
+    expect(activeCooldown('global', NOW)).toBeNull()
   })
 
   it('cooldown hết hạn thì tự xóa', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body429([PER_MINUTE], '30s')), { status: 429 }))
     await callGemini(GeminiTicket.issue(), call(fetchImpl))
-    expect(activeCooldown(new Date(NOW.getTime() + 29_000))).not.toBeNull()
-    expect(activeCooldown(new Date(NOW.getTime() + 30_000))).toBeNull()
+    expect(activeCooldown('global', new Date(NOW.getTime() + 29_000))).not.toBeNull()
+    expect(activeCooldown('global', new Date(NOW.getTime() + 30_000))).toBeNull()
   })
 
   it.each([
@@ -130,7 +138,7 @@ describe('callGemini', () => {
   ])('%s → lỗi, không cooldown', async (_label, impl, reason) => {
     const outcome = await callGemini(GeminiTicket.issue(), call(vi.fn<typeof fetch>(impl)))
     expect(outcome).toEqual({ ok: false, kind: 'error', reason })
-    expect(activeCooldown(NOW)).toBeNull()
+    expect(activeCooldown('global', NOW)).toBeNull()
   })
 
   it('vé chỉ dùng một lần; số lần fetch luôn bằng số vé đã cấp', async () => {
