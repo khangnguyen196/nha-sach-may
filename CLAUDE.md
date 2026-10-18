@@ -271,6 +271,7 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 ## Bảo mật
 
 - **Claude KHÔNG mở, đọc hay sửa `.env.local`**, kể cả khi nghi nó sai. Thay vào đó chạy `npm run check:env` (`scripts/check-env.mjs`, chỉ báo biến thiếu/sai định dạng, không in giá trị) rồi báo để tôi tự sửa.
+- **Không tạo link (hard link / symlink) hay bản copy của `.env.local`** cho worktree hay bất cứ chỗ nào khác mà không hỏi tôi trước. Worktree cần env để build / `next start` thì dừng lại hỏi.
 - Chỉ dùng `npm run check:env` để kiểm tra env. **Không** viết script nào khác đọc env (kể cả script tạm/debug rồi xóa, kể cả qua `loadEnvConfig` của `@next/env`). Script của dự án cần env (`import:books`, `scripts/e2e-user.ts` ở Phase 4) chỉ được viết khi đã có trong plan đã duyệt (ngoại lệ này đã được duyệt).
 - **Ngoại lệ đã duyệt (2026-10-17)**: `scripts/e2e-env.ts` đọc khóa của **Supabase local** qua `supabase status -o env` (khóa demo của stack Docker, không phải bí mật), với điều kiện: **không đọc file env nào** và **từ chối mọi URL không phải `127.0.0.1` / `localhost`** (kể cả production `ylfgwcxddxvfxwldmwtf`). Không in giá trị. e2e vì vậy không cần secret trên GitHub; khóa thật (production) vẫn không bao giờ đặt lên GitHub.
 - `.env.local` không commit. Client chỉ được dùng URL và anon/publishable key. `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng trong `scripts/` chạy local, **không bao giờ** import vào `src/`.
