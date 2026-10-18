@@ -123,7 +123,7 @@ describe('proxy: x-not-found do khách tự gửi', () => {
     expect(forwarded(response, 'x-not-found')).toBe('book')
   })
 
-  it('POST (Server Action) kèm header: vẫn bỏ header, không đụng body', async () => {
+  it('POST (Server Action) kèm header: vẫn bỏ header', async () => {
     const response = await proxy(
       new NextRequest('http://localhost:3000/abc', { method: 'POST', body: 'a=1', headers: { 'x-not-found': 'book' } }),
     )

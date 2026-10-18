@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // requestPasswordReset (ux-messages mục 3): chỉ báo lỗi không nói gì về tài khoản; mọi trường hợp còn lại cùng một
 // kết quả "đã gửi", để không dò được email nào có tài khoản. Supabase và Next đều giả lập.
@@ -33,6 +33,7 @@ function authError(code: string, status: number, message = 'error') {
 
 describe('requestPasswordReset', () => {
   beforeEach(() => resetPasswordForEmail.mockReset())
+  afterEach(() => vi.restoreAllMocks())
 
   it('email không có tài khoản: GoTrue không báo lỗi → "đã gửi"', async () => {
     resetPasswordForEmail.mockResolvedValue({ data: {}, error: null })

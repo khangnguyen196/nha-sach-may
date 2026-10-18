@@ -101,10 +101,12 @@ async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Da
 }
 
 /**
- * x-not-found chỉ do proxy đặt (notFoundRewrite). Khách tự gửi header này thì bỏ trước mọi bước: next-intl và
- * NextResponse.next({ request }) chép header từ request này sang trang, nên giá trị của khách không tới not-found.tsx.
+ * x-not-found chỉ do proxy đặt (notFoundRewrite). Khách tự gửi header này thì bỏ trước mọi bước của proxy: next-intl và
+ * NextResponse.next({ request }) chép header từ request này sang trang. Đường dẫn proxy không chạy (matcher bỏ qua
+ * đường dẫn có dấu chấm) vẫn mang header của khách tới not-found.tsx: chấp nhận, chỉ đổi được câu giải thích của
+ * chính request đó (parseNotFoundKind chỉ nhận loại có sẵn, trang động nên không cache chung).
  */
-export function withoutClientNotFoundKind(request: NextRequest): NextRequest {
+function withoutClientNotFoundKind(request: NextRequest): NextRequest {
   if (!request.headers.has(NOT_FOUND_HEADER)) return request
   const headers = new Headers(request.headers)
   headers.delete(NOT_FOUND_HEADER)

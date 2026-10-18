@@ -158,6 +158,8 @@ describe('gợi ý mã giảm giá + mã lỗi theo lý do (ux-messages)', () =>
       expect(body).toContain(condition)
     }
     const returns = /returns table \(([^)]*)\)/.exec(body)?.[1] ?? ''
+    // Đọc hết danh sách cột (regex dừng ở dấu ")" đầu tiên: cột kiểu có ngoặc sẽ cắt ngắn danh sách)
+    expect(returns).toMatch(/\bshortfall int\s*$/)
     for (const column of ['id', 'used_count', 'usage_limit', 'starts_at', 'is_active', 'is_public']) {
       expect(returns).not.toMatch(new RegExp(`\\b${column}\\b`))
     }
