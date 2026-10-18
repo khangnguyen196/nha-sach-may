@@ -19,8 +19,8 @@ export type ErrorPageMessages = {
 }
 
 // error.tsx bắt buộc là client component và Next không truyền props từ server vào nó. Layout (server) dịch sẵn
-// 4 chuỗi và đặt vào context này, error.tsx đọc lại: vẫn là "client leaf nhận chuỗi đã dịch từ server", không kéo
-// useTranslations (runtime dịch của next-intl) vào bundle đầu của mọi trang.
+// 6 chuỗi (ErrorPageMessages) và đặt vào context này, error.tsx đọc lại: vẫn là "client leaf nhận chuỗi đã dịch từ
+// server", không kéo useTranslations (runtime dịch của next-intl) vào bundle đầu của mọi trang.
 const ErrorMessagesContext = createContext<ErrorPageMessages | null>(null)
 
 export function ErrorMessagesProvider({ messages, children }: { messages: ErrorPageMessages; children: ReactNode }) {
