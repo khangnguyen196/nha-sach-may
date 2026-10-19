@@ -15,7 +15,7 @@
 - [Đã quyết 2026-10-19] ★ perf-js: xem docs/plans/perf-js.md; đợt sau làm D → sheet lazy → C.
 - [Đã quyết – nhánh riêng sau merge] Đăng ký: lỗi khi gửi thư (429, email_address_*, 5xx) trả cùng kết quả 'kiểm tra hộp thư' như khi thành công; chỉ báo NETWORK_ERROR, lỗi zod và lỗi GoTrue kiểm TRƯỚC khi tìm user (vd mật khẩu yếu — đối chiếu mã nguồn GoTrue trước khi làm).
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.
-- [Sau merge] Voucher TEST10 đang is_public = true trên production (để test iPhone); chủ dự án quyết giữ hay bỏ (2026-10-19: giữ tới khi chủ dự án báo).
+- [Đã quyết 2026-10-19] Giữ TEST10 hiện trong gợi ý (demo); không còn việc gì.
 - [Dọn 2026-10-26] xóa nhánh backup/main-local-06d5009 và stash eb9bb91.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
