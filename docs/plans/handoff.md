@@ -4,10 +4,10 @@
 
 ## Trạng thái
 
-- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **chưa merge**. Plan + báo cáo: `docs/plans/ux-messages.md`.
+- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **đã duyệt merge 2026-10-19** (fast-forward lên `main`). Test tay bằng Chrome trên Preview (8 bước: footer, 404, không tìm thấy đơn, mã sai, gợi ý mã, đổi ngôn ngữ, địa chỉ không có, trả giỏ) **ĐẠT**. Plan + báo cáo: `docs/plans/ux-messages.md`.
   - Migration **A** (`20261018120000_voucher_suggestions.sql`: `vouchers.is_public`, RPC `checkout_vouchers`) **đã chạy** trên production, KA1–KA6 khớp.
   - Migration **B** (`20261018130000_error_reasons.sql`: mã lỗi voucher / hủy đơn theo lý do) **CHƯA chạy**: chạy **sau** khi bản app của nhánh này đã merge + deploy production, rồi chạy `supabase/checks/ux-messages-b.sql`. Bản app mới hiểu cả mã cũ (`INVALID_VOUCHER`, `ORDER_NOT_CANCELLABLE`) lẫn mã mới.
-  - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` (đổi 8 tên, gộp id 8 + 9 vào id 1) **chưa chạy**, chờ chủ dự án duyệt; chạy xong phải **Redeploy** trên Vercel.
+  - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` (đổi 8 tên, gộp id 8 + 9 vào id 1) **đã chạy** trên production sáng 2026-10-19, K1–K5 khớp (8 tên mới; id 8, 9 đã xóa; id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần; search_text có tên mới; slug giữ nguyên). Deploy production sau merge làm mới cache trang.
   - Sau khi B đã chạy: xóa `INVALID_VOUCHER` khỏi `ERROR_CODES` / messages / `VOUCHER_ERRORS` (đợt sau).
 - **Phase 11 (chatbot gợi ý sách "Mây")**: **đã merge vào `main`** (ff, 2026-10-18) sau khi chủ dự án test tay OK trên bản Preview (máy tính + iPhone Safari). Nhánh `phase-11` đã xóa (local + remote). Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11".
   - Migration `chat_quota` + `chat_quota_defaults` đã chạy trên Supabase.

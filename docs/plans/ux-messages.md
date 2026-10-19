@@ -14,7 +14,7 @@ Quy ước trong file này:
 
 ## Báo cáo (2026-10-18)
 
-Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge**. Migration A đã chạy (KA1–KA6 khớp); **B chưa chạy** (chạy sau khi merge + deploy, rồi `supabase/checks/ux-messages-b.sql`); `supabase/checks/authors-fix.sql` chờ duyệt.
+Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **đã duyệt merge 2026-10-19** (xem "Sáng 2026-10-19"). Migration A đã chạy (KA1–KA6 khớp); **B chưa chạy** (chạy sau khi merge + deploy, rồi `supabase/checks/ux-messages-b.sql`); `supabase/checks/authors-fix.sql` chờ duyệt.
 
 **Đã làm theo mục**
 - **10** `SUPPORT_EMAIL` (`lib/support.ts`) ở cả hai footer; câu lỗi có `{email}` tự thành link `mailto:` (`SupportEmailText`, dùng trong `FormAlert`, giỏ, nút thêm vào giỏ). Vitest: không chép địa chỉ ở chỗ khác.
@@ -106,6 +106,9 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 - Quy ước ghi vào `CLAUDE.md` (nháp ghi chú theo tài khoản; quên mật khẩu / gửi lại chỉ báo NETWORK_ERROR + lỗi zod).
 - Test: `migrations.test` neo regex vào `) language` + danh sách cột khác rỗng (vẫn fail khi tạm thêm `used_count`); e2e `not-found.spec` gửi `x-not-found: order` thật qua proxy (`2873f08`). `account.spec` (chờ form đăng xuất hydrate bằng `__reactProps`): giữ nguyên, vì không có hiệu ứng quan sát được của riêng form đăng xuất nếu không sửa code app (cùng cơ chế với helper `waitForHydration` dùng ở các spec khác).
 - Mục 15 (request RSC 404) và tắt JS → trang trắng: có từ trước, không chặn merge, chuyển sang `docs/progress.md`.
+- `supabase/checks/authors-fix.sql` đã chạy trên production sáng 2026-10-19, K1–K5 khớp hết.
+- Test tay bằng Claude in Chrome trên Preview của nhánh (đăng nhập admin): footer vi / en, 404 sách / danh mục / tác giả / trang lạ / en, không tìm thấy đơn (mã sai dạng, đổi 1 ký tự, en: cùng câu, HTTP 404), mã sai "AB", gợi ý mã (tick TEST10 → hiện trong dialog → Áp dụng giảm 10% → Bỏ mã), đổi ngôn ngữ giữ query, địa chỉ không có, trả giỏ: **8/8 ĐẠT**.
+- Duyệt merge 2026-10-19 (fast-forward). **Migration B chờ chạy sau khi deploy production** (rồi `supabase/checks/ux-messages-b.sql`).
 
 ## ★ Quyết định (đã duyệt 2026-10-18)
 

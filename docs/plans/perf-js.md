@@ -1,6 +1,6 @@
 # Đợt "giảm JS client" (plan, chưa làm)
 
-Trạng thái: **plan, chờ duyệt** (viết 2026-10-19 trên nhánh `ux-messages`). Không sửa code trong file này.
+Trạng thái: **plan, ★ đã quyết 2026-10-19** (viết 2026-10-19 trên nhánh `ux-messages`). Chưa làm. Thứ tự đợt: **D → sheet lazy → C (+ `scripts/analyze-diff.mjs`)**; B để sau.
 
 Mục tiêu: giảm JS tải ngay ở mọi trang, đưa `/sach` + trang danh mục về dưới ngân sách, bỏ zod khỏi client của cửa hàng.
 
@@ -66,7 +66,19 @@ D → lazy-load sheet bộ lọc → C → B. Mỗi bước một commit (hoặc
 - `/sach` + danh mục: **≤ 50KB** sau bước 2 (★1); trước khi làm bước 2 ghi rõ là đang vượt (55.3KB).
 - Các route khác: ≤ 50KB (hiện tất cả dưới 47KB), để measure-js báo khi vượt.
 
-## ★ Cần chủ dự án quyết
+## ★ Đã quyết 2026-10-19
+
+- ★1 **50KB** cho `/sach` + trang danh mục.
+- ★2 **prefetch** chunk sheet khi rê chuột / focus nút.
+- ★3 **viết tay** + Vitest so với schema zod.
+- ★4 + ★5 **CHƯA** làm B và test screenshot; quyết lại sau khi xong D → sheet lazy → C và đo lại (B không cần để đạt ngân sách).
+- ★6 **để nguyên** `book-form.tsx` (admin).
+- ★7 **có**: thêm `scripts/analyze-diff.mjs` khi làm đợt perf-js.
+- ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt.
+
+Thứ tự đợt perf-js: D → sheet lazy → C (+ `analyze-diff.mjs`). B để sau.
+
+## ★ Câu hỏi ban đầu (giữ để tra)
 
 - ★1 Ngân sách `/sach` + danh mục: 50KB (bằng trang sách, đề xuất) hay 48KB (chặt hơn, cần bước 3)?
 - ★2 Sheet bộ lọc: prefetch chunk khi rê chuột / focus nút (đề xuất) hay chỉ tải khi bấm?
