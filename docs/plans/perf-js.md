@@ -1,6 +1,6 @@
-# Đợt "giảm JS client" (plan, chưa làm)
+# Đợt "giảm JS client" (perf-js)
 
-Trạng thái: **plan, ★ đã quyết 2026-10-19** (viết 2026-10-19 trên nhánh `ux-messages`). Chưa làm. Thứ tự đợt: **`scripts/analyze-diff.mjs` → D → sheet lazy → C**; B để sau.
+Trạng thái (2026-10-20, đêm): **D, sheet lazy, C xong trên nhánh `perf-js`** (từ `sau-ux` `56bcf5e`), CI check + e2e xanh từng bước, **chưa merge** (chờ review + duyệt). B chưa làm (★4 / ★5). Kết quả ở mục "Báo cáo" cuối file. Plan viết 2026-10-19 trên nhánh `ux-messages`, ★ đã quyết 2026-10-19. Thứ tự đợt: **`scripts/analyze-diff.mjs` → D → sheet lazy → C**; B để sau.
 
 Mục tiêu: giảm JS tải ngay ở mọi trang, đưa `/sach` + trang danh mục về dưới ngân sách, bỏ zod khỏi client của cửa hàng.
 
@@ -106,3 +106,83 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 - ★6 `book-form.tsx` (admin, client) cũng import zod: để nguyên (admin không có ngân sách JS) hay làm cùng D?
 - ★7 Công cụ so module trước / sau (đọc `next analyze export`, đêm 2026-10-18 dùng script tạm ngoài repo): thêm `scripts/analyze-diff.mjs` vào repo?
 - ★8 measure:js có loại polyfill `noModule` (~38.6KB, trình duyệt hiện đại không tải) khỏi số đo không (đổi baseline cho khớp)?
+
+## Báo cáo (đêm 2026-10-20)
+
+Đo trên máy dev, build với DB production (hard link `.env.local` theo quy trình được duyệt cho lượt này: tạo trước mỗi đợt build, xóa ngay sau, `fsutil hardlink list` chỉ còn bản gốc). Số liệu thô (log build, `measure-*.txt`, export `next analyze` `before / after-d / after-sheet / after-c.jsonl`) ở `D:/Bán sách-backup/perf/` (ngoài repo).
+
+### measure:js (KB gzip ngoài baseline 170KB, ngân sách 50KB)
+
+| Route | Trước (`56bcf5e`) | Sau D (`8c7c5a7`) | Sau sheet (`46719ef`) | Sau C (`3334285`) | Ngân sách |
+|---|---:|---:|---:|---:|---|
+| `vi` (trang chủ) | 42.2 | 42.2 | 42.3 | **41.4** | ĐẠT |
+| `vi/books` (`/sach`) | 55.3 | 55.3 | 43.0 | **41.9** | ĐẠT (trước: vượt) |
+| `vi/categories/van-hoc` | 55.3 | 55.3 | 43.0 | **41.9** | ĐẠT (trước: vượt) |
+| `vi/books/sapiens` | 45.3 | 45.3 | 45.4 | **44.2** | ĐẠT |
+| `vi/cart` | 46.1 | 46.1 | 46.2 | **45.8** | ĐẠT |
+| `vi/checkout` | 45.0 | 45.0 | 45.1 | **44.8** | ĐẠT |
+| `vi/login` | 36.6 | 36.6 | 36.7 | **36.0** | ĐẠT |
+
+±0.1KB ở bước sheet (route không có sheet) là do chia chunk lại (số script 15 → 14), không phải module mới. Commit sửa theo review (`0ef0086`) chỉ đổi comment / class / `.catch` của prefetch, không đo lại.
+
+### next analyze (`scripts/analyze-diff.mjs`, ước lượng theo module, dùng để so chênh lệch)
+
+| Bước | Route | Tải ngay | Tải lười |
+|---|---|---|---|
+| D | mọi route có palette | 0 | −33.6KB (16 module zod + `schemas.ts` bớt, `search-input.ts` +0.3KB) |
+| Sheet | `/[locale]/books`, `/[locale]/categories/[slug]` | −48.2KB | +48.5KB (Radix Dialog, focus-scope, dismissable-layer, react-remove-scroll, aria-hidden… chuyển sang chunk tải khi bấm) |
+| Sheet | route khác | −0.1KB | 0 |
+| C | `/[locale]` −1.6, `/books` −1.7, `/books/[slug]` −1.9, `/cart` −0.6, `/login` −1.3KB | | +0.7 đến +1.2KB (icon chỉ còn trong chunk lười của palette / khung chat) |
+| Cả đợt | `/[locale]/books` | 306.6 → 256.7KB (−49.9) | 60.6 → 76.6KB (+16.1) |
+| Cả đợt | `/[locale]/books/[slug]` | 262.1 → 260.0KB (−2.1) | 92.2 → 59.8KB (−32.4) |
+
+### Khác plan
+
+- **D**: zod 4.6 đếm độ dài chuỗi theo **code point** (`'📚'` dài 1), không theo UTF-16 unit → `normalizeSearchQuery` đếm `[...s].length`. Vitest bắt được lệch này ở lần chạy đầu.
+- **C**: `lucide-react` 1.57 đánh dấu `Icon.mjs` là `"use client"` (dùng `LucideProvider` context) → icon render ở Server Component **vẫn** kéo lõi `Icon` (~2KB ước lượng) xuống client. Bước C chỉ bớt module từng icon; ước tính "−2 đến −3KB khi không còn client module nào import lucide" của plan không đạt được bằng cách này (bỏ hẳn lõi phải vẽ SVG thẳng mọi icon hoặc bỏ lucide: không làm, cần quyết). Đo thật: −0.3 đến −1.2KB.
+- **C** làm thêm `sort-select.tsx`, `filter-sheet.tsx` (cùng trang `/sach`), `components/ui/field.tsx` (`SelectField` vẽ thẳng SVG chevron vì file dùng ở nhiều client form: đăng nhập, đánh giá…). Icon truyền vào không kèm class; class kích thước nằm ở component (`[&_svg]:size-…`, span `hidden dark:contents` cho sun / moon).
+- Sheet: nút giữ `aria-haspopup="dialog"`, thêm `aria-expanded`; mất `aria-controls` / `data-state` của `SheetTrigger` (nội dung chưa có trong DOM khi chưa mở).
+- Theo review: `review-form` bỏ class `group` của label sao (`has-checked:[&_svg]:fill-primary` trên label thay `group-has-checked:fill-primary` trên svg). Bản cũ khớp với mọi tổ tiên `.group`, nên ở trang đơn (`<details class="group">`) chọn 1 sao làm cả 5 sao tô kín. Lỗi này reviewer suy ra từ CSS, chưa kiểm bằng mắt (cần đăng nhập + đơn đã giao).
+- Build local lỗi tạm 2 lần ở bước C (`getRelatedBooks: Internal server error` lúc prerender, rồi "`use cache` took too long" ở `getHomeShelves`), cùng loại "Lỗi #3 (build)" ở `handoff.md`; lần 3 qua (health Supabase lúc đó 0,2 s). `next analyze` cùng code build qua cả 3 lần.
+
+### Test thêm / đổi
+
+- Vitest mới `src/features/books/search-input.test.ts` (65 ca): `normalizeSearchQuery` ↔ `searchQuerySchema` (rỗng, 1 / 2 / 100 / 101 ký tự, khoảng trắng hai đầu, NBSP, U+3000, U+FEFF, U+2028/2029, em / thin space, zero-width space, tab / xuống dòng, có dấu / không dấu / NFD, emoji, surrogate lẻ, 100 / 101 code point); `parseSearchResponse` ↔ `searchResponseSchema` (hợp lệ, rỗng, `coverUrl` null / thiếu / undefined / số, `ok` false / "true" / thiếu, `data` thiếu / null / không phải mảng, hit null / mảng, `id` chuỗi / NaN / Infinity / số lẻ, thiếu `slug`, `title` số, `authors` sai kiểu, key thừa bị bỏ).
+- Vitest mới `src/lib/client-no-zod.test.ts` (44 ca, theo gợi ý review): mọi file `'use client'` của cửa hàng (trừ admin, ★6) không import giá trị từ `zod` / `…/schemas` (`import type` được phép). Đã thử thêm `searchQuerySchema` vào import của palette → test fail, rồi trả lại.
+- e2e mới `e2e/catalog.spec.ts` "mobile: sheet bộ lọc (tải lười) — Enter mở, Tab ở trong sheet, Esc / "Xong" đóng, focus về nút" (desktop skip: nút chỉ hiện dưới `md`).
+- Không xóa / skip / nới test nào; không đổi chuỗi expected nào.
+
+### CI
+
+| Commit | CI check | e2e |
+|---|---|---|
+| `8c7c5a7` (D) | 39296424992 ✔ | 39296425020 ✔ 421 qua / 9 skip / 0 flaky |
+| `46719ef` (sheet + docs) | 39297885429 ✔ | 39297885209 ✔ 422 qua / 10 skip / 0 flaky |
+| `3334285` (C) | 39299313643 ✔ | 39299313775 ✔ 422 qua / 10 skip / 0 flaky |
+| `0ef0086` (sửa theo review) | 39300594509 ✔ | 39300594469 (kết quả: báo cáo đêm) |
+
+### Kiểm bằng mắt (Claude in Chrome, Preview `3334285`, chỉ xem)
+
+- ⌘K (Ctrl K) mở palette; "sapiens" → 2 gợi ý; "nguyen nhat anh" → "Sương Khói Quê Nhà", "Làm bạn với bầu trời"; chọn kết quả → trang sách. ĐẠT.
+- Trang sách: icon giỏ ở nút "Thêm vào giỏ" và header 16px, icon tìm kiếm 16px, mũi tên kệ 16px. ĐẠT.
+- Sáng / tối: sáng → hiện mặt trăng (mặt trời 0px), nhãn "Chuyển sang giao diện tối"; tối → hiện mặt trời. ĐẠT.
+- Kệ "Nổi bật" trang chủ: bấm mũi tên phải → kệ cuộn, nút trái bật. ĐẠT.
+- `/sach`: lọc "Tiếng Anh" → `/sach?lang=en`, 189 → 117 cuốn; `/danh-muc/van-hoc` "Tiếng Việt" → `?lang=vi`, chip đổi trạng thái, có "Xóa bộ lọc" (26 cuốn, danh mục toàn sách Việt). Chevron sort 16px. ĐẠT.
+- Sheet bộ lọc: **chưa kiểm mobile** (Chrome không thu được cửa sổ: `resize_window` báo xong nhưng `innerWidth` vẫn 1536). Ở desktop mở bằng `click()` qua JS (nút `md:hidden`): sheet "Bộ lọc" hiện, 14 link, focus trong sheet, 18 lần Tab vẫn trong sheet, Esc đóng; focus về `body` vì nút đang `display: none` ở desktop (đúng dự kiến). Ca mobile (focus về nút) do e2e mới trên Pixel 7 kiểm.
+- HTML không JS của `/sach` (fetch cùng origin): Preview `sau-ux` (`56bcf5e`) và `perf-js`: nút "Bộ lọc" cùng 43 class (SHA-256 16 ký tự `4615c06793ee24f7`), cùng chữ / icon, `aria-haspopup="dialog"` + `aria-expanded="false"`; khác `data-slot` (`sheet-trigger` → `button`) và mất `data-state="closed"`; 7 link lọc (`price` ×4, `lang` ×2, `stock`) giống hệt; không có dialog trong HTML ở cả hai. Không JS: như cũ (nút không làm gì, hàng lọc desktop chạy bằng link).
+- Console: không lỗi.
+
+### Review (code-reviewer, diff `56bcf5e..3334285`)
+
+- NGHIÊM TRỌNG: không có.
+- NÊN SỬA: (1) câu quy ước dialog trong CLAUDE.md ghi quá thực tế (palette không trả focus về nút khi đóng; gợi ý mã không tải trước) → đã viết lại, ghi rõ chỗ lệch; (2) docs chưa cập nhật → mục này + CLAUDE.md; `progress.md` để lúc merge (dưới); (3) tải chunk lỗi: prefetch sinh unhandled rejection → đã `.catch`; bấm khi tải lỗi → error boundary của route (cùng mẫu với gợi ý mã, khung chat) → **chưa sửa**, đề xuất làm chung cho cả 3 chỗ.
+- GỢI Ý đã làm: bỏ `group` thừa; sửa comment `search-input.ts`; `measure-js.mjs` "thừa" → "vượt" + comment bảng ngân sách; test tĩnh chặn zod.
+- GỢI Ý chưa làm: chỉ đặt `aria-expanded` khi đã mounted; `{ ssr: false }` cho thống nhất; e2e "bấm khi chunk chưa về" bằng `page.route` làm chậm chunk.
+
+### Ghi vào progress.md khi merge
+
+- Xóa: dòng D (`[Đợt "giảm JS client" – làm D trước]`), dòng C, dòng sheet lazy, dòng `[Đo] scripts/measure-js.mjs thêm cột ngân sách theo route`, dòng `[Đợt perf-js] cập nhật mốc JS trong CLAUDE.md:153`, dòng `[Đã quyết 2026-10-19] ★ perf-js`.
+- Giữ: dòng B (`[Đợt "giảm JS client"] B: … cn`), `[Đo] … polyfill noModule` (★8: quyết sau đợt), `[Không làm] E`.
+- Thêm:
+  - "[perf-js, chờ quyết] Lõi lucide `Icon` (`"use client"` từ lucide-react 1.x) vẫn tải ở mọi trang có icon; bỏ hẳn cần vẽ SVG thẳng / bỏ lucide (docs/plans/perf-js.md → Báo cáo)."
+  - "[Mức thấp] Dialog tải lười (sheet bộ lọc, gợi ý mã, khung chat): tải chunk lỗi khi bấm → error boundary của route; palette chưa trả focus về nút khi đóng; gợi ý mã chưa tải trước (CLAUDE.md → Hiệu năng)."
