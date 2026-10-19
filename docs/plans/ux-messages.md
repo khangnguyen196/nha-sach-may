@@ -23,7 +23,7 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 - **1b** "Chọn mã giảm giá": RPC `checkout_vouchers`, mã đủ điều kiện giảm nhiều nhất lên đầu, mã chưa đủ mờ + "Mua thêm … để dùng mã này", "Áp dụng" điền ô + gửi đúng form GET cũ. Tấm trượt dưới `sm` (chữ 16px, nút 44px), dialog từ `sm`; code dialog tải khi bấm. Admin: ô "Hiện trong gợi ý ở trang thanh toán", nhãn "Gợi ý" ở danh sách.
 - **2** Hủy đơn báo đúng lý do (đã xác nhận / đang giao, đã giao, đã thanh toán, đã hủy), lý do cần cửa hàng xử lý kèm email.
 - **3** Lỗi Supabase Auth: email bị từ chối → dưới ô Email; mật khẩu yếu / trùng → dưới ô Mật khẩu; tắt đăng ký, tài khoản khóa, phiên hết hạn có mã riêng. Quên mật khẩu không còn báo "đã gửi" khi mất mạng. Link xác nhận gặp lỗi mạng không còn báo "hết hạn".
-- **4** Đăng nhập khi chưa xác nhận email: câu rõ + "Gửi lại email xác nhận" (form riêng, chạy không cần JS, khóa 60 giây đếm ngược, luôn báo "đã gửi" để không lộ email).
+- **4** Đăng nhập khi chưa xác nhận email: câu rõ + "Gửi lại email xác nhận" (form riêng, khóa 60 giây đếm ngược, luôn báo "đã gửi" để không lộ email). Ghi chú 2026-10-19: "chạy không cần JS" đã kiểm là KHÔNG đúng (khi tắt JS, form trả kết quả hiện trang trắng; xem `docs/progress.md`).
 - **5** `RATE_LIMITED` trung tính, có số giây khi GoTrue báo.
 - **6 / 9** 404 theo loại (proxy gắn `x-not-found`): sách ngừng bán, danh mục ẩn, tác giả, đơn hàng (CÙNG một câu cho mã sai / không có / của tài khoản khác), địa chỉ; link tìm sách / danh mục / đơn hàng của tôi. Vẫn HTTP 404 thật.
 - **7** `AUTH_REQUIRED`: "Phiên đăng nhập đã hết…" + "Đăng nhập lại" về đúng trang (form địa chỉ, ngôn ngữ email, đánh giá, giỏ). Tìm ra lỗi gốc: proxy chuyển hướng cả POST (Server Action) về trang đăng nhập → client báo nhầm "Không kết nối được máy chủ"; nay proxy chỉ chuyển hướng GET / HEAD.
@@ -98,8 +98,14 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **chưa merge*
 **Khác với plan (thêm)**
 - Mục 4 "chạy được không cần JS": SAI khi action trả kết quả trên trang prerender (xem việc 6); áp cho mọi form, không riêng gửi lại email.
 - Mục 6: proxy giờ xóa header `x-not-found` của khách ở mọi request đi qua proxy (trước đây chỉ ghi đè khi rewrite); đường dẫn có dấu chấm không qua proxy (xem việc 3).
-- Mục 3 (`requestPasswordReset`): theo mã nguồn GoTrue (`internal/api/recover.go`, `mail.go`), email sai dạng trả `validation_failed` TRƯỚC khi tìm user; `email_address_invalid` chỉ sinh trong `sendEmail`, tức là SAU khi đã tìm thấy tài khoản. Báo `email_address_invalid` dưới ô (theo yêu cầu Việc 2) vì vậy vẫn có thể lộ email có tài khoản khi GoTrue kiểm tên miền / DNS. Giữ đúng yêu cầu, chờ quyết (`docs/progress.md`).
+- Mục 3 / 4 / 5 (quên mật khẩu, gửi lại xác nhận): theo mã nguồn GoTrue (`recover.go`, `mail.go`), `email_address_invalid` và giới hạn tần suất theo từng tài khoản (429 "after N seconds") chỉ xảy ra SAU khi đã tìm thấy tài khoản → báo ra là lộ email có tài khoản. Đã chặn hết ở đợt 2026-10-19 (xem dưới).
 - Mục 15: URL thật khác giả thuyết (xem mục 15 ở trên).
+
+**Sáng 2026-10-19 (quyết định của chủ dự án + việc đã làm)**
+- Quyết định: quên mật khẩu và gửi lại email xác nhận CHẶN HẾT việc dò email. `requestPasswordReset`, `resendConfirmation` chỉ báo lỗi khi không tới được máy chủ (fetch lỗi, không có response) hoặc zod chặn dữ liệu nhập; mọi phản hồi khác của GoTrue (`email_address_invalid`, `email_address_not_authorized`, mọi 429 kể cả theo từng tài khoản và giới hạn email của project, 5xx khi gửi thư, user không có, mã lạ) cùng một kết quả "đã gửi". Log chỉ ghi mã lỗi. Câu "đã gửi" (vi / en) nói rõ thư tới trong vài phút nếu email có tài khoản / cần xác nhận, không thấy thì xem Spam hoặc thử lại sau vài phút. Nút "Gửi lại sau N giây" khóa 60 giây cố định ở client. Commit `4b30b55`; Vitest 20 trường hợp cho 2 action (9 fail với code trước đó). Bỏ dòng "[Rủi ro chấp nhận] … ~60 giây" khỏi `docs/progress.md`.
+- Quy ước ghi vào `CLAUDE.md` (nháp ghi chú theo tài khoản; quên mật khẩu / gửi lại chỉ báo NETWORK_ERROR + lỗi zod).
+- Test: `migrations.test` neo regex vào `) language` + danh sách cột khác rỗng (vẫn fail khi tạm thêm `used_count`); e2e `not-found.spec` gửi `x-not-found: order` thật qua proxy (`2873f08`). `account.spec` (chờ form đăng xuất hydrate bằng `__reactProps`): giữ nguyên, vì không có hiệu ứng quan sát được của riêng form đăng xuất nếu không sửa code app (cùng cơ chế với helper `waitForHydration` dùng ở các spec khác).
+- Mục 15 (request RSC 404) và tắt JS → trang trắng: có từ trước, không chặn merge, chuyển sang `docs/progress.md`.
 
 ## ★ Quyết định (đã duyệt 2026-10-18)
 
@@ -350,8 +356,8 @@ grant execute on function public.checkout_vouchers() to authenticated;
 
 **Cách sửa**
 - Action mới `resendConfirmation(locale, _prev, formData)` (`features/auth/actions.ts`): parse `email` (zod), `supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: authCallbackUrl(…, 'signup') } })`. Kết quả luôn "đã gửi" nếu không phải lỗi giới hạn / mạng (không lộ email có tồn tại).
-- `LoginForm`: khi `failure.code === 'EMAIL_NOT_CONFIRMED'`, trong khối lỗi hiện nút "Gửi lại email xác nhận". Nút là `<button formAction={resend}>` của **cùng form** (gửi luôn ô email đang có; không cần trả email về từ server). Chạy được không cần JS.
-- Sau khi gửi: "Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé." + nút khóa 60 giây, đếm ngược ("Gửi lại sau 42 giây"). Bị Supabase giới hạn → câu `RATE_LIMITED` có số giây (mục 5).
+- `LoginForm`: khi `failure.code === 'EMAIL_NOT_CONFIRMED'`, trong khối lỗi hiện nút "Gửi lại email xác nhận". Nút là `<button formAction={resend}>` của **cùng form** (gửi luôn ô email đang có; không cần trả email về từ server). ~~Chạy được không cần JS.~~ Đã kiểm 2026-10-18: KHÔNG đúng: khi tắt JS, POST của Server Action trên trang prerender chỉ trả phần động → trang trắng (xem `docs/progress.md`).
+- Sau khi gửi: "Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé." + nút khóa 60 giây, đếm ngược ("Gửi lại sau 42 giây"). Bị Supabase giới hạn → câu `RATE_LIMITED` có số giây (mục 5). **Đổi 2026-10-19**: mọi phản hồi của GoTrue trừ không tới được máy chủ đều "đã gửi" (kể cả 429), câu mới "Nếu email này cần xác nhận, thư sẽ tới trong vài phút…"; xem "Bổ sung".
 - Template: email gửi lại dùng template "Confirm signup" như đăng ký (song ngữ theo `user_metadata.locale`). Supabase local (Mailpit) cũng vậy.
 
 **Câu mới** (namespace `auth`)

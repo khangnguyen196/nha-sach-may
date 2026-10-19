@@ -133,7 +133,7 @@ Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari)
 
 **Việc còn lại cho đợt sửa lỗi sau Phase 11** (đã làm ở nhánh `ux-messages`, xem mục dưới)
 1. Trang đăng nhập mất chữ đã gõ → đã sửa (một form ngay từ đầu, mục 14).
-2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`) → **chưa xong**: commit chẩn đoán đã bắt được URL (`/dang-nhap?next=%2Ftai-khoan&_rsc=…`, run 39148697724), khác giả thuyết; chờ quyết trước khi sửa.
+2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`) → **chưa xong**: commit chẩn đoán đã bắt được URL (`/dang-nhap?next=%2Ftai-khoan&_rsc=…`, run 39148697724), khác giả thuyết; có từ trước, điều tra ở nhánh riêng sau merge (`docs/progress.md`).
 3. Tên tác giả ngược thứ tự → SQL `supabase/checks/authors-fix.sql` chờ duyệt (chưa chạy).
 
 ## Đợt ux-messages: thông báo cho khách (nhánh `ux-messages`, CHƯA merge)
@@ -143,12 +143,11 @@ Plan + báo cáo: `docs/plans/ux-messages.md`. Việc để sau: `docs/progress.
 - Mã giảm giá / hủy đơn báo đúng lý do, gợi ý mã ở trang thanh toán, lỗi đăng ký / đăng nhập theo ô, gửi lại email xác nhận, 404 nói rõ thiếu gì (vẫn HTTP 404 thật), link "Đăng nhập lại", form giữ chữ khi mất mạng, trang lỗi có mã tra cứu + email liên hệ.
 - Migration A đã chạy; **migration B chạy sau khi merge + deploy** (app hiểu cả mã cũ lẫn mới, có Vitest cho đường mã cũ).
 - JS (measure:js, gzip ngoài baseline 170KB): trang sách 43.9 → **45.3KB** (ngân sách 50), trang chủ 41.2 → 42.2, `/sach` + danh mục 54.3 → 55.3 (chưa có ngân sách).
-- Bổ sung đêm 2026-10-18: quên mật khẩu không còn lộ email có tài khoản qua `email_address_not_authorized`; proxy bỏ header `x-not-found` do khách gửi (request đi qua proxy); nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
+- Bổ sung đêm 2026-10-18: quên mật khẩu / gửi lại email xác nhận không còn lộ email nào có tài khoản (chỉ báo lỗi khi không tới được máy chủ, còn lại "đã gửi", 2026-10-19); proxy bỏ header `x-not-found` do khách gửi (request đi qua proxy); nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
 
 ## 4. Rủi ro còn lại
 
 - **LCP chưa đạt 2.5 s** trên mobile mô phỏng (3.6–5.1 s): font (12 file woff2) + JS tranh băng thông. Cần đo lại trên domain thật (Vercel Speed Insights) rồi mới quyết định bớt độ đậm font / preload ảnh lưới.
-- **e2e chạy trên DB production**: sách e2e đang bán lộ qua tìm kiếm / `/sach` trong lúc test; user, đơn, voucher test sót lại nếu lần chạy bị ngắt (setup lần sau dọn). Xử lý: project Supabase riêng (mục 3 bước 6).
 - **Thanh toán không đối soát**: admin tự xem sao kê; đơn chuyển khoản chưa trả giữ tồn kho tới khi admin hủy. VietQR đang là thông tin demo.
 - **Email chỉ ghi log** tới khi cấu hình Resend; lỗi gửi chỉ có trong log, không thử lại.
 - `/sach` + trang danh mục 55.3KB JS (chưa có ngân sách; trên mức 50KB của trang sách; do sheet bộ lọc tải ngay). Plan giảm: `docs/plans/perf-js.md`.
