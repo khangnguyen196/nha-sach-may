@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { cookies, headers } from 'next/headers'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { getBookBySlug, getCategories } from '@/features/books/queries'
-import { truncateText } from '@/features/books/utils'
+import { inVisibleCategories, truncateText } from '@/features/books/utils'
 import { getCurrentUser } from '@/lib/auth'
 import type { Failure, Result } from '@/lib/errors'
 import { selectCandidates, type Candidate } from './candidates'
@@ -138,12 +138,15 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   const requestHeaders = await headers()
   if (isBlockedCountry(requestHeaders.get('x-vercel-ip-country'))) return { ok: false, code: 'CHAT_REGION' }
 
-  const [user, catalog, categories, current] = await Promise.all([
+  const [user, fullCatalog, categories, current] = await Promise.all([
     getCurrentUser(),
     getChatCatalog(),
     getCategories(),
     slug ? getBookBySlug(slug) : Promise.resolve(null),
   ])
+  // Một lần, cho cả ứng viên lẫn knownSlugs: sách thuộc danh mục ẩn không được gợi ý (docs/plans/sau-ux.md mục 6, A1).
+  // Sách đang xem thuộc danh mục ẩn vẫn vào prompt qua fallbackCandidate (link trực tiếp vẫn xem được).
+  const catalog = inVisibleCategories(fullCatalog, categories)
 
   const now = new Date()
   const identity = user

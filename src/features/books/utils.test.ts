@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { discountPercent, fillShelf, paginationRange, splitParagraphs, truncateText, visibleCategoryIds } from './utils'
+import {
+  discountPercent,
+  fillShelf,
+  inVisibleCategories,
+  paginationRange,
+  splitParagraphs,
+  truncateText,
+  visibleBooksFilter,
+  visibleCategoryIds,
+} from './utils'
 
 describe('discountPercent', () => {
   it('làm tròn % giảm', () => {
@@ -85,5 +94,32 @@ describe('visibleCategoryIds', () => {
       { id: 10, parent_id: 9 },
     ]
     expect(visibleCategoryIds(categories)).toEqual([1, 2, 3])
+  })
+})
+
+describe('visibleBooksFilter', () => {
+  it('sách thuộc danh mục đang hiện hoặc không có danh mục (★6c giữ nguyên)', () => {
+    expect(visibleBooksFilter([1, 2, 3])).toBe('category_id.is.null,category_id.in.(1,2,3)')
+  })
+
+  it('không danh mục nào hiện → chỉ sách không có danh mục (không sinh `in.()` rỗng)', () => {
+    expect(visibleBooksFilter([])).toBe('category_id.is.null')
+  })
+})
+
+describe('inVisibleCategories', () => {
+  it('bỏ sách thuộc danh mục ẩn / con của gốc ẩn, giữ sách không có danh mục', () => {
+    const categories = [
+      { id: 1, parent_id: null },
+      { id: 2, parent_id: 1 },
+      { id: 10, parent_id: 9 },
+    ]
+    const books = [
+      { slug: 'hien', category_id: 2 },
+      { slug: 'con-goc-an', category_id: 10 },
+      { slug: 'danh-muc-an', category_id: 7 },
+      { slug: 'khong-danh-muc', category_id: null },
+    ]
+    expect(inVisibleCategories(books, categories).map((book) => book.slug)).toEqual(['hien', 'khong-danh-muc'])
   })
 })

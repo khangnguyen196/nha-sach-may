@@ -520,7 +520,8 @@ export async function createE2eBook({
   stock = 10,
   active = true,
 }: {
-  categoryId: number
+  /** null: sách không có danh mục (vẫn lên danh sách, docs/plans/sau-ux.md mục 6 ★6c) */
+  categoryId: number | null
   price?: number
   stock?: number
   active?: boolean

@@ -151,6 +151,8 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 - **Tầng trả 404: Next** (segment prefetch theo header của route cũ đi qua redirect của proxy sang route khác). Proxy chỉ tạo redirect đúng như thiết kế. Người dùng không thấy gì (prefetch hỏng, điều hướng thật vẫn sang trang đăng nhập); chỉ là dòng 404 trong console + 2 request thừa.
 - **Nguồn prefetch khi chưa có phiên** (giả thuyết, chưa kiểm): (a) fallback Suspense của `AccountLink` (`components/layout/account-link.tsx`) là link `/account` nằm trong khung tĩnh của **mọi trang** → khách chưa đăng nhập mà hydrate xong trước khi phần động tới (máy CI bận) thì router prefetch `/tai-khoan` → chuỗi trên; (b) link `/account` của header khi còn phiên được prefetch đúng lúc cookie vừa xóa (đăng xuất).
 - **Đề xuất sửa** (chưa làm, chờ duyệt): (1) `prefetch={false}` cho link `/account` ở fallback của `AccountLink` (và cân nhắc cả link `/account` khi đã đăng nhập: khu tài khoản là trang động, prefetch lợi ít); 0KB JS; (2) e2e: khách chưa đăng nhập tải trang chủ → không có request nào tới `/tai-khoan?_rsc`; (3) theo dõi `cart-account.spec.ts:94` vài lượt CI. Không sửa ở proxy (không thấy header RSC). Phương án phụ nếu (1) không đủ: fallback là icon không phải link.
+- **Đã sửa (2026-10-19, `d60b369`)** theo quyết định: `prefetch={false}` CHỈ cho link `/account` trong fallback của `AccountLink` (`components/layout/account-link.tsx`); link `/account` khi đã đăng nhập giữ prefetch. e2e mới `layout.spec.ts` "khách chưa đăng nhập: không có request RSC / prefetch nào tới /tai-khoan (/en/account)" (trang chủ, `/sach/sapiens`, `/en`, `/en/books/sapiens`; chờ hydrate + 1,5 s). `cart-account.spec.ts:94` giữ nguyên.
+- **Chứng minh test bắt được: KHÔNG đạt.** Nhánh nháp `prefetch-red-check` (bỏ `prefetch={false}`, chỉ chạy test này `--repeat-each 10 --retries 0`, desktop + mobile): **20/20 qua** (run 39249999264) → test không phân biệt được có / không có bản sửa; nhánh đã xóa. Lý do có thể: khi tải trang lần đầu, phần động (phiên) tới trước lúc React hydrate boundary nên fallback không bao giờ được hydrate thành `Link` (React không hydrate fallback của boundary đang chờ server) → không prefetch dù có bản sửa hay không. Vậy giả thuyết (a) "fallback ở lần tải đầu" **khó xảy ra**; fallback chỉ thành `Link` thật khi được render ở client (VD cây được render lại sau Server Action / refresh mà boundary hiện fallback) — chưa tái hiện được. Bản sửa vẫn giữ (chỉ bớt request, không đổi giao diện); test giữ làm kiểm hồi quy cho khách. Hiệu quả thật với lỗi chập chờn: **chưa kiểm**, theo dõi `cart-account.spec.ts:94` trên CI.
 
 ## 5. Tắt JavaScript → trang trắng khi Server Action trả kết quả — đợt riêng sau perf-js (★5)
 
@@ -228,6 +230,17 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - Rủi ro e2e: spec đang tìm sách e2e qua `/sach` / tìm kiếm / palette sẽ hỏng (ứng viên: `purchase.spec`, `admin-books.spec`, `catalog.spec`, `crawl.spec`; grep khi làm) → sửa spec dùng link trực tiếp hoặc sách thật.
 
 **Xong khi** (sau khi duyệt): các chỗ lọc + ★6a; Vitest + e2e CI xanh; CLAUDE.md ghi quy tắc ("ẩn danh mục = ẩn sách khỏi mọi danh sách; link trực tiếp vẫn mua được").
+
+**Đã code (2026-10-19, chưa merge, chờ duyệt + kết quả H1–H3)** — quyết định: A1; ★6a theo đề xuất (lọc trang tác giả + ẩn kệ "Cùng danh mục"); ★6d theo đề xuất (giữ trang riêng của danh mục con của gốc ẩn); ★6c: **giữ hành vi hiện tại từng chỗ** — sách không có danh mục KHÔNG bị ẩn thêm ở đâu (vẫn hiện ở `/sach`, tìm kiếm, palette, chatbot, trang tác giả như trước; trang chủ / sitemap vốn đã không có).
+- `features/books/utils.ts`: `visibleBooksFilter(ids)` (chuỗi `or` của PostgREST: `category_id.is.null,category_id.in.(…)`; rỗng → chỉ `is.null`), `inVisibleCategories(books, categories)` (lọc trong bộ nhớ).
+- `listBooks`: tham số `visibleCategoryIds` → `.or(visibleBooksFilter(…))`, dùng được trên bảng lẫn kết quả RPC `search_books`.
+- `withCategoryFilter` (`/sach`, `/tim-kiem`): chỉ danh mục đang hiện (chip, `?cat=`); không chọn danh mục → `visibleCategoryIds`.
+- `searchBookHits` (palette): đọc `getCategories()` → `.or(…)`; thêm tag `categories`.
+- `askMay`: lọc `catalog` một lần (`inVisibleCategories`) cho cả `selectCandidates` lẫn `knownSlugs`.
+- Trang tác giả: `listBooks({ bookIds, visibleCategoryIds })`. Trang sách: kệ "Cùng danh mục" chỉ hiện khi danh mục lá nằm trong cây đang hiện.
+- Không migration. Cache: không đổi (ẩn / hiện / đổi cha danh mục đã làm mới `categories` + `books` + `chat-catalog`).
+- Test: Vitest `listing.test.ts` (mới, 4 ca), `utils.test.ts` (`visibleBooksFilter` 2 ca, `inVisibleCategories` 1 ca); e2e `hidden-category.spec.ts` (mới, 4 test: trang tìm kiếm, `/api/search`, trang tác giả, link trực tiếp + không có kệ; đối chứng sách không có danh mục vẫn hiện). Giới hạn của e2e: danh mục tạo sau build không vào cache `getCategories` (`'max'`) → e2e kiểm đường lọc được nối vào từng chỗ, logic cây (con của gốc ẩn) kiểm ở Vitest. Chatbot chưa có e2e riêng (catalog chatbot cache theo giờ, sách tạo trong test không vào) → Vitest `inVisibleCategories`.
+- `measure:js` (build với DB production, cùng máy): trước / sau giống hệt — trang chủ (`vi`) +42.2KB, `/sach` (`vi/books`) +55.3KB, trang sách (`vi/books/sapiens`) +45.3KB (thay đổi chỉ ở server).
 
 ## 7 — chi tiết (plan, chờ duyệt; chưa có SQL sửa)
 

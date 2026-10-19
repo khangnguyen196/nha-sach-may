@@ -5,7 +5,7 @@ import { SHARP_COVER_WIDTH } from '@/lib/cover-image'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
-import { fillShelf } from './utils'
+import { fillShelf, visibleBooksFilter, visibleCategoryIds } from './utils'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -116,6 +116,8 @@ export type ListBooksInput = {
   categoryIds?: number[]
   /** Trang tác giả */
   bookIds?: number[]
+  /** Chỉ sách thuộc các danh mục đang hiện này (+ sách không có danh mục): /sach, tìm kiếm, trang tác giả */
+  visibleCategoryIds?: number[]
   /** Từ khóa đã qua searchQuerySchema → RPC search_books */
   q?: string
   price?: PriceRange
@@ -145,6 +147,7 @@ export async function listBooks(input: ListBooksInput): Promise<{ books: BookCar
 
   if (input.categoryIds) query = query.in('category_id', input.categoryIds)
   if (input.bookIds) query = query.in('id', input.bookIds)
+  if (input.visibleCategoryIds) query = query.or(visibleBooksFilter(input.visibleCategoryIds))
   if (input.lang) query = query.eq('language', input.lang)
   if (input.inStock) query = query.gt('stock', 0)
   if (input.price) {
@@ -275,15 +278,17 @@ export async function getAllAuthorSlugs() {
 
 const SEARCH_HIT_LIMIT = 8
 
-/** Gợi ý cho command palette: tối đa 8 sách khớp từ khóa (q đã qua searchQuerySchema). */
+/** Gợi ý cho command palette: tối đa 8 sách khớp từ khóa (q đã qua searchQuerySchema), bỏ sách thuộc danh mục ẩn. */
 export async function searchBookHits(q: string): Promise<SearchHit[]> {
   'use cache'
-  cacheTag('books')
+  cacheTag('books', 'categories')
   cacheLife('hours')
 
+  const categories = await getCategories()
   const { data, error } = await createPublicClient()
     .rpc('search_books', { q })
     .select('id, slug, title, cover_url, book_authors(role, authors(name))')
+    .or(visibleBooksFilter(visibleCategoryIds(categories)))
     .range(0, SEARCH_HIT_LIMIT - 1)
   if (error) throw new Error(`searchBookHits: ${error.message}`)
 

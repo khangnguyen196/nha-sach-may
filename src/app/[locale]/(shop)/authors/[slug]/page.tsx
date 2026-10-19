@@ -6,9 +6,9 @@ import { resolveSort } from '@/features/books/catalog-params'
 import { CatalogSkeleton, PageHeaderSkeleton } from '@/features/books/components/book-grid-skeleton'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { CatalogView } from '@/features/books/components/catalog-view'
-import { getAllAuthorSlugs, getAuthorBySlug, listBooks } from '@/features/books/queries'
+import { getAllAuthorSlugs, getAuthorBySlug, getCategories, listBooks } from '@/features/books/queries'
 import { catalogParamsSchema } from '@/features/books/schemas'
-import { splitParagraphs, truncateText } from '@/features/books/utils'
+import { splitParagraphs, truncateText, visibleCategoryIds } from '@/features/books/utils'
 import { localeAlternates } from '@/i18n/alternates'
 import { localize } from '@/lib/i18n-db'
 
@@ -82,14 +82,20 @@ async function AuthorContent({ params, searchParams }: Pick<Props, 'params' | 's
 type ResultsProps = { slug: string; bookIds: number[]; searchParams: Props['searchParams'] }
 
 async function AuthorResults({ slug, bookIds, searchParams }: ResultsProps) {
-  const [raw, t] = await Promise.all([searchParams, getTranslations('catalog')])
+  const [raw, t, categories] = await Promise.all([searchParams, getTranslations('catalog'), getCategories()])
   // Trang tác giả không có bộ lọc: chỉ giữ sort và trang
   const { sort, page } = catalogParamsSchema.parse(raw)
   const params = { sort, page }
 
   const result =
     bookIds.length > 0
-      ? await listBooks({ bookIds, sort: resolveSort(params, 'browse'), page })
+      ? await listBooks({
+          bookIds,
+          // Sách thuộc danh mục ẩn không lên danh sách (docs/plans/sau-ux.md mục 6)
+          visibleCategoryIds: visibleCategoryIds(categories),
+          sort: resolveSort(params, 'browse'),
+          page,
+        })
       : { books: [], total: 0 }
   // Trang vượt quá → UI 404 (soft 404)
   if (page > 1 && result.books.length === 0) return <InlineNotFound kind="page" />

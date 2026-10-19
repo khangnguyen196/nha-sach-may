@@ -77,3 +77,21 @@ export function visibleCategoryIds(categories: { id: number; parent_id: number |
     .filter((category) => category.parent_id === null || ids.has(category.parent_id))
     .map((category) => category.id)
 }
+
+/**
+ * Quy tắc ẩn danh mục (docs/plans/sau-ux.md mục 6, A1): sách thuộc danh mục không hiện (`visibleCategoryIds`) không lên
+ * danh sách nào (lưới, tìm kiếm, palette, chatbot, trang tác giả); link trực tiếp vẫn xem / mua được. Sách không có
+ * danh mục (`category_id` null) giữ nguyên như trước (★6c chưa quyết). Bộ lọc `or` của PostgREST cho bảng / kết quả RPC.
+ */
+export function visibleBooksFilter(visibleIds: readonly number[]) {
+  return visibleIds.length > 0 ? `category_id.is.null,category_id.in.(${visibleIds.join(',')})` : 'category_id.is.null'
+}
+
+/** Như visibleBooksFilter nhưng lọc trong bộ nhớ (catalog rút gọn của chatbot) */
+export function inVisibleCategories<T extends { category_id: number | null }>(
+  books: readonly T[],
+  categories: { id: number; parent_id: number | null }[],
+): T[] {
+  const visible = new Set(visibleCategoryIds(categories))
+  return books.filter((book) => book.category_id === null || visible.has(book.category_id))
+}
