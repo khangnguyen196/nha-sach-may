@@ -89,6 +89,21 @@ export async function signUp(
   return { ok: true, data: { email: parsed.data.email } }
 }
 
+/**
+ * Quên mật khẩu / gửi lại email xác nhận: chỉ báo lỗi khi KHÔNG tới được máy chủ (fetch lỗi, không có response). Mọi
+ * phản hồi của GoTrue (email_address_invalid, email_address_not_authorized, mọi 429 kể cả giới hạn theo từng tài khoản,
+ * 5xx khi gửi thư, user không có, mã lạ) cùng một kết quả "đã gửi": nhiều phản hồi trong số đó chỉ xảy ra khi email ĐÃ có
+ * tài khoản (GoTrue tìm user trước rồi mới gửi thư / kiểm tần suất), báo khác đi là lộ email nào có tài khoản.
+ * Quyết định 2026-10-19, xem docs/plans/ux-messages.md → "Bổ sung". Lỗi nhập (zod) vẫn báo, trước khi gọi GoTrue.
+ * Trả Failure khi phải báo, null khi coi như "đã gửi" (log chỉ ghi mã: message của GoTrue có thể chứa địa chỉ email).
+ */
+function unreachableOnly(label: string, error: Parameters<typeof authFailure>[0] | null): Failure | null {
+  if (!error) return null
+  if (error.status === 0) return { ok: false, code: 'NETWORK_ERROR' }
+  console.error(label, error.code ?? `${error.name ?? 'AuthError'} ${error.status ?? ''}`.trim())
+  return null
+}
+
 export async function requestPasswordReset(
   locale: Locale,
   _prev: Result<{ email: string }> | null,
@@ -103,18 +118,9 @@ export async function requestPasswordReset(
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: await callbackUrl(target, 'recovery'),
   })
-  if (error) {
-    const failure = authFailure(error)
-    // Báo: giới hạn tần suất, không tới được máy chủ (không nói gì về tài khoản), và email_address_invalid dưới ô
-    // Email (giữ theo yêu cầu đợt ux-messages, CHỜ QUYẾT: GoTrue trả mã này trong sendEmail, sau khi đã tìm thấy tài
-    // khoản; sai dạng là validation_failed, trả trước khi tìm → có thể lộ email có tài khoản, xem docs/progress.md).
-    // email_address_not_authorized cũng chỉ xảy ra khi đã có tài khoản (SMTP mặc định chỉ gửi cho thành viên
-    // project) → như mọi lỗi khác: "đã gửi", giống email không có tài khoản.
-    if (failure.code === 'RATE_LIMITED' || failure.code === 'NETWORK_ERROR' || error.code === 'email_address_invalid') {
-      return withAuthMessage(target, failure)
-    }
-    console.error('resetPasswordForEmail:', error.code ?? error.message)
-  }
+  // Mọi kết quả khác "không tới được máy chủ" đều "đã gửi" (unreachableOnly)
+  const unreachable = unreachableOnly('resetPasswordForEmail:', error)
+  if (unreachable) return unreachable
   return { ok: true, data: { email: parsed.data.email } }
 }
 
@@ -139,8 +145,9 @@ export async function updatePassword(_prev: Result<null> | null, formData: FormD
 }
 
 /**
- * Gửi lại email xác nhận đăng ký. Luôn báo "đã gửi" trừ lỗi không nói gì về tài khoản (giới hạn tần suất, mạng): không
- * lộ email nào đã đăng ký / đã xác nhận. Supabase tự giới hạn mỗi email (~60 giây); form khóa nút 60 giây.
+ * Gửi lại email xác nhận đăng ký. Như quên mật khẩu (unreachableOnly): chỉ báo khi không tới được máy chủ, còn lại
+ * "đã gửi", không lộ email nào đã đăng ký / đã xác nhận. Nút khóa 60 giây ở client sau mỗi lần gửi (số cố định, không
+ * lấy từ GoTrue).
  */
 export async function resendConfirmation(
   locale: Locale,
@@ -157,11 +164,8 @@ export async function resendConfirmation(
     email: parsed.data.email,
     options: { emailRedirectTo: await callbackUrl(target, 'signup') },
   })
-  if (error) {
-    const failure = authFailure(error)
-    if (failure.code === 'RATE_LIMITED' || failure.code === 'NETWORK_ERROR') return withAuthMessage(target, failure)
-    console.error('resend(signup):', error.code ?? error.message)
-  }
+  const unreachable = unreachableOnly('resend(signup):', error)
+  if (unreachable) return unreachable
   return { ok: true, data: null }
 }
 

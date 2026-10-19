@@ -803,7 +803,7 @@
       "description": "Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.",
       "submit": "Gửi liên kết",
       "sentTitle": "Kiểm tra hộp thư của bạn",
-      "sent": "Nếu email dưới đây có tài khoản, liên kết đặt lại mật khẩu đã được gửi tới đó. Liên kết chỉ dùng được một lần.",
+      "sent": "Nếu email dưới đây có tài khoản, liên kết đặt lại mật khẩu sẽ tới trong vài phút (chỉ dùng được một lần). Không thấy thư thì bạn xem mục Spam hoặc thử lại sau vài phút.",
       "backToLogin": "Quay lại đăng nhập"
     },
     "reset": {
@@ -837,7 +837,7 @@
     "resend": {
       "submit": "Gửi lại email xác nhận",
       "pending": "Đang gửi…",
-      "sent": "Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé.",
+      "sent": "Nếu email này cần xác nhận, thư sẽ tới trong vài phút. Không thấy thư thì bạn xem mục Spam hoặc thử lại sau vài phút.",
       "wait": "Gửi lại sau {seconds} giây"
     }
   },

@@ -387,7 +387,7 @@
       "description": "Enter the email you registered with and we'll send you a link to reset your password.",
       "submit": "Send link",
       "sentTitle": "Check your inbox",
-      "sent": "If the email below has an account, a password reset link has been sent to it. The link can only be used once.",
+      "sent": "If the email below has an account, a password reset link will arrive within a few minutes (it can only be used once). If you don’t see it, check your Spam folder or try again in a few minutes.",
       "backToLogin": "Back to sign in"
     },
     "reset": {
@@ -421,7 +421,7 @@
     "resend": {
       "submit": "Resend confirmation email",
       "pending": "Sending…",
-      "sent": "Sent again. Please check your inbox (and Spam).",
+      "sent": "If this email still needs confirming, the email will arrive within a few minutes. If you don’t see it, check your Spam folder or try again in a few minutes.",
       "wait": "Resend in {seconds}s"
     }
   },

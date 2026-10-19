@@ -101,12 +101,12 @@ test('đăng nhập khi chưa xác nhận email (vi) → báo rõ + "Gửi lại
     )
     const resend = page.getByRole('main').getByTestId('resend-confirmation')
     // Supabase local chỉ cho gửi lại mỗi email cách thư trước ≥ 1 giây (config.toml: max_frequency = "1s"; production
-    // ~60 giây): bấm sớm hơn thì GoTrue trả giới hạn tần suất (UI báo "thử lại sau N giây", không phải lỗi)
+    // ~60 giây): bấm sớm hơn thì GoTrue không gửi thư thứ 2 (UI vẫn báo "đã gửi", không lộ email có tài khoản)
     await page.waitForTimeout(Math.max(0, 1_100 - (Date.now() - firstEmailAt)))
     await resend.getByRole('button', { name: 'Gửi lại email xác nhận' }).click()
     // Kèm khối lỗi của form gửi lại: fail thì thấy luôn lý do
     await expect(resend.getByRole('status').or(resend.getByRole('alert'))).toHaveText(
-      'Đã gửi lại. Bạn mở hộp thư (cả mục Spam) nhé.',
+      'Nếu email này cần xác nhận, thư sẽ tới trong vài phút. Không thấy thư thì bạn xem mục Spam hoặc thử lại sau vài phút.',
     )
     // Khóa 60 giây, đếm ngược trên nút (Supabase giới hạn gửi lại mỗi email)
     const waiting = resend.getByRole('button', { name: /^Gửi lại sau \d+ giây$/ })
