@@ -39,6 +39,11 @@
 2. `docs/plans/owner-todo.md`: hướng dẫn từng bước (Redirect URLs, Vercel, CI, e2e trên Supabase local).
 3. Cần chi tiết một phần thì đọc `docs/plans/phase-<n>.md` (mục "Báo cáo" và "Quyết định tự chọn" ở đầu file) và `docs/plans/data.md` (dữ liệu sách, bìa).
 
+## Vận hành (production)
+
+- **Mã tra cứu ở trang lỗi** (`error.digest`): tra trong Vercel → project → Logs, lọc theo mã. Gói **Hobby chỉ giữ runtime log 1 giờ** → phải tra trong 1 giờ sau khi khách gặp lỗi; không có cách xem lại log cũ (không đặt lịch "xem log hằng tuần").
+- **Lượt dùng chatbot Mây**: chạy `supabase/checks/chat-usage.sql` (chỉ đọc) trong SQL Editor: Q1 lượt gọi Gemini mỗi ngày (trần 400), Q2 số khách / câu hỏi mỗi ngày (mỗi khách tối đa 30), Q3 10 phút đông nhất (trần 10 / phút). Bảng `private.chat_quota` chỉ giữ ~3 ngày.
+
 ## Cách làm việc chủ dự án đã quen
 
 - Mọi việc làm trên **nhánh riêng**, kiểm tra đủ (`typecheck`, `lint`, `build`, Vitest, e2e liên quan), push nhánh rồi **báo trước khi merge**. Merge vào `main` bằng `--ff-only` khi đã được duyệt, xong thì xóa nhánh và xem CI.

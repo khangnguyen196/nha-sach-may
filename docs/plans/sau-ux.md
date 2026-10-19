@@ -160,3 +160,71 @@ File `supabase/checks/catalog-data-r.sql` (CHỈ ĐỌC) + đề xuất xử lý
 ## Thứ tự
 
 Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) · mục 4 song song trên `diag-rsc-404` · mục 6, 7 (plan + SQL chỉ đọc) · mục 8 → `/baocao`. Chưa merge.
+
+## 6 — chi tiết (plan, chờ duyệt; chưa code)
+
+**Định nghĩa "danh mục đang hiện"**: `categories.is_active` (RLS anon chỉ trả dòng này) **và** là gốc hoặc có cha đang hiện. Dùng lại `visibleCategoryIds(getCategories())` (`src/features/books/utils.ts`). Cây tối đa 2 cấp (admin `checkParent` chặn cấp 3) nên một bước kiểm cha là đủ. Sách `category_id = null` (danh mục bị xóa → `on delete set null`) coi như **không hiện**, khớp trang chủ + sitemap hiện tại (★6c).
+
+**Kiểm kê chỗ liệt kê sách** (grep `from('books')` / `rpc('search_books')` trong `src`, bỏ admin):
+
+| Chỗ | Hàm (file) | Đang lọc danh mục hiện? | Theo hướng A |
+|---|---|---|---|
+| Trang chủ: 4 kệ | `getHomeShelves` (`features/books/queries.ts`) | **Có** (`.in('category_id', visibleCategoryIds)`) | giữ |
+| `/sach` (lưới + đếm + phân trang + bộ lọc) | `listBooks` qua `withCategoryFilter` (`features/books/listing.ts`) | **Không** (không `cat` → không lọc; `?cat=` nhận cả danh mục con của gốc ẩn) | lọc |
+| Trang tìm kiếm `/tim-kiem` | `listBooks({ q })` → RPC `search_books` | **Không** | lọc |
+| Palette ⌘K | `searchBookHits` (`/api/search`) → RPC `search_books` | **Không** | lọc |
+| Chatbot: catalog ứng viên | `getChatCatalog` (`features/chat/queries.ts`) | **Không** | lọc |
+| Chatbot: thẻ sách trả lời | `getChatBookCards(slugs)` | gián tiếp (slug chỉ lấy từ ứng viên, `enum` của Gemini) | không đổi |
+| Trang danh mục | `listBooks({ categoryIds })` | danh mục ẩn → 404 (RLS + slug guard); danh mục con của gốc ẩn **vẫn có trang** (e2e dựa vào "gốc ẩn + con đang hiện") | không đổi (★6d) |
+| Trang tác giả | `listBooks({ bookIds })` | **Không** | ★6a: đề xuất lọc |
+| Kệ "Cùng danh mục" ở trang sách | `getRelatedBooks(bookId, categoryId)` | không cần khi sách thuộc danh mục hiện; sách thuộc danh mục ẩn (mở qua link) thì kệ toàn sách ẩn | ★6a: đề xuất ẩn kệ khi danh mục của sách không hiện |
+| Sitemap | `app/sitemap.ts` | **Có** (cây đang hiện, bỏ `category_id null`) | giữ |
+| `generateStaticParams` trang sách | `getAllBookSlugs` | không (chỉ prerender) | không đổi (A1) |
+| Giỏ khách / giỏ tài khoản / đặt hàng | `cart/queries.ts`, `cart/actions.ts`, RPC | không | không đổi (A1) |
+
+**Cách làm (A1)** — không cần sửa DB: `search_books` là hàm invoker trả `setof books`, PostgREST nhận thêm `.in('category_id', …)` trên kết quả RPC (như filter `price`, `language` đang dùng). Không migration.
+- `withCategoryFilter`: chỉ nhận danh mục đang hiện; không `cat` → `categoryIds = visibleCategoryIds(categories)`; `?cat=` chỉ nhận slug trong cây đang hiện. `/sach` và `/tim-kiem` dùng chung.
+- `searchBookHits(q)`: đọc `getCategories()` (cache, tag `categories`) → `.in('category_id', visible)`.
+- Chatbot: lọc `catalog` theo `visibleCategoryIds(categories)` trong `askMay` (đã lấy `getCategories()` song song) trước khi chọn ứng viên.
+- Trang tác giả (nếu ★6a đồng ý): `listBooks({ bookIds, categoryIds: visible })`; tác giả chỉ có sách ẩn → trạng thái rỗng như khi không có sách.
+- Kệ "Cùng danh mục" (nếu ★6a đồng ý): danh mục của sách không nằm trong cây hiện → không render kệ.
+- `.in()` ~30 id → URL PostgREST ngắn; cache key của `listBooks` thêm mảng id (đổi khi danh mục đổi, lúc đó tag `books` cũng hết hạn).
+
+**Cache**: admin ẩn / hiện / đổi cha danh mục → `catalogTagsFor({ kind: 'category' })` trả `categories` + `books` (+ `chat-catalog` qua `adminCatalogTags`). `listBooks`, `searchBookHits`, `getRelatedBooks` gắn tag `books`; `getChatCatalog` gắn `books`, `categories`, `chat-catalog` → đủ, không cần tag mới. Khi làm: kiểm `cache-tags.test.ts` có ca ẩn danh mục.
+
+**★6 A1 / A2** (trang chi tiết / giỏ / đặt hàng với sách thuộc danh mục ẩn):
+- **A1** (đề xuất của chủ dự án, đợt này): chỉ ẩn khỏi danh sách; link trực tiếp vẫn xem / thêm giỏ / mua. Công sức ~0.5–1 ngày (4–6 chỗ lọc + test). Không migration.
+- **A2**: coi như ngừng bán: trang sách 404 (proxy slug guard + `getBookBySlug` phải biết danh mục), giỏ hiện "Ngừng bán", `place_order` / `quote_*` chặn (migration sửa RPC + `books_public_read` hoặc hàm `private.book_visible`), e2e đặt hàng trên sách e2e (đang ở danh mục gốc ẩn) phải chuyển sang danh mục hiện. Công sức ~2–3 ngày + migration chạy tay + rủi ro đơn đang mở.
+- ★6a: lọc cả trang tác giả + ẩn kệ "Cùng danh mục" (đề xuất: có).
+- ★6c: sách không có danh mục coi như ẩn (đề xuất: có, khớp trang chủ / sitemap; H3 cho biết bao nhiêu cuốn).
+- ★6d: danh mục con của gốc ẩn giữ trang riêng (link trực tiếp) như hiện tại (đề xuất: giữ, e2e admin dựa vào).
+
+**SQL chỉ đọc**: `supabase/checks/hidden-categories-r.sql` (H1 số sách theo trạng thái danh mục, H2 danh mục không hiện còn sách, H3 sách không có danh mục). Chưa chạy.
+
+**Test**
+- Vitest: `withCategoryFilter` (không `cat` → id cây hiện; `cat` là con của gốc ẩn → bỏ qua), lọc catalog chatbot (hàm thuần), `visibleCategoryIds` (thiếu ca cha ẩn thì thêm).
+- e2e (dữ liệu có sẵn "gốc ẩn + con hiện" + sách `e2e-shop-…` ở danh mục gốc ẩn): sách e2e **không** hiện ở `/sach`, `/tim-kiem?q=<tên>`, palette; vẫn mở được bằng link (A1). Chatbot `[mock:5-books]` không trả sách e2e.
+- Rủi ro e2e: spec đang tìm sách e2e qua `/sach` / tìm kiếm / palette sẽ hỏng (ứng viên: `purchase.spec`, `admin-books.spec`, `catalog.spec`, `crawl.spec`; grep khi làm) → sửa spec dùng link trực tiếp hoặc sách thật.
+
+**Xong khi** (sau khi duyệt): các chỗ lọc + ★6a; Vitest + e2e CI xanh; CLAUDE.md ghi quy tắc ("ẩn danh mục = ẩn sách khỏi mọi danh sách; link trực tiếp vẫn mua được").
+
+## 7 — chi tiết (plan, chờ duyệt; chưa có SQL sửa)
+
+**SQL chỉ đọc**: `supabase/checks/catalog-data-r.sql` (chưa chạy):
+- R1 tác giả đã biết (86/87/88, 113/114, 90/92, 93/94, 75, 22, 24, 89, 107) kèm sách + vai trò;
+- R2 tìm thêm cặp trùng (từ đầu + từ cuối của slug, bỏ chữ viết tắt 1 ký tự: `peter-f-drucker` ~ `peter-drucker`);
+- R3 tác giả "A và B" / "A and B" / "&" / ",";
+- R4 tác giả là tổ chức / chung chung, kèm số tác giả khác của từng sách;
+- R5 tên sách tiếng Việt không dấu (≥ 3 từ, không có chữ cái riêng tiếng Việt; xem từng dòng);
+- R6 "chân dùng";
+- R7 tên còn hậu tố định dạng + `format` hiện tại + `format` / tên đề xuất.
+
+**Đề xuất xử lý** (SQL sửa viết sau khi duyệt kết quả, theo mẫu `authors-fix.sql`: một transaction, guard theo id + giá trị cũ, đếm dòng, lệch → `raise exception` → rollback; phần 2 chỉ đọc để kiểm; không đổi slug; sau khi chạy: Redeploy Vercel vì SQL chạy ngoài app không làm mới cache):
+- **Gộp tác giả trùng**: giữ id có tên đầy đủ / đúng nhất, hòa thì id nhiều sách hơn rồi id nhỏ hơn (chốt sau R1); chuyển `book_authors` sang id giữ (bỏ dòng trùng khóa chính), xóa id thừa. Trang tác giả của slug thừa thành 404 như authors-fix (★7a: hoặc giữ id thừa không sách).
+- **id 75 "Trần Tuyết Nhung và Anthony Reid"**: đổi tên id 75 thành "Trần Tuyết Nhung" (giữ slug cũ), tạo tác giả "Anthony Reid" (slug `anthony-reid` nếu chưa có), gắn vào cùng các sách với cùng vai trò.
+- **Tổ chức / chung chung** (22 Nhà xuất bản Kim Đồng, 24 Nhiều tác giả, 89 Harvard Business Review, 107 Ladybird): **★7b** — (a) bỏ liên kết khi sách còn tác giả khác, giữ khi là tác giả duy nhất (thẻ sách không trống); (b) bỏ hết; (c) giữ nguyên. Đề xuất (a); "Nhiều tác giả" giữ (đúng nghĩa với tuyển tập).
+- **Tên không dấu** (R5): sửa tay từng cuốn theo bìa (chủ dự án xác nhận tên đúng), không suy tự động.
+- **"chân dùng" → "chân dung"** (R6).
+- **Hậu tố định dạng** (R7): bỏ hậu tố khỏi `title`, đặt `format` theo hậu tố khi đang sai; `search_text` do trigger tự tính lại; slug giữ.
+
+**Xong khi** (đợt này): file chỉ đọc + plan; chủ dự án chạy R1–R7, dán kết quả, duyệt ★7a / ★7b → đợt sau viết `supabase/checks/catalog-data-fix.sql`.
