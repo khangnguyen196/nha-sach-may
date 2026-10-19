@@ -372,8 +372,8 @@ grant execute on function public.checkout_vouchers() to authenticated;
 (`resendWait` chỉ có tham số đơn giản: server giữ chỗ trống, client điền bằng `fillTemplate`.)
 
 **Test**
-- Vitest: action trả "đã gửi" khi Supabase trả lỗi lộ email; map giới hạn. (Đổi 2026-10-19: Vitest kiểm mọi phản hồi của GoTrue, kể cả 429 / 5xx, → "đã gửi"; status 0 → `NETWORK_ERROR`; log không chứa email.)
-- e2e `auth-email.spec` (đã làm: chỉ vi): đăng ký → không bấm link → đăng nhập → câu chưa xác nhận + nút → bấm → câu "đã gửi" (từ 2026-10-19: "Nếu email này cần xác nhận, thư sẽ tới trong vài phút…"), nút khóa; Mailpit có **2** thư xác nhận cho email đó, link trong thư thứ 2 dùng được. Bấm lại ngay → nút vẫn khóa (client). (Đổi 2026-10-19: gửi lại không còn báo `RATE_LIMITED`, mọi phản hồi trừ không tới được máy chủ đều "đã gửi", xem "Bổ sung".)
+- Vitest: action trả "đã gửi" khi Supabase trả lỗi lộ email; ~~map giới hạn~~ (bỏ 2026-10-19). (Đổi 2026-10-19: Vitest kiểm mọi phản hồi của GoTrue, kể cả 429 / 5xx, → "đã gửi"; status 0 → `NETWORK_ERROR`; log không chứa email.)
+- e2e `auth-email.spec` (đã làm: chỉ vi): đăng ký → không bấm link → đăng nhập → câu chưa xác nhận + nút → bấm → câu "đã gửi" (từ 2026-10-19: "Nếu email này cần xác nhận, thư sẽ tới trong vài phút…"), nút chuyển "Gửi lại sau N giây" và bị khóa (client); Mailpit có **2** thư xác nhận cho email đó, link trong thư thứ 2 dùng được. (Đổi 2026-10-19: gửi lại không còn báo `RATE_LIMITED`, mọi phản hồi trừ không tới được máy chủ đều "đã gửi", xem "Bổ sung".)
 
 **Migration**: không.
 

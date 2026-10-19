@@ -61,19 +61,21 @@ const NETWORK = { name: 'AuthRetryableFetchError', status: 0, message: 'fetch fa
 const ACTIONS = [
   {
     name: 'requestPasswordReset',
+    label: 'resetPasswordForEmail:',
     mock: resetPasswordForEmail,
     run: (data: FormData) => requestPasswordReset('vi', null, data),
     sent: { ok: true, data: { email: EMAIL } },
   },
   {
     name: 'resendConfirmation',
+    label: 'resend(signup):',
     mock: resend,
     run: (data: FormData) => resendConfirmation('vi', null, data),
     sent: { ok: true, data: null },
   },
 ] as const
 
-describe.each(ACTIONS)('$name', ({ mock, run, sent }) => {
+describe.each(ACTIONS)('$name', ({ label, mock, run, sent }) => {
   let logged: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
@@ -86,14 +88,19 @@ describe.each(ACTIONS)('$name', ({ mock, run, sent }) => {
     mock.mockResolvedValue({ data: error ? null : {}, error })
     expect(await run(form())).toEqual(sent)
     // Log có mã lỗi thật, không có địa chỉ email (message của GoTrue có thể chứa email)
-    if (log) expect(logged).toHaveBeenCalledWith(expect.any(String), log)
-    else expect(logged).not.toHaveBeenCalled()
+    if (log) {
+      expect(logged).toHaveBeenCalledTimes(1)
+      expect(logged).toHaveBeenCalledWith(label, log)
+    } else {
+      expect(logged).not.toHaveBeenCalled()
+    }
     expect(JSON.stringify(logged.mock.calls)).not.toContain(EMAIL)
   })
 
   it('không tới được máy chủ (fetch lỗi) → NETWORK_ERROR', async () => {
     mock.mockResolvedValue({ data: null, error: NETWORK })
     expect(await run(form())).toEqual({ ok: false, code: 'NETWORK_ERROR' })
+    expect(logged).not.toHaveBeenCalled()
   })
 
   it('email sai dạng: zod chặn ở server, không gọi GoTrue', async () => {

@@ -38,8 +38,10 @@ const SESSION_GONE = new Set([
 ])
 
 /**
- * Không gọi được Supabase Auth: supabase-js ném AuthRetryableFetchError (fetch lỗi → status 0; 502 / 503 / 504), các
- * lỗi 5xx khác là lỗi phía máy chủ → cùng báo "không kết nối được máy chủ".
+ * Không gọi được Supabase Auth: supabase-js ném AuthRetryableFetchError khi fetch lỗi (status 0) và khi GoTrue trả
+ * 500–504 hoặc 520–530 (auth-js lib/fetch.ts, NETWORK_ERROR_CODES; response này mất `code`); các 5xx khác là lỗi phía
+ * máy chủ → cùng báo "không kết nối được máy chủ". Vì 504 mất `code`, mã `request_timeout` ở bảng trên gần như không tới.
+ * Quên mật khẩu / gửi lại xác nhận KHÔNG dùng hàm này (unreachableOnly trong actions.ts: chỉ status 0).
  */
 export function isAuthUnreachable(error: { name?: string; status?: number }) {
   return error.name === 'AuthRetryableFetchError' || error.status === 0 || (error.status ?? 0) >= 500
