@@ -373,7 +373,7 @@ grant execute on function public.checkout_vouchers() to authenticated;
 
 **Test**
 - Vitest: action trả "đã gửi" khi Supabase trả lỗi lộ email; map giới hạn.
-- e2e `auth-email.spec` (vi + en): đăng ký → không bấm link → đăng nhập → câu chưa xác nhận + nút → bấm → "Đã gửi lại", nút khóa; Mailpit có **2** thư xác nhận cho email đó, link trong thư thứ 2 dùng được. Bấm lại ngay → nút vẫn khóa (client). Câu `RATE_LIMITED` từ Supabase kiểm bằng Vitest (e2e phải chờ đúng nhịp 60 giây của GoTrue: dễ chập chờn).
+- e2e `auth-email.spec` (vi + en): đăng ký → không bấm link → đăng nhập → câu chưa xác nhận + nút → bấm → "Đã gửi lại", nút khóa; Mailpit có **2** thư xác nhận cho email đó, link trong thư thứ 2 dùng được. Bấm lại ngay → nút vẫn khóa (client). (Đổi 2026-10-19: gửi lại không còn báo `RATE_LIMITED`, mọi phản hồi trừ không tới được máy chủ đều "đã gửi", xem "Bổ sung".) Câu `RATE_LIMITED` từ Supabase kiểm bằng Vitest (e2e phải chờ đúng nhịp 60 giây của GoTrue: dễ chập chờn).
 
 **Migration**: không.
 

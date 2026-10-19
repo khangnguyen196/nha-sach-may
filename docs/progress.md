@@ -13,6 +13,7 @@
 - [Lỗi có từ trước – điều tra] Tắt JS: form Server Action trả kết quả hiện trang trắng (POST chỉ trả phần động, Cache Components). Ảnh hưởng: đăng nhập, gửi lại email, địa chỉ, đánh giá, thanh toán, hủy đơn; action kết thúc bằng redirect vẫn chạy. Hướng: xem issue / cấu hình Next 16, hoặc báo kết quả qua redirect + tham số URL.
 - [Điều tra – nhánh riêng sau merge] Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (cart-account.spec.ts:94, desktop-account, chập chờn 2/5 lượt đêm 18→19/10). Giả thuyết: prefetch / điều hướng /tai-khoan khi chưa đăng nhập → proxy 307 → request RSC nhận 404. Có từ trước ux-messages.
 - [Chờ quyết] ★1–★8 của docs/plans/perf-js.md.
+- [Chờ quyết – có từ trước] Đăng ký (`signUp`) vẫn dò được email có tài khoản: GoTrue xử lý khác nhau theo email (mới: tạo + gửi thư, gửi lỗi thì báo lỗi; đã có + đã xác nhận: trả 200 giả, không gửi; đã có + chưa xác nhận: gửi lại, kiểm tần suất) → khi chạm giới hạn email của project / SMTP lỗi / `email_address_*`, email mới báo lỗi còn email đã có báo "kiểm tra hộp thư". Hướng: gộp lỗi gửi thư ở đăng ký thành câu chung (mất thông báo lỗi cụ thể cho người đăng ký thật) hoặc ghi rõ chấp nhận rủi ro. Nguồn: code-reviewer 2026-10-19.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 
