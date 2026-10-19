@@ -59,6 +59,32 @@ describe('retryAfterSeconds', () => {
   })
 })
 
+// Chuyển từ describe('authErrorCode') của schemas.test.ts (hàm authErrorCode đã xóa: chỉ còn test dùng)
+describe('authFailure: mã app', () => {
+  const code = (error: Parameters<typeof authFailure>[0]) => authFailure(error).code
+
+  it('map mã của Supabase sang mã app', () => {
+    expect(code({ code: 'invalid_credentials' })).toBe('INVALID_CREDENTIALS')
+    expect(code({ code: 'email_not_confirmed' })).toBe('EMAIL_NOT_CONFIRMED')
+    expect(code({ code: 'weak_password' })).toBe('WEAK_PASSWORD')
+    expect(code({ code: 'over_email_send_rate_limit' })).toBe('RATE_LIMITED')
+    expect(code({ code: 'otp_expired' })).toBe('LINK_EXPIRED')
+  })
+
+  it('mã lạ hoặc không có mã → UNKNOWN', () => {
+    expect(code({ code: 'hook_timeout', status: 422 })).toBe('UNKNOWN')
+    expect(code({})).toBe('UNKNOWN')
+  })
+
+  it('không gọi được Supabase Auth (fetch lỗi, 502 / 503 / 504, 5xx) → NETWORK_ERROR', () => {
+    expect(code({ name: 'AuthRetryableFetchError', status: 0 })).toBe('NETWORK_ERROR')
+    expect(code({ name: 'AuthRetryableFetchError', status: 503 })).toBe('NETWORK_ERROR')
+    expect(code({ name: 'AuthApiError', code: 'unexpected_failure', status: 500 })).toBe('NETWORK_ERROR')
+    // Mã đã biết vẫn ưu tiên (rate limit là 429, không phải lỗi mạng)
+    expect(code({ code: 'over_request_rate_limit', status: 429 })).toBe('RATE_LIMITED')
+  })
+})
+
 describe('PRE_LOOKUP_SIGNUP_CODES', () => {
   it('chỉ các mã GoTrue kiểm trước khi tìm user (signup.go)', () => {
     expect([...PRE_LOOKUP_SIGNUP_CODES].sort()).toEqual(['email_provider_disabled', 'signup_disabled', 'validation_failed', 'weak_password'])

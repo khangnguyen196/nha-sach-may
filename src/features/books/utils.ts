@@ -88,12 +88,18 @@ export function visibleBooksFilter(visibleIds: readonly number[]) {
   return visibleIds.length > 0 ? `category_id.is.null,category_id.in.(${visibleIds.join(',')})` : 'category_id.is.null'
 }
 
-/** Kệ "Cùng danh mục" ở trang sách: chỉ khi danh mục lá của sách nằm trong cây đang hiện (không thì kệ toàn sách ẩn) */
+/**
+ * Kệ "Cùng danh mục" ở trang sách: chỉ khi danh mục lá của sách nằm trong cây đang hiện (không thì kệ toàn sách ẩn).
+ * Một chỗ dùng, tách ra để Vitest kiểm được (e2e không tạo được danh mục mới trong cache getCategories).
+ */
 export function showRelatedShelf(leafId: number | undefined, categories: { id: number; parent_id: number | null }[]) {
   return leafId !== undefined && visibleCategoryIds(categories).includes(leafId)
 }
 
-/** Như visibleBooksFilter nhưng lọc trong bộ nhớ (catalog rút gọn của chatbot) */
+/**
+ * Như visibleBooksFilter nhưng lọc trong bộ nhớ (catalog rút gọn của chatbot). Một chỗ dùng, tách ra để Vitest kiểm được
+ * (catalog chatbot cache theo giờ, e2e không đưa sách mới vào được).
+ */
 export function inVisibleCategories<T extends { category_id: number | null }>(
   books: readonly T[],
   categories: { id: number; parent_id: number | null }[],

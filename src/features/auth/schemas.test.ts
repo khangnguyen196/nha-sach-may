@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { invalidInput } from '@/lib/errors'
-import { authErrorCode } from './errors'
 import { nextFromReferer, safeNextPath } from './next-path'
 import { signInSchema, signUpSchema } from './schemas'
 
@@ -68,29 +67,6 @@ describe('safeNextPath', () => {
     [42],
   ])('%j → mặc định', (value) => {
     expect(safeNextPath(value, fallback)).toBe(fallback)
-  })
-})
-
-describe('authErrorCode', () => {
-  it('map mã của Supabase sang mã app', () => {
-    expect(authErrorCode({ code: 'invalid_credentials' })).toBe('INVALID_CREDENTIALS')
-    expect(authErrorCode({ code: 'email_not_confirmed' })).toBe('EMAIL_NOT_CONFIRMED')
-    expect(authErrorCode({ code: 'weak_password' })).toBe('WEAK_PASSWORD')
-    expect(authErrorCode({ code: 'over_email_send_rate_limit' })).toBe('RATE_LIMITED')
-    expect(authErrorCode({ code: 'otp_expired' })).toBe('LINK_EXPIRED')
-  })
-
-  it('mã lạ hoặc không có mã → UNKNOWN', () => {
-    expect(authErrorCode({ code: 'hook_timeout', status: 422 })).toBe('UNKNOWN')
-    expect(authErrorCode({})).toBe('UNKNOWN')
-  })
-
-  it('không gọi được Supabase Auth (fetch lỗi, 502 / 503 / 504, 5xx) → NETWORK_ERROR', () => {
-    expect(authErrorCode({ name: 'AuthRetryableFetchError', status: 0 })).toBe('NETWORK_ERROR')
-    expect(authErrorCode({ name: 'AuthRetryableFetchError', status: 503 })).toBe('NETWORK_ERROR')
-    expect(authErrorCode({ name: 'AuthApiError', code: 'unexpected_failure', status: 500 })).toBe('NETWORK_ERROR')
-    // Mã đã biết vẫn ưu tiên (rate limit là 429, không phải lỗi mạng)
-    expect(authErrorCode({ code: 'over_request_rate_limit', status: 429 })).toBe('RATE_LIMITED')
   })
 })
 

@@ -31,7 +31,10 @@ test.beforeAll(async () => {
   const root = await createE2eCategory({ active: false })
   const leaf = await createE2eCategory({ parentId: root.id })
   hidden = await createE2eBook({ categoryId: leaf.id })
-  control = await createE2eBook({ categoryId: null })
+  // Không có danh mục → lên /sach (★6c giữ nguyên) trong lúc spec chạy. Giá rất cao + created_at năm 2000: không lọt
+  // trang 1 của /sach (bán chạy / mới nhất / giá tăng; không spec nào sắp giá giảm) mà spec khác (catalog, crawl) đi qua
+  // rồi theo link tới sách đã xóa
+  control = await createE2eBook({ categoryId: null, price: 9_900_000 })
   const author = await createE2eAuthor()
   await linkAuthor(hidden.id, author.id)
   await linkAuthor(control.id, author.id)

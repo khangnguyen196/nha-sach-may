@@ -79,7 +79,3 @@ export function authFailure(error: AuthErrorLike, { recovery = false }: { recove
   if (error.code && SESSION_GONE.has(error.code)) return { ok: false, code: recovery ? 'LINK_EXPIRED' : 'SESSION_EXPIRED' }
   return { ok: false, code: isAuthUnreachable(error) ? 'NETWORK_ERROR' : 'UNKNOWN' }
 }
-
-export function authErrorCode(error: AuthErrorLike): ErrorCode {
-  return authFailure(error).code
-}
