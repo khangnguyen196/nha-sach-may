@@ -37,8 +37,9 @@ export function FilterSheet({ labels, children, icon }: Props) {
           setMounted(true)
           setOpen(true)
         }}
-        onPointerEnter={() => void loadContent()}
-        onFocus={() => void loadContent()}
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua: lần bấm sẽ tải lại
+        onPointerEnter={() => void loadContent().catch(() => {})}
+        onFocus={() => void loadContent().catch(() => {})}
       >
         {icon}
         {labels.trigger}

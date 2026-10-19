@@ -1,6 +1,7 @@
 // Hàm thuần cho palette tìm kiếm, chạy ở client. KHÔNG import zod: zod vào chunk palette tốn ~30KB gzip (CLAUDE.md →
-// Hiệu năng). Server (/api/search, catalogParamsSchema) vẫn parse bằng searchQuerySchema / searchResponseSchema
-// (schemas.ts); search-input.test.ts kiểm hàm tay và schema zod cho cùng kết quả trên cùng bộ input.
+// Hiệu năng). Server (/api/search, catalogParamsSchema) vẫn parse từ khóa bằng searchQuerySchema (schemas.ts);
+// searchResponseSchema là hợp đồng JSON của /api/search (nguồn kiểu SearchHit). search-input.test.ts kiểm hàm tay và hai
+// schema zod cho cùng kết quả trên cùng bộ input.
 import type { SearchHit } from './schemas'
 
 // Cùng giới hạn với searchQuerySchema

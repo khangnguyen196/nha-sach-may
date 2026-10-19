@@ -14,6 +14,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
 const BASELINE_GZIP_KB = 170
 // Ngân sách phần vượt baseline (KB gzip) theo route nội bộ, CLAUDE.md → Hiệu năng. Route không có trong bảng: DEFAULT.
+// Hiện mọi route cùng 50KB; bảng ghi rõ route nào có ngân sách đã quyết (perf-js ★1), để sẵn khi siết từng route.
 const DEFAULT_BUDGET_KB = 50
 const BUDGETS_KB = [
   [/^(vi|en)\/books$/, 50], // /sach (★1)
@@ -51,6 +52,6 @@ const budgetKb = BUDGETS_KB.find(([pattern]) => pattern.test(route))?.[1] ?? DEF
 const within = overBaselineKb <= budgetKb
 console.log(`Ngoài baseline framework (${BASELINE_GZIP_KB}KB gzip): ${overBaselineKb.toFixed(1)}KB gzip`)
 console.log(
-  `Ngân sách ${budgetKb}KB: ${within ? 'ĐẠT' : 'VƯỢT'} (${within ? 'còn' : 'thừa'} ${Math.abs(budgetKb - overBaselineKb).toFixed(1)}KB)`,
+  `Ngân sách ${budgetKb}KB: ${within ? 'ĐẠT' : 'VƯỢT'} (${within ? 'còn' : 'vượt'} ${Math.abs(budgetKb - overBaselineKb).toFixed(1)}KB)`,
 )
 if (!within) process.exitCode = 1
