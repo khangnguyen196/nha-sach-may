@@ -89,6 +89,42 @@ test('lọc giá → URL có price, về trang 1, mọi giá trong khoảng', as
   expect(errors).toEqual([])
 })
 
+test('mobile: sheet bộ lọc (tải lười) — Enter mở, Tab ở trong sheet, Esc / "Xong" đóng, focus về nút', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Nút "Bộ lọc" chỉ hiện dưới md')
+  const errors = collectErrors(page)
+  await page.goto('/sach')
+  // Sheet mở thì phần ngoài bị aria-hidden → tìm nút bằng CSS, không bằng role
+  const trigger = page.locator('main button[aria-haspopup="dialog"]')
+  await waitForHydration(page, 'main button[aria-haspopup="dialog"]')
+  await expect(trigger).toHaveText('Bộ lọc')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+  await trigger.focus()
+  await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Bộ lọc' })
+  await expect(dialog).toBeVisible()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await expect(dialog.getByRole('link').first()).toBeVisible()
+  for (let i = 0; i < 20; i++) {
+    await page.keyboard.press('Tab')
+    expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true)
+  }
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
+
+  // Lần mở thứ hai: chunk đã tải, sheet vẫn trong cây
+  await trigger.click()
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Xong' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
+  expect(errors).toEqual([])
+})
+
 test('phân trang: trang 2 không trùng trang 1', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/tim-kiem?q=978')

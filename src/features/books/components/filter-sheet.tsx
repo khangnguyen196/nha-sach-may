@@ -1,9 +1,13 @@
 'use client'
 
 import { SlidersHorizontalIcon } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
+import { useRef, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+
+// Nội dung sheet (Radix Dialog, react-remove-scroll, focus trap…) chỉ tải khi bấm; rê chuột / focus vào nút thì tải trước
+const loadContent = () => import('./filter-sheet-content')
+const FilterSheetContent = dynamic(() => loadContent().then((mod) => mod.FilterSheetContent))
 
 type Props = {
   labels: { trigger: string; title: string; close: string }
@@ -11,35 +15,43 @@ type Props = {
   children: ReactNode
 }
 
-/** Bộ lọc trên mobile. Bấm một lựa chọn (Link) → điều hướng và đóng sheet. */
+/** Bộ lọc trên mobile: nút mở (không Radix) + nội dung sheet tải lười. */
 export function FilterSheet({ labels, children }: Props) {
   const [open, setOpen] = useState(false)
+  // Giữ sheet trong cây sau lần mở đầu để có hiệu ứng đóng
+  const [mounted, setMounted] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="outline" size="lg" className="md:hidden">
-          <SlidersHorizontalIcon aria-hidden />
-          {labels.trigger}
-        </Button>
-      </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        aria-describedby={undefined}
-        onClick={(event) => {
-          if (event.target instanceof Element && event.target.closest('a')) setOpen(false)
+    <>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="outline"
+        size="lg"
+        className="md:hidden"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => {
+          setMounted(true)
+          setOpen(true)
         }}
+        onPointerEnter={() => void loadContent()}
+        onFocus={() => void loadContent()}
       >
-        <SheetHeader className="pb-0">
-          <SheetTitle>{labels.title}</SheetTitle>
-        </SheetHeader>
-        <div className="overflow-y-auto px-4">{children}</div>
-        <SheetFooter>
-          <SheetClose asChild>
-            <Button size="lg">{labels.close}</Button>
-          </SheetClose>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        <SlidersHorizontalIcon aria-hidden />
+        {labels.trigger}
+      </Button>
+      {mounted && (
+        <FilterSheetContent
+          open={open}
+          onOpenChange={setOpen}
+          labels={labels}
+          returnFocus={() => triggerRef.current?.focus()}
+        >
+          {children}
+        </FilterSheetContent>
+      )}
+    </>
   )
 }
