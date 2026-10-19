@@ -7,7 +7,6 @@
 - [Đợt "giảm JS client"] C: icon lucide của client component (theme-toggle, cart-badge, search-trigger, shelf-nav, review-form) render ở server, truyền qua children. Ước tính −2 đến −3KB.
 - [Đo] measure:js đang cộng cả polyfill noModule 0cz1… (38.6KB gzip) dù trình duyệt hiện đại không tải; xem có nên loại khỏi số đo.
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
-- [B đã chạy, làm được (đợt sau-ux)] chạy lại `supabase gen types`, so với src/types/database.ts đang sửa tay.
 - [Đợt "giảm JS client"] lazy-load sheet bộ lọc ở /sach và trang danh mục (next/dynamic), ước −8KB; sau đó đặt ngân sách cho 2 route này.
 - [Đo] scripts/measure-js.mjs thêm cột ngân sách theo route.
 - [Đợt riêng sau perf-js] Tắt JS: form Server Action trả kết quả hiện trang trắng (POST chỉ trả phần động, Cache Components). Ảnh hưởng: đăng nhập, gửi lại email, địa chỉ, đánh giá, thanh toán, hủy đơn; action kết thúc bằng redirect vẫn chạy. Hướng: xem issue / cấu hình Next 16, hoặc báo kết quả qua redirect + tham số URL. Hướng điều tra + ước lượng: docs/plans/sau-ux.md mục 5. Lúc điều tra: kiểm lại danh sách form (thêm đăng ký, quên mật khẩu, đặt lại mật khẩu cũng trả kết quả trong khung tĩnh); phương án redirect **không** đưa email lên URL (chỉ `?sent=1`).

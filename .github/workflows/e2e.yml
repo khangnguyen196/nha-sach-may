@@ -58,8 +58,6 @@ jobs:
           retention-days: 7
       - if: ${{ !cancelled() }}
         name: Check src/types/database.ts
-        # Lượt đầu chế độ báo: xem bản --local khác bản đang commit thế nào trước khi bật fail
-        continue-on-error: true
         run: diff -u src/types/database.ts "$RUNNER_TEMP/database.ts"
       - if: ${{ failure() }}
         name: Supabase logs (auth, rest, storage)

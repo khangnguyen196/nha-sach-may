@@ -22,7 +22,7 @@ Thêm dependency mới phải có lý do rõ ràng (kích thước bundle, có c
 npm run dev | build | lint | typecheck | test | test:e2e
 npm run check:env                                         # kiểm tra .env.local, không in giá trị bí mật
 npm run measure:js -- <route>                             # sau build: JS gzip của route prerender (vi, en, vi/books/<slug>)
-npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts   # Supabase CLI đã đăng nhập trên máy dev
+gh run download <run e2e> -n database-types -D <thư mục tạm>                # types sinh từ DB local trên CI → chép vào src/types/database.ts (xem Database)
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
@@ -188,6 +188,8 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 ## Database
 
 Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migration trong `supabase/migrations/`, cập nhật `schema.sql`, sinh lại types.
+
+- Types (`src/types/database.ts`) sinh từ **DB local của CI** (dựng từ `schema.sql`), không từ project cloud (cloud chạy migration tay sau deploy nên hay trễ, và khác định dạng / `PostgrestVersion`). Job e2e chạy `supabase gen types typescript --local`, upload artifact `database-types` và **fail** khi khác file trong repo. Đổi `schema.sql` → push → bước "Check src/types/database.ts" đỏ → `gh run download <run> -n database-types` → chép đè `src/types/database.ts` (giữ nguyên định dạng CLI sinh, file bị ESLint bỏ qua) → `npm run typecheck` → commit. Tắt e2e (`RUN_E2E = false`) thì mất luôn bước kiểm này.
 
 - `supabase/config.toml` chỉ cho Supabase local của e2e. **Không** `supabase link` / `supabase db push` (sẽ chạy `migrations/` lên production); migration do chủ dự án chạy tay trong SQL Editor.
 
