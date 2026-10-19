@@ -15,7 +15,10 @@ select a.id, a.name, a.slug,
 --   một ký tự ("peter-f-drucker" ~ "peter-drucker"). Mỗi cặp một dòng, kèm số sách mỗi bên.
 with t as (
   select a.id, a.name, a.slug,
-         array_remove(array(select w from unnest(string_to_array(a.slug, '-')) as w where char_length(w) > 1), null) as words,
+         array(select u.w
+                 from unnest(string_to_array(a.slug, '-')) with ordinality as u(w, n)
+                where char_length(u.w) > 1
+                order by u.n) as words,
          (select count(*) from public.book_authors ba where ba.author_id = a.id) as so_sach
     from public.authors a
 ),
@@ -39,10 +42,14 @@ select a.id, a.name, a.slug,
  order by a.id;
 
 -- R4. Tác giả là tổ chức / chung chung (NXB, "Nhiều tác giả", tạp chí, thương hiệu sách), kèm sách + vai trò.
---   Sách còn tác giả khác (cot so_tac_gia_khac > 0) → bỏ liên kết tổ chức không làm sách mất tác giả.
+--   so_tac_gia_khac: số tác giả KHÁC có role 'author' (không đếm dịch giả / minh họa) → > 0 thì bỏ liên kết tổ chức
+--   không làm thẻ sách mất tác giả.
+--   Lưu ý: ~* với chữ có dấu viết hoa (VD "NHÀ XUẤT BẢN") phụ thuộc collation / ctype của DB; các id đã biết liệt kê cứng
+--   nên không sót, chỉ nhóm tìm thêm theo mẫu có thể sót.
 select a.id, a.name, a.slug,
        b.id as book_id, b.title, ba.role,
-       (select count(*) from public.book_authors o where o.book_id = b.id and o.author_id <> a.id) as so_tac_gia_khac
+       (select count(distinct o.author_id) from public.book_authors o
+         where o.book_id = b.id and o.author_id <> a.id and o.role = 'author') as so_tac_gia_khac
   from public.authors a
   join public.book_authors ba on ba.author_id = a.id
   join public.books b on b.id = ba.book_id
@@ -52,6 +59,7 @@ select a.id, a.name, a.slug,
 
 -- R5. Tên sách tiếng Việt không có dấu (dữ liệu Google Books mất dấu, VD "Kien Chuot Va Ruoi"):
 --   không có chữ cái riêng của tiếng Việt nào và có ≥ 3 từ. Sách tên thật không dấu (tên riêng, tiếng Anh) sẽ lẫn vào → xem từng dòng.
+--   Lưu ý: so khớp chữ có dấu (kể cả viết hoa) phụ thuộc collation / ctype của DB; danh sách ký tự dưới đây đã gồm cả hoa và thường.
 select b.id, b.title, b.slug, b.language, b.is_active
   from public.books b
  where b.language = 'vi'
@@ -65,15 +73,16 @@ select b.id, b.title, b.slug, b.is_active
  where b.title ilike '%chân dùng%'
  order by b.id;
 
--- R7. Tên sách còn hậu tố định dạng ("(hardcover)", "(hard cover…)", "(soft cover…)", "(paperback)", "(bìa cứng)"…),
+-- R7. Tên sách còn hậu tố định dạng ("(hardcover)", "(hard cover…)", "(soft cover…)", "(paperback)", "(bìa cứng)", "(hộp…)"…),
 --   kèm cột format hiện tại và format đề xuất theo hậu tố (chỉ để tham khảo). Slug giữ nguyên khi sửa tên.
+--   CASE, WHERE và regexp_replace dùng CÙNG một bộ mẫu.
 select b.id, b.title, b.slug, b.format as format_hien_tai,
        case
-         when b.title ~* '\((hard\s*-?\s*cover|hardback|bìa cứng)' then 'hardcover'
-         when b.title ~* '\((soft\s*-?\s*cover|paper\s*-?\s*back|bìa mềm)' then 'paperback'
+         when b.title ~* '\((hard\s*-?\s*(cover|back)|bìa cứng)' then 'hardcover'
+         when b.title ~* '\((soft\s*-?\s*(cover|back)|paper\s*-?\s*(cover|back)|bìa mềm)' then 'paperback'
          when b.title ~* '\((box\s*-?\s*set|hộp)' then 'boxset'
        end as format_de_xuat,
-       regexp_replace(b.title, '\s*\((hard|soft|paper)\s*-?\s*(cover|back)[^)]*\)|\s*\((hardback|box\s*-?\s*set|bìa cứng|bìa mềm)[^)]*\)', '', 'gi') as ten_de_xuat
+       regexp_replace(b.title, '\s*\((hard\s*-?\s*(cover|back)|soft\s*-?\s*(cover|back)|paper\s*-?\s*(cover|back)|bìa cứng|bìa mềm|box\s*-?\s*set|hộp)[^)]*\)', '', 'gi') as ten_de_xuat
   from public.books b
- where b.title ~* '\((hard|soft|paper)\s*-?\s*(cover|back)|\((hardback|box\s*-?\s*set|bìa cứng|bìa mềm)'
+ where b.title ~* '\((hard\s*-?\s*(cover|back)|soft\s*-?\s*(cover|back)|paper\s*-?\s*(cover|back)|bìa cứng|bìa mềm|box\s*-?\s*set|hộp)'
  order by b.id;
