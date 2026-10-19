@@ -1,6 +1,6 @@
 # Đợt "giảm JS client" (plan, chưa làm)
 
-Trạng thái: **plan, ★ đã quyết 2026-10-19** (viết 2026-10-19 trên nhánh `ux-messages`). Chưa làm. Thứ tự đợt: **D → sheet lazy → C (+ `scripts/analyze-diff.mjs`)**; B để sau.
+Trạng thái: **plan, ★ đã quyết 2026-10-19** (viết 2026-10-19 trên nhánh `ux-messages`). Chưa làm. Thứ tự đợt: **`scripts/analyze-diff.mjs` → D → sheet lazy → C**; B để sau.
 
 Mục tiêu: giảm JS tải ngay ở mọi trang, đưa `/sach` + trang danh mục về dưới ngân sách, bỏ zod khỏi client của cửa hàng.
 
@@ -26,7 +26,7 @@ Phân rã (đo bằng `next analyze`, có sẵn trong Next 16, không thêm depe
 
 ## Thứ tự
 
-D → lazy-load sheet bộ lọc → C → B (B: chờ quyết lại, xem ★4 / ★5). Mỗi bước một commit (hoặc một nhánh nhỏ), đo `measure:js` trước / sau, e2e CI xanh rồi mới sang bước sau.
+Bước 0 `scripts/analyze-diff.mjs` (so module trước / sau từ `next analyze export`) → D → lazy-load sheet bộ lọc → C → B (B: chờ quyết lại, xem ★4 / ★5). Mỗi bước một commit (hoặc một nhánh nhỏ), đo `measure:js` trước / sau, e2e CI xanh rồi mới sang bước sau.
 
 ### Bước 1 – D: bỏ zod khỏi palette tìm kiếm
 
@@ -73,10 +73,10 @@ D → lazy-load sheet bộ lọc → C → B (B: chờ quyết lại, xem ★4 /
 - ★3 **viết tay** + Vitest so với schema zod.
 - ★4 + ★5 **CHƯA** làm B và test screenshot; quyết lại sau khi xong D → sheet lazy → C và đo lại (B không cần để đạt ngân sách).
 - ★6 **để nguyên** `book-form.tsx` (admin).
-- ★7 **có**: thêm `scripts/analyze-diff.mjs` khi làm đợt perf-js.
+- ★7 **có**: thêm `scripts/analyze-diff.mjs`, làm **trước** D (2026-10-19, theo gợi ý reviewer: bước D đổi chunk palette tải lười, `measure:js` không thấy, cần so module).
 - ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt (sửa cả mốc 170KB trong `CLAUDE.md` mục Hiệu năng và `BASELINE_GZIP_KB` trong `scripts/measure-js.mjs`).
 
-Thứ tự đợt perf-js: D → sheet lazy → C (+ `analyze-diff.mjs`). B để sau.
+Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B để sau.
 
 ## ★ Câu hỏi ban đầu (giữ để tra)
 

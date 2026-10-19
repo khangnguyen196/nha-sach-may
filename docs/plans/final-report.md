@@ -136,12 +136,13 @@ Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari)
 2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`) → **chưa xong**: commit chẩn đoán đã bắt được URL (`/dang-nhap?next=%2Ftai-khoan&_rsc=…`, run 39148697724), khác giả thuyết; có từ trước, điều tra ở nhánh riêng sau merge (`docs/progress.md`).
 3. Tên tác giả ngược thứ tự → SQL `supabase/checks/authors-fix.sql` → đã chạy 2026-10-19 trên production, K1–K5 khớp.
 
-## Đợt ux-messages: thông báo cho khách (nhánh `ux-messages`, CHƯA merge)
+## Đợt ux-messages: thông báo cho khách (đã lên production 2026-10-19, `main` `c3e2131`)
 
 Plan + báo cáo: `docs/plans/ux-messages.md`. Việc để sau: `docs/progress.md`. Plan đợt giảm JS: `docs/plans/perf-js.md`.
 
 - Mã giảm giá / hủy đơn báo đúng lý do, gợi ý mã ở trang thanh toán, lỗi đăng ký / đăng nhập theo ô, gửi lại email xác nhận, 404 nói rõ thiếu gì (vẫn HTTP 404 thật), link "Đăng nhập lại", form giữ chữ khi mất mạng, trang lỗi có mã tra cứu + email liên hệ.
-- Migration A đã chạy; **migration B chạy sau khi merge + deploy** (app hiểu cả mã cũ lẫn mới, có Vitest cho đường mã cũ).
+- Migration A, B đã chạy trên production (B: 2026-10-19, KB1–KB3 khớp). Merge fast-forward lên `main`: `fa78aab..a723621` rồi `a723621..c3e2131` (`git push origin ux-messages:main`, không force). CI + e2e trên `main` xanh (a723621: e2e 411 qua / 9 skip / 0 fail / 0 flaky, run 39212964358; c3e2131: CI check run 39214787681, e2e cùng SHA run 39213724077). Vercel Production: a723621 07:00:03Z, c3e2131 07:17:21Z, cả hai success.
+- **Test production bằng Claude in Chrome (https://nha-sach-may.vercel.app)**: footer vi / en, 404 sách + trang lạ, tên tác giả mới (Nguyễn Huy Thiệp, Dương Thụy, Quan Thế Dân; `lap-nguyen`, `quang-lap-nguyen` → 404; `nguyen-quang-lap` có "Bạn Văn" + "Kien Chuot Va Ruoi" 1 lần; tìm "nguyen huy thiep" ra "Vong bướm"), quên mật khẩu (email không có tài khoản và email có tài khoản gửi 2 lần → cùng câu "đã gửi"), đổi ngôn ngữ giữ `?page=2`, không tìm thấy đơn vi / en (HTTP 404), thanh toán sau B ("AB" → "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé."; "CHAOBAN10" với tạm tính 77.000 ₫ → "Mua thêm 73.000 ₫ để dùng mã này (đơn từ 150.000 ₫)."; gợi ý TEST10 → giảm 7.700 ₫ → Bỏ mã), giỏ trả về như cũ: **tất cả ĐẠT**.
 - JS (measure:js, gzip ngoài baseline 170KB): trang sách 43.9 → **45.3KB** (ngân sách 50), trang chủ 41.2 → 42.2, `/sach` + danh mục 54.3 → 55.3 (chưa có ngân sách).
 - Bổ sung đêm 2026-10-18: quên mật khẩu / gửi lại email xác nhận không còn lộ email nào có tài khoản (chỉ báo lỗi khi không tới được máy chủ, còn lại "đã gửi", 2026-10-19); proxy bỏ header `x-not-found` do khách gửi (request đi qua proxy); nháp ghi chú thanh toán theo tài khoản, xóa khi đăng xuất; thêm test plan đã hứa.
 

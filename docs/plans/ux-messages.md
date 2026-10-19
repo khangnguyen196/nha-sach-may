@@ -1,6 +1,6 @@
 # Đợt sửa "ux-messages" (sau Phase 11)
 
-Trạng thái: **code xong, đã duyệt merge 2026-10-19** (bổ sung đêm 2026-10-18 → 19 và sáng 2026-10-19, xem "Bổ sung"). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
+Trạng thái: **đã lên production 2026-10-19** (`main` `c3e2131`, migration B đã chạy) (bổ sung đêm 2026-10-18 → 19 và sáng 2026-10-19, xem "Bổ sung"). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
 
 Mục tiêu: khách luôn hiểu chuyện gì đang xảy ra.
 - Lỗi do khách: nói đúng lý do và cách làm tiếp, đặt ngay chỗ liên quan.
@@ -109,6 +109,8 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **đã duyệt
 - `supabase/checks/authors-fix.sql` đã chạy trên production sáng 2026-10-19, K1–K5 khớp hết.
 - Test tay bằng Claude in Chrome trên Preview của nhánh (đăng nhập admin): footer vi / en, 404 sách / danh mục / tác giả / trang lạ / en, không tìm thấy đơn (mã sai dạng, đổi 1 ký tự, en: cùng câu, HTTP 404), mã sai "AB", gợi ý mã (tick TEST10 → hiện trong dialog → Áp dụng giảm 10% → Bỏ mã), đổi ngôn ngữ giữ query, địa chỉ không có, trả giỏ: **8/8 ĐẠT**.
 - Duyệt merge 2026-10-19 (fast-forward). **Migration B chờ chạy sau khi deploy production** (rồi `supabase/checks/ux-messages-b.sql`).
+- **Lên production 2026-10-19**: migration B chạy trên production (chủ dự án, sớm hơn deploy vài phút; KB1–KB3 khớp). Merge fast-forward lên `main`: `fa78aab..a723621` rồi `a723621..c3e2131` (`git push origin ux-messages:main`, không force). CI + e2e trên `main` xanh (a723621: e2e 411 qua / 9 skip / 0 fail / 0 flaky, run 39212964358; c3e2131: CI check run 39214787681, e2e cùng SHA run 39213724077). Vercel Production: a723621 07:00:03Z, c3e2131 07:17:21Z, cả hai success.
+- **Test production bằng Claude in Chrome (https://nha-sach-may.vercel.app)**: footer vi / en, 404 sách + trang lạ, tên tác giả mới (Nguyễn Huy Thiệp, Dương Thụy, Quan Thế Dân; `lap-nguyen`, `quang-lap-nguyen` → 404; `nguyen-quang-lap` có "Bạn Văn" + "Kien Chuot Va Ruoi" 1 lần; tìm "nguyen huy thiep" ra "Vong bướm"), quên mật khẩu (email không có tài khoản và email có tài khoản gửi 2 lần → cùng câu "đã gửi"), đổi ngôn ngữ giữ `?page=2`, không tìm thấy đơn vi / en (HTTP 404), thanh toán sau B ("AB" → "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé."; "CHAOBAN10" với tạm tính 77.000 ₫ → "Mua thêm 73.000 ₫ để dùng mã này (đơn từ 150.000 ₫)."; gợi ý TEST10 → giảm 7.700 ₫ → Bỏ mã), giỏ trả về như cũ: **tất cả ĐẠT**.
 - Quyết định khác cùng ngày (★ perf-js, đăng ký làm ở nhánh riêng, chấp nhận rủi ro dò email qua thời gian phản hồi, TEST10 public): xem `docs/progress.md` và `docs/plans/perf-js.md`.
 
 ## ★ Quyết định (đã duyệt 2026-10-18)

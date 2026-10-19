@@ -1,14 +1,17 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-19, đợt ux-messages đã duyệt merge)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-19, ux-messages đã lên production)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
 ## Trạng thái
 
-- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **đã duyệt merge 2026-10-19** (sẽ fast-forward lên `main`). Test tay bằng Chrome trên Preview (8 bước: footer, 404, không tìm thấy đơn, mã sai, gợi ý mã, đổi ngôn ngữ, địa chỉ không có, trả giỏ) **ĐẠT**. Plan + báo cáo: `docs/plans/ux-messages.md`.
-  - Migration **A** (`20261018120000_voucher_suggestions.sql`: `vouchers.is_public`, RPC `checkout_vouchers`) **đã chạy** trên production, KA1–KA6 khớp.
-  - Migration **B** (`20261018130000_error_reasons.sql`: mã lỗi voucher / hủy đơn theo lý do) **CHƯA chạy**: chạy **sau** khi bản app của nhánh này đã merge + deploy production, rồi chạy `supabase/checks/ux-messages-b.sql`. Bản app mới hiểu cả mã cũ (`INVALID_VOUCHER`, `ORDER_NOT_CANCELLABLE`) lẫn mã mới.
-  - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` (đổi 8 tên, gộp id 8 + 9 vào id 1) **đã chạy** trên production sáng 2026-10-19, K1–K5 khớp (8 tên mới; id 8, 9 đã xóa; id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần; search_text có tên mới; slug giữ nguyên). Deploy production sau merge làm mới cache trang.
-  - Sau khi B đã chạy: xóa `INVALID_VOUCHER` khỏi `ERROR_CODES` / messages / `VOUCHER_ERRORS` (đợt sau).
+- **Hiện tại**: `main` mới nhất là trạng thái đang chạy trên production (https://nha-sach-may.vercel.app). **Không còn migration nào chờ chạy.**
+- **Việc tiếp theo**: đợt **`sau-ux`** (plan `docs/plans/sau-ux.md` trên nhánh `sau-ux`: đăng ký chặn dò email, xóa `INVALID_VOUCHER`, kiểm `database.ts` tự động trên CI, chẩn đoán request RSC 404, hướng điều tra tắt JS), rồi đợt **perf-js** (`docs/plans/perf-js.md`: `scripts/analyze-diff.mjs` → D → sheet lazy → C). Việc để sau: `docs/progress.md`.
+- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: **đã lên production 2026-10-19**. Plan + báo cáo: `docs/plans/ux-messages.md` (mục "Sáng 2026-10-19").
+  - **Lên production 2026-10-19**: migration B chạy trên production (chủ dự án, sớm hơn deploy vài phút; KB1–KB3 khớp). Merge fast-forward lên `main`: `fa78aab..a723621` rồi `a723621..c3e2131` (`git push origin ux-messages:main`, không force). CI + e2e trên `main` xanh (a723621: e2e 411 qua / 9 skip / 0 fail / 0 flaky, run 39212964358; c3e2131: CI check run 39214787681, e2e cùng SHA run 39213724077). Vercel Production: a723621 07:00:03Z, c3e2131 07:17:21Z, cả hai success.
+  - Migration **A** (`20261018120000_voucher_suggestions.sql`) và **B** (`20261018130000_error_reasons.sql`) đều đã chạy; app hiểu cả mã cũ lẫn mới, `INVALID_VOUCHER` xóa ở đợt `sau-ux`.
+  - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` đã chạy sáng 2026-10-19, K1–K5 khớp; production hiện tên mới.
+  - **Test production bằng Claude in Chrome (https://nha-sach-may.vercel.app)**: footer vi / en, 404 sách + trang lạ, tên tác giả mới (Nguyễn Huy Thiệp, Dương Thụy, Quan Thế Dân; `lap-nguyen`, `quang-lap-nguyen` → 404; `nguyen-quang-lap` có "Bạn Văn" + "Kien Chuot Va Ruoi" 1 lần; tìm "nguyen huy thiep" ra "Vong bướm"), quên mật khẩu (email không có tài khoản và email có tài khoản gửi 2 lần → cùng câu "đã gửi"), đổi ngôn ngữ giữ `?page=2`, không tìm thấy đơn vi / en (HTTP 404), thanh toán sau B ("AB" → "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé."; "CHAOBAN10" với tạm tính 77.000 ₫ → "Mua thêm 73.000 ₫ để dùng mã này (đơn từ 150.000 ₫)."; gợi ý TEST10 → giảm 7.700 ₫ → Bỏ mã), giỏ trả về như cũ: **tất cả ĐẠT**.
+  - Test tay trên Preview trước merge (8 bước) ĐẠT.
 - **Phase 11 (chatbot gợi ý sách "Mây")**: **đã merge vào `main`** (ff, 2026-10-18) sau khi chủ dự án test tay OK trên bản Preview (máy tính + iPhone Safari). Nhánh `phase-11` đã xóa (local + remote). Chi tiết: `docs/plans/phase-11.md` → "Báo cáo Phase 11".
   - Migration `chat_quota` + `chat_quota_defaults` đã chạy trên Supabase.
   - `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN` đặt ở Vercel **Production** (đã bỏ khỏi Preview).
@@ -26,7 +29,7 @@
   - Kết quả: 2 lượt liền trên nhánh + 1 lượt trên `main` đều **265/265, 0 flaky** (~5,9–6,4 phút Playwright; cả job ~8,5 phút: npm ci 14 s, `supabase start` ~75 s, Chromium 13–21 s, seed 3 s).
   - `next.config.ts`: cấu hình ảnh qua `coverImagesConfig` (`src/lib/cover-images-config.ts`): pattern http / IP local chỉ khi URL Supabase là local; build Vercel (`VERCEL=1`) với URL local → build fail (chống SSRF qua `/_next/image`, Vitest). Đã kiểm production sau deploy (chỉ đọc): bìa hiện ở trang chủ, `/danh-muc/van-hoc`, `/sach/sapiens`, 0 ảnh lỗi.
   - Theo dõi: `public.ecr.aws` đôi lúc trả `toomanyrequests` khi kéo image (CLI tự thử lại, +~13 s); nếu làm fail job thì thêm cache image Docker.
-- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase, **trừ** `20261018130000_error_reasons.sql` (migration B, chạy sau deploy production của ux-messages). `src/types/database.ts` khớp DB (sửa tay theo migration A; sinh lại sau B).
+- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase (kể cả B, 2026-10-19). `src/types/database.ts` sửa tay theo migration A; kiểm tự động bằng `supabase gen types --local` trên CI là mục 3 của đợt `sau-ux`.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
 - Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
 

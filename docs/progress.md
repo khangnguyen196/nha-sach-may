@@ -7,7 +7,7 @@
 - [Đợt "giảm JS client"] C: icon lucide của client component (theme-toggle, cart-badge, search-trigger, shelf-nav, review-form) render ở server, truyền qua children. Ước tính −2 đến −3KB.
 - [Đo] measure:js đang cộng cả polyfill noModule 0cz1… (38.6KB gzip) dù trình duyệt hiện đại không tải; xem có nên loại khỏi số đo.
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
-- [Sau migration B] chạy lại `supabase gen types`, so với src/types/database.ts đang sửa tay; xóa INVALID_VOUCHER.
+- [B đã chạy, làm được (đợt sau-ux)] chạy lại `supabase gen types`, so với src/types/database.ts đang sửa tay; xóa INVALID_VOUCHER.
 - [Đợt "giảm JS client"] lazy-load sheet bộ lọc ở /sach và trang danh mục (next/dynamic), ước −8KB; sau đó đặt ngân sách cho 2 route này.
 - [Đo] scripts/measure-js.mjs thêm cột ngân sách theo route.
 - [Lỗi có từ trước – điều tra] Tắt JS: form Server Action trả kết quả hiện trang trắng (POST chỉ trả phần động, Cache Components). Ảnh hưởng: đăng nhập, gửi lại email, địa chỉ, đánh giá, thanh toán, hủy đơn; action kết thúc bằng redirect vẫn chạy. Hướng: xem issue / cấu hình Next 16, hoặc báo kết quả qua redirect + tham số URL.
@@ -15,7 +15,8 @@
 - [Đã quyết 2026-10-19] ★ perf-js: xem docs/plans/perf-js.md; đợt sau làm D → sheet lazy → C.
 - [Đã quyết – nhánh riêng sau merge] Đăng ký: lỗi khi gửi thư (429, email_address_*, 5xx) trả cùng kết quả 'kiểm tra hộp thư' như khi thành công; chỉ báo NETWORK_ERROR, lỗi zod và lỗi GoTrue kiểm TRƯỚC khi tìm user (vd mật khẩu yếu — đối chiếu mã nguồn GoTrue trước khi làm).
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.
-- [Sau merge] Voucher TEST10 đang is_public = true trên production (để test iPhone); chủ dự án quyết giữ hay bỏ.
+- [Sau merge] Voucher TEST10 đang is_public = true trên production (để test iPhone); chủ dự án quyết giữ hay bỏ (2026-10-19: giữ tới khi chủ dự án báo).
+- [Dọn 2026-10-26] xóa nhánh backup/main-local-06d5009 và stash eb9bb91.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 
