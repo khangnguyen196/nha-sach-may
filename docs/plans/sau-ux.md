@@ -5,7 +5,11 @@ Trạng thái (2026-10-19): **mục 1, 2, 3 code xong** trên nhánh `sau-ux` (t
 Kết quả từng mục:
 - Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
 - Mục 2 `553fcfe` (+ docs `3f934b0`): e2e 411 qua / 9 skip (run 39241695759).
-- Mục 3 `485abe4` (chế độ báo, run 39243064552: `gen types --local` chạy được dù `postgres-meta` bị `-x`; bản `--local` chỉ khác bản sửa tay ở `order_items.line_total` = `never` khi Insert / Update, còn lại là định dạng) → `bf9fcb8` (database.ts từ artifact, bật fail): e2e 411 qua, bước kiểm types xanh (run 39244493102). Chứng minh đỏ: nhánh nháp `types-red-check` đổi `authors.bio_en` → bước "Check src/types/database.ts" fail kèm đúng dòng lệch (run 39244521641), nhánh đã xóa.
+- Test đã đổi / xóa / thêm (mục 1–3):
+  - Xóa (test của code bị xóa): `errors.test.ts` 2 expectation `email_address_invalid` / `email_address_not_authorized` → `emailRejected` (mapping đã xóa, không còn nơi dùng); `legacy-error-codes.test.ts` ca `INVALID_VOUCHER` (mã đã xóa); `voucher-errors.test.ts` phần tử `INVALID_VOUCHER` trong danh sách kiểm; `schemas.test.ts` expectation `user_already_exists` → `EMAIL_TAKEN` (mã đã xóa, xem Việc 2 bên dưới).
+  - Đổi tên: `legacy-error-codes.test.ts` describe "báo giá thanh toán với mã lỗi cũ" → "báo giá thanh toán: lỗi voucher thiếu detail", "hủy đơn với mã lỗi cũ" → "hủy đơn: đơn không có / của tài khoản khác" (+ comment đầu file); `voucher-errors.test.ts` "có cả mã cũ (trước migration B) lẫn mã mới" → "có đủ các lý do của voucher".
+  - Thêm: `actions.test.ts` (`signUp` vào `ACTIONS`: 13 ca bảng `SILENT` + NETWORK_ERROR + zod; describe "signUp: riêng của đăng ký" 6 ca); `errors.test.ts` describe `PRE_LOOKUP_SIGNUP_CODES` (2 ca); e2e `auth-email.spec.ts`: câu thân + link ở ca đăng ký en và vi, đăng ký lại cùng email (en) → cùng khối. Không đổi chuỗi expected cũ nào, trừ Việc 2: câu en dùng ’ (cũ `doesn't` / `hasn't` / `don't` → `doesn’t` / `hasn’t` / `don’t`).
+- Mục 3 `485abe4` (chế độ báo, run 39243064552: `gen types --local` chạy được dù `postgres-meta` bị `-x`; trong schema `public`, bản `--local` chỉ khác bản sửa tay ở `order_items.line_total` = `never` khi Insert / Update; ngoài `public`, bản `--local` **không có** khối `__InternalSupabase` (`PostgrestVersion: "14.18"`) → postgrest-js suy kiểu theo PostgREST v12, typecheck vẫn sạch; còn lại là định dạng) → `bf9fcb8` (database.ts từ artifact, bật fail): e2e 411 qua, bước kiểm types xanh (run 39244493102). Chứng minh đỏ: nhánh nháp `types-red-check` đổi `authors.bio_en` → bước "Check src/types/database.ts" fail kèm đúng dòng lệch (run 39244521641), nhánh đã xóa.
 
 Bối cảnh: đợt `ux-messages` đã lên production 2026-10-19, migration A + B đã chạy (`docs/plans/ux-messages.md`). Đợt này dọn các việc còn lại của nó (`docs/progress.md`) trước đợt perf-js (`docs/plans/perf-js.md`) (★6: sau-ux trước perf-js).
 
@@ -109,7 +113,7 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 - `supabase start -x imgproxy,postgres-meta,supavisor`: `gen types --local` dùng image pg-meta. Thử trước với `-x` như cũ; CLI không chạy được (hoặc chậm vì kéo image) thì bỏ `postgres-meta` khỏi `-x`.
 - Lượt đầu chế độ báo (`continue-on-error: true` + in diff) → tải artifact, commit làm `database.ts` chuẩn (★3 a), `typecheck` sạch → bật fail (bỏ `continue-on-error`).
 - Quy trình cập nhật types về sau (máy dev không có Docker): đổi `schema.sql` → push → bước CI đỏ, artifact `database-types` có bản đúng → `gh run download <run> -n database-types` → chép vào `src/types/database.ts` → `npm run typecheck` → commit. CLAUDE.md: thay lệnh `--project-id` ở mục Lệnh và mục Database ("sinh lại types") bằng quy trình này.
-- Lưu ý: bản `--local` có `PostgrestVersion` của stack local; đổi version làm đổi suy luận kiểu của postgrest-js → sau khi sinh lại phải `typecheck`, và để ý tính năng PostgREST mà production không có.
+- Lưu ý: bản `--local` (CLI 2.121.0) **không có** khối `__InternalSupabase` (`PostgrestVersion`) → postgrest-js suy kiểu theo PostgREST v12 (API kiểu v13+ như `maxAffected` sẽ không typecheck dù production có). Cần tính năng v13+ thì truyền `PostgrestVersion` ở chỗ tạo client, không sửa tay `database.ts` (bước so sẽ đỏ). Sau khi sinh lại luôn `typecheck`.
 
 **Test**: đổi tạm một kiểu trong `database.ts` trên nhánh nháp → bước đỏ (không commit bản tạm vào `sau-ux`, xóa nhánh nháp).
 
@@ -202,7 +206,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 **Cách làm (A1)** — không cần sửa DB: `search_books` là hàm invoker trả `setof books`, PostgREST nhận thêm `.in('category_id', …)` trên kết quả RPC (như filter `price`, `language` đang dùng). Không migration.
 - `withCategoryFilter`: chỉ nhận danh mục đang hiện; không `cat` → `categoryIds = visibleCategoryIds(categories)`; `?cat=` chỉ nhận slug trong cây đang hiện. `/sach` và `/tim-kiem` dùng chung.
 - `searchBookHits(q)`: đọc `getCategories()` (cache, tag `categories`) → `.in('category_id', visible)`.
-- Chatbot: lọc `catalog` theo `visibleCategoryIds(categories)` trong `askMay` (đã lấy `getCategories()` song song) trước khi chọn ứng viên.
+- Chatbot: lọc `catalog` **một lần** ngay sau `Promise.all` trong `askMay` (`visibleCategoryIds(categories)`), dùng bản đã lọc cho **cả** `selectCandidates` lẫn `knownSlugs` (chỉ lọc ứng viên thì `knownSlugs` vẫn nhận slug sách ẩn). Sách đang xem thuộc danh mục ẩn vẫn vào prompt qua `fallbackCandidate(current)`: đúng A1 (link trực tiếp vẫn xem được).
 - Trang tác giả (nếu ★6a đồng ý): `listBooks({ bookIds, categoryIds: visible })`; tác giả chỉ có sách ẩn → trạng thái rỗng như khi không có sách.
 - Kệ "Cùng danh mục" (nếu ★6a đồng ý): danh mục của sách không nằm trong cây hiện → không render kệ.
 - `.in()` ~30 id → URL PostgREST ngắn; cache key của `listBooks` thêm mảng id (đổi khi danh mục đổi, lúc đó tag `books` cũng hết hạn).
