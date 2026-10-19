@@ -13,12 +13,15 @@ const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 
 
 /**
  * Icon tài khoản ở header. Phần đọc phiên (cookies) nằm trong Suspense → header vẫn prerender, 0 JS client.
- * Fallback = icon trỏ /tai-khoan (proxy tự chuyển sang đăng nhập nếu chưa có phiên).
+ * Fallback = icon trỏ /tai-khoan (proxy tự chuyển sang đăng nhập nếu chưa có phiên). Fallback KHÔNG prefetch: lúc nó
+ * hiện chưa biết phiên, khách chưa đăng nhập mà router prefetch /tai-khoan thì proxy 307 sang /dang-nhap, Next 307 thêm
+ * `_rsc` rồi trả 404 cho segment `account/__PAGE__` (trang đăng nhập không có) → lỗi 404 trong console
+ * (docs/plans/sau-ux.md mục 4). Link /account khi đã đăng nhập vẫn prefetch.
  */
 export async function AccountLink() {
   const t = await getTranslations('layout')
   return (
-    <Suspense fallback={<IconLink href="/account" label={t('account')} />}>
+    <Suspense fallback={<IconLink href="/account" label={t('account')} prefetch={false} />}>
       <AccountStatus />
     </Suspense>
   )
@@ -72,9 +75,9 @@ async function AdminIconLink() {
   )
 }
 
-function IconLink({ href, label }: { href: '/account' | '/login'; label: string }) {
+function IconLink({ href, label, prefetch }: { href: '/account' | '/login'; label: string; prefetch?: false }) {
   return (
-    <Link href={href} className={iconLink}>
+    <Link href={href} prefetch={prefetch} className={iconLink}>
       <UserIcon aria-hidden />
       <span className="sr-only">{label}</span>
     </Link>
