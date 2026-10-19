@@ -13,7 +13,7 @@ import { invalidInput, type Failure, type Result } from '@/lib/errors'
 import { requestOrigin } from '@/lib/site-url'
 import { createClient } from '@/lib/supabase/server'
 import { authCallbackUrl, type ConfirmPurpose } from './confirm-link'
-import { authFailure } from './errors'
+import { authFailure, PRE_LOOKUP_SIGNUP_CODES } from './errors'
 import { nextFromReferer, safeNextPath } from './next-path'
 import {
   parseLocale,
@@ -80,9 +80,10 @@ export async function signUp(
       emailRedirectTo: await callbackUrl(target, 'signup'),
     },
   })
-  // Email đã có: trả lời y như đăng ký mới để không lộ email nào đã có tài khoản
-  const failure = error ? authFailure(error) : null
-  if (failure && failure.code !== 'EMAIL_TAKEN') return withAuthMessage(target, failure)
+  // Chỉ báo lỗi GoTrue kiểm trước khi tìm user (mật khẩu yếu, dữ liệu sai, tắt đăng ký); còn lại như đăng ký mới
+  if (error?.code && PRE_LOOKUP_SIGNUP_CODES.has(error.code)) return authFailure(error)
+  const unreachable = unreachableOnly('signUp:', error)
+  if (unreachable) return unreachable
 
   // Project tắt xác nhận email thì signUp đăng nhập luôn
   if (data.session) redirect({ href: '/account', locale: target })
@@ -90,11 +91,12 @@ export async function signUp(
 }
 
 /**
- * Quên mật khẩu / gửi lại email xác nhận: chỉ báo lỗi khi KHÔNG tới được máy chủ (fetch lỗi, không có response). Mọi
+ * Quên mật khẩu / gửi lại email xác nhận / đăng ký: chỉ báo lỗi khi KHÔNG tới được máy chủ (fetch lỗi, không có response). Mọi
  * phản hồi của GoTrue (email_address_invalid, email_address_not_authorized, mọi 429 kể cả giới hạn theo từng tài khoản,
  * 5xx khi gửi thư, user không có, mã lạ) cùng một kết quả "đã gửi": nhiều phản hồi trong số đó chỉ xảy ra khi email ĐÃ có
  * tài khoản (GoTrue tìm user trước rồi mới gửi thư / kiểm tần suất), báo khác đi là lộ email nào có tài khoản.
- * Quyết định 2026-10-19, xem docs/plans/ux-messages.md → "Bổ sung". Lỗi nhập (zod) vẫn báo, trước khi gọi GoTrue.
+ * Quyết định 2026-10-19, xem docs/plans/ux-messages.md → "Bổ sung" và docs/plans/sau-ux.md mục 1 (đăng ký còn báo các mã
+ * kiểm trước khi tìm user: PRE_LOOKUP_SIGNUP_CODES). Lỗi nhập (zod) vẫn báo, trước khi gọi GoTrue.
  * Trả Failure khi phải báo, null khi coi như "đã gửi" (log chỉ ghi mã: message của GoTrue có thể chứa địa chỉ email).
  */
 function unreachableOnly(label: string, error: Parameters<typeof authFailure>[0] | null): Failure | null {

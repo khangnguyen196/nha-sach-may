@@ -353,7 +353,6 @@
     "reason": "The reason can be at most 500 characters.",
     "rating": "Please choose a rating (1–5 stars).",
     "reviewContent": "Your review can be up to 2,000 characters.",
-    "emailRejected": "This email can’t receive mail. Please check the address (e.g. name@gmail.com).",
     "passwordWeak": "This password is easy to guess or has appeared in a data leak. Please choose a different, longer one.",
     "passwordSame": "Your new password must be different from the current one."
   },
@@ -380,7 +379,7 @@
       "hasAccount": "Already have an account?",
       "loginLink": "Sign in",
       "checkInboxTitle": "Check your inbox",
-      "checkInbox": "If the email below isn't registered yet, we've sent it a confirmation link. Open the link to activate your account."
+      "checkInbox": "If the email below doesn't have an account yet (or hasn't been confirmed), a confirmation link usually arrives within a few minutes. If you don't see it, check your Spam folder and double-check the address. If you already have an account, <login>sign in</login> or use <forgot>Forgot password</forgot>."
     },
     "forgot": {
       "title": "Forgot password",

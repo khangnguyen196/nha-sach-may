@@ -14,7 +14,7 @@ export default async function RegisterPage() {
   const [t, locale, messages] = await Promise.all([
     getTranslations('auth'),
     getLocale(),
-    getFormMessages(['WEAK_PASSWORD', 'RATE_LIMITED', 'SIGNUP_DISABLED']),
+    getFormMessages(['WEAK_PASSWORD', 'SIGNUP_DISABLED']),
   ])
 
   return (
@@ -41,7 +41,18 @@ export default async function RegisterPage() {
           submit: t('register.submit'),
           pending: t('pending'),
           checkInboxTitle: t('register.checkInboxTitle'),
-          checkInbox: t('register.checkInbox'),
+          checkInbox: t.rich('register.checkInbox', {
+            login: (chunks) => (
+              <Link href="/login" className={authLinkClass}>
+                {chunks}
+              </Link>
+            ),
+            forgot: (chunks) => (
+              <Link href="/forgot-password" className={authLinkClass}>
+                {chunks}
+              </Link>
+            ),
+          }),
         }}
       />
     </AuthPage>

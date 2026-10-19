@@ -20,6 +20,13 @@ test('đăng ký (en) → thư tiếng Anh → xác nhận → vào tài khoản
     await page.getByRole('main').getByLabel('Password', { exact: true }).fill(`E2e-${randomBytes(9).toString('base64url')}`)
     await page.getByRole('main').getByRole('button', { name: 'Create account' }).click()
     await expect(page.getByRole('main').getByRole('heading', { name: 'Check your inbox' })).toBeVisible()
+    // Cùng một câu dù email đã có tài khoản hay gửi thư lỗi (docs/plans/sau-ux.md mục 1), kèm link đăng nhập / quên mật khẩu
+    const notice = page.getByRole('main').getByRole('status')
+    await expect(notice.locator('p').first()).toHaveText(
+      "If the email below doesn't have an account yet (or hasn't been confirmed), a confirmation link usually arrives within a few minutes. If you don't see it, check your Spam folder and double-check the address. If you already have an account, sign in or use Forgot password.",
+    )
+    await expect(notice.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', '/en/login')
+    await expect(notice.getByRole('link', { name: 'Forgot password' })).toHaveAttribute('href', '/en/forgot-password')
 
     const mail = await waitForAuthEmail(email)
     expect(mail.subject).toBe('Confirm your Nhà Sách Mây account')
@@ -91,6 +98,12 @@ test('đăng nhập khi chưa xác nhận email (vi) → báo rõ + "Gửi lại
     await page.getByRole('main').getByLabel('Mật khẩu', { exact: true }).fill(password)
     await page.getByRole('main').getByRole('button', { name: 'Đăng ký' }).click()
     await expect(page.getByRole('main').getByRole('heading', { name: 'Kiểm tra hộp thư của bạn' })).toBeVisible()
+    const notice = page.getByRole('main').getByRole('status')
+    await expect(notice.locator('p').first()).toHaveText(
+      'Nếu email dưới đây chưa có tài khoản (hoặc chưa xác nhận), liên kết xác nhận thường tới trong vài phút. Không thấy thư thì bạn xem mục Spam và kiểm tra lại địa chỉ email. Nếu đã có tài khoản, bạn đăng nhập hoặc dùng Quên mật khẩu.',
+    )
+    await expect(notice.getByRole('link', { name: 'đăng nhập' })).toHaveAttribute('href', '/dang-nhap')
+    await expect(notice.getByRole('link', { name: 'Quên mật khẩu' })).toHaveAttribute('href', '/quen-mat-khau')
     await waitForAuthEmail(email)
     const firstEmailAt = Date.now()
 

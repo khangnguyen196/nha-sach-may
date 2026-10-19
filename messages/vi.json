@@ -769,7 +769,6 @@
     "reason": "Lý do hủy tối đa 500 ký tự.",
     "rating": "Vui lòng chọn số sao (1–5).",
     "reviewContent": "Nhận xét tối đa 2.000 ký tự.",
-    "emailRejected": "Email này không nhận được thư. Bạn kiểm tra lại địa chỉ (VD ten@gmail.com) nhé.",
     "passwordWeak": "Mật khẩu này dễ đoán hoặc đã từng bị lộ. Bạn chọn mật khẩu khác, dài hơn nhé.",
     "passwordSame": "Mật khẩu mới phải khác mật khẩu đang dùng."
   },
@@ -796,7 +795,7 @@
       "hasAccount": "Đã có tài khoản?",
       "loginLink": "Đăng nhập",
       "checkInboxTitle": "Kiểm tra hộp thư của bạn",
-      "checkInbox": "Nếu email dưới đây chưa được đăng ký, chúng tôi đã gửi tới đó một liên kết xác nhận. Mở liên kết để kích hoạt tài khoản."
+      "checkInbox": "Nếu email dưới đây chưa có tài khoản (hoặc chưa xác nhận), liên kết xác nhận thường tới trong vài phút. Không thấy thư thì bạn xem mục Spam và kiểm tra lại địa chỉ email. Nếu đã có tài khoản, bạn <login>đăng nhập</login> hoặc dùng <forgot>Quên mật khẩu</forgot>."
     },
     "forgot": {
       "title": "Quên mật khẩu",

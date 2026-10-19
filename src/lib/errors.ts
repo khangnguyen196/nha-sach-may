@@ -85,8 +85,7 @@ export const VALIDATION_KEYS = [
   'reason',
   'rating',
   'reviewContent',
-  // Supabase Auth từ chối (ux-messages): email không nhận thư, mật khẩu dễ đoán / đã lộ, trùng mật khẩu cũ
-  'emailRejected',
+  // Supabase Auth từ chối (ux-messages): mật khẩu dễ đoán / đã lộ, trùng mật khẩu cũ
   'passwordWeak',
   'passwordSame',
   'invalid',

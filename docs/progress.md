@@ -13,7 +13,6 @@
 - [Lỗi có từ trước – điều tra] Tắt JS: form Server Action trả kết quả hiện trang trắng (POST chỉ trả phần động, Cache Components). Ảnh hưởng: đăng nhập, gửi lại email, địa chỉ, đánh giá, thanh toán, hủy đơn; action kết thúc bằng redirect vẫn chạy. Hướng: xem issue / cấu hình Next 16, hoặc báo kết quả qua redirect + tham số URL.
 - [Điều tra – nhánh riêng sau merge] Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (cart-account.spec.ts:94, desktop-account, chập chờn 2/5 lượt đêm 18→19/10). Giả thuyết: prefetch / điều hướng /tai-khoan khi chưa đăng nhập → proxy 307 → request RSC nhận 404. Có từ trước ux-messages.
 - [Đã quyết 2026-10-19] ★ perf-js: xem docs/plans/perf-js.md; đợt sau làm D → sheet lazy → C.
-- [Đã quyết – nhánh riêng sau merge] Đăng ký: lỗi khi gửi thư (429, email_address_*, 5xx) trả cùng kết quả 'kiểm tra hộp thư' như khi thành công; chỉ báo NETWORK_ERROR, lỗi zod và lỗi GoTrue kiểm TRƯỚC khi tìm user (vd mật khẩu yếu — đối chiếu mã nguồn GoTrue trước khi làm).
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.
 - [Đã quyết 2026-10-19] Giữ TEST10 hiện trong gợi ý (demo); không còn việc gì.
 - [Dọn 2026-10-26] xóa nhánh backup/main-local-06d5009 và stash eb9bb91.

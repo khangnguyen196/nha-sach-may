@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { authFailure, retryAfterSeconds } from './errors'
+import { authFailure, PRE_LOOKUP_SIGNUP_CODES, retryAfterSeconds } from './errors'
 
 describe('authFailure', () => {
   it('lỗi gắn với một ô → hiện dưới ô đó (không còn "Dữ liệu không hợp lệ." chung chung)', () => {
-    expect(authFailure({ code: 'email_address_invalid', status: 400 })).toEqual({
-      ok: false,
-      code: 'INVALID_INPUT',
-      fieldErrors: { email: 'emailRejected' },
-    })
-    expect(authFailure({ code: 'email_address_not_authorized', status: 400 }).fieldErrors).toEqual({ email: 'emailRejected' })
     expect(authFailure({ code: 'weak_password', status: 422 })).toEqual({
       ok: false,
       code: 'WEAK_PASSWORD',
@@ -62,5 +56,25 @@ describe('retryAfterSeconds', () => {
     expect(retryAfterSeconds('…after 59 seconds')).toBe(59)
     expect(retryAfterSeconds('Email rate limit exceeded')).toBeNull()
     expect(retryAfterSeconds(undefined)).toBeNull()
+  })
+})
+
+describe('PRE_LOOKUP_SIGNUP_CODES', () => {
+  it('chỉ các mã GoTrue kiểm trước khi tìm user (signup.go)', () => {
+    expect([...PRE_LOOKUP_SIGNUP_CODES].sort()).toEqual(['email_provider_disabled', 'signup_disabled', 'validation_failed', 'weak_password'])
+  })
+
+  it('mã sau bước tìm user / gửi thư không nằm trong danh sách', () => {
+    for (const code of [
+      'email_address_invalid',
+      'email_address_not_authorized',
+      'over_email_send_rate_limit',
+      'over_request_rate_limit',
+      'user_already_exists',
+      'email_exists',
+      'unexpected_failure',
+    ]) {
+      expect(PRE_LOOKUP_SIGNUP_CODES.has(code), code).toBe(false)
+    }
   })
 })

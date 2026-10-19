@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { FormAlert, TextField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import type { Result } from '@/lib/errors'
@@ -15,7 +16,8 @@ type Labels = {
   submit: string
   pending: string
   checkInboxTitle: string
-  checkInbox: string
+  /** Có link đăng nhập / quên mật khẩu (server dựng bằng t.rich) */
+  checkInbox: ReactNode
 }
 
 type Props = {
@@ -27,7 +29,7 @@ type Props = {
 export function RegisterForm({ action, messages, labels }: Props) {
   const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
 
-  // Luôn cùng một thông báo dù email đã có tài khoản hay chưa (không lộ email đã đăng ký)
+  // Luôn cùng một thông báo dù email đã có tài khoản hay chưa, kể cả khi gửi thư lỗi (không lộ email đã đăng ký)
   if (state?.ok) {
     return (
       <Notice title={labels.checkInboxTitle}>

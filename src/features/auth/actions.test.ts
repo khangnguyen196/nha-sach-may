@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Quên mật khẩu / gửi lại email xác nhận (docs/plans/ux-messages.md → "Bổ sung", quyết định 2026-10-19): chỉ báo lỗi khi
-// không tới được máy chủ (hoặc zod chặn dữ liệu nhập). Mọi phản hồi khác của GoTrue cùng một kết quả "đã gửi", để không
-// dò được email nào có tài khoản. Supabase và Next đều giả lập.
+// Quên mật khẩu / gửi lại email xác nhận / đăng ký (docs/plans/ux-messages.md → "Bổ sung", docs/plans/sau-ux.md mục 1):
+// chỉ báo lỗi khi không tới được máy chủ (hoặc zod chặn dữ liệu nhập; đăng ký: thêm các mã GoTrue kiểm trước khi tìm user).
+// Mọi phản hồi khác của GoTrue cùng một kết quả "đã gửi", để không dò được email nào có tài khoản. Supabase và Next đều
+// giả lập.
 const resetPasswordForEmail = vi.fn()
 const resend = vi.fn()
+const signUpMock = vi.fn()
 
 vi.mock('server-only', () => ({}))
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
@@ -15,16 +17,19 @@ vi.mock('next-intl/server', () => ({
 vi.mock('@/i18n/navigation', () => ({ getPathname: () => '/', redirect: vi.fn() }))
 vi.mock('@/lib/auth', () => ({ getCurrentUser: async () => null }))
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({ auth: { resetPasswordForEmail, resend } }),
+  createClient: async () => ({ auth: { resetPasswordForEmail, resend, signUp: signUpMock } }),
 }))
 
-const { requestPasswordReset, resendConfirmation } = await import('./actions')
+const { requestPasswordReset, resendConfirmation, signUp } = await import('./actions')
 
 const EMAIL = 'ban.doc@example.com'
 
+// Đủ ô của form đăng ký; 2 action kia chỉ đọc `email` (zod bỏ ô thừa)
 function form(email = EMAIL) {
   const data = new FormData()
   data.set('email', email)
+  data.set('full_name', 'Bạn Đọc')
+  data.set('password', 'mat-khau-du-dai-1')
   return data
 }
 
@@ -65,6 +70,8 @@ const ACTIONS = [
     mock: resetPasswordForEmail,
     run: (data: FormData) => requestPasswordReset('vi', null, data),
     sent: { ok: true, data: { email: EMAIL } },
+    // `data` supabase-js trả kèm lỗi
+    failedData: null,
   },
   {
     name: 'resendConfirmation',
@@ -72,10 +79,19 @@ const ACTIONS = [
     mock: resend,
     run: (data: FormData) => resendConfirmation('vi', null, data),
     sent: { ok: true, data: null },
+    failedData: null,
+  },
+  {
+    name: 'signUp',
+    label: 'signUp:',
+    mock: signUpMock,
+    run: (data: FormData) => signUp('vi', null, data),
+    sent: { ok: true, data: { email: EMAIL } },
+    failedData: { user: null, session: null },
   },
 ] as const
 
-describe.each(ACTIONS)('$name', ({ label, mock, run, sent }) => {
+describe.each(ACTIONS)('$name', ({ label, mock, run, sent, failedData }) => {
   let logged: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
@@ -85,7 +101,7 @@ describe.each(ACTIONS)('$name', ({ label, mock, run, sent }) => {
   afterEach(() => vi.restoreAllMocks())
 
   it.each(SILENT)('%s → "đã gửi"', async (_name, error, log) => {
-    mock.mockResolvedValue({ data: error ? null : {}, error })
+    mock.mockResolvedValue({ data: error ? failedData : {}, error })
     expect(await run(form())).toEqual(sent)
     // Log có mã lỗi thật, không có địa chỉ email (message của GoTrue có thể chứa email)
     if (log) {
@@ -98,7 +114,7 @@ describe.each(ACTIONS)('$name', ({ label, mock, run, sent }) => {
   })
 
   it('không tới được máy chủ (fetch lỗi) → NETWORK_ERROR', async () => {
-    mock.mockResolvedValue({ data: null, error: NETWORK })
+    mock.mockResolvedValue({ data: failedData, error: NETWORK })
     expect(await run(form())).toEqual({ ok: false, code: 'NETWORK_ERROR' })
     expect(logged).not.toHaveBeenCalled()
   })
@@ -106,5 +122,40 @@ describe.each(ACTIONS)('$name', ({ label, mock, run, sent }) => {
   it('email sai dạng: zod chặn ở server, không gọi GoTrue', async () => {
     expect(await run(form('khong-phai-email'))).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
     expect(mock).not.toHaveBeenCalled()
+  })
+})
+
+describe('signUp: riêng của đăng ký', () => {
+  let logged: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    signUpMock.mockReset()
+    logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('email đã có tài khoản (autoconfirm bật: user_already_exists) → "đã gửi" như đăng ký mới', async () => {
+    signUpMock.mockResolvedValue({ data: { user: null, session: null }, error: authError('user_already_exists', 422, 'User already registered') })
+    expect(await signUp('vi', null, form())).toEqual({ ok: true, data: { email: EMAIL } })
+    expect(logged).toHaveBeenCalledWith('signUp:', 'user_already_exists')
+  })
+
+  // Mã GoTrue kiểm TRƯỚC khi tìm user (signup.go): không nói gì về tài khoản → vẫn báo
+  it.each([
+    ['weak_password → dưới ô Mật khẩu', authError('weak_password', 422, 'Password is known to be weak'), { ok: false, code: 'WEAK_PASSWORD', fieldErrors: { password: 'passwordWeak' } }],
+    ['validation_failed → đầu form', authError('validation_failed', 400, 'Unable to validate email address: invalid format'), { ok: false, code: 'INVALID_INPUT' }],
+    ['signup_disabled', authError('signup_disabled', 422, 'Signups not allowed for this instance'), { ok: false, code: 'SIGNUP_DISABLED' }],
+    ['email_provider_disabled', authError('email_provider_disabled', 422, 'Email signups are disabled'), { ok: false, code: 'SIGNUP_DISABLED' }],
+  ])('%s', async (_name, error, expected) => {
+    signUpMock.mockResolvedValue({ data: { user: null, session: null }, error })
+    expect(await signUp('vi', null, form())).toEqual(expected)
+  })
+
+  it('mật khẩu / họ tên sai: zod chặn, không gọi GoTrue', async () => {
+    const data = form()
+    data.set('password', 'ngan')
+    data.set('full_name', '')
+    expect(await signUp('vi', null, data)).toMatchObject({ ok: false, code: 'INVALID_INPUT' })
+    expect(signUpMock).not.toHaveBeenCalled()
   })
 })

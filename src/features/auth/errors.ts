@@ -9,9 +9,6 @@ const AUTH_ERRORS: Partial<Record<string, { code: ErrorCode; field?: [name: stri
   user_already_exists: { code: 'EMAIL_TAKEN' },
   email_exists: { code: 'EMAIL_TAKEN' },
   email_not_confirmed: { code: 'EMAIL_NOT_CONFIRMED' },
-  // GoTrue từ chối địa chỉ zod đã nhận (tên miền không nhận thư, SMTP mặc định chỉ gửi cho thành viên project…)
-  email_address_invalid: { code: 'INVALID_INPUT', field: ['email', 'emailRejected'] },
-  email_address_not_authorized: { code: 'INVALID_INPUT', field: ['email', 'emailRejected'] },
   weak_password: { code: 'WEAK_PASSWORD', field: ['password', 'passwordWeak'] },
   same_password: { code: 'SAME_PASSWORD', field: ['password', 'passwordSame'] },
   validation_failed: { code: 'INVALID_INPUT' },
@@ -24,6 +21,19 @@ const AUTH_ERRORS: Partial<Record<string, { code: ErrorCode; field?: [name: stri
   otp_expired: { code: 'LINK_EXPIRED' },
   request_timeout: { code: 'NETWORK_ERROR' },
 }
+
+/**
+ * Đăng ký: chỉ các mã GoTrue kiểm TRƯỚC khi tìm user được báo ra form (supabase/auth internal/api/signup.go, `Signup`:
+ * DisableSignup → validateSignupParams (checkPasswordStrength) → email provider → validateEmail, rồi mới
+ * IsDuplicatedEmail). Mọi mã sau bước tìm user (gửi thư, tần suất, user đã có…) có thể khác nhau giữa email có / không
+ * có tài khoản → actions.ts coi như "đã gửi". Mã lạ mặc định "đã gửi".
+ */
+export const PRE_LOOKUP_SIGNUP_CODES: ReadonlySet<string> = new Set([
+  'weak_password',
+  'validation_failed',
+  'signup_disabled',
+  'email_provider_disabled',
+])
 
 // Phiên không còn dùng được (hết hạn, đã thu hồi, link PKCE mở ở trình duyệt khác…)
 const SESSION_GONE = new Set([
@@ -41,7 +51,7 @@ const SESSION_GONE = new Set([
  * Không gọi được Supabase Auth: supabase-js ném AuthRetryableFetchError khi fetch lỗi (status 0) và khi GoTrue trả
  * 500–504 hoặc 520–530 (auth-js lib/fetch.ts, NETWORK_ERROR_CODES; response này mất `code`); các 5xx khác là lỗi phía
  * máy chủ → cùng báo "không kết nối được máy chủ". Vì 504 mất `code`, mã `request_timeout` ở bảng trên gần như không tới.
- * Quên mật khẩu / gửi lại xác nhận KHÔNG dùng hàm này (unreachableOnly trong actions.ts: chỉ status 0).
+ * Quên mật khẩu / gửi lại xác nhận / đăng ký KHÔNG dùng hàm này (unreachableOnly trong actions.ts: chỉ status 0).
  */
 export function isAuthUnreachable(error: { name?: string; status?: number }) {
   return error.name === 'AuthRetryableFetchError' || error.status === 0 || (error.status ?? 0) >= 500
