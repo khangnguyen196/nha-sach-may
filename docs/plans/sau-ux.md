@@ -262,3 +262,10 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - **Hậu tố định dạng** (R7): bỏ hậu tố khỏi `title`, đặt `format` theo hậu tố khi đang sai; `search_text` do trigger tự tính lại; slug giữ.
 
 **Xong khi** (đợt này): file chỉ đọc + plan; chủ dự án chạy R1–R7, dán kết quả, duyệt ★7a / ★7b → đợt sau viết `supabase/checks/catalog-data-fix.sql`.
+
+**SQL sửa đã viết (2026-10-19, CHƯA chạy)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 1 một transaction, mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
+1. Gộp (id giữ ← id gộp): 87 "Peter F. Drucker" ← 86 "Peter Ferdinand Drucker", 88 "Peter Drucker"; 114 "Stephen Hawking" ← 113 "Stephen W. Hawking"; 90 "Jim Collins" ← 92 "James Charles Collins"; 94 "Jerry Porras" ← 93 "Jerry I. Porras". Chuyển `book_authors` (`on conflict do nothing`), kiểm mọi liên kết đã có ở id giữ, rồi xóa liên kết + tác giả của id gộp (đúng 5). Không gộp 101 / 104 (Covey), không đụng 99.
+2. Tách id 75 → "Trần Tuyết Nhung" (giữ slug); "Anthony Reid" (slug `anthony-reid`, đã có thì dùng dòng đó) gắn đúng các sách của id 75, cùng vai trò.
+3. Bỏ liên kết 89 "Harvard Business Review" khỏi "The Peter F. Drucker Reader" và 107 "Ladybird" khỏi "Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)" chỉ khi sách còn ≥ 1 tác giả role `author` khác (sau bước gộp); xóa 89 / 107 nếu không còn liên kết (còn thì NOTICE, giữ). Giữ 22, 24.
+4. Tên sách (giữ slug): "Kien Chuot Va Ruoi" → "Kiến, Chuột và Ruồi"; "chân dùng" → "chân dung"; bỏ hậu tố định dạng ở 4 sách, `format` = hardcover / paperback / hardcover / hardcover.
+Phần 2 (chỉ đọc) C1–C7 có cột mong đợi. Sau khi chạy: Redeploy Vercel. R2 / R5 tìm thêm: file sau.
