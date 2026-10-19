@@ -1,6 +1,11 @@
 # Đợt "sau-ux"
 
-Trạng thái: **plan đã duyệt 2026-10-19 (có chỉnh)**, đang làm trên nhánh `sau-ux` (tạo từ `main` `1016280`). Mục 4 làm ở nhánh `diag-rsc-404` (không bao giờ merge). Mục 6, 7: chỉ plan + SQL chỉ đọc, chờ duyệt.
+Trạng thái (2026-10-19): **mục 1, 2, 3 code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge**. Mục 4 đã chẩn đoán trên nhánh `diag-rsc-404` (đã xóa), đề xuất sửa chờ duyệt. Mục 5: đợt riêng. Mục 6, 7: plan + SQL chỉ đọc, chờ chủ dự án chạy + quyết ★. Mục 8: xong.
+
+Kết quả từng mục:
+- Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
+- Mục 2 `553fcfe` (+ docs `3f934b0`): e2e 411 qua / 9 skip (run 39241695759).
+- Mục 3 `485abe4` (chế độ báo, run 39243064552: `gen types --local` chạy được dù `postgres-meta` bị `-x`; bản `--local` chỉ khác bản sửa tay ở `order_items.line_total` = `never` khi Insert / Update, còn lại là định dạng) → `bf9fcb8` (database.ts từ artifact, bật fail): e2e 411 qua, bước kiểm types xanh (run 39244493102). Chứng minh đỏ: nhánh nháp `types-red-check` đổi `authors.bio_en` → bước "Check src/types/database.ts" fail kèm đúng dòng lệch (run 39244521641), nhánh đã xóa.
 
 Bối cảnh: đợt `ux-messages` đã lên production 2026-10-19, migration A + B đã chạy (`docs/plans/ux-messages.md`). Đợt này dọn các việc còn lại của nó (`docs/progress.md`) trước đợt perf-js (`docs/plans/perf-js.md`) (★6: sau-ux trước perf-js).
 
