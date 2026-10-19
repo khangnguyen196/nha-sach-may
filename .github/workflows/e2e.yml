@@ -44,6 +44,23 @@ jobs:
       - name: Seed books
         run: npx tsx scripts/e2e-seed.ts
       - run: npx playwright test
+      # src/types/database.ts phải khớp kiểu sinh từ DB local (dựng từ schema.sql). Lệch → tải artifact database-types
+      # (`gh run download <run> -n database-types`), chép vào src/types/database.ts, `npm run typecheck`, commit.
+      # Chạy cả khi Playwright fail: lệch kiểu không che kết quả e2e và ngược lại (docs/plans/sau-ux.md mục 3).
+      - if: ${{ !cancelled() }}
+        name: Generate DB types (local)
+        run: supabase gen types typescript --local --schema public --schema graphql_public > "$RUNNER_TEMP/database.ts"
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-types
+          path: ${{ runner.temp }}/database.ts
+          retention-days: 7
+      - if: ${{ !cancelled() }}
+        name: Check src/types/database.ts
+        # Lượt đầu chế độ báo: xem bản --local khác bản đang commit thế nào trước khi bật fail
+        continue-on-error: true
+        run: diff -u src/types/database.ts "$RUNNER_TEMP/database.ts"
       - if: ${{ failure() }}
         name: Supabase logs (auth, rest, storage)
         run: |
