@@ -32,23 +32,28 @@ function authError(code: string, status: number, message = 'error') {
   return { name: 'AuthApiError', code, status, message }
 }
 
-// Đúng kiểu supabase-js trả cho 5xx (auth-js lib/fetch.ts): AuthRetryableFetchError, có status, KHÔNG có code
+// Đúng kiểu supabase-js trả cho 500–504 và 520–530 (auth-js lib/fetch.ts): AuthRetryableFetchError, có status, KHÔNG có
+// code. Bản auth-js cũ chỉ coi 502–504 là retryable (500 thành AuthApiError unexpected_failure): giữ cả hai ca.
 function retryable(status: number, message = 'Error sending recovery email') {
   return { name: 'AuthRetryableFetchError', status, message }
 }
 
-// Phản hồi của GoTrue mà nhiều cái chỉ xảy ra khi email ĐÃ có tài khoản → phải cùng một kết quả "đã gửi"
-const SILENT: [name: string, error: { name: string; status?: number; message: string; code?: string } | null][] = [
-  ['email không có tài khoản (GoTrue trả 200, không lỗi)', null],
-  ['email_address_invalid (GoTrue kiểm khi gửi thư, sau khi tìm thấy tài khoản)', authError('email_address_invalid', 400, `Email address "${EMAIL}" is invalid`)],
-  ['email_address_not_authorized (SMTP mặc định chỉ gửi cho thành viên project)', authError('email_address_not_authorized', 400, `Email address "${EMAIL}" cannot be used as it is not authorized`)],
-  ['429 theo từng tài khoản (gửi lại trong ~60 giây)', authError('over_email_send_rate_limit', 429, 'For security purposes, you can only request this after 42 seconds.')],
-  ['429 giới hạn email của project', authError('over_email_send_rate_limit', 429, 'Email rate limit exceeded')],
-  ['429 giới hạn request', authError('over_request_rate_limit', 429, 'Request rate limit reached')],
-  ['500 khi gửi thư (SMTP lỗi; supabase-js: AuthRetryableFetchError, không code)', retryable(500)],
-  ['503 (supabase-js: AuthRetryableFetchError, không code)', retryable(503, `Service unavailable for ${EMAIL}`)],
-  ['lỗi không có status (AuthUnknownError)', { name: 'AuthUnknownError', message: `unknown ${EMAIL}` }],
-  ['mã lạ', authError('something_new', 400)],
+type GoTrueError = { name: string; status?: number; message: string; code?: string }
+
+// Phản hồi của GoTrue mà nhiều cái chỉ xảy ra khi email ĐÃ có tài khoản → phải cùng một kết quả "đã gửi".
+// Cột 3: dòng log mong đợi (mã lỗi, hoặc name + status khi không có mã), không bao giờ có email.
+const SILENT: [name: string, error: GoTrueError | null, log: string | null][] = [
+  ['email không có tài khoản (GoTrue trả 200, không lỗi)', null, null],
+  ['email_address_invalid (GoTrue kiểm khi gửi thư, sau khi tìm thấy tài khoản)', authError('email_address_invalid', 400, `Email address "${EMAIL}" is invalid`), 'email_address_invalid'],
+  ['email_address_not_authorized (SMTP mặc định chỉ gửi cho thành viên project)', authError('email_address_not_authorized', 400, `Email address "${EMAIL}" cannot be used as it is not authorized`), 'email_address_not_authorized'],
+  ['429 theo từng tài khoản (gửi lại trong ~60 giây)', authError('over_email_send_rate_limit', 429, 'For security purposes, you can only request this after 42 seconds.'), 'over_email_send_rate_limit'],
+  ['429 giới hạn email của project', authError('over_email_send_rate_limit', 429, 'Email rate limit exceeded'), 'over_email_send_rate_limit'],
+  ['429 giới hạn request', authError('over_request_rate_limit', 429, 'Request rate limit reached'), 'over_request_rate_limit'],
+  ['500 khi gửi thư (SMTP lỗi; supabase-js hiện tại: AuthRetryableFetchError, không code)', retryable(500), 'AuthRetryableFetchError 500'],
+  ['500 khi gửi thư (auth-js cũ: AuthApiError unexpected_failure)', authError('unexpected_failure', 500, 'Error sending recovery email'), 'unexpected_failure'],
+  ['503 (AuthRetryableFetchError, không code)', retryable(503, `Service unavailable for ${EMAIL}`), 'AuthRetryableFetchError 503'],
+  ['lỗi không có status (AuthUnknownError)', { name: 'AuthUnknownError', message: `unknown ${EMAIL}` }, 'AuthUnknownError'],
+  ['mã lạ', authError('something_new', 400), 'something_new'],
 ]
 
 const NETWORK = { name: 'AuthRetryableFetchError', status: 0, message: 'fetch failed' }
@@ -77,11 +82,12 @@ describe.each(ACTIONS)('$name', ({ mock, run, sent }) => {
   })
   afterEach(() => vi.restoreAllMocks())
 
-  it.each(SILENT)('%s → "đã gửi"', async (_name, error) => {
+  it.each(SILENT)('%s → "đã gửi"', async (_name, error, log) => {
     mock.mockResolvedValue({ data: error ? null : {}, error })
     expect(await run(form())).toEqual(sent)
     // Log có mã lỗi thật, không có địa chỉ email (message của GoTrue có thể chứa email)
-    if (error) expect(logged).toHaveBeenCalledWith(expect.any(String), error.code ?? `${error.name} ${error.status ?? ''}`.trim())
+    if (log) expect(logged).toHaveBeenCalledWith(expect.any(String), log)
+    else expect(logged).not.toHaveBeenCalled()
     expect(JSON.stringify(logged.mock.calls)).not.toContain(EMAIL)
   })
 
