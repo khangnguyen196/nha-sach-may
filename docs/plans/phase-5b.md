@@ -48,7 +48,7 @@ Trạng thái: **đã xong, đã merge vào `main`** (2026-10-15). Plan đã duy
 | `vi/checkout` | 207.5KB | 37.5KB | form + `useFormAction` + store giỏ |
 
 **Đề xuất cập nhật CLAUDE.md** (chưa làm, chờ duyệt):
-- Lệnh: `npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts` (CLI đã đăng nhập trên máy này).
+- Lệnh: `npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts` (CLI đã đăng nhập trên máy này). (cũ, đã thay ở sau-ux mục 3: types lấy từ artifact `database-types` của CI e2e, xem CLAUDE.md → Database).
 - `place_order` nhận `p_idempotency_key`, `p_expected_total`; `CART_CHANGED` là mã của DB. Giá trị ngẫu nhiên / theo thời gian (idempotency key) chỉ sinh trong phần động sau khi đọc phiên.
 - e2e: spec cần user dùng `ACCOUNT_SPECS` (`(account|checkout)\.spec\.ts`); locator đặt trong `<main>` khi trang có Suspense stream.
 
@@ -217,7 +217,7 @@ Migration: `supabase/migrations/20261015120000_place_order_idempotency.sql` (ch�
 
 1. Supabase Dashboard → SQL Editor → dán toàn bộ file migration → Run. File tự bọc `begin … commit`, chạy lại vẫn an toàn.
 2. Kiểm tra: `select pg_get_function_identity_arguments('public.place_order'::regproc);` ra 6 tham số (`…, p_idempotency_key uuid, p_expected_total integer`), và `\d public.orders` (hoặc Table Editor) có cột `idempotency_key`.
-3. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` → `Functions.place_order.Args` có `p_idempotency_key?`, `p_expected_total?`; `orders.Row` có `idempotency_key`.
+3. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` (cũ, đã thay ở sau-ux mục 3: types lấy từ artifact `database-types` của CI e2e, xem CLAUDE.md → Database) → `Functions.place_order.Args` có `p_idempotency_key?`, `p_expected_total?`; `orders.Row` có `idempotency_key`.
 4. Báo tôi để nối action vào RPC mới và chạy e2e.
 
 ## Tiến độ

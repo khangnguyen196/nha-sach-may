@@ -1,6 +1,8 @@
 # Việc của chủ dự án (sau đêm 2026-10-16)
 
-Claude không làm được các việc dưới đây (cần tài khoản, khóa bí mật, hoặc chạy SQL lên Supabase). Theo thứ tự nên làm.
+Claude không làm được các việc dưới đây (cần tài khoản, khóa bí mật, hoặc chạy SQL **ghi** lên Supabase). Theo thứ tự nên làm.
+
+SQL trên Supabase thật (chủ dự án duyệt 2026-10-20): SQL ghi chỉ chủ dự án chạy tay trong SQL Editor; Claude chạy SQL **chỉ đọc** qua MCP `supabase` (`read_only=true`) để kiểm trước / chụp dòng sẽ đổi / kiểm sau (CLAUDE.md → Bảo mật).
 
 ## 1. Chạy migration (bắt buộc, theo đúng thứ tự) — ✅ đã chạy 2026-10-16, types sinh lại khớp, `covers --measure` đã chạy
 
@@ -13,11 +15,7 @@ Supabase Dashboard → SQL Editor → dán toàn bộ file → Run. Mỗi file c
 
 Sau khi chạy:
 
-```bash
-npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts
-```
-
-(Types đã sửa tay cho khớp migration; sinh lại để chắc chắn, `git diff` nên gần như rỗng.)
+Đã thay (sau-ux mục 3): types lấy từ artifact `database-types` của CI e2e, xem CLAUDE.md → Database. Lệnh cloud cũ sẽ làm bước "Check src/types/database.ts" đỏ.
 
 Rồi đo chiều rộng bìa (ghi `cover_width` cho mọi sách, không gọi API ngoài):
 
@@ -111,7 +109,7 @@ Claude đã chuẩn bị cấu hình (header bảo mật trong `next.config.ts`,
 **6.5 e2e trên Supabase local (thay cho project Supabase thứ hai)** — ✅ đã merge `main` (2026-10-17), e2e trên CI xanh
 - Lý do tách khỏi production: sách e2e (`e2e-shop-…`, `e2e-admin-…`) là sách **đang bán** trong lúc test chạy, lộ qua tìm kiếm / `/sach` / link trực tiếp; e2e còn tạo user, đơn, voucher thật (sót lại nếu lượt chạy bị ngắt). Project cloud thứ hai không làm được (tài khoản đã dùng hết 2 project free).
 - Cách làm: job CI chạy Supabase CLI (`supabase start`, Docker trên runner) → DB trống dựng từ `schema.sql` + `seed.sql` + `seed-foreign-books.sql` (`supabase/config.toml`, migration tắt vì đã nằm trong `schema.sql`) → `scripts/e2e-seed.ts` nạp 58 sách test + bìa giả → Playwright. Auth local: xác nhận email bật, template song ngữ như production, thư vào hộp thư giả Mailpit. Không đụng project production.
-- Việc của bạn: không có gì bắt buộc. Dữ liệu e2e cũ trên production: lần kiểm gần nhất (2026-10-17, `measure.ts --check-leftovers`) 0 sót; sau khi merge script không còn chạm production, muốn kiểm lại thì chạy trong SQL Editor production `select count(*) from auth.users where email like 'e2e+%@example.com'` và `select count(*) from public.books where slug like 'e2e-%'` (kỳ vọng 0).
+- Việc của bạn: không có gì bắt buộc. Dữ liệu e2e cũ trên production: lần kiểm gần nhất (2026-10-17, `measure.ts --check-leftovers`) 0 sót; sau khi merge script không còn chạm production, muốn kiểm lại thì chạy (chỉ đọc: Claude qua MCP `supabase`, hoặc SQL Editor) `select count(*) from auth.users where email like 'e2e+%@example.com'` và `select count(*) from public.books where slug like 'e2e-%'` (kỳ vọng 0).
 - (Tùy chọn) Chạy e2e trên máy dev: cài Docker Desktop (WSL2, ~4GB RAM cho Supabase + Chromium + next start; máy 8GB sẽ chật) → `npx supabase start` → `npx tsx scripts/e2e-seed.ts` → `npx playwright test`. `npx supabase stop` khi xong.
 - Không chạy `npm run test:e2e` trên DB production nữa: `scripts/e2e-env.ts` từ chối URL production và mọi host không phải `127.0.0.1` / `localhost`.
 
@@ -134,6 +132,6 @@ Trước khi bật chat trên web thật:
 1. **Kiểm số đường dây hỗ trợ** trong câu trả lời cố định (`messages/vi.json` → `chat.crisis`): cấp cứu 115 và đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật). Đối chiếu trên duongdaynongngaymai.vn; sai thì sửa chuỗi trong `vi.json`.
 2. Google AI Studio: project của key **không gắn billing** (chi phí = 0). Rate limit đã đọc 2026-10-18 (15 RPM / 250K TPM / 500 RPD cho `gemini-3.5-flash-lite` và `gemini-3.1-flash-lite`). Đổi model hoặc thấy 429 sớm hơn trần thì đọc lại và sửa `FREE_TIER` trong `src/features/chat/config.ts` (Vitest kiểm trần chung 10 / phút, 400 / ngày luôn thấp hơn).
 3. Vercel → Environment Variables → `GEMINI_API_KEY` (chỉ Production). `GEMINI_MODEL` chỉ đặt khi muốn đổi sang `gemini-3.1-flash-lite` (tắt 2027-05-07). Redeploy: bong bóng chỉ hiện khi build có đủ `GEMINI_API_KEY` + `CHAT_QUOTA_TOKEN`.
-4. Sau khi bật: xem bộ đếm bằng K6 (`docs/plans/phase-11.md` → "Câu SQL kiểm tra sau migration"). Đổi token: `select private.new_chat_quota_token();` rồi cập nhật Vercel + `.env.local`.
+4. Sau khi bật: xem bộ đếm bằng K6 (`docs/plans/phase-11.md` → "Câu SQL kiểm tra sau migration"). Đổi token: `select private.new_chat_quota_token();` (chỉ chủ dự án chạy tay trong SQL Editor, không qua MCP) rồi cập nhật Vercel + `.env.local`.
 5. Demo cả lớp: trần chung 10 lượt gọi / phút, 400 / ngày (ngày reset 14h giờ VN, 15h từ 2/11/2026). Dặn mọi người hỏi giãn ra.
 6. (Tùy chọn) Bổ sung mô tả sách trong admin: 4 sách thiếu mô tả, 4 sách tiếng Việt có mô tả tiếng Anh (`docs/plans/data.md` → "Mô tả sách (Phase 11)").

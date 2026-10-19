@@ -41,7 +41,7 @@ select has_function_privilege('authenticated', 'public.order_contact(bigint)', '
 ```
 
 **Sau khi chạy**
-1. `npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts` (types đã sửa tay cho khớp; `git diff` nên gần như rỗng).
+1. `npx supabase gen types typescript --project-id ylfgwcxddxvfxwldmwtf > src/types/database.ts` (types đã sửa tay cho khớp; `git diff` nên gần như rỗng). (cũ, đã thay ở sau-ux mục 3: types lấy từ artifact `database-types` của CI e2e, xem CLAUDE.md → Database).
 2. `npm run covers -- --measure` (ghi `cover_width` cho 189 bìa, không gọi API ngoài) → kệ trang chủ ưu tiên bìa nét.
 3. Xóa nhánh dự phòng `42703` trong `sharpRows` (`src/features/books/queries.ts`) — hoặc nhờ Claude.
 4. `npm run test:e2e` trên `phase-10`: các test "chờ migration" ở mục 5 phải qua.

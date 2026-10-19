@@ -203,7 +203,7 @@ Migration: `supabase/migrations/20261015090000_quote_items.sql` (idempotent, ch�
    select * from public.quote_items(jsonb_build_array(jsonb_build_object('book_id', (select id from public.books where is_active limit 1), 'quantity', 2)));
    ```
    Dòng đầu: `0 | 0 | 0 | 0 | 300000`. Dòng sau: `item_count = 1`, `subtotal = 2 × giá`, `shipping_fee` 30000 hoặc 0.
-4. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` → `src/types/database.ts` có `quote_items` trong `Functions`.
+4. Sinh lại types: `npx supabase gen types typescript --project-id <ID> > src/types/database.ts` → `src/types/database.ts` có `quote_items` trong `Functions`. (cũ, đã thay ở sau-ux mục 3: types lấy từ artifact `database-types` của CI e2e, xem CLAUDE.md → Database).
 5. Báo tôi để làm tiếp phần trang giỏ / `/api/cart/guest`.
 
 ## Tiến độ

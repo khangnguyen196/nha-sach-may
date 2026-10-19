@@ -5,7 +5,7 @@
 ## Trạng thái
 
 - **Hiện tại**: `main` mới nhất là trạng thái đang chạy trên production (https://nha-sach-may.vercel.app). **Không còn migration nào chờ chạy.**
-- **Việc tiếp theo**: đợt **`sau-ux`** (trạng thái + kết quả ở đầu `docs/plans/sau-ux.md` trên nhánh `sau-ux`, **chưa merge**): mục 1–4 + 6 code xong, CI xanh; chờ chủ dự án test Preview (đăng ký), duyệt mục 6 + kết quả H1–H3, chạy `supabase/checks/catalog-fix.sql` (mục 7). Sau đó đợt **perf-js** (`docs/plans/perf-js.md`: bước 0 `scripts/analyze-diff.mjs` đã xong → D → sheet lazy → C). Việc để sau: `docs/progress.md`.
+- **Việc tiếp theo**: đợt **`sau-ux`** **đã duyệt merge** (2026-10-20; trạng thái + kết quả ở đầu `docs/plans/sau-ux.md` trên nhánh `sau-ux`): mục 1–4 + 6 code xong, CI xanh; mục 6 đã đo trên dữ liệu thật (0 sách bị ẩn, 0 sách thiếu danh mục, ★6c giữ như code). `supabase/checks/catalog-fix.sql` (mục 7): chủ dự án chạy khối DO sáng 2026-10-20 (Claude kiểm trước / sau qua MCP `supabase` chỉ đọc), merge sau đó. Đợt **perf-js** (`docs/plans/perf-js.md`: bước 0 `scripts/analyze-diff.mjs` đã xong → D → sheet lazy → C) đang làm trên nhánh `perf-js`. Việc để sau: `docs/progress.md`.
 - **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: **đã lên production 2026-10-19**. Plan + báo cáo: `docs/plans/ux-messages.md` (mục "Sáng 2026-10-19").
   - **Lên production 2026-10-19**: migration B chạy trên production (chủ dự án, sớm hơn deploy vài phút; KB1–KB3 khớp). Merge fast-forward lên `main`: `fa78aab..a723621` rồi `a723621..c3e2131` (`git push origin ux-messages:main`, không force). CI + e2e trên `main` xanh (a723621: e2e 411 qua / 9 skip / 0 fail / 0 flaky, run 39212964358; c3e2131: CI check run 39214787681, e2e cùng SHA run 39213724077). Vercel Production: a723621 07:00:03Z, c3e2131 07:17:21Z, cả hai success.
   - Migration **A** (`20261018120000_voucher_suggestions.sql`) và **B** (`20261018130000_error_reasons.sql`) đều đã chạy; `INVALID_VOUCHER` đã xóa ở đợt `sau-ux`.
@@ -29,7 +29,7 @@
   - Kết quả: 2 lượt liền trên nhánh + 1 lượt trên `main` đều **265/265, 0 flaky** (~5,9–6,4 phút Playwright; cả job ~8,5 phút: npm ci 14 s, `supabase start` ~75 s, Chromium 13–21 s, seed 3 s).
   - `next.config.ts`: cấu hình ảnh qua `coverImagesConfig` (`src/lib/cover-images-config.ts`): pattern http / IP local chỉ khi URL Supabase là local; build Vercel (`VERCEL=1`) với URL local → build fail (chống SSRF qua `/_next/image`, Vitest). Đã kiểm production sau deploy (chỉ đọc): bìa hiện ở trang chủ, `/danh-muc/van-hoc`, `/sach/sapiens`, 0 ảnh lỗi.
   - Theo dõi: `public.ecr.aws` đôi lúc trả `toomanyrequests` khi kéo image (CLI tự thử lại, +~13 s); nếu làm fail job thì thêm cache image Docker.
-- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase (kể cả B, 2026-10-19). `src/types/database.ts` sửa tay theo migration A; kiểm tự động bằng `supabase gen types --local` trên CI là mục 3 của đợt `sau-ux`.
+- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase (kể cả B, 2026-10-19). `src/types/database.ts` sinh từ Supabase local trên CI (artifact `database-types`), CI fail khi lệch — xem CLAUDE.md → Database. Không sửa tay, không gen types từ project cloud.
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
 - Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
 
@@ -42,12 +42,12 @@
 ## Vận hành (production)
 
 - **Mã tra cứu ở trang lỗi** (`error.digest`): tra trong Vercel → project → Logs, lọc theo mã. Gói **Hobby chỉ giữ runtime log 1 giờ** → phải tra trong 1 giờ sau khi khách gặp lỗi; không có cách xem lại log cũ (không đặt lịch "xem log hằng tuần").
-- **Lượt dùng chatbot Mây**: chạy `supabase/checks/chat-usage.sql` (chỉ đọc) trong SQL Editor: Q1 lượt gọi Gemini mỗi ngày (trần 400), Q2 số khách / câu hỏi mỗi ngày (mỗi khách tối đa 30), Q3 10 phút đông nhất (trần 10 / phút). Bảng `private.chat_quota` chỉ giữ ~3 ngày.
+- **Lượt dùng chatbot Mây**: chạy `supabase/checks/chat-usage.sql` (chỉ đọc) (Claude chạy qua MCP `supabase` chỉ đọc, hoặc chủ dự án chạy trong SQL Editor): Q1 lượt gọi Gemini mỗi ngày (trần 400), Q2 số khách / câu hỏi mỗi ngày (mỗi khách tối đa 30), Q3 10 phút đông nhất (trần 10 / phút). Bảng `private.chat_quota` chỉ giữ ~3 ngày.
 
 ## Cách làm việc chủ dự án đã quen
 
 - Mọi việc làm trên **nhánh riêng**, kiểm tra đủ (`typecheck`, `lint`, `build`, Vitest, e2e liên quan), push nhánh rồi **báo trước khi merge**. Merge vào `main` bằng `--ff-only` khi đã được duyệt, xong thì xóa nhánh và xem CI.
-- Không mở / đọc / sửa `.env.local`; chỉ chạy `npm run check:env`. Không chạy SQL lên Supabase: viết migration (idempotent) để chủ dự án chạy.
+- Không mở / đọc / sửa `.env.local`; chỉ chạy `npm run check:env`. SQL ghi (migration, file sửa dữ liệu) **chỉ chủ dự án** chạy tay trong SQL Editor: Claude viết file (idempotent / guard), cắt nguyên văn khối cần chạy ra file ngoài repo, kiểm trước + chụp dòng sẽ đổi + kiểm sau qua MCP `supabase` **chỉ đọc** (CLAUDE.md → Bảo mật, "SQL trên Supabase thật").
 - Thêm dependency phải hỏi trước.
 - e2e chạy trên **Supabase local ở CI** (máy dev không có Docker): push nhánh → `gh run list --workflow e2e.yml --branch <nhánh>` / `gh run view <id> --log-failed`; chạy lại tay `gh workflow run e2e.yml --ref <nhánh>`. Không nới timeout, không xóa / skip test. Một test fail lặp lại thì dừng và báo. Không chạy `npx playwright test` khi chưa có Supabase local (`scripts/e2e-env.ts` sẽ báo lỗi, không bao giờ rơi về production).
 
