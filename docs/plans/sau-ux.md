@@ -1,6 +1,6 @@
 # Đợt "sau-ux"
 
-Trạng thái (2026-10-19, tối): **mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge**. Test đăng ký trên Preview: không làm (chủ dự án tự thử trên production sau merge). Mục 6 chờ duyệt + kết quả H1–H3 trước khi merge. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, CHƯA chạy. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong.
+Trạng thái (2026-10-19, tối): **mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge**. Test đăng ký trên Preview: không làm (chủ dự án tự thử trên production sau merge). Mục 6: đã đo trên dữ liệu thật (thay H1–H3: không có danh mục ẩn, 0 sách biến mất, 0 sách thiếu danh mục), chờ duyệt merge. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, CHƯA chạy. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong.
 
 Kết quả từng mục:
 - Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
@@ -183,7 +183,7 @@ File `supabase/checks/catalog-data-r.sql` (CHỈ ĐỌC) + đề xuất xử lý
 
 Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) · mục 4 song song trên `diag-rsc-404` · mục 6, 7 (plan + SQL chỉ đọc) · mục 8 → `/baocao`. Chưa merge.
 
-## 6 — chi tiết (plan, chờ duyệt; chưa code)
+## 6 — chi tiết (plan gốc; đã code, xem "Đã code" cuối mục)
 
 **Định nghĩa "danh mục đang hiện"**: `categories.is_active` (RLS anon chỉ trả dòng này) **và** là gốc hoặc có cha đang hiện. Dùng lại `visibleCategoryIds(getCategories())` (`src/features/books/utils.ts`). Cây tối đa 2 cấp (admin `checkParent` chặn cấp 3) nên một bước kiểm cha là đủ. Sách `category_id = null` (danh mục bị xóa → `on delete set null`): plan ban đầu đề xuất coi như **không hiện** (★6c); **đã thay bởi quyết định ở mục "Đã code" bên dưới: giữ hành vi hiện tại, vẫn hiện ở mọi danh sách**.
 
@@ -221,7 +221,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - ★6c: sách không có danh mục coi như ẩn (đề xuất: có, khớp trang chủ / sitemap; H3 cho biết bao nhiêu cuốn). → Đã thay bởi quyết định ở mục "Đã code" bên dưới (giữ hành vi hiện tại).
 - ★6d: danh mục con của gốc ẩn giữ trang riêng (link trực tiếp) như hiện tại (đề xuất: giữ, e2e admin dựa vào).
 
-**SQL chỉ đọc**: `supabase/checks/hidden-categories-r.sql` (H1 số sách theo trạng thái danh mục, H2 danh mục không hiện còn sách, H3 sách không có danh mục). Chưa chạy.
+**SQL chỉ đọc**: `supabase/checks/hidden-categories-r.sql` (H1 số sách theo trạng thái danh mục, H2 danh mục không hiện còn sách, H3 sách không có danh mục). Không chạy: thay bằng đo trên dữ liệu thật ở mục "Đã code".
 
 **Test**
 - Vitest: `withCategoryFilter` (không `cat` → id cây hiện; `cat` là con của gốc ẩn → bỏ qua), lọc catalog chatbot (hàm thuần), `visibleCategoryIds` (thiếu ca cha ẩn thì thêm).
@@ -230,7 +230,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 
 **Xong khi** (sau khi duyệt): các chỗ lọc + ★6a; Vitest + e2e CI xanh; CLAUDE.md ghi quy tắc ("ẩn danh mục = ẩn sách khỏi mọi danh sách; link trực tiếp vẫn mua được").
 
-**Đã code (2026-10-19, chưa merge, chờ duyệt + kết quả H1–H3)** — quyết định: A1; ★6a theo đề xuất (lọc trang tác giả + ẩn kệ "Cùng danh mục"); ★6d theo đề xuất (giữ trang riêng của danh mục con của gốc ẩn); ★6c: **giữ hành vi hiện tại từng chỗ** — sách không có danh mục KHÔNG bị ẩn thêm ở đâu (vẫn hiện ở `/sach`, tìm kiếm, palette, chatbot, trang tác giả như trước; trang chủ / sitemap vốn đã không có).
+**Đã code (2026-10-19, chưa merge; đã đo trên dữ liệu thật thay H1–H3, chờ duyệt merge)** — quyết định: A1; ★6a theo đề xuất (lọc trang tác giả + ẩn kệ "Cùng danh mục"); ★6d theo đề xuất (giữ trang riêng của danh mục con của gốc ẩn); ★6c: **giữ hành vi hiện tại từng chỗ** — sách không có danh mục KHÔNG bị ẩn thêm ở đâu (vẫn hiện ở `/sach`, tìm kiếm, palette, chatbot, trang tác giả như trước; trang chủ / sitemap vốn đã không có).
 - `features/books/utils.ts`: `visibleBooksFilter(ids)` (chuỗi `or` của PostgREST: `category_id.is.null,category_id.in.(…)`; rỗng → chỉ `is.null`), `inVisibleCategories(books, categories)` (lọc trong bộ nhớ).
 - `listBooks`: tham số `visibleCategoryIds` → `.or(visibleBooksFilter(…))`, dùng được trên bảng lẫn kết quả RPC `search_books`.
 - `withCategoryFilter` (`/sach`, `/tim-kiem`): chỉ danh mục đang hiện (chip, `?cat=`); không chọn danh mục → `visibleCategoryIds`.
@@ -241,14 +241,14 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - Test: Vitest `listing.test.ts` (mới, 4 ca), `utils.test.ts` (`visibleBooksFilter` 2 ca, `inVisibleCategories` 1 ca); e2e `hidden-category.spec.ts` (mới, 4 test: trang tìm kiếm, `/api/search`, trang tác giả, link trực tiếp + không có kệ; đối chứng sách không có danh mục vẫn hiện). Giới hạn của e2e: danh mục tạo sau build không vào cache `getCategories` (`'max'`) → e2e kiểm đường lọc được nối vào từng chỗ, logic cây (con của gốc ẩn) kiểm ở Vitest. Chatbot chưa có e2e riêng (catalog chatbot cache theo giờ, sách tạo trong test không vào) → Vitest `inVisibleCategories`.
 - CI: `1e8d0dd` → `da7433a` e2e 421 qua / 9 skip / 0 flaky (run 39251380596); `60d2617` e2e xanh (run 39252747366). Sau review: spec đổi tên `hidden-category-account.spec.ts` (chạy sau setup, trước teardown), thêm `showRelatedShelf` + Vitest, Vitest `askMay` lọc catalog.
 - `measure:js` (build với DB production, cùng máy): trước / sau giống hệt — trang chủ (`vi`) +42.2KB, `/sach` (`vi/books`) +55.3KB, trang sách (`vi/books/sapiens`) +45.3KB (thay đổi chỉ ở server).
-- **Đo tác động trên dữ liệu thật (2026-10-19, Claude in Chrome, chỉ đọc; thay cho H1–H3)**: PROD = https://nha-sach-may.vercel.app (code cũ), PREV = https://nha-sach-may-git-sau-ux-khangtpvl1-3775.vercel.app (deploy `0ec2cab`, xác nhận trên trang deployment của Vercel), cùng DB production.
+- **Đo tác động trên dữ liệu thật (2026-10-19, Claude in Chrome, chỉ đọc; thay cho H1–H3)**: PROD = production (code cũ), PREV = Preview của nhánh `sau-ux` (deploy `0ec2cab`, xác nhận trên trang deployment của Vercel), cùng DB production.
   - Danh mục (admin PROD): 24 danh mục, **tất cả "Đang hiện"**, không có danh mục ẩn, không có danh mục con nào dưới gốc ẩn.
   - `/sach`: PROD 189 cuốn, PREV 189 cuốn; tập slug thu qua 8 trang giống hệt (SHA-256 16 ký tự đầu `87e756422f90d795` ở cả hai) → **0 sách biến mất** khi merge (với dữ liệu hiện tại).
   - Kiểm mẫu trên PREV: `/tim-kiem?q=sapiens` 2 cuốn, `/api/search?q=sapiens` 2 gợi ý, `/sach/sapiens` 200 và có kệ "Cùng danh mục" (danh mục đang hiện).
   - Sách không có danh mục (★6c): admin `/admin/sach` 189 dòng (mọi trạng thái), **0 dòng thiếu danh mục**, 0 sách "Đã ẩn" → quyết định ★6c hiện không ảnh hưởng sách nào.
   - Chatbot: không test (Preview không có key Gemini), dựa vào Vitest.
 
-## 7 — chi tiết (plan, chờ duyệt; chưa có SQL sửa)
+## 7 — chi tiết (plan gốc; SQL sửa đã viết, xem cuối mục)
 
 **SQL chỉ đọc**: `supabase/checks/catalog-data-r.sql` (chưa chạy):
 - R1 tác giả đã biết (86/87/88, 113/114, 90/92, 93/94, 75, 22, 24, 89, 107) kèm sách + vai trò;

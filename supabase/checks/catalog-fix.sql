@@ -1,6 +1,7 @@
 -- docs/plans/sau-ux.md mục 7: dọn dữ liệu tác giả / tên sách (dữ liệu Google Books). Danh sách do chủ dự án duyệt
 -- (2026-10-19) sau khi xem kết quả supabase/checks/catalog-data-r.sql; KHÔNG suy tự động.
--- CHỈ chạy sau khi được duyệt (đã chạy thử trên bản sao schema có dữ liệu mẫu (review 2026-10-19); vẫn chạy P0a / P0b trước khối DO). SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
+-- CHỈ chạy sau khi được duyệt. Đã chạy thử trên bản sao schema có dữ liệu mẫu (review 2026-10-19); vẫn chạy
+-- P0a / P0b trước khối DO. SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
 -- (một khối DO = một lệnh nguyên tử: raise → không đổi gì), rồi phần 2 (chỉ đọc).
 -- SQL Editor chỉ hiện kết quả của câu CUỐI khi chạy nhiều câu một lần → bôi đen TỪNG câu (P0a, P0b, khối DO, C1…C7)
 -- rồi Run, đừng chạy cả file.
@@ -204,6 +205,12 @@ begin
     raise exception 'Tên sách: % / 6 tên cũ không khớp đúng 1 sách (dữ liệu đã khác) → rollback', extra;
   end if;
 
+  -- Hai dòng của kế hoạch không được cùng tên mới
+  select count(*) - count(distinct new_title) into extra from title_plan;
+  if extra > 0 then
+    raise exception 'Tên sách: % tên mới bị lặp trong kế hoạch → rollback', extra;
+  end if;
+
   -- Tên mới không được trùng tên một sách khác đang có (VD bản bìa mềm cùng tên)
   select count(*) into extra
     from title_plan p
@@ -263,7 +270,8 @@ select b.id, b.title,
  order by b.id;
 
 -- C5. Tên sách mới + format. Mong đợi: 6 dòng, dung_ten = true, so_sach_cung_ten = 1 ở mọi dòng (không trùng tên với
---     sách khác); format như cột mong_doi_format (null = không đổi); slug giống kết quả Phần 0
+--     sách khác; chỉ có nghĩa khi dung_ten = true, dòng không khớp cũng đếm ra 1); format như cột mong_doi_format
+--     (null = không đổi); slug giống kết quả Phần 0
 select v.new_title, b.id, b.slug, b.format, v.mong_doi_format, b.title is not null as dung_ten,
        count(*) over (partition by v.new_title) as so_sach_cung_ten
   from (values

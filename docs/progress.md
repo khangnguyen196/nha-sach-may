@@ -21,7 +21,7 @@
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 
-- [Đã code A1 trên `sau-ux`, chưa merge] Ẩn danh mục = ẩn sách khỏi `/sach`, tìm kiếm, palette, chatbot, trang tác giả, kệ "Cùng danh mục" (docs/plans/sau-ux.md mục 6). ★6c (sách không có danh mục) chờ kết quả đo trên dữ liệu thật.
+- [Đã code A1 trên `sau-ux`, chưa merge] Ẩn danh mục = ẩn sách khỏi `/sach`, tìm kiếm, palette, chatbot, trang tác giả, kệ "Cùng danh mục" (docs/plans/sau-ux.md mục 6). ★6c: đã đo trên dữ liệu thật, 0 sách bị ảnh hưởng (không có danh mục ẩn, không có sách thiếu danh mục). Còn chờ: duyệt merge.
 - [SQL sửa đã viết, CHƯA chạy] Dữ liệu tác giả / tên sách (4 dòng dưới): `supabase/checks/catalog-fix.sql` (docs/plans/sau-ux.md mục 7). Chạy xong (+ Redeploy) thì gỡ 4 dòng dưới.
 - Tác giả nước ngoài trùng: Peter Drucker (id 86 / 87 / 88), Stephen Hawking (113 / 114), Jim Collins (90 / 92), Jerry Porras (93 / 94).
 - id 75 gộp hai người: "Trần Tuyết Nhung và Anthony Reid".
