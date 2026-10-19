@@ -33,13 +33,15 @@ Bước 0 `scripts/analyze-diff.mjs` (so module trước / sau từ `next analyz
 So module JS client trước / sau từ `next analyze export` (JSON Lines, có sẵn trong Next 16, không dependency). Thấy cả chunk **tải lười** (palette ⌘K, khung chat, sheet) mà `measure:js` không thấy.
 
 ```bash
-npx next analyze -o --snapshot before                        # ở commit trước; cần env như build (hard link .env.local tạm)
+npx next analyze -o --snapshot before                        # ở commit trước; cần env như build (xem dưới)
 npx next analyze export --snapshot before > ../before.jsonl  # lưu NGOÀI .next (rm -rf .next làm mất snapshot)
 npx next analyze -o --snapshot after                         # sau khi sửa
 npx next analyze export --snapshot after > ../after.jsonl
 node scripts/analyze-diff.mjs ../before.jsonl ../after.jsonl --route "/[locale]/books/[slug]"
 ```
 
+- Cần env như `npm run build` (`next.config.ts` kiểm env): ở worktree thì **hỏi chủ dự án trước** khi link `.env.local` (CLAUDE.md → Bảo mật), không coi là bước thường lệ.
+- Chạy lệnh `export … > file` trong **bash** (Git Bash). Script vẫn đọc được file do PowerShell ghi (UTF-16 / có BOM).
 - `--route`: route nội bộ như trong export (`/[locale]`, `/[locale]/books`, `/[locale]/books/[slug]`, `/[locale]/categories/[slug]`…); bỏ trống = mọi route chung. `--all`: in cả module không đổi.
 - In tổng "Tải ngay" / "Tải lười" và bảng module thêm / bớt / đổi cỡ, xếp theo chênh lệch. Cỡ là `compressed_size` của next analyze (ước lượng theo module), không cộng ra đúng số gzip của `measure:js`: dùng để so chênh lệch, số ngân sách vẫn lấy từ `measure:js`.
 - Kiểm thử script (2026-10-19): cùng một export → "Không có module nào đổi"; export giả bỏ module zod ở trang sách → "Tải lười" 92.2KB → 58.7KB (−33.5KB), liệt kê đúng 14 module zod (khớp ước tính ~30KB của bước 1).

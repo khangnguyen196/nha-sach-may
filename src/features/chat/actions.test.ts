@@ -158,6 +158,29 @@ describe('askMay', () => {
     expect(await ask('gợi ý sách')).toMatchObject({ ok: true, data: { kind: 'crisis', message: 'chat.crisis' } })
   })
 
+  it('sách thuộc danh mục ẩn không vào ứng viên / enum slug; sách không có danh mục vẫn vào (docs/plans/sau-ux.md mục 6)', async () => {
+    const book = (slug: string, category_id: number | null) => ({
+      id: slug.length,
+      slug,
+      title: `Tình yêu ${slug}`,
+      language: 'vi',
+      category_id,
+      stock: 5,
+      sold_count: 1,
+      is_featured: false,
+      cover_width: 600,
+      description: 'Tình yêu tuổi học trò.',
+      book_authors: [],
+    })
+    // getCategories (giả) chỉ có danh mục 1: danh mục 10 coi như ẩn
+    state.catalog = [book('mat-biec', 1), book('sach-an', 10), book('khong-danh-muc', null)]
+    await ask('sách tình yêu')
+    const body = JSON.stringify(callGemini.mock.calls[0]?.[1].body)
+    expect(body).toContain('mat-biec')
+    expect(body).toContain('khong-danh-muc')
+    expect(body).not.toContain('sach-an')
+  })
+
   it('lỗi bất ngờ → CHAT_UNAVAILABLE, không throw', async () => {
     consumeQuota.mockRejectedValue(new Error('boom'))
     vi.spyOn(console, 'error').mockImplementation(() => {})

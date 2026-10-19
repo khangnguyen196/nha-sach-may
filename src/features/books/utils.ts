@@ -81,10 +81,16 @@ export function visibleCategoryIds(categories: { id: number; parent_id: number |
 /**
  * Quy tắc ẩn danh mục (docs/plans/sau-ux.md mục 6, A1): sách thuộc danh mục không hiện (`visibleCategoryIds`) không lên
  * danh sách nào (lưới, tìm kiếm, palette, chatbot, trang tác giả); link trực tiếp vẫn xem / mua được. Sách không có
- * danh mục (`category_id` null) giữ nguyên như trước (★6c chưa quyết). Bộ lọc `or` của PostgREST cho bảng / kết quả RPC.
+ * danh mục (`category_id` null) giữ nguyên như trước (★6c: giữ hành vi hiện tại). Bộ lọc `or` của PostgREST cho bảng /
+ * kết quả RPC.
  */
 export function visibleBooksFilter(visibleIds: readonly number[]) {
   return visibleIds.length > 0 ? `category_id.is.null,category_id.in.(${visibleIds.join(',')})` : 'category_id.is.null'
+}
+
+/** Kệ "Cùng danh mục" ở trang sách: chỉ khi danh mục lá của sách nằm trong cây đang hiện (không thì kệ toàn sách ẩn) */
+export function showRelatedShelf(leafId: number | undefined, categories: { id: number; parent_id: number | null }[]) {
+  return leafId !== undefined && visibleCategoryIds(categories).includes(leafId)
 }
 
 /** Như visibleBooksFilter nhưng lọc trong bộ nhớ (catalog rút gọn của chatbot) */

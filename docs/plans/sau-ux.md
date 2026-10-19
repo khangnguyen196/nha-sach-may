@@ -1,6 +1,6 @@
 # Đợt "sau-ux"
 
-Trạng thái (2026-10-19): **mục 1, 2, 3 code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge**. Mục 4 đã chẩn đoán trên nhánh `diag-rsc-404` (đã xóa), đề xuất sửa chờ duyệt. Mục 5: đợt riêng. Mục 6, 7: plan + SQL chỉ đọc, chờ chủ dự án chạy + quyết ★. Mục 8: xong.
+Trạng thái (2026-10-19, tối): **mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge** (Việc 5 test Preview cần chủ dự án tự làm: có bước gõ mật khẩu vào form đăng ký trên Preview dùng DB production). Mục 6 chờ duyệt + kết quả H1–H3 trước khi merge. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, CHƯA chạy. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong.
 
 Kết quả từng mục:
 - Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
@@ -240,6 +240,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - Trang tác giả: `listBooks({ bookIds, visibleCategoryIds })`. Trang sách: kệ "Cùng danh mục" chỉ hiện khi danh mục lá nằm trong cây đang hiện.
 - Không migration. Cache: không đổi (ẩn / hiện / đổi cha danh mục đã làm mới `categories` + `books` + `chat-catalog`).
 - Test: Vitest `listing.test.ts` (mới, 4 ca), `utils.test.ts` (`visibleBooksFilter` 2 ca, `inVisibleCategories` 1 ca); e2e `hidden-category.spec.ts` (mới, 4 test: trang tìm kiếm, `/api/search`, trang tác giả, link trực tiếp + không có kệ; đối chứng sách không có danh mục vẫn hiện). Giới hạn của e2e: danh mục tạo sau build không vào cache `getCategories` (`'max'`) → e2e kiểm đường lọc được nối vào từng chỗ, logic cây (con của gốc ẩn) kiểm ở Vitest. Chatbot chưa có e2e riêng (catalog chatbot cache theo giờ, sách tạo trong test không vào) → Vitest `inVisibleCategories`.
+- CI: `1e8d0dd` → `da7433a` e2e 421 qua / 9 skip / 0 flaky (run 39251380596); `60d2617` e2e xanh (run 39252747366). Sau review: spec đổi tên `hidden-category-account.spec.ts` (chạy sau setup, trước teardown), thêm `showRelatedShelf` + Vitest, Vitest `askMay` lọc catalog.
 - `measure:js` (build với DB production, cùng máy): trước / sau giống hệt — trang chủ (`vi`) +42.2KB, `/sach` (`vi/books`) +55.3KB, trang sách (`vi/books/sapiens`) +45.3KB (thay đổi chỉ ở server).
 
 ## 7 — chi tiết (plan, chờ duyệt; chưa có SQL sửa)
@@ -263,7 +264,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 
 **Xong khi** (đợt này): file chỉ đọc + plan; chủ dự án chạy R1–R7, dán kết quả, duyệt ★7a / ★7b → đợt sau viết `supabase/checks/catalog-data-fix.sql`.
 
-**SQL sửa đã viết (2026-10-19, CHƯA chạy)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 1 một transaction, mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
+**SQL sửa đã viết (2026-10-19, CHƯA chạy)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 0 (chỉ đọc) lưu slug hiện tại để đối chiếu. Phần 1 một khối DO (lệnh nguyên tử, không bọc begin / commit), mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
 1. Gộp (id giữ ← id gộp): 87 "Peter F. Drucker" ← 86 "Peter Ferdinand Drucker", 88 "Peter Drucker"; 114 "Stephen Hawking" ← 113 "Stephen W. Hawking"; 90 "Jim Collins" ← 92 "James Charles Collins"; 94 "Jerry Porras" ← 93 "Jerry I. Porras". Chuyển `book_authors` (`on conflict do nothing`), kiểm mọi liên kết đã có ở id giữ, rồi xóa liên kết + tác giả của id gộp (đúng 5). Không gộp 101 / 104 (Covey), không đụng 99.
 2. Tách id 75 → "Trần Tuyết Nhung" (giữ slug); "Anthony Reid" (slug `anthony-reid`, đã có thì dùng dòng đó) gắn đúng các sách của id 75, cùng vai trò.
 3. Bỏ liên kết 89 "Harvard Business Review" khỏi "The Peter F. Drucker Reader" và 107 "Ladybird" khỏi "Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)" chỉ khi sách còn ≥ 1 tác giả role `author` khác (sau bước gộp); xóa 89 / 107 nếu không còn liên kết (còn thì NOTICE, giữ). Giữ 22, 24.

@@ -39,6 +39,13 @@ if (!beforePath || !afterPath) {
 const CLIENT = '[client-fs]/_next/static/'
 const isClientScript = (filename) => filename.startsWith(CLIENT) && filename.endsWith('.js')
 
+/** PowerShell 5.1 ghi `>` ra UTF-16LE có BOM, `Out-File -Encoding utf8` có BOM UTF-8 → đọc được cả ba kiểu */
+function readText(path) {
+  const buffer = readFileSync(path)
+  const text = buffer[0] === 0xff && buffer[1] === 0xfe ? buffer.toString('utf16le') : buffer.toString('utf8')
+  return text.replace(/^\uFEFF/, '').replace(/\r/g, '')
+}
+
 /** route → { modules: Map<module, { initial, lazy }> } (byte nén), chỉ chunk client */
 function load(path) {
   const parts = []
@@ -48,9 +55,15 @@ function load(path) {
     if (!map.has(route)) map.set(route, new Set())
     map.get(route).add(chunk)
   }
-  for (const line of readFileSync(path, 'utf8').split('\n')) {
+  for (const [index, line] of readText(path).split('\n').entries()) {
     if (!line.trim()) continue
-    const record = JSON.parse(line)
+    let record
+    try {
+      record = JSON.parse(line)
+    } catch {
+      console.error(`${path}:${index + 1}: không phải JSON (file phải là output của \`next analyze export\`)`)
+      process.exit(1)
+    }
     if (record.type === 'part' && isClientScript(record.filename)) parts.push(record)
     if (record.type === 'group') {
       for (const chunk of record.outputs) {

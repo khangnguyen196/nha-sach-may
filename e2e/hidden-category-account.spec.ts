@@ -9,6 +9,9 @@ import {
 } from '../scripts/e2e-user'
 import { collectErrors } from './helpers'
 
+// Tên `…-account.spec.ts` (khớp ACCOUNT_SPECS) dù không cần user: chạy ở project *-account, tức SAU setup và TRƯỚC
+// teardown — cả hai gọi cleanupE2eAdminData() không tham số (xóa mọi slug e2e-admin-…), chạy ở desktop / mobile thì có
+// thể bị teardown xóa dữ liệu giữa chừng.
 // Quy tắc ẩn danh mục (docs/plans/sau-ux.md mục 6, A1): sách thuộc danh mục không hiện (gốc ẩn + con đang hiện) không
 // lên tìm kiếm, palette, trang tác giả; link trực tiếp vẫn mở được. Đối chứng: sách không có danh mục vẫn hiện (★6c giữ
 // nguyên). Dữ liệu e2e-admin-… tạo bằng service role, mỗi worker một bộ, dọn đúng slug của mình.
@@ -71,6 +74,8 @@ test('trang tác giả: chỉ liệt kê sách không thuộc danh mục ẩn', 
   expect(errors).toEqual([])
 })
 
+// Kệ: danh mục tạo sau build thường chưa có trong cache getCategories → leaf undefined → kệ vốn không hiện; điều kiện
+// "danh mục lá trong cây đang hiện" kiểm ở Vitest (showRelatedShelf). Ở đây chỉ chắc A1 (mở được, mua được).
 test('link trực tiếp tới sách thuộc danh mục ẩn vẫn mở được (A1), không có kệ "Cùng danh mục"', async ({ page }) => {
   const errors = collectErrors(page)
   const response = await page.goto(`/sach/${hidden.slug}`)

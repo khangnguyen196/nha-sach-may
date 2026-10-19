@@ -4,6 +4,7 @@ import {
   fillShelf,
   inVisibleCategories,
   paginationRange,
+  showRelatedShelf,
   splitParagraphs,
   truncateText,
   visibleBooksFilter,
@@ -121,5 +122,18 @@ describe('inVisibleCategories', () => {
       { slug: 'khong-danh-muc', category_id: null },
     ]
     expect(inVisibleCategories(books, categories).map((book) => book.slug)).toEqual(['hien', 'khong-danh-muc'])
+  })
+})
+
+describe('showRelatedShelf', () => {
+  const categories = [
+    { id: 1, parent_id: null },
+    { id: 2, parent_id: 1 },
+    { id: 10, parent_id: 9 },
+  ]
+  it('danh mục lá đang hiện → có kệ; con của gốc ẩn / không có danh mục → không', () => {
+    expect(showRelatedShelf(2, categories)).toBe(true)
+    expect(showRelatedShelf(10, categories)).toBe(false)
+    expect(showRelatedShelf(undefined, categories)).toBe(false)
   })
 })

@@ -1,16 +1,32 @@
 -- docs/plans/sau-ux.md mục 7: dọn dữ liệu tác giả / tên sách (dữ liệu Google Books). Danh sách do chủ dự án duyệt
 -- (2026-10-19) sau khi xem kết quả supabase/checks/catalog-data-r.sql; KHÔNG suy tự động.
--- CHỈ chạy sau khi được duyệt (kiểm thử trên bản sao trước). SQL Editor: phần 1 (một transaction), rồi phần 2 (chỉ đọc).
+-- CHỈ chạy sau khi được duyệt (kiểm thử trên bản sao trước). SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
+-- (một khối DO = một lệnh nguyên tử: raise → không đổi gì), rồi phần 2 (chỉ đọc).
 -- Không đổi slug của dòng còn lại (link cũ chạy tiếp). search_text do trigger tự tính lại.
 -- Trường hợp R2 / R5 tìm thêm (tác giả trùng khác, tên không dấu khác) làm ở file sau, không ở đây.
 -- SAU KHI CHẠY: Redeploy trên Vercel (trang đã prerender + catalog rút gọn của chatbot đang cache dữ liệu cũ; SQL chạy
 -- ngoài app nên không làm mới cache).
 
 -- =====================================================================
--- PHẦN 1. Lệch bất kỳ số dòng / giá trị nào → raise exception → rollback cả khối, không đổi gì.
+-- PHẦN 0. CHỈ ĐỌC, chạy TRƯỚC phần 1 và lưu kết quả: slug hiện tại để đối chiếu C2 / C5 sau khi chạy.
 -- =====================================================================
-begin;
+select 'tac_gia' as loai, id, name as ten, slug from public.authors where id in (75, 87, 90, 94, 114)
+union all
+select 'sach', id, title, slug from public.books
+ where title in (
+   'Kien Chuot Va Ruoi',
+   'Mười chín chân dùng nhà văn cùng thời',
+   'Ngôn Ngữ - Tuyển Tập Truyện Ngắn Chọn Lọc 2025 (hardcover)',
+   'Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta (soft cover - groundwood paper - new edition)',
+   'Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (hard cover - groundwood)',
+   'Lịch Sử Việt Nam Thời Tự Chủ - Tập Một (hard cover - groundwood)'
+ )
+ order by loai, id;
 
+-- =====================================================================
+-- PHẦN 1. Lệch bất kỳ số dòng / giá trị nào → raise exception → cả khối DO không đổi gì (DO là một lệnh nguyên tử;
+-- không bọc begin / commit để phiên SQL Editor không kẹt ở trạng thái "transaction aborted" khi raise).
+-- =====================================================================
 do $$
 declare
   n       int;
@@ -79,6 +95,11 @@ begin
   select id into reid_id from public.authors where slug = 'anthony-reid';
   if reid_id is null then
     insert into public.authors (name, slug) values ('Anthony Reid', 'anthony-reid') returning id into reid_id;
+  else
+    perform 1 from public.authors where id = reid_id and name = 'Anthony Reid';
+    if not found then
+      raise exception 'Tách: slug anthony-reid đã có nhưng tên không phải "Anthony Reid" → rollback';
+    end if;
   end if;
 
   insert into public.book_authors (book_id, author_id, role)
@@ -163,6 +184,12 @@ begin
     ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Một (hard cover - groundwood)',
      'Lịch Sử Việt Nam Thời Tự Chủ - Tập Một', 'hardcover');
 
+  -- Tên mới phải ở dạng NFC (như dữ liệu import, normalizeText): file lưu NFD thì tên hiển thị đúng nhưng search_text sai
+  select count(*) into extra from title_plan where new_title is not nfc normalized;
+  if extra > 0 then
+    raise exception 'Tên sách: % tên mới không ở dạng NFC (file SQL bị lưu NFD?) → rollback', extra;
+  end if;
+
   select count(*) into extra
     from title_plan p
    where (select count(*) from public.books b where b.title = p.old_title) <> 1;
@@ -181,8 +208,6 @@ begin
   end if;
 end $$;
 
-commit;
-
 -- =====================================================================
 -- PHẦN 2. Kiểm tra sau khi chạy (CHỈ ĐỌC). Đối chiếu cột mong_doi.
 -- =====================================================================
@@ -192,7 +217,7 @@ commit;
 select (select count(*) from public.authors where id in (86, 88, 113, 92, 93, 89, 107))          as tac_gia_da_xoa,
        (select count(*) from public.book_authors where author_id in (86, 88, 113, 92, 93))       as lien_ket_id_gop;
 
--- C2. Tên tác giả giữ lại + slug không đổi. Mong đợi: 5 dòng, dung = true; slug như trước khi chạy
+-- C2. Tên tác giả giữ lại + slug không đổi. Mong đợi: 5 dòng, dung = true; slug giống kết quả Phần 0
 select v.id, a.name, v.mong_doi, a.name = v.mong_doi as dung, a.slug,
        (select count(*) from public.book_authors ba where ba.author_id = v.id) as so_lien_ket
   from (values
@@ -202,10 +227,13 @@ select v.id, a.name, v.mong_doi, a.name = v.mong_doi as dung, a.slug,
   left join public.authors a on a.id = v.id
  order by v.id;
 
--- C3. Anthony Reid gắn đúng các sách của id 75, cùng vai trò. Mong đợi: thieu_o_reid = 0, so_sach_reid = so_sach_75 (> 0)
-select (select count(*) from public.book_authors where author_id = 75) as so_sach_75,
-       (select count(*) from public.book_authors ba join public.authors a on a.id = ba.author_id
-         where a.slug = 'anthony-reid') as so_sach_reid,
+-- C3. Anthony Reid gắn đúng các sách của id 75, cùng vai trò (đếm trên sách của id 75: Reid có sẵn sách khác cũng đúng).
+--     Mong đợi: so_lien_ket_75 > 0, reid_tren_sach_75 = so_lien_ket_75, thieu_o_reid = 0
+select (select count(*) from public.book_authors where author_id = 75) as so_lien_ket_75,
+       (select count(*) from public.book_authors x
+         where x.author_id = 75
+           and exists (select 1 from public.book_authors y join public.authors a on a.id = y.author_id
+                        where a.slug = 'anthony-reid' and y.book_id = x.book_id and y.role = x.role)) as reid_tren_sach_75,
        (select count(*) from public.book_authors x
          where x.author_id = 75
            and not exists (select 1 from public.book_authors y join public.authors a on a.id = y.author_id
@@ -219,7 +247,8 @@ select b.id, b.title,
  where b.title in ('The Peter F. Drucker Reader', 'Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)')
  order by b.id;
 
--- C5. Tên sách mới + format. Mong đợi: 6 dòng, dung_ten = true; format như cột mong_doi_format (null = không đổi)
+-- C5. Tên sách mới + format. Mong đợi: 6 dòng, dung_ten = true; format như cột mong_doi_format (null = không đổi);
+--     slug giống kết quả Phần 0
 select v.new_title, b.id, b.slug, b.format, v.mong_doi_format, b.title is not null as dung_ten
   from (values
     ('Kiến, Chuột và Ruồi', null),

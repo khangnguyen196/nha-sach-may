@@ -16,7 +16,7 @@ import {
   type BookDetail,
   type Category,
 } from '@/features/books/queries'
-import { discountPercent, splitParagraphs, truncateText, visibleCategoryIds } from '@/features/books/utils'
+import { discountPercent, showRelatedShelf, splitParagraphs, truncateText } from '@/features/books/utils'
 import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
 import { cartLimit, MAX_LINES } from '@/features/cart/guest-cart'
@@ -201,7 +201,7 @@ async function BookContent({ params }: { params: Props['params'] }) {
       <Reviews book={book} locale={locale} />
 
       {/* Sách thuộc danh mục ẩn (mở qua link trực tiếp): kệ sẽ toàn sách ẩn → không hiện (docs/plans/sau-ux.md mục 6) */}
-      {leaf && visibleCategoryIds(categories).includes(leaf.id) && (
+      {leaf && showRelatedShelf(leaf.id, categories) && (
         <div className="mt-16 md:mt-24">
           <Suspense fallback={<ShelfSkeleton id="related-books" title={t('related')} />}>
             <RelatedShelf bookId={book.id} category={leaf} title={t('related')} />

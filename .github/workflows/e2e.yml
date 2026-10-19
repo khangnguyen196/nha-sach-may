@@ -41,24 +41,26 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
-      - name: Seed books
+      - id: seed
+        name: Seed books
         run: npx tsx scripts/e2e-seed.ts
       # src/types/database.ts phải khớp kiểu sinh từ DB local (dựng từ schema.sql). Lệch → tải artifact database-types
       # (`gh run download <run> -n database-types`), chép vào src/types/database.ts, `npm run typecheck`, commit.
-      # Sinh trước Playwright (Playwright không đổi schema): job chạm timeout (cancelled) vẫn đã có file. Upload + so ở
-      # cuối, chạy cả khi Playwright fail (lệch kiểu không che kết quả e2e và ngược lại), nhưng chỉ khi sinh thành công:
-      # file rỗng / dở dang không thành artifact, không bị so như "lệch kiểu" (docs/plans/sau-ux.md mục 3).
+      # Sinh trước Playwright (Playwright không đổi schema). Sinh lỗi không chặn Playwright (bước Playwright chỉ cần seed
+      # xong); upload + so ở cuối, chạy cả khi Playwright fail hoặc job bị hủy vì quá giờ (`always()`), nhưng chỉ khi sinh
+      # thành công: file rỗng / dở dang không thành artifact, không bị so như "lệch kiểu" (docs/plans/sau-ux.md mục 3).
       - id: gen_types
         name: Generate DB types (local)
         run: supabase gen types typescript --local --schema public --schema graphql_public > "$RUNNER_TEMP/database.ts"
-      - run: npx playwright test
-      - if: ${{ !cancelled() && steps.gen_types.outcome == 'success' }}
+      - if: ${{ !cancelled() && steps.seed.outcome == 'success' }}
+        run: npx playwright test
+      - if: ${{ always() && steps.gen_types.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: database-types
           path: ${{ runner.temp }}/database.ts
           retention-days: 7
-      - if: ${{ !cancelled() && steps.gen_types.outcome == 'success' }}
+      - if: ${{ always() && steps.gen_types.outcome == 'success' }}
         name: Check src/types/database.ts
         run: diff -u src/types/database.ts "$RUNNER_TEMP/database.ts"
       - if: ${{ failure() }}
