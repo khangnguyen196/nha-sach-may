@@ -26,7 +26,7 @@ Phân rã (đo bằng `next analyze`, có sẵn trong Next 16, không thêm depe
 
 ## Thứ tự
 
-D → lazy-load sheet bộ lọc → C → B. Mỗi bước một commit (hoặc một nhánh nhỏ), đo `measure:js` trước / sau, e2e CI xanh rồi mới sang bước sau.
+D → lazy-load sheet bộ lọc → C → B (B: chờ quyết lại, xem ★4 / ★5). Mỗi bước một commit (hoặc một nhánh nhỏ), đo `measure:js` trước / sau, e2e CI xanh rồi mới sang bước sau.
 
 ### Bước 1 – D: bỏ zod khỏi palette tìm kiếm
 
@@ -74,7 +74,7 @@ D → lazy-load sheet bộ lọc → C → B. Mỗi bước một commit (hoặc
 - ★4 + ★5 **CHƯA** làm B và test screenshot; quyết lại sau khi xong D → sheet lazy → C và đo lại (B không cần để đạt ngân sách).
 - ★6 **để nguyên** `book-form.tsx` (admin).
 - ★7 **có**: thêm `scripts/analyze-diff.mjs` khi làm đợt perf-js.
-- ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt.
+- ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt (sửa cả mốc 170KB trong `CLAUDE.md` mục Hiệu năng và `BASELINE_GZIP_KB` trong `scripts/measure-js.mjs`).
 
 Thứ tự đợt perf-js: D → sheet lazy → C (+ `analyze-diff.mjs`). B để sau.
 

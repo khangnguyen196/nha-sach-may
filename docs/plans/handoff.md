@@ -1,10 +1,10 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-18, đợt sửa ux-messages trên nhánh riêng)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-19, đợt ux-messages đã duyệt merge)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
 ## Trạng thái
 
-- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **đã duyệt merge 2026-10-19** (fast-forward lên `main`). Test tay bằng Chrome trên Preview (8 bước: footer, 404, không tìm thấy đơn, mã sai, gợi ý mã, đổi ngôn ngữ, địa chỉ không có, trả giỏ) **ĐẠT**. Plan + báo cáo: `docs/plans/ux-messages.md`.
+- **Đợt `ux-messages` (thông báo cho khách hiểu chuyện gì đang xảy ra)**: code xong trên nhánh **`ux-messages`** (từ `main` `fa78aab`), **đã duyệt merge 2026-10-19** (sẽ fast-forward lên `main`). Test tay bằng Chrome trên Preview (8 bước: footer, 404, không tìm thấy đơn, mã sai, gợi ý mã, đổi ngôn ngữ, địa chỉ không có, trả giỏ) **ĐẠT**. Plan + báo cáo: `docs/plans/ux-messages.md`.
   - Migration **A** (`20261018120000_voucher_suggestions.sql`: `vouchers.is_public`, RPC `checkout_vouchers`) **đã chạy** trên production, KA1–KA6 khớp.
   - Migration **B** (`20261018130000_error_reasons.sql`: mã lỗi voucher / hủy đơn theo lý do) **CHƯA chạy**: chạy **sau** khi bản app của nhánh này đã merge + deploy production, rồi chạy `supabase/checks/ux-messages-b.sql`. Bản app mới hiểu cả mã cũ (`INVALID_VOUCHER`, `ORDER_NOT_CANCELLABLE`) lẫn mã mới.
   - Mục 16 (tên tác giả): `supabase/checks/authors-fix.sql` (đổi 8 tên, gộp id 8 + 9 vào id 1) **đã chạy** trên production sáng 2026-10-19, K1–K5 khớp (8 tên mới; id 8, 9 đã xóa; id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần; search_text có tên mới; slug giữ nguyên). Deploy production sau merge làm mới cache trang.
@@ -20,13 +20,13 @@
   2. **Request 404 làm e2e đăng nhập / đăng xuất chập chờn**: `account.spec.ts:71`, `cart-account.spec.ts:94`. Console có "Failed to load resource: 404", chưa rõ URL nào; qua ở lần retry; có từ trước Phase 11.
   3. **Tên tác giả ngược thứ tự**: dữ liệu Google Books, VD "Huy Thiệp Nguyễn". Chatbot và trang sách hiện đúng như trong DB.
 - Phase 1–10 trong Lộ trình (`CLAUDE.md`) **đã xong và đã merge vào `main`**, cùng bản sửa email auth (`fix-auth-default-email`).
-- Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote). Không còn nhánh mở.
+- Đợt sửa sau test tay (`fix-manual-test`, gồm `check-after-manual-test`) **đã merge vào `main`** (ff, `f4899ab`, 2026-10-17) sau lượt e2e toàn bộ sạch; hai nhánh đã xóa (local + remote).
 - CI (`.github/workflows/ci.yml`) xanh trên `main` (job `check`: typecheck, lint, Vitest, build).
 - **e2e chạy trên Supabase local ở GitHub Actions** (`e2e-project`, **đã merge `main`** ff `df891fb`, 2026-10-17; nhánh đã xóa local + remote): `.github/workflows/e2e.yml` chạy `supabase start` (DB trống dựng từ `schema.sql` + seed, `supabase/config.toml`), `scripts/e2e-seed.ts` nạp 58 sách test (`e2e/fixtures/books.json`, bìa giả), rồi `npx playwright test`. Mọi push (trừ `docs/**`, `*.md`) + chạy tay; không secret. Guard `scripts/e2e-env.ts` từ chối production / host cloud; `ci.yml` không còn job e2e. Không còn chạy e2e trên DB production.
   - Kết quả: 2 lượt liền trên nhánh + 1 lượt trên `main` đều **265/265, 0 flaky** (~5,9–6,4 phút Playwright; cả job ~8,5 phút: npm ci 14 s, `supabase start` ~75 s, Chromium 13–21 s, seed 3 s).
   - `next.config.ts`: cấu hình ảnh qua `coverImagesConfig` (`src/lib/cover-images-config.ts`): pattern http / IP local chỉ khi URL Supabase là local; build Vercel (`VERCEL=1`) với URL local → build fail (chống SSRF qua `/_next/image`, Vitest). Đã kiểm production sau deploy (chỉ đọc): bìa hiện ở trang chủ, `/danh-muc/van-hoc`, `/sach/sapiens`, 0 ảnh lỗi.
   - Theo dõi: `public.ecr.aws` đôi lúc trả `toomanyrequests` khi kéo image (CLI tự thử lại, +~13 s); nếu làm fail job thì thêm cache image Docker.
-- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase; `src/types/database.ts` khớp DB.
+- Migration trong `supabase/migrations/` **đã chạy hết** trên Supabase, **trừ** `20261018130000_error_reasons.sql` (migration B, chạy sau deploy production của ux-messages). `src/types/database.ts` khớp DB (sửa tay theo migration A; sinh lại sau B).
 - **Đã deploy** `https://nha-sach-may.vercel.app` trên Vercel: tự deploy từ `main`, region `sin1`, env chỉ 2 biến `NEXT_PUBLIC_SUPABASE_*` (chưa đặt `SITE_URL`, app dùng `VERCEL_PROJECT_PRODUCTION_URL`). GitHub Secrets 2 biến đó đã có.
 - Supabase Auth: Site URL = domain Vercel; Redirect URLs `…/api/auth/confirm**` cho production + localhost (thử bằng link giả về đúng `/xac-nhan`); SMTP riêng qua Gmail; 2 template song ngữ (`supabase/templates/`) đã dán.
 

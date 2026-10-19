@@ -134,7 +134,7 @@ Chủ dự án đã test tay OK trên bản Preview (máy tính + iPhone Safari)
 **Việc còn lại cho đợt sửa lỗi sau Phase 11** (đã làm ở nhánh `ux-messages`, xem mục dưới)
 1. Trang đăng nhập mất chữ đã gõ → đã sửa (một form ngay từ đầu, mục 14).
 2. Request 404 làm e2e đăng nhập / đăng xuất chập chờn (`account.spec:71`, `cart-account.spec:94`) → **chưa xong**: commit chẩn đoán đã bắt được URL (`/dang-nhap?next=%2Ftai-khoan&_rsc=…`, run 39148697724), khác giả thuyết; có từ trước, điều tra ở nhánh riêng sau merge (`docs/progress.md`).
-3. Tên tác giả ngược thứ tự → SQL `supabase/checks/authors-fix.sql` chờ duyệt (chưa chạy).
+3. Tên tác giả ngược thứ tự → SQL `supabase/checks/authors-fix.sql` → đã chạy 2026-10-19 trên production, K1–K5 khớp.
 
 ## Đợt ux-messages: thông báo cho khách (nhánh `ux-messages`, CHƯA merge)
 

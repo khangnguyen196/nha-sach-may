@@ -1,6 +1,6 @@
 # Đợt sửa "ux-messages" (sau Phase 11)
 
-Trạng thái: **code xong, chưa merge** (2026-10-18; bổ sung đêm 2026-10-18 → 19, xem "Bổ sung"). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
+Trạng thái: **code xong, đã duyệt merge 2026-10-19** (bổ sung đêm 2026-10-18 → 19 và sáng 2026-10-19, xem "Bổ sung"). Nhánh `ux-messages` tạo từ `origin/main` `fa78aab`. Xem "Báo cáo" ngay dưới.
 
 Mục tiêu: khách luôn hiểu chuyện gì đang xảy ra.
 - Lỗi do khách: nói đúng lý do và cách làm tiếp, đặt ngay chỗ liên quan.
@@ -14,7 +14,7 @@ Quy ước trong file này:
 
 ## Báo cáo (2026-10-18)
 
-Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **đã duyệt merge 2026-10-19** (xem "Sáng 2026-10-19"). Migration A đã chạy (KA1–KA6 khớp); **B chưa chạy** (chạy sau khi merge + deploy, rồi `supabase/checks/ux-messages-b.sql`); `supabase/checks/authors-fix.sql` chờ duyệt.
+Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **đã duyệt merge 2026-10-19** (xem "Sáng 2026-10-19"). Migration A đã chạy (KA1–KA6 khớp); **B chưa chạy** (chạy sau khi merge + deploy, rồi `supabase/checks/ux-messages-b.sql`); `supabase/checks/authors-fix.sql` đã chạy 2026-10-19 (K1–K5 khớp).
 
 **Đã làm theo mục**
 - **10** `SUPPORT_EMAIL` (`lib/support.ts`) ở cả hai footer; câu lỗi có `{email}` tự thành link `mailto:` (`SupportEmailText`, dùng trong `FormAlert`, giỏ, nút thêm vào giỏ). Vitest: không chép địa chỉ ở chỗ khác.
@@ -109,6 +109,7 @@ Trạng thái: code xong mục 1–16 trên nhánh `ux-messages`, **đã duyệt
 - `supabase/checks/authors-fix.sql` đã chạy trên production sáng 2026-10-19, K1–K5 khớp hết.
 - Test tay bằng Claude in Chrome trên Preview của nhánh (đăng nhập admin): footer vi / en, 404 sách / danh mục / tác giả / trang lạ / en, không tìm thấy đơn (mã sai dạng, đổi 1 ký tự, en: cùng câu, HTTP 404), mã sai "AB", gợi ý mã (tick TEST10 → hiện trong dialog → Áp dụng giảm 10% → Bỏ mã), đổi ngôn ngữ giữ query, địa chỉ không có, trả giỏ: **8/8 ĐẠT**.
 - Duyệt merge 2026-10-19 (fast-forward). **Migration B chờ chạy sau khi deploy production** (rồi `supabase/checks/ux-messages-b.sql`).
+- Quyết định khác cùng ngày (★ perf-js, đăng ký làm ở nhánh riêng, chấp nhận rủi ro dò email qua thời gian phản hồi, TEST10 public): xem `docs/progress.md` và `docs/plans/perf-js.md`.
 
 ## ★ Quyết định (đã duyệt 2026-10-18)
 
@@ -636,7 +637,7 @@ Nguồn chung: `toFailure` (lỗi PostgREST có `message` không phải mã đã
 - Đổi 8 tên (giữ slug, ★7): 3 "Thụy Dương" → "Dương Thụy"; 5 "Tá Nhí Nguyễn" → "Nguyễn Tá Nhí"; 6 "Huy Thiệp Nguyễn" → "Nguyễn Huy Thiệp"; 13 "Luan Hoan" → "Luân Hoán"; 14 "Dong Ngac Nguyen" → "Nguyễn Đông Ngạc"; 28 "Bach Thao Ho" → "Hồ Bạch Thảo"; 31 "Nguyen Phuong Ngoc" → "Nguyễn Phương Ngọc"; 63 "Thế Dân Quan" → "Quan Thế Dân".
 - Gộp id 8 "Lap Nguyen" và id 9 "Quang Lập Nguyễn" vào id 1 "Nguyễn Quang Lập" (cả hai chỉ gắn "Kien Chuot Va Ruoi").
 - Giữ nguyên: id 4 "Hà Thủy Nguyên", id 20 "Cao Nguyệt Nguyên" ("Nguyên" là tên riêng), id 69 "Dr. Tung Phan", id 73 "Việt Lê", các tác giả còn lại.
-- File: `supabase/checks/authors-fix.sql` (một transaction, mỗi update có `where id = X and name = '<tên cũ>'`, lệch số dòng / id 8, 9 gắn sách khác / vai trò khác → `raise exception` rollback cả khối; phần 2 là câu kiểm tra chỉ đọc có cột mong đợi: 8 tên mới, id 8 / 9 không còn, id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần, `search_text` của sách liên quan có tên mới, slug không đổi). **Chưa chạy**, chờ duyệt.
+- File: `supabase/checks/authors-fix.sql` (một transaction, mỗi update có `where id = X and name = '<tên cũ>'`, lệch số dòng / id 8, 9 gắn sách khác / vai trò khác → `raise exception` rollback cả khối; phần 2 là câu kiểm tra chỉ đọc có cột mong đợi: 8 tên mới, id 8 / 9 không còn, id 1 gắn "Kien Chuot Va Ruoi" đúng 1 lần, `search_text` của sách liên quan có tên mới, slug không đổi). **Chưa chạy**, chờ duyệt. **Đã chạy 2026-10-19 trên production, K1–K5 khớp.**
 - **Sau khi chạy: Redeploy trên Vercel** để xóa cache trang (SQL chạy ngoài app nên không gọi `updateTag`; trang prerender + catalog rút gọn của chatbot giữ tên cũ tới khi build lại).
 - Import sau này: Google vẫn trả tên ngược → slug cũ → khớp tác giả đã có (tên đã sửa không bị ghi đè). Tên đúng thứ tự (slug mới, cùng tập từ) → `reuseByNameTokens` dùng lại tác giả đã có thay vì tạo bản trùng.
 
