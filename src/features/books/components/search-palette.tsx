@@ -14,7 +14,8 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useRouter } from '@/i18n/navigation'
-import { searchQuerySchema, searchResponseSchema, type SearchHit } from '../schemas'
+import type { SearchHit } from '../schemas'
+import { normalizeSearchQuery, parseSearchResponse } from '../search-input'
 
 const DEBOUNCE_MS = 250
 const SKELETON_ROWS = 3
@@ -23,8 +24,8 @@ type SearchResult = { q: string; status: 'success'; hits: SearchHit[] } | { q: s
 
 async function fetchHits(q: string, signal: AbortSignal): Promise<SearchResult> {
   const response = await fetch(`/api/search?${new URLSearchParams({ q })}`, { signal })
-  const body = searchResponseSchema.safeParse(await response.json())
-  return body.success ? { q, status: 'success', hits: body.data.data } : { q, status: 'error' }
+  const hits = parseSearchResponse(await response.json())
+  return hits ? { q, status: 'success', hits } : { q, status: 'error' }
 }
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void }
@@ -35,8 +36,7 @@ export default function SearchPalette({ open, onOpenChange }: Props) {
   const [input, setInput] = useState('')
   const [result, setResult] = useState<SearchResult | null>(null)
 
-  const parsed = searchQuerySchema.safeParse(input)
-  const q = parsed.success ? parsed.data : null
+  const q = normalizeSearchQuery(input)
   // Kết quả của từ khóa cũ (đang chờ debounce / fetch) coi như đang tải, không hiện lẫn
   const current = q !== null && result?.q === q ? result : null
 

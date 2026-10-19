@@ -1,7 +1,8 @@
 import { z } from 'zod'
 
 /**
- * Từ khóa tìm kiếm, dùng chung palette (client) và /api/search (server).
+ * Từ khóa tìm kiếm của /api/search và trang tìm kiếm (server). Palette (client) dùng normalizeSearchQuery
+ * (search-input.ts, không zod), search-input.test.ts kiểm hai bên khớp nhau.
  * Gộp khoảng trắng + chữ thường để cùng một từ khóa ra cùng một URL → CDN cache trúng nhiều hơn
  * (search_books không phân biệt hoa thường).
  */
@@ -12,7 +13,7 @@ export const searchQuerySchema = z
   .max(100)
   .transform((q) => q.replace(/\s+/g, ' ').toLowerCase())
 
-/** Một kết quả gợi ý trong palette: hợp đồng JSON giữa /api/search và client */
+/** Một kết quả gợi ý trong palette: hợp đồng JSON giữa /api/search và client (client kiểm bằng parseSearchResponse) */
 export const searchHitSchema = z.object({
   id: z.number(),
   slug: z.string(),
