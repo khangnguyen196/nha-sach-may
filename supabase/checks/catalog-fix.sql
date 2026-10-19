@@ -1,6 +1,6 @@
 -- docs/plans/sau-ux.md mục 7: dọn dữ liệu tác giả / tên sách (dữ liệu Google Books). Danh sách do chủ dự án duyệt
 -- (2026-10-19) sau khi xem kết quả supabase/checks/catalog-data-r.sql; KHÔNG suy tự động.
--- CHỈ chạy sau khi được duyệt (kiểm thử trên bản sao trước). SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
+-- CHỈ chạy sau khi được duyệt (đã chạy thử trên bản sao schema có dữ liệu mẫu (review 2026-10-19); vẫn chạy P0a / P0b trước khối DO). SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
 -- (một khối DO = một lệnh nguyên tử: raise → không đổi gì), rồi phần 2 (chỉ đọc).
 -- SQL Editor chỉ hiện kết quả của câu CUỐI khi chạy nhiều câu một lần → bôi đen TỪNG câu (P0a, P0b, khối DO, C1…C7)
 -- rồi Run, đừng chạy cả file.
@@ -187,7 +187,7 @@ begin
     ('Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta (soft cover - groundwood paper - new edition)',
      'Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta', 'paperback'),
     ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (hard cover - groundwood)',
-     'Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai', 'hardcover'),
+     'Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)', 'hardcover'),
     ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Một (hard cover - groundwood)',
      'Lịch Sử Việt Nam Thời Tự Chủ - Tập Một', 'hardcover');
 
@@ -202,6 +202,14 @@ begin
    where (select count(*) from public.books b where b.title = p.old_title) <> 1;
   if extra > 0 then
     raise exception 'Tên sách: % / 6 tên cũ không khớp đúng 1 sách (dữ liệu đã khác) → rollback', extra;
+  end if;
+
+  -- Tên mới không được trùng tên một sách khác đang có (VD bản bìa mềm cùng tên)
+  select count(*) into extra
+    from title_plan p
+   where exists (select 1 from public.books b where b.title = p.new_title);
+  if extra > 0 then
+    raise exception 'Tên sách: % tên mới đã có ở sách khác → rollback', extra;
   end if;
 
   update public.books b
@@ -254,15 +262,16 @@ select b.id, b.title,
  where b.title in ('The Peter F. Drucker Reader', 'Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)')
  order by b.id;
 
--- C5. Tên sách mới + format. Mong đợi: 6 dòng, dung_ten = true; format như cột mong_doi_format (null = không đổi);
---     slug giống kết quả Phần 0
-select v.new_title, b.id, b.slug, b.format, v.mong_doi_format, b.title is not null as dung_ten
+-- C5. Tên sách mới + format. Mong đợi: 6 dòng, dung_ten = true, so_sach_cung_ten = 1 ở mọi dòng (không trùng tên với
+--     sách khác); format như cột mong_doi_format (null = không đổi); slug giống kết quả Phần 0
+select v.new_title, b.id, b.slug, b.format, v.mong_doi_format, b.title is not null as dung_ten,
+       count(*) over (partition by v.new_title) as so_sach_cung_ten
   from (values
     ('Kiến, Chuột và Ruồi', null),
     ('Mười chín chân dung nhà văn cùng thời', null),
     ('Ngôn Ngữ - Tuyển Tập Truyện Ngắn Chọn Lọc 2025', 'hardcover'),
     ('Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta', 'paperback'),
-    ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai', 'hardcover'),
+    ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)', 'hardcover'),
     ('Lịch Sử Việt Nam Thời Tự Chủ - Tập Một', 'hardcover')
   ) as v(new_title, mong_doi_format)
   left join public.books b on b.title = v.new_title
@@ -285,7 +294,7 @@ select b.id, b.title, b.search_text like '%' || public.normalize_vi(b.title) || 
   from public.books b
  where b.title in (
    'Kiến, Chuột và Ruồi', 'Mười chín chân dung nhà văn cùng thời', 'Ngôn Ngữ - Tuyển Tập Truyện Ngắn Chọn Lọc 2025',
-   'Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta', 'Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai',
+   'Những Truyện Ngắn Hay Nhất Của Quê Hương Chúng Ta', 'Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)',
    'Lịch Sử Việt Nam Thời Tự Chủ - Tập Một'
  )
  order by b.id;

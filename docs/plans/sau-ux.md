@@ -1,14 +1,14 @@
 # Đợt "sau-ux"
 
-Trạng thái (2026-10-19, tối): **mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge** (Việc 5 test Preview cần chủ dự án tự làm: có bước gõ mật khẩu vào form đăng ký trên Preview dùng DB production). Mục 6 chờ duyệt + kết quả H1–H3 trước khi merge. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, CHƯA chạy. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong.
+Trạng thái (2026-10-19, tối): **mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh, **chưa merge**. Test đăng ký trên Preview: không làm (chủ dự án tự thử trên production sau merge). Mục 6 chờ duyệt + kết quả H1–H3 trước khi merge. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, CHƯA chạy. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong.
 
 Kết quả từng mục:
 - Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
 - Mục 2 `553fcfe` (+ docs `3f934b0`): e2e 411 qua / 9 skip (run 39241695759).
 - Test đã đổi / xóa / thêm (mục 1–3):
-  - Xóa (test của code bị xóa): `errors.test.ts` 2 expectation `email_address_invalid` / `email_address_not_authorized` → `emailRejected` (mapping đã xóa, không còn nơi dùng); `legacy-error-codes.test.ts` ca `INVALID_VOUCHER` (mã đã xóa); `voucher-errors.test.ts` phần tử `INVALID_VOUCHER` trong danh sách kiểm; `schemas.test.ts` expectation `user_already_exists` → `EMAIL_TAKEN` (mã đã xóa, xem Việc 2 bên dưới).
+  - Xóa (test của code bị xóa): `errors.test.ts` 2 expectation `email_address_invalid` / `email_address_not_authorized` → `emailRejected` (mapping đã xóa, không còn nơi dùng); `legacy-error-codes.test.ts` ca `INVALID_VOUCHER` (mã đã xóa); `voucher-errors.test.ts` phần tử `INVALID_VOUCHER` trong danh sách kiểm; `schemas.test.ts` expectation `user_already_exists` → `EMAIL_TAKEN` (mã đã xóa, mục 1 → "Code chết").
   - Đổi tên: `legacy-error-codes.test.ts` describe "báo giá thanh toán với mã lỗi cũ" → "báo giá thanh toán: lỗi voucher thiếu detail", "hủy đơn với mã lỗi cũ" → "hủy đơn: đơn không có / của tài khoản khác" (+ comment đầu file); `voucher-errors.test.ts` "có cả mã cũ (trước migration B) lẫn mã mới" → "có đủ các lý do của voucher".
-  - Thêm: `actions.test.ts` (`signUp` vào `ACTIONS`: 13 ca bảng `SILENT` + NETWORK_ERROR + zod; describe "signUp: riêng của đăng ký" 6 ca); `errors.test.ts` describe `PRE_LOOKUP_SIGNUP_CODES` (2 ca); e2e `auth-email.spec.ts`: câu thân + link ở ca đăng ký en và vi, đăng ký lại cùng email (en) → cùng khối. Không đổi chuỗi expected cũ nào, trừ Việc 2: câu en dùng ’ (cũ `doesn't` / `hasn't` / `don't` → `doesn’t` / `hasn’t` / `don’t`).
+  - Thêm: `actions.test.ts` (`signUp` vào `ACTIONS`: 13 ca bảng `SILENT` + NETWORK_ERROR + zod; describe "signUp: riêng của đăng ký" 6 ca); `errors.test.ts` describe `PRE_LOOKUP_SIGNUP_CODES` (2 ca); e2e `auth-email.spec.ts`: câu thân + link ở ca đăng ký en và vi, đăng ký lại cùng email (en) → cùng khối. Không đổi chuỗi expected cũ nào, trừ câu ★1 bản en dùng ’ (cũ `doesn't` / `hasn't` / `don't` → `doesn’t` / `hasn’t` / `don’t`).
 - Mục 3 `485abe4` (chế độ báo, run 39243064552: `gen types --local` chạy được dù `postgres-meta` bị `-x`; trong schema `public`, bản `--local` chỉ khác bản sửa tay ở `order_items.line_total` = `never` khi Insert / Update; ngoài `public`, bản `--local` **không có** khối `__InternalSupabase` (`PostgrestVersion: "14.18"`) → postgrest-js suy kiểu theo PostgREST v12, typecheck vẫn sạch; còn lại là định dạng) → `bf9fcb8` (database.ts từ artifact, bật fail): e2e 411 qua, bước kiểm types xanh (run 39244493102). Chứng minh đỏ: nhánh nháp `types-red-check` đổi `authors.bio_en` → bước "Check src/types/database.ts" fail kèm đúng dòng lệch (run 39244521641), nhánh đã xóa.
 
 Bối cảnh: đợt `ux-messages` đã lên production 2026-10-19, migration A + B đã chạy (`docs/plans/ux-messages.md`). Đợt này dọn các việc còn lại của nó (`docs/progress.md`) trước đợt perf-js (`docs/plans/perf-js.md`) (★6: sau-ux trước perf-js).
@@ -60,7 +60,7 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 - `register/page.tsx`: bỏ `RATE_LIMITED` khỏi `getFormMessages`.
 - `data.session` (autoconfirm) giữ redirect `/account` như cũ.
 - Câu thành công theo ★1; `register-form.tsx` nhận `checkInbox: ReactNode`.
-- Code chết: `email_address_invalid` / `email_address_not_authorized` trong `AUTH_ERRORS`, `'emailRejected'` trong `VALIDATION_KEYS`, `validation.emailRejected` (vi / en) → xóa nếu grep không còn nơi dùng.
+- Code chết: `email_address_invalid` / `email_address_not_authorized` trong `AUTH_ERRORS`, `'emailRejected'` trong `VALIDATION_KEYS`, `validation.emailRejected` (vi / en) → xóa nếu grep không còn nơi dùng. Sau đó (review): `EMAIL_TAKEN` (`user_already_exists` / `email_exists` trong `AUTH_ERRORS`, `ERROR_CODES`, `errors.EMAIL_TAKEN` vi / en) cũng không còn nơi dùng → đã xóa; `authErrorCode` chỉ còn test dùng → đã xóa (ca test chuyển sang `authFailure`).
 - `CLAUDE.md`: quy ước "Quên mật khẩu / gửi lại email xác nhận" mở rộng thành "… / đăng ký" (đăng ký có thêm allowlist mã trước lookup).
 
 **Test**
@@ -165,11 +165,11 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 
 **Ước lượng**: điều tra + thử nghiệm ~0.5–1 ngày; phương án redirect ~1–2 ngày cho các form + e2e không JS.
 
-## 6. Quy tắc ẩn danh mục (hướng A đã quyết) — chỉ plan + SQL chỉ đọc, chờ duyệt
+## 6. Quy tắc ẩn danh mục (hướng A đã quyết) — đã code A1 trên `sau-ux`, chưa merge
 
 Ẩn danh mục = ẩn luôn sách của nó ở trang chủ (đã có), `/sach`, tìm kiếm (palette + trang tìm kiếm), chatbot (`getChatCatalog`). Chi tiết (kiểm kê mọi chỗ liệt kê sách, định nghĩa "danh mục đang hiện", cache, ★ A1 / A2, test): mục "6 — chi tiết" bên dưới.
 
-## 7. Dọn dữ liệu tác giả / tên sách — chỉ plan + SQL chỉ đọc, chờ duyệt
+## 7. Dọn dữ liệu tác giả / tên sách — SQL sửa đã viết (`catalog-fix.sql`), CHƯA chạy
 
 File `supabase/checks/catalog-data-r.sql` (CHỈ ĐỌC) + đề xuất xử lý từng nhóm. Chi tiết: mục "7 — chi tiết" bên dưới. File SQL sửa viết SAU khi chủ dự án duyệt kết quả câu chỉ đọc, theo mẫu `authors-fix` (guard theo id + giá trị cũ, đếm dòng, rollback nếu lệch).
 
@@ -185,7 +185,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 
 ## 6 — chi tiết (plan, chờ duyệt; chưa code)
 
-**Định nghĩa "danh mục đang hiện"**: `categories.is_active` (RLS anon chỉ trả dòng này) **và** là gốc hoặc có cha đang hiện. Dùng lại `visibleCategoryIds(getCategories())` (`src/features/books/utils.ts`). Cây tối đa 2 cấp (admin `checkParent` chặn cấp 3) nên một bước kiểm cha là đủ. Sách `category_id = null` (danh mục bị xóa → `on delete set null`) coi như **không hiện**, khớp trang chủ + sitemap hiện tại (★6c).
+**Định nghĩa "danh mục đang hiện"**: `categories.is_active` (RLS anon chỉ trả dòng này) **và** là gốc hoặc có cha đang hiện. Dùng lại `visibleCategoryIds(getCategories())` (`src/features/books/utils.ts`). Cây tối đa 2 cấp (admin `checkParent` chặn cấp 3) nên một bước kiểm cha là đủ. Sách `category_id = null` (danh mục bị xóa → `on delete set null`): plan ban đầu đề xuất coi như **không hiện** (★6c); **đã thay bởi quyết định ở mục "Đã code" bên dưới: giữ hành vi hiện tại, vẫn hiện ở mọi danh sách**.
 
 **Kiểm kê chỗ liệt kê sách** (grep `from('books')` / `rpc('search_books')` trong `src`, bỏ admin):
 
@@ -210,7 +210,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - Chatbot: lọc `catalog` **một lần** ngay sau `Promise.all` trong `askMay` (`visibleCategoryIds(categories)`), dùng bản đã lọc cho **cả** `selectCandidates` lẫn `knownSlugs` (chỉ lọc ứng viên thì `knownSlugs` vẫn nhận slug sách ẩn). Sách đang xem thuộc danh mục ẩn vẫn vào prompt qua `fallbackCandidate(current)`: đúng A1 (link trực tiếp vẫn xem được).
 - Trang tác giả (nếu ★6a đồng ý): `listBooks({ bookIds, categoryIds: visible })`; tác giả chỉ có sách ẩn → trạng thái rỗng như khi không có sách.
 - Kệ "Cùng danh mục" (nếu ★6a đồng ý): danh mục của sách không nằm trong cây hiện → không render kệ.
-- `.in()` ~30 id → URL PostgREST ngắn; cache key của `listBooks` thêm mảng id (đổi khi danh mục đổi, lúc đó tag `books` cũng hết hạn).
+- Bộ lọc thật dùng `.or(visibleBooksFilter(ids))` (`category_id.is.null,category_id.in.(…)`, ~30 id) → URL PostgREST ngắn; cache key của `listBooks` thêm mảng id (đổi khi danh mục đổi, lúc đó tag `books` cũng hết hạn).
 
 **Cache**: admin ẩn / hiện / đổi cha danh mục → `catalogTagsFor({ kind: 'category' })` trả `categories` + `books` (+ `chat-catalog` qua `adminCatalogTags`). `listBooks`, `searchBookHits`, `getRelatedBooks` gắn tag `books`; `getChatCatalog` gắn `books`, `categories`, `chat-catalog` → đủ, không cần tag mới. Khi làm: kiểm `cache-tags.test.ts` có ca ẩn danh mục.
 
@@ -218,7 +218,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 - **A1** (đề xuất của chủ dự án, đợt này): chỉ ẩn khỏi danh sách; link trực tiếp vẫn xem / thêm giỏ / mua. Công sức ~0.5–1 ngày (4–6 chỗ lọc + test). Không migration.
 - **A2**: coi như ngừng bán: trang sách 404 (proxy slug guard + `getBookBySlug` phải biết danh mục), giỏ hiện "Ngừng bán", `place_order` / `quote_*` chặn (migration sửa RPC + `books_public_read` hoặc hàm `private.book_visible`), e2e đặt hàng trên sách e2e (đang ở danh mục gốc ẩn) phải chuyển sang danh mục hiện. Công sức ~2–3 ngày + migration chạy tay + rủi ro đơn đang mở.
 - ★6a: lọc cả trang tác giả + ẩn kệ "Cùng danh mục" (đề xuất: có).
-- ★6c: sách không có danh mục coi như ẩn (đề xuất: có, khớp trang chủ / sitemap; H3 cho biết bao nhiêu cuốn).
+- ★6c: sách không có danh mục coi như ẩn (đề xuất: có, khớp trang chủ / sitemap; H3 cho biết bao nhiêu cuốn). → Đã thay bởi quyết định ở mục "Đã code" bên dưới (giữ hành vi hiện tại).
 - ★6d: danh mục con của gốc ẩn giữ trang riêng (link trực tiếp) như hiện tại (đề xuất: giữ, e2e admin dựa vào).
 
 **SQL chỉ đọc**: `supabase/checks/hidden-categories-r.sql` (H1 số sách theo trạng thái danh mục, H2 danh mục không hiện còn sách, H3 sách không có danh mục). Chưa chạy.
@@ -263,7 +263,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 
 **Xong khi** (đợt này): file chỉ đọc + plan; chủ dự án chạy R1–R7, dán kết quả, duyệt ★7a / ★7b → đợt sau viết `supabase/checks/catalog-data-fix.sql`.
 
-**SQL sửa đã viết (2026-10-19, CHƯA chạy)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 0 (chỉ đọc) lưu slug hiện tại để đối chiếu. Phần 1 một khối DO (lệnh nguyên tử, không bọc begin / commit), mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
+**SQL sửa đã viết (2026-10-19, CHƯA chạy)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 0 (chỉ đọc) lưu slug hiện tại để đối chiếu. Review toàn đợt: thêm guard "tên mới không trùng sách khác đang có" (bản bìa mềm "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai" đã có) → tên mới của bản bìa cứng là "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)"; C5 thêm `so_sach_cung_ten`. Chủ dự án đã chạy thử bản này trên bản sao schema có dữ liệu mẫu giống production (2026-10-19): chạy đúng; tên trùng → rollback cả khối. Phần 1 một khối DO (lệnh nguyên tử, không bọc begin / commit), mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
 1. Gộp (id giữ ← id gộp): 87 "Peter F. Drucker" ← 86 "Peter Ferdinand Drucker", 88 "Peter Drucker"; 114 "Stephen Hawking" ← 113 "Stephen W. Hawking"; 90 "Jim Collins" ← 92 "James Charles Collins"; 94 "Jerry Porras" ← 93 "Jerry I. Porras". Chuyển `book_authors` (`on conflict do nothing`), kiểm mọi liên kết đã có ở id giữ, rồi xóa liên kết + tác giả của id gộp (đúng 5). Không gộp 101 / 104 (Covey), không đụng 99.
 2. Tách id 75 → "Trần Tuyết Nhung" (giữ slug); "Anthony Reid" (slug `anthony-reid`, đã có thì dùng dòng đó) gắn đúng các sách của id 75, cùng vai trò.
 3. Bỏ liên kết 89 "Harvard Business Review" khỏi "The Peter F. Drucker Reader" và 107 "Ladybird" khỏi "Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)" chỉ khi sách còn ≥ 1 tác giả role `author` khác (sau bước gộp); xóa 89 / 107 nếu không còn liên kết (còn thì NOTICE, giữ). Giữ 22, 24.

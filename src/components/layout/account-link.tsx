@@ -16,7 +16,8 @@ const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 
  * Fallback = icon trỏ /tai-khoan (proxy tự chuyển sang đăng nhập nếu chưa có phiên). Fallback KHÔNG prefetch: lúc nó
  * hiện chưa biết phiên, khách chưa đăng nhập mà router prefetch /tai-khoan thì proxy 307 sang /dang-nhap, Next 307 thêm
  * `_rsc` rồi trả 404 cho segment `account/__PAGE__` (trang đăng nhập không có) → lỗi 404 trong console
- * (docs/plans/sau-ux.md mục 4). Link /account khi đã đăng nhập vẫn prefetch.
+ * (docs/plans/sau-ux.md mục 4). Link /account khi đã đăng nhập vẫn prefetch. e2e layout.spec.ts chỉ là kiểm hồi quy cho
+ * khách; không tái hiện được lỗi gốc (sau-ux.md mục 4).
  */
 export async function AccountLink() {
   const t = await getTranslations('layout')

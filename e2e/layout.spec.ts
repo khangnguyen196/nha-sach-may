@@ -156,6 +156,7 @@ test('footer có email liên hệ (mailto), cả footer rút gọn ở trang đ�
 // docs/plans/sau-ux.md mục 4: router prefetch /tai-khoan khi chưa có phiên → proxy 307 → Next 307 → 404 segment
 // account/__PAGE__ (lỗi console chập chờn của cart-account.spec.ts:94). Link /account ở fallback của AccountLink không
 // prefetch; khách chưa đăng nhập tải trang không được gửi request RSC nào tới khu tài khoản.
+// Chỉ là kiểm hồi quy cho khách; không tái hiện được lỗi gốc (bỏ bản sửa vẫn qua 20/20, sau-ux.md mục 4).
 test('khách chưa đăng nhập: không có request RSC / prefetch nào tới /tai-khoan (/en/account)', async ({ page }) => {
   const errors = collectErrors(page)
   const accountRsc: string[] = []
