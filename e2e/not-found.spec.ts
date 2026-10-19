@@ -56,3 +56,19 @@ test('sách đang ẩn (ngừng bán) → HTTP 404 + câu "đã ngừng bán"', 
     await deleteHiddenBooks(book.id)
   }
 })
+
+test('header x-not-found do khách tự gửi bị proxy bỏ: /abc vẫn câu chung, sách thiếu vẫn câu sách', async ({ page }) => {
+  const order = 'Không tìm thấy đơn hàng này.'
+  await page.setExtraHTTPHeaders({ 'x-not-found': 'order' })
+
+  const generic = await page.goto('/khong-co-trang-nay-e2e')
+  expect(generic?.status()).toBe(404)
+  const view = page.getByRole('main').getByTestId('not-found')
+  await expect(view).toContainText('Trang bạn tìm không có hoặc đã được chuyển đi. Bạn thử tìm sách hoặc xem danh mục nhé.')
+  await expect(view).not.toContainText(order)
+
+  const book = await page.goto('/sach/khong-ton-tai-e2e')
+  expect(book?.status()).toBe(404)
+  await expect(view).toContainText('Cuốn sách này không có hoặc đã ngừng bán.')
+  await expect(view).not.toContainText(order)
+})

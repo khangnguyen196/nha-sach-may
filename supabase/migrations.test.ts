@@ -157,9 +157,10 @@ describe('gợi ý mã giảm giá + mã lỗi theo lý do (ux-messages)', () =>
     for (const condition of ['v.is_public', 'v.is_active', 'v.starts_at <= now()', 'v.ends_at >= now()', 'v.used_count < v.usage_limit']) {
       expect(body).toContain(condition)
     }
-    const returns = /returns table \(([^)]*)\)/.exec(body)?.[1] ?? ''
-    // Đọc hết danh sách cột (regex dừng ở dấu ")" đầu tiên: cột kiểu có ngoặc sẽ cắt ngắn danh sách)
-    expect(returns).toMatch(/\bshortfall int\s*$/)
+    // Neo vào ") language": cột có kiểu chứa ngoặc (numeric(10,2)…) làm regex không khớp → danh sách rỗng → fail ở dưới,
+    // thay vì cắt ngắn danh sách và để cột cấm đứng sau lọt qua
+    const returns = /returns table \(([^)]*)\) language /.exec(body)?.[1] ?? ''
+    expect(returns.trim()).not.toBe('')
     for (const column of ['id', 'used_count', 'usage_limit', 'starts_at', 'is_active', 'is_public']) {
       expect(returns).not.toMatch(new RegExp(`\\b${column}\\b`))
     }
