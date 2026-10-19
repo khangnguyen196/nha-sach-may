@@ -895,7 +895,6 @@
     "BOOK_UNAVAILABLE": "Sách \"{title}\" hiện không còn bán.",
     "OUT_OF_STOCK": "Sách \"{title}\" chỉ còn {stock} cuốn.",
     "CART_EMPTY": "Giỏ hàng đang trống.",
-    "INVALID_VOUCHER": "Mã giảm giá không hợp lệ hoặc đã hết hạn.",
     "VOUCHER_MIN_ORDER": "Mã này áp dụng cho đơn từ {min_order_value, number, price}.",
     "ORDER_NOT_CANCELLABLE": "Không hủy được đơn này. Bạn tải lại trang để xem trạng thái mới nhất.",
     "ORDER_REOPEN_FORBIDDEN": "Không thể mở lại đơn hàng đã hủy.",

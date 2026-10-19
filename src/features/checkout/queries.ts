@@ -45,7 +45,7 @@ export async function getCheckoutQuote(
   return { quote: plain.data, voucher: { code, failure: await voucherFailure(locale, failure, plain.data.subtotal) } }
 }
 
-/** Chưa đủ đơn tối thiểu → nói rõ còn thiếu bao nhiêu (minOrderShortfall: cả DB trước migration B) */
+/** Chưa đủ đơn tối thiểu → nói rõ còn thiếu bao nhiêu (minOrderShortfall) */
 async function voucherFailure(locale: Locale, failure: Failure, subtotal: number): Promise<Failure> {
   const values = failure.code === 'VOUCHER_MIN_ORDER' ? minOrderShortfall(failure.details, subtotal) : null
   if (!values) return withMessage(locale, failure)

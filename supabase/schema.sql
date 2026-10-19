@@ -1419,7 +1419,6 @@ grant  execute on function public.set_chat_quota_token(text) to service_role;
 --   VOUCHER_NOT_FOUND, VOUCHER_INACTIVE, VOUCHER_NOT_STARTED (detail: {"starts_at": ...}),
 --   VOUCHER_EXPIRED (detail: {"ends_at": ...}), VOUCHER_EXHAUSTED,
 --   VOUCHER_MIN_ORDER (detail: {"min_order_value": ..., "shortfall": ...}),
---   INVALID_VOUCHER (bản cũ trước ux-messages B, không còn hàm nào trả),
 --   ORDER_NOT_CANCELLABLE (đơn không có / của tài khoản khác), ORDER_ALREADY_CANCELLED, ORDER_DELIVERED,
 --   ORDER_IN_PROGRESS (detail: {"status": ...}), ORDER_PAID, ORDER_REOPEN_FORBIDDEN,
 --   ORDER_INVALID_TRANSITION (trigger trạng thái đơn; detail: {"from": ..., "to": ...}),

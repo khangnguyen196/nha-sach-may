@@ -7,17 +7,14 @@ export const ERROR_CODES = [
   'BOOK_UNAVAILABLE',
   'OUT_OF_STOCK',
   'CART_EMPTY',
-  // Mã giảm giá không dùng được, theo lý do (ux-messages B). INVALID_VOUCHER: mã gộp của bản DB trước migration B,
-  // giữ để app chạy được cả trước lẫn sau khi chạy B; xóa ở đợt sau.
+  // Mã giảm giá không dùng được, theo lý do (ux-messages B)
   'VOUCHER_NOT_FOUND',
   'VOUCHER_INACTIVE',
   'VOUCHER_NOT_STARTED',
   'VOUCHER_EXPIRED',
   'VOUCHER_EXHAUSTED',
-  'INVALID_VOUCHER',
   'VOUCHER_MIN_ORDER',
   // Khách tự hủy đơn không được, theo lý do (ux-messages B). ORDER_NOT_CANCELLABLE: đơn không có / của tài khoản khác
-  // (và mọi trường hợp ở bản DB trước migration B)
   'ORDER_NOT_CANCELLABLE',
   'ORDER_ALREADY_CANCELLED',
   'ORDER_DELIVERED',

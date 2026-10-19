@@ -24,8 +24,8 @@ describe('minOrderShortfall', () => {
 })
 
 describe('VOUCHER_ERRORS', () => {
-  it('có cả mã cũ (trước migration B) lẫn mã mới', () => {
-    for (const code of ['INVALID_VOUCHER', 'VOUCHER_MIN_ORDER', 'VOUCHER_NOT_FOUND', 'VOUCHER_EXPIRED'] as const) {
+  it('có đủ các lý do của voucher', () => {
+    for (const code of ['VOUCHER_MIN_ORDER', 'VOUCHER_NOT_FOUND', 'VOUCHER_EXPIRED'] as const) {
       expect(VOUCHER_ERRORS.has(code)).toBe(true)
     }
   })

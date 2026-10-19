@@ -479,7 +479,6 @@
     "BOOK_UNAVAILABLE": "\"{title}\" is no longer available.",
     "OUT_OF_STOCK": "Only {stock} copies of \"{title}\" are left.",
     "CART_EMPTY": "Your cart is empty.",
-    "INVALID_VOUCHER": "This voucher code is invalid or has expired.",
     "VOUCHER_MIN_ORDER": "This code applies to orders from {min_order_value, number, price}.",
     "ORDER_NOT_CANCELLABLE": "This order can’t be cancelled. Reload the page to see its latest status.",
     "ORDER_REOPEN_FORBIDDEN": "A cancelled order cannot be reopened.",

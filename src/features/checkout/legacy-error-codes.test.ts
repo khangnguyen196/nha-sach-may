@@ -4,8 +4,8 @@ import en from '../../../messages/en.json'
 import vi_ from '../../../messages/vi.json'
 import { formats } from '@/i18n/formats'
 
-// Mã lỗi CŨ của DB: production chạy mã cũ từ lúc deploy bản app ux-messages tới lúc chạy migration B. e2e dựng DB từ
-// schema.sql (đã có B) nên không đi qua đường này → Vitest với RPC giả + bản dịch thật (messages + formats của app).
+// Lỗi DB mà e2e không tạo ra được (detail thiếu `shortfall`, đơn không có / của tài khoản khác) → Vitest với RPC giả +
+// bản dịch thật (messages + formats của app).
 const rpc = vi.fn()
 const refresh = vi.fn()
 
@@ -43,16 +43,7 @@ beforeEach(() => {
   refresh.mockReset()
 })
 
-describe('báo giá thanh toán với mã lỗi cũ', () => {
-  it('INVALID_VOUCHER → câu chung dưới ô, trang không lỗi, tổng tính lại không voucher', async () => {
-    quoteOrderFails({ message: 'INVALID_VOUCHER' })
-    const vi = await getCheckoutQuote('vi', { code: 'HETHAN' })
-    expect(vi.quote).toEqual(QUOTE)
-    expect(vi.voucher).toMatchObject({ code: 'HETHAN', failure: { code: 'INVALID_VOUCHER', message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn.' } })
-    const english = await getCheckoutQuote('en', { code: 'HETHAN' })
-    expect(english.voucher?.failure?.message).toBe('This voucher code is invalid or has expired.')
-  })
-
+describe('báo giá thanh toán: lỗi voucher thiếu detail', () => {
   it('VOUCHER_MIN_ORDER không có shortfall trong detail → tự tính số tiền còn thiếu từ tạm tính', async () => {
     quoteOrderFails({ message: 'VOUCHER_MIN_ORDER', details: '{"min_order_value": 150000}' })
     const { voucher } = await getCheckoutQuote('vi', { code: 'GIAM20K' })
@@ -60,7 +51,7 @@ describe('báo giá thanh toán với mã lỗi cũ', () => {
   })
 })
 
-describe('hủy đơn với mã lỗi cũ', () => {
+describe('hủy đơn: đơn không có / của tài khoản khác', () => {
   it('ORDER_NOT_CANCELLABLE → câu "tải lại trang…", trang làm mới để hiện trạng thái thật', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'ORDER_NOT_CANCELLABLE' } })
     const result = await cancelOrder('vi', 7, 'NS26101800001', null, new FormData())
