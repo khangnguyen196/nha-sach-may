@@ -902,7 +902,6 @@
     "INVALID_INPUT": "Dữ liệu không hợp lệ.",
     "CART_CHANGED": "Giỏ hàng vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt hàng.",
     "INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
-    "EMAIL_TAKEN": "Email này đã được dùng để đăng ký.",
     "EMAIL_NOT_CONFIRMED": "Email này chưa được xác nhận. Bạn mở thư xác nhận trong hộp thư (cả mục Spam), hoặc bấm gửi lại bên dưới.",
     "WEAK_PASSWORD": "Mật khẩu quá yếu. Hãy dùng mật khẩu dài hơn, khó đoán hơn.",
     "SAME_PASSWORD": "Mật khẩu mới phải khác mật khẩu cũ.",

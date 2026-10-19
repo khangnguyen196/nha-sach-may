@@ -74,7 +74,6 @@ describe('safeNextPath', () => {
 describe('authErrorCode', () => {
   it('map mã của Supabase sang mã app', () => {
     expect(authErrorCode({ code: 'invalid_credentials' })).toBe('INVALID_CREDENTIALS')
-    expect(authErrorCode({ code: 'user_already_exists' })).toBe('EMAIL_TAKEN')
     expect(authErrorCode({ code: 'email_not_confirmed' })).toBe('EMAIL_NOT_CONFIRMED')
     expect(authErrorCode({ code: 'weak_password' })).toBe('WEAK_PASSWORD')
     expect(authErrorCode({ code: 'over_email_send_rate_limit' })).toBe('RATE_LIMITED')

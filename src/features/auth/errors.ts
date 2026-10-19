@@ -6,8 +6,6 @@ type AuthErrorLike = { code?: string; name?: string; status?: number; message?: 
 // mật khẩu) kèm khóa validation để form hiện ngay dưới ô đó.
 const AUTH_ERRORS: Partial<Record<string, { code: ErrorCode; field?: [name: string, key: ValidationKey] }>> = {
   invalid_credentials: { code: 'INVALID_CREDENTIALS' },
-  user_already_exists: { code: 'EMAIL_TAKEN' },
-  email_exists: { code: 'EMAIL_TAKEN' },
   email_not_confirmed: { code: 'EMAIL_NOT_CONFIRMED' },
   weak_password: { code: 'WEAK_PASSWORD', field: ['password', 'passwordWeak'] },
   same_password: { code: 'SAME_PASSWORD', field: ['password', 'passwordSame'] },

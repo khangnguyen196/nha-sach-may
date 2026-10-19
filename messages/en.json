@@ -379,7 +379,7 @@
       "hasAccount": "Already have an account?",
       "loginLink": "Sign in",
       "checkInboxTitle": "Check your inbox",
-      "checkInbox": "If the email below doesn't have an account yet (or hasn't been confirmed), a confirmation link usually arrives within a few minutes. If you don't see it, check your Spam folder and double-check the address. If you already have an account, <login>sign in</login> or use <forgot>Forgot password</forgot>."
+      "checkInbox": "If the email below doesn’t have an account yet (or hasn’t been confirmed), a confirmation link usually arrives within a few minutes. If you don’t see it, check your Spam folder and double-check the address. If you already have an account, <login>sign in</login> or use <forgot>Forgot password</forgot>."
     },
     "forgot": {
       "title": "Forgot password",
@@ -486,7 +486,6 @@
     "INVALID_INPUT": "Some of the information is invalid.",
     "CART_CHANGED": "Your cart has just changed. Check the new total, then place your order.",
     "INVALID_CREDENTIALS": "Incorrect email or password.",
-    "EMAIL_TAKEN": "This email is already registered.",
     "EMAIL_NOT_CONFIRMED": "This email isn’t confirmed yet. Open the confirmation email (check Spam too), or send it again below.",
     "WEAK_PASSWORD": "This password is too weak. Use a longer, harder to guess password.",
     "SAME_PASSWORD": "Your new password must be different from the old one.",

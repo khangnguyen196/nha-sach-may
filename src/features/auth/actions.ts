@@ -80,7 +80,9 @@ export async function signUp(
       emailRedirectTo: await callbackUrl(target, 'signup'),
     },
   })
-  // Chỉ báo lỗi GoTrue kiểm trước khi tìm user (mật khẩu yếu, dữ liệu sai, tắt đăng ký); còn lại như đăng ký mới
+  // Chỉ báo lỗi GoTrue kiểm trước khi tìm user (mật khẩu yếu, dữ liệu sai, tắt đăng ký); còn lại như đăng ký mới.
+  // Chỉ kín khi project bật "Confirm email" (production đang bật): tắt thì email mới có phiên ngay (redirect bên dưới),
+  // email đã có thì không → hai kết quả khác nhau.
   if (error?.code && PRE_LOOKUP_SIGNUP_CODES.has(error.code)) return authFailure(error)
   const unreachable = unreachableOnly('signUp:', error)
   if (unreachable) return unreachable

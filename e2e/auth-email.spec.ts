@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { canSignIn, createE2eUser, deleteE2eUsers, findUserIdByEmail } from '../scripts/e2e-user'
 import { fillLogin, NO_SESSION } from './auth'
 import { collectErrors, waitForHydration } from './helpers'
@@ -9,24 +9,36 @@ import { waitForAuthEmail } from './mailbox'
 // link token_hash → trang trung gian /xac-nhan → nút POST. Mỗi test tự tạo user, xóa ở finally.
 test.use({ storageState: NO_SESSION })
 
-test('đăng ký (en) → thư tiếng Anh → xác nhận → vào tài khoản; mở lại link → hết hạn', async ({ page }) => {
+const EN_CHECK_INBOX =
+  'If the email below doesn’t have an account yet (or hasn’t been confirmed), a confirmation link usually arrives within a few minutes. If you don’t see it, check your Spam folder and double-check the address. If you already have an account, sign in or use Forgot password.'
+
+async function registerEn(page: Page, email: string) {
+  await page.goto('/en/register')
+  await waitForHydration(page, 'main form button[type="submit"]')
+  await page.getByRole('main').getByLabel('Full name').fill('Kiểm Thử Đăng Ký')
+  await page.getByRole('main').getByLabel('Email').fill(email)
+  await page.getByRole('main').getByLabel('Password', { exact: true }).fill(`E2e-${randomBytes(9).toString('base64url')}`)
+  await page.getByRole('main').getByRole('button', { name: 'Create account' }).click()
+}
+
+/** Cùng một khối dù email đã có tài khoản hay gửi thư lỗi (docs/plans/sau-ux.md mục 1), kèm link đăng nhập / quên mật khẩu */
+async function expectCheckInboxEn(page: Page, email: string) {
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Check your inbox' })).toBeVisible()
+  const notice = page.getByRole('main').getByRole('status')
+  await expect(notice.locator('p').first()).toHaveText(EN_CHECK_INBOX)
+  await expect(notice.locator('p').nth(1)).toHaveText(email)
+  await expect(notice.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', '/en/login')
+  await expect(notice.getByRole('link', { name: 'Forgot password' })).toHaveAttribute('href', '/en/forgot-password')
+}
+
+test('đăng ký (en) → thư tiếng Anh → xác nhận → vào tài khoản; mở lại link → hết hạn; đăng ký lại → cùng kết quả', async ({
+  page,
+}) => {
   const errors = collectErrors(page)
   const email = `e2e+${randomBytes(6).toString('hex')}-signup@example.com`
   try {
-    await page.goto('/en/register')
-    await waitForHydration(page, 'main form button[type="submit"]')
-    await page.getByRole('main').getByLabel('Full name').fill('Kiểm Thử Đăng Ký')
-    await page.getByRole('main').getByLabel('Email').fill(email)
-    await page.getByRole('main').getByLabel('Password', { exact: true }).fill(`E2e-${randomBytes(9).toString('base64url')}`)
-    await page.getByRole('main').getByRole('button', { name: 'Create account' }).click()
-    await expect(page.getByRole('main').getByRole('heading', { name: 'Check your inbox' })).toBeVisible()
-    // Cùng một câu dù email đã có tài khoản hay gửi thư lỗi (docs/plans/sau-ux.md mục 1), kèm link đăng nhập / quên mật khẩu
-    const notice = page.getByRole('main').getByRole('status')
-    await expect(notice.locator('p').first()).toHaveText(
-      "If the email below doesn't have an account yet (or hasn't been confirmed), a confirmation link usually arrives within a few minutes. If you don't see it, check your Spam folder and double-check the address. If you already have an account, sign in or use Forgot password.",
-    )
-    await expect(notice.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', '/en/login')
-    await expect(notice.getByRole('link', { name: 'Forgot password' })).toHaveAttribute('href', '/en/forgot-password')
+    await registerEn(page, email)
+    await expectCheckInboxEn(page, email)
 
     const mail = await waitForAuthEmail(email)
     expect(mail.subject).toBe('Confirm your Nhà Sách Mây account')
@@ -44,6 +56,11 @@ test('đăng ký (en) → thư tiếng Anh → xác nhận → vào tài khoản
     await page.goto(mail.link)
     await page.getByRole('main').getByRole('button', { name: 'Confirm email' }).click()
     await expect(page).toHaveURL(/\/en\/login\?error=LINK_EXPIRED$/)
+
+    // Đăng ký lại đúng email đã có tài khoản đã xác nhận (GoTrue: 200 kèm user giả, hoặc 429 nếu quá nhịp) → giao diện
+    // y như lần đầu, không lộ email đã có tài khoản
+    await registerEn(page, email)
+    await expectCheckInboxEn(page, email)
     expect(errors).toEqual([])
   } finally {
     const id = await findUserIdByEmail(email)
