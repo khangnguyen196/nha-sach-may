@@ -108,8 +108,7 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 **Phạm vi**: `.github/workflows/e2e.yml`, `src/types/database.ts`, `CLAUDE.md`, docs.
 
 **Cách làm** (không cần quyền vào Supabase thật)
-- `e2e.yml`: bước mới **sau** Playwright, `if: ${{ !cancelled() }}` (lệch kiểu không chặn e2e):
-  `supabase gen types typescript --local --schema public --schema graphql_public > "$RUNNER_TEMP/database.ts"` → upload artifact `database-types` (luôn) → `diff -u src/types/database.ts "$RUNNER_TEMP/database.ts"`.
+- `e2e.yml` (bản cuối, sau review): bước sinh types (`id: gen_types`) chạy ngay sau "Seed books", **trước** Playwright: `supabase gen types typescript --local --schema public --schema graphql_public > "$RUNNER_TEMP/database.ts"`. Playwright chỉ cần seed xong (`!cancelled() && steps.seed.outcome == 'success'`), nên sinh types lỗi không chặn e2e. Upload artifact `database-types` + `diff -u src/types/database.ts "$RUNNER_TEMP/database.ts"` ở cuối, `always() && steps.gen_types.outcome == 'success'` (chạy cả khi Playwright fail / job quá giờ, không chạy khi sinh lỗi).
 - `supabase start -x imgproxy,postgres-meta,supavisor`: `gen types --local` dùng image pg-meta. Thử trước với `-x` như cũ; CLI không chạy được (hoặc chậm vì kéo image) thì bỏ `postgres-meta` khỏi `-x`.
 - Lượt đầu chế độ báo (`continue-on-error: true` + in diff) → tải artifact, commit làm `database.ts` chuẩn (★3 a), `typecheck` sạch → bật fail (bỏ `continue-on-error`).
 - Quy trình cập nhật types về sau (máy dev không có Docker): đổi `schema.sql` → push → bước CI đỏ, artifact `database-types` có bản đúng → `gh run download <run> -n database-types` → chép vào `src/types/database.ts` → `npm run typecheck` → commit. CLAUDE.md: thay lệnh `--project-id` ở mục Lệnh và mục Database ("sinh lại types") bằng quy trình này.

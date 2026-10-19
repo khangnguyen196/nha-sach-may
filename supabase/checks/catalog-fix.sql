@@ -2,14 +2,17 @@
 -- (2026-10-19) sau khi xem kết quả supabase/checks/catalog-data-r.sql; KHÔNG suy tự động.
 -- CHỈ chạy sau khi được duyệt (kiểm thử trên bản sao trước). SQL Editor: phần 0 (chỉ đọc, lưu kết quả lại), phần 1
 -- (một khối DO = một lệnh nguyên tử: raise → không đổi gì), rồi phần 2 (chỉ đọc).
+-- SQL Editor chỉ hiện kết quả của câu CUỐI khi chạy nhiều câu một lần → bôi đen TỪNG câu (P0a, P0b, khối DO, C1…C7)
+-- rồi Run, đừng chạy cả file.
 -- Không đổi slug của dòng còn lại (link cũ chạy tiếp). search_text do trigger tự tính lại.
 -- Trường hợp R2 / R5 tìm thêm (tác giả trùng khác, tên không dấu khác) làm ở file sau, không ở đây.
 -- SAU KHI CHẠY: Redeploy trên Vercel (trang đã prerender + catalog rút gọn của chatbot đang cache dữ liệu cũ; SQL chạy
 -- ngoài app nên không làm mới cache).
 
 -- =====================================================================
--- PHẦN 0. CHỈ ĐỌC, chạy TRƯỚC phần 1 và lưu kết quả: slug hiện tại để đối chiếu C2 / C5 sau khi chạy.
+-- PHẦN 0. CHỈ ĐỌC, chạy TRƯỚC phần 1 và lưu kết quả.
 -- =====================================================================
+-- P0a. Slug hiện tại để đối chiếu C2 / C5 sau khi chạy.
 select 'tac_gia' as loai, id, name as ten, slug from public.authors where id in (75, 87, 90, 94, 114)
 union all
 select 'sach', id, title, slug from public.books
@@ -22,6 +25,10 @@ select 'sach', id, title, slug from public.books
    'Lịch Sử Việt Nam Thời Tự Chủ - Tập Một (hard cover - groundwood)'
  )
  order by loai, id;
+
+-- P0b. "Anthony Reid" đã có dưới slug khác? Phần 1 chỉ tìm theo slug `anthony-reid`: có dòng tên Anthony Reid mà slug
+--      khác thì DỪNG, báo lại (chạy sẽ tạo bản trùng).
+select id, name, slug from public.authors where name ilike '%anthony%reid%' order by id;
 
 -- =====================================================================
 -- PHẦN 1. Lệch bất kỳ số dòng / giá trị nào → raise exception → cả khối DO không đổi gì (DO là một lệnh nguyên tử;

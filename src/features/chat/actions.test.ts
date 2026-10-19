@@ -175,6 +175,7 @@ describe('askMay', () => {
     // getCategories (giả) chỉ có danh mục 1: danh mục 10 coi như ẩn
     state.catalog = [book('mat-biec', 1), book('sach-an', 10), book('khong-danh-muc', null)]
     await ask('sách tình yêu')
+    expect(callGemini).toHaveBeenCalledTimes(1)
     const body = JSON.stringify(callGemini.mock.calls[0]?.[1].body)
     expect(body).toContain('mat-biec')
     expect(body).toContain('khong-danh-muc')
