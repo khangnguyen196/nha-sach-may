@@ -32,15 +32,22 @@ function authError(code: string, status: number, message = 'error') {
   return { name: 'AuthApiError', code, status, message }
 }
 
+// Đúng kiểu supabase-js trả cho 5xx (auth-js lib/fetch.ts): AuthRetryableFetchError, có status, KHÔNG có code
+function retryable(status: number, message = 'Error sending recovery email') {
+  return { name: 'AuthRetryableFetchError', status, message }
+}
+
 // Phản hồi của GoTrue mà nhiều cái chỉ xảy ra khi email ĐÃ có tài khoản → phải cùng một kết quả "đã gửi"
-const SILENT: [name: string, error: ReturnType<typeof authError> | null][] = [
+const SILENT: [name: string, error: { name: string; status?: number; message: string; code?: string } | null][] = [
   ['email không có tài khoản (GoTrue trả 200, không lỗi)', null],
   ['email_address_invalid (GoTrue kiểm khi gửi thư, sau khi tìm thấy tài khoản)', authError('email_address_invalid', 400, `Email address "${EMAIL}" is invalid`)],
   ['email_address_not_authorized (SMTP mặc định chỉ gửi cho thành viên project)', authError('email_address_not_authorized', 400, `Email address "${EMAIL}" cannot be used as it is not authorized`)],
   ['429 theo từng tài khoản (gửi lại trong ~60 giây)', authError('over_email_send_rate_limit', 429, 'For security purposes, you can only request this after 42 seconds.')],
   ['429 giới hạn email của project', authError('over_email_send_rate_limit', 429, 'Email rate limit exceeded')],
   ['429 giới hạn request', authError('over_request_rate_limit', 429, 'Request rate limit reached')],
-  ['5xx khi gửi thư (SMTP lỗi)', authError('unexpected_failure', 500, 'Error sending recovery email')],
+  ['500 khi gửi thư (SMTP lỗi; supabase-js: AuthRetryableFetchError, không code)', retryable(500)],
+  ['503 (supabase-js: AuthRetryableFetchError, không code)', retryable(503, `Service unavailable for ${EMAIL}`)],
+  ['lỗi không có status (AuthUnknownError)', { name: 'AuthUnknownError', message: `unknown ${EMAIL}` }],
   ['mã lạ', authError('something_new', 400)],
 ]
 
@@ -74,7 +81,7 @@ describe.each(ACTIONS)('$name', ({ mock, run, sent }) => {
     mock.mockResolvedValue({ data: error ? null : {}, error })
     expect(await run(form())).toEqual(sent)
     // Log có mã lỗi thật, không có địa chỉ email (message của GoTrue có thể chứa email)
-    if (error) expect(logged).toHaveBeenCalledWith(expect.any(String), error.code)
+    if (error) expect(logged).toHaveBeenCalledWith(expect.any(String), error.code ?? `${error.name} ${error.status ?? ''}`.trim())
     expect(JSON.stringify(logged.mock.calls)).not.toContain(EMAIL)
   })
 

@@ -7,7 +7,10 @@ import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
 import { useFormAction } from '@/lib/use-form-action'
 
-/** Supabase giới hạn gửi lại mỗi email ~60 giây: khóa nút đúng chừng đó để khách không bấm vào lỗi giới hạn */
+/**
+ * Supabase giới hạn gửi lại mỗi email ~60 giây; action báo "đã gửi" cả khi bị giới hạn (không lộ email nào có tài khoản)
+ * → khóa nút 60 giây cố định ở client để khách không bấm lần GoTrue âm thầm bỏ thư
+ */
 const COOLDOWN_SECONDS = 60
 
 export type ResendLabels = { submit: string; pending: string; sent: string; wait: string }
@@ -33,7 +36,8 @@ function useNow(active: boolean) {
 
 /**
  * Nút "Gửi lại email xác nhận" dưới lỗi EMAIL_NOT_CONFIRMED ở trang đăng nhập. Form riêng (không lồng trong form đăng
- * nhập), chạy cả khi chưa có JS; có JS thì khóa nút 60 giây sau khi gửi xong, đếm ngược trên nút.
+ * nhập); khóa nút 60 giây sau khi gửi xong, đếm ngược trên nút. Tắt JS: form vẫn gửi nhưng trang kết quả trắng (lỗi có từ
+ * trước, xem docs/progress.md).
  */
 export function ResendConfirmation({ action, messages, labels, email }: Props) {
   const { state, formProps, pending, formError } = useFormAction(action, messages)

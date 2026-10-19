@@ -421,7 +421,7 @@
     "resend": {
       "submit": "Resend confirmation email",
       "pending": "Sending…",
-      "sent": "If this email still needs confirming, the email will arrive within a few minutes. If you don’t see it, check your Spam folder or try again in a few minutes.",
+      "sent": "If this email still needs confirming, a confirmation email will arrive within a few minutes. If you don’t see it, check your Spam folder or try again in a few minutes.",
       "wait": "Resend in {seconds}s"
     }
   },
