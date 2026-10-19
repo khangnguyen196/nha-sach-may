@@ -1,4 +1,3 @@
-import { ChevronDownIcon } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 import { SupportEmailText } from '@/components/layout/support-email-text'
 import { cn } from '@/lib/utils'
@@ -101,10 +100,20 @@ export function SelectField({
         >
           {children}
         </select>
-        <ChevronDownIcon
+        {/* Vẽ thẳng hình chevron-down của lucide: field.tsx chạy trong nhiều client form (đăng nhập, đánh giá ở trang
+            sách…), import lucide ở đây kéo lõi Icon vào bundle của các trang đó (perf-js bước C) */}
+        <svg
           aria-hidden
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
-        />
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </div>
     </FieldShell>
   )

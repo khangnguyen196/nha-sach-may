@@ -1,7 +1,6 @@
 'use client'
 
-import { StarIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SignInAgainLink } from '@/components/layout/sign-in-again-link'
 import { FormAlert, TextAreaField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
@@ -39,6 +38,8 @@ type Props = {
   contentMax: number
   /** Tiền tố id ô nhập: trang đơn có một form / dòng sách */
   idPrefix?: string
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  starIcon: ReactNode
 }
 
 const noop: Action = async () => ({ ok: true, data: null })
@@ -47,7 +48,16 @@ const noop: Action = async () => ({ ok: true, data: null })
  * Viết / sửa / xóa đánh giá của mình. Radio sao gốc (không JS vẫn gửi được, bàn phím dùng mũi tên). Component giữ
  * nguyên vị trí khi server render lại sau refresh() nên thông báo kết quả còn; xóa xong thì reset ô nhập.
  */
-export function ReviewForm({ save, remove, messages, labels, defaults, contentMax, idPrefix = 'review' }: Props) {
+export function ReviewForm({
+  save,
+  remove,
+  messages,
+  labels,
+  defaults,
+  contentMax,
+  idPrefix = 'review',
+  starIcon,
+}: Props) {
   const saving = useFormAction(save, messages)
   const deleting = useFormAction(remove ?? noop, messages)
   const formRef = useRef<HTMLFormElement>(null)
@@ -75,7 +85,7 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
             {labels.ratingOptions.map((label, index) => (
               <label
                 key={label}
-                className="group relative flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+                className="group relative flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50 [&_svg]:size-7 has-checked:[&_svg]:fill-primary"
               >
                 <input
                   type="radio"
@@ -86,7 +96,7 @@ export function ReviewForm({ save, remove, messages, labels, defaults, contentMa
                   aria-label={label}
                   className="sr-only"
                 />
-                <StarIcon aria-hidden className="size-7 group-has-checked:fill-primary" />
+                {starIcon}
                 <span aria-hidden>{index + 1}</span>
               </label>
             ))}

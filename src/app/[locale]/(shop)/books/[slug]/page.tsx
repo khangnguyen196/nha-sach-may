@@ -1,4 +1,4 @@
-import { BookIcon } from 'lucide-react'
+import { BookIcon, ShoppingBagIcon } from 'lucide-react'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import type { Locale } from 'next-intl'
@@ -342,6 +342,7 @@ async function AddToCart({ book }: { book: BookDetail }) {
       limit={limit}
       add={addToCart.bind(null, locale, book.id)}
       formAction={addToCartFromForm.bind(null, locale, book.id, book.slug)}
+      icon={<ShoppingBagIcon aria-hidden />}
       labels={{
         add: tCart('add'),
         adding: tCart('adding'),

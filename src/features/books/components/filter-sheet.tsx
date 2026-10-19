@@ -1,6 +1,5 @@
 'use client'
 
-import { SlidersHorizontalIcon } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useRef, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
@@ -13,10 +12,12 @@ type Props = {
   labels: { trigger: string; title: string; close: string }
   /** Các nhóm filter (Server Component, toàn Link) */
   children: ReactNode
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icon: ReactNode
 }
 
 /** Bộ lọc trên mobile: nút mở (không Radix) + nội dung sheet tải lười. */
-export function FilterSheet({ labels, children }: Props) {
+export function FilterSheet({ labels, children, icon }: Props) {
   const [open, setOpen] = useState(false)
   // Giữ sheet trong cây sau lần mở đầu để có hiệu ứng đóng
   const [mounted, setMounted] = useState(false)
@@ -39,7 +40,7 @@ export function FilterSheet({ labels, children }: Props) {
         onPointerEnter={() => void loadContent()}
         onFocus={() => void loadContent()}
       >
-        <SlidersHorizontalIcon aria-hidden />
+        {icon}
         {labels.trigger}
       </Button>
       {mounted && (

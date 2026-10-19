@@ -1,3 +1,4 @@
+import { StarIcon } from 'lucide-react'
 import type { Locale } from 'next-intl'
 import { getTranslations } from 'next-intl/server'
 import { getPathname, Link } from '@/i18n/navigation'
@@ -58,6 +59,7 @@ export async function MyReview({ bookId, slug, locale }: Props) {
         contentMax={REVIEW_CONTENT_MAX}
         defaults={{ rating: review?.rating ?? null, content: review?.content ?? null }}
         labels={labels}
+        starIcon={<StarIcon aria-hidden />}
       />
     </section>
   )

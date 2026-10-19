@@ -1,17 +1,21 @@
 'use client'
 
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 
-type Props = { listId: string; labels: { previous: string; next: string } }
+type Props = {
+  listId: string
+  labels: { previous: string; next: string }
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icons: { previous: ReactNode; next: ReactNode }
+}
 type Edges = { start: boolean; end: boolean }
 
 /**
  * Nút trước / sau cho kệ trên desktop (chuột không cuộn ngang được). Chỉ hiện từ `md` và khi kệ có chỗ để cuộn;
  * không JS thì không hiện (kệ vẫn cuộn bằng trackpad / thanh cuộn). Mỗi lần bấm cuộn ~ một màn kệ, scroll-snap căn thẻ.
  */
-export function ShelfNav({ listId, labels }: Props) {
+export function ShelfNav({ listId, labels, icons }: Props) {
   // null = chưa đo (SSR / chưa mount) hoặc kệ không tràn → không render nút
   const [edges, setEdges] = useState<Edges | null>(null)
 
@@ -52,7 +56,7 @@ export function ShelfNav({ listId, labels }: Props) {
         disabled={edges.start}
         onClick={() => scroll(-1)}
       >
-        <ChevronLeftIcon aria-hidden />
+        {icons.previous}
       </Button>
       <Button
         variant="ghost"
@@ -62,7 +66,7 @@ export function ShelfNav({ listId, labels }: Props) {
         disabled={edges.end}
         onClick={() => scroll(1)}
       >
-        <ChevronRightIcon aria-hidden />
+        {icons.next}
       </Button>
     </div>
   )

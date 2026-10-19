@@ -1,7 +1,6 @@
 'use client'
 
-import { ShoppingBagIcon } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { fillTemplate } from '@/lib/template'
@@ -13,12 +12,14 @@ type Props = {
   labels: CartBadgeLabels
   /** null: phiên chưa đọc xong (fallback của Suspense) */
   session: { signedIn: boolean; count: number | null } | null
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icon: ReactNode
 }
 
 const MAX_SHOWN = 99
 
 /** Icon giỏ ở header. Số = tổng số cuốn: giỏ tài khoản từ server (+ optimistic khi thêm), giỏ khách từ localStorage. */
-export function CartBadge({ labels, session }: Props) {
+export function CartBadge({ labels, session, icon }: Props) {
   const signedIn = session?.signedIn
   const serverCount = session?.count ?? null
 
@@ -39,7 +40,7 @@ export function CartBadge({ labels, session }: Props) {
       href="/cart"
       className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'relative text-muted-foreground' })}
     >
-      <ShoppingBagIcon aria-hidden />
+      {icon}
       <span className="sr-only">{label}</span>
       {/* Tuyệt đối trên icon: hiện / ẩn số không làm xô header */}
       {count ? (

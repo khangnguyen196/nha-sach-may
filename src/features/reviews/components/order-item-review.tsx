@@ -1,3 +1,4 @@
+import { StarIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { buttonVariants } from '@/components/ui/button'
 import type { FormMessages } from '@/lib/form-messages'
@@ -43,6 +44,7 @@ export async function OrderItemReview({ bookId, review, messages }: Props) {
           contentMax={REVIEW_CONTENT_MAX}
           defaults={{ rating: review?.rating ?? null, content: review?.content ?? null }}
           labels={labels}
+          starIcon={<StarIcon aria-hidden />}
           idPrefix={`review-${bookId}`}
         />
       </div>

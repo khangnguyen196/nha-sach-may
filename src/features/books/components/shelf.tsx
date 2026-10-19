@@ -1,3 +1,4 @@
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { getTranslations } from 'next-intl/server'
 import { Link, type Href } from '@/i18n/navigation'
@@ -36,7 +37,11 @@ export async function Shelf({ id, title, href, books }: Props) {
               {t('seeAll')}
             </Link>
           )}
-          <ShelfNav listId={listId} labels={{ previous: t('shelfPrevious'), next: t('shelfNext') }} />
+          <ShelfNav
+            listId={listId}
+            labels={{ previous: t('shelfPrevious'), next: t('shelfNext') }}
+            icons={{ previous: <ChevronLeftIcon aria-hidden />, next: <ChevronRightIcon aria-hidden /> }}
+          />
         </div>
       </ShelfHeading>
       <ul id={listId} className={LIST_CLASS}>

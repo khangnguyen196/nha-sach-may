@@ -1,7 +1,6 @@
 'use client'
 
-import { ShoppingBagIcon } from 'lucide-react'
-import { useState, useTransition, type FormEvent } from 'react'
+import { useState, useTransition, type FormEvent, type ReactNode } from 'react'
 import { SupportEmailText } from '@/components/layout/support-email-text'
 import { Button } from '@/components/ui/button'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -32,6 +31,8 @@ type Props = {
   add: () => Promise<Result<CartActionData>>
   /** addToCartFromForm đã bind: dùng khi chưa có JS (form POST) */
   formAction: () => Promise<void>
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icon: ReactNode
 }
 
 type Status = { kind: 'added' } | { kind: 'error'; message: string } | null
@@ -40,7 +41,7 @@ type Status = { kind: 'added' } | { kind: 'error'; message: string } | null
  * Thêm 1 cuốn mỗi lần bấm. Khách → localStorage; đã đăng nhập → Server Action. Chưa biết phiên (header chưa
  * stream xong) → thử action, nhận AUTH_REQUIRED thì ghi localStorage.
  */
-export function AddToCartButton({ bookId, limit, labels, add, formAction }: Props) {
+export function AddToCartButton({ bookId, limit, labels, add, formAction, icon }: Props) {
   const [status, setStatus] = useState<Status>(null)
   const [pending, startTransition] = useTransition()
   const router = useRouter()
@@ -86,7 +87,7 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction }: Prop
   return (
     <form action={formAction} onSubmit={onSubmit}>
       <Button type="submit" size="lg" className="h-11 w-full px-6 text-base sm:w-auto" aria-disabled={pending}>
-        <ShoppingBagIcon aria-hidden />
+        {icon}
         {pending ? labels.adding : labels.add}
       </Button>
       {/* Giữ sẵn một dòng: thông báo hiện ra không đẩy nội dung bên dưới */}

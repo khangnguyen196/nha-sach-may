@@ -1,3 +1,4 @@
+import { MessageCircleIcon } from 'lucide-react'
 import { locale as rootLocale } from 'next/root-params'
 import { Footer } from '@/components/layout/footer'
 import { ChatBubble } from '@/features/chat/components/chat-bubble'
@@ -25,5 +26,5 @@ export default function ShopLayout({ children }: LayoutProps<'/[locale]'>) {
 async function Chat() {
   if ((await rootLocale()) !== 'vi' || !chatEnabled()) return null
   const [labels, categories] = await Promise.all([getChatLabels(), getChatBrowseCategories()])
-  return <ChatBubble labels={labels} categories={categories} />
+  return <ChatBubble labels={labels} categories={categories} icon={<MessageCircleIcon aria-hidden />} />
 }

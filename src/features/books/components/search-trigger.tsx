@@ -1,8 +1,7 @@
 'use client'
 
-import { SearchIcon } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 
 // Palette (cmdk + dialog) chỉ tải khi mở lần đầu; rê chuột / focus vào nút thì tải trước
 const loadPalette = () => import('./search-palette')
@@ -13,7 +12,8 @@ const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 type Labels = { placeholder: string; open: string }
 
-export function SearchTrigger({ labels }: { labels: Labels }) {
+/** `icon`: Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
@@ -43,9 +43,9 @@ export function SearchTrigger({ labels }: { labels: Labels }) {
         }}
         onPointerEnter={() => void loadPalette()}
         onFocus={() => void loadPalette()}
-        className="inline-flex size-9 items-center justify-center gap-2 rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 md:w-full md:max-w-sm md:justify-start md:border md:border-input md:bg-surface md:px-3 md:text-sm"
+        className="inline-flex size-9 items-center justify-center gap-2 rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 md:w-full md:max-w-sm md:justify-start md:border md:border-input md:bg-surface md:px-3 md:text-sm [&_svg]:size-4 [&_svg]:shrink-0"
       >
-        <SearchIcon aria-hidden className="size-4 shrink-0" />
+        {icon}
         <span className="hidden md:inline">{labels.placeholder}</span>
         <span className="sr-only md:hidden">{labels.open}</span>
         <kbd

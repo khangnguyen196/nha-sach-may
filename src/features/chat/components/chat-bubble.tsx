@@ -1,10 +1,9 @@
 'use client'
 
 import { cn } from 'cn'
-import { MessageCircleIcon } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import type { ChatBrowseCategory, ChatLabels } from '../labels'
 import { currentBookSlug, isChatHidden } from '../visibility'
@@ -18,7 +17,12 @@ const ChatPanel = dynamic(loadPanel, { ssr: false })
 const BOTTOM_BAND_PX = 88
 const AVOID_SELECTOR = '[data-chat-avoid]'
 
-type Props = { labels: ChatLabels; categories: ChatBrowseCategory[] }
+type Props = {
+  labels: ChatLabels
+  categories: ChatBrowseCategory[]
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icon: ReactNode
+}
 
 /** Đọc pathname / params trong Suspense riêng: App Shell của slug chưa biết vẫn prerender được (như LocaleSwitcher) */
 export function ChatBubble(props: Props) {
@@ -80,7 +84,7 @@ function useAvoidBottomBand(pathname: string) {
   return covered
 }
 
-function ChatBubbleInner({ labels, categories }: Props) {
+function ChatBubbleInner({ labels, categories, icon }: Props) {
   const pathname = usePathname()
   const params = useParams()
   const [mounted, setMounted] = useState(false)
@@ -120,11 +124,11 @@ function ChatBubbleInner({ labels, categories }: Props) {
           'fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30',
           'inline-flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground',
           'transition-[opacity,translate] duration-200 ease-out outline-none hover:-translate-y-0.5',
-          'focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none',
+          'focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none [&_svg]:size-6',
           hidden && 'pointer-events-none invisible translate-y-4 opacity-0',
         )}
       >
-        <MessageCircleIcon aria-hidden className="size-6" />
+        {icon}
       </button>
       {mounted && (
         <ChatPanel

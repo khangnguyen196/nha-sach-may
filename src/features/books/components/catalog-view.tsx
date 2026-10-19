@@ -1,4 +1,4 @@
-import { XIcon } from 'lucide-react'
+import { ChevronDownIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { buttonVariants } from '@/components/ui/button'
@@ -142,12 +142,18 @@ export async function CatalogView({ params, context, base, result, subcategories
           {groups.length > 0 && (
             <FilterSheet
               labels={{ trigger: t('filtersActive', { count: activeCount }), title: t('filters'), close: t('close') }}
+              icon={<SlidersHorizontalIcon aria-hidden />}
             >
               <FilterGroups groups={groups} />
               {activeCount > 0 && <div className="mt-6">{clearTextLink}</div>}
             </FilterSheet>
           )}
-          <SortSelect label={t('sortLabel')} value={sort} options={sortOptions} />
+          <SortSelect
+            label={t('sortLabel')}
+            value={sort}
+            options={sortOptions}
+            icon={<ChevronDownIcon aria-hidden />}
+          />
         </div>
       </div>
 

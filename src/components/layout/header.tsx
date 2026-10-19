@@ -1,3 +1,4 @@
+import { MoonIcon, SearchIcon, SunIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { SearchTrigger } from '@/features/books/components/search-trigger'
 import { CartLink } from '@/features/cart/components/cart-link'
@@ -22,12 +23,18 @@ export async function Header() {
         </Link>
 
         <div className="flex flex-1 justify-end md:justify-center md:px-6">
-          <SearchTrigger labels={{ placeholder: t('searchPlaceholder'), open: t('openSearch') }} />
+          <SearchTrigger
+            labels={{ placeholder: t('searchPlaceholder'), open: t('openSearch') }}
+            icon={<SearchIcon aria-hidden />}
+          />
         </div>
 
         <div className="flex items-center sm:gap-0.5">
           <LocaleSwitcher labels={{ short: t('switchLocaleShort'), full: t('switchLocale') }} />
-          <ThemeToggle labels={{ toLight: t('toLightTheme'), toDark: t('toDarkTheme') }} />
+          <ThemeToggle
+            labels={{ toLight: t('toLightTheme'), toDark: t('toDarkTheme') }}
+            icons={{ sun: <SunIcon aria-hidden />, moon: <MoonIcon aria-hidden /> }}
+          />
           <CartLink />
           <AccountLink />
         </div>
