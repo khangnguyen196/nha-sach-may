@@ -52,6 +52,16 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
               chuỗi đã dịch qua props → không gửi cả file messages xuống, không kéo intl-messageformat vào bundle đầu. */}
           <NextIntlClientProvider messages={{ search: messages.search }}>
             <Header />
+            {/* Tắt JS: phần stream (Suspense) không hiện, form Server Action trả kết quả ra trang trắng
+                (docs/plans/no-js.md) → nói rõ thay vì để trang thiếu nội dung không lời giải thích */}
+            <noscript>
+              <p
+                data-testid="no-script"
+                className="border-b bg-surface-raised px-4 py-3 text-center text-base text-foreground sm:px-6"
+              >
+                {t('noScript')}
+              </p>
+            </noscript>
             {/* <main> + footer do layout của từng route group dựng: (shop) có footer đầy đủ, (auth) chỉ dòng bản quyền */}
             {/* Chuỗi cho error.tsx (client, không nhận props từ server): xem components/layout/error-view.tsx */}
             <ErrorMessagesProvider messages={errorMessages}>

@@ -45,7 +45,7 @@ type Props = {
 const noop: Action = async () => ({ ok: true, data: null })
 
 /**
- * Viết / sửa / xóa đánh giá của mình. Radio sao gốc (không JS vẫn gửi được, bàn phím dùng mũi tên). Component giữ
+ * Viết / sửa / xóa đánh giá của mình. Radio sao gốc (chọn không cần JS, bàn phím dùng mũi tên). Component giữ
  * nguyên vị trí khi server render lại sau refresh() nên thông báo kết quả còn; xóa xong thì reset ô nhập.
  */
 export function ReviewForm({

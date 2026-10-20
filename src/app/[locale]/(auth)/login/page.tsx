@@ -36,6 +36,7 @@ export default async function LoginPage({ searchParams }: Props) {
       submit: t('login.submit'),
       pending: t('pending'),
       forgot: t('login.forgot'),
+      noScript: t('noScriptSubmit'),
     },
     resendLabels: {
       submit: t('resend.submit'),

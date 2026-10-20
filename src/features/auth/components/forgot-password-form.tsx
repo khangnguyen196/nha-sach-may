@@ -7,7 +7,7 @@ import type { FormMessages } from '@/lib/form-messages'
 import { useFormAction } from '@/lib/use-form-action'
 import { Notice } from './notice'
 
-type Labels = { email: string; submit: string; pending: string; sentTitle: string; sent: string }
+type Labels = { email: string; submit: string; pending: string; sentTitle: string; sent: string; noScript: string }
 
 type Props = {
   action: (prev: Result<{ email: string }> | null, formData: FormData) => Promise<Result<{ email: string }>>
@@ -38,6 +38,12 @@ export function ForgotPasswordForm({ action, messages, labels }: Props) {
         required
         error={fieldError('email')}
       />
+      <noscript>
+        {/* Như login-form.tsx: tắt JS thì sau khi gửi là trang trắng */}
+        <p className="text-base text-muted-foreground" data-testid="no-script-submit">
+          {labels.noScript}
+        </p>
+      </noscript>
       <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
         {labels.submit}
       </SubmitButton>

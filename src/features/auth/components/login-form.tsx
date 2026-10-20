@@ -9,7 +9,7 @@ import { useFormAction } from '@/lib/use-form-action'
 import { NextField } from './next-field'
 import { ResendConfirmation, type ResendLabels } from './resend-confirmation'
 
-type Labels = { email: string; password: string; submit: string; pending: string; forgot: string }
+type Labels = { email: string; password: string; submit: string; pending: string; forgot: string; noScript: string }
 
 type Props = {
   action: (prev: Result<null> | null, formData: FormData) => Promise<Result<null>>
@@ -54,6 +54,13 @@ export function LoginForm({ action, resend, messages, labels, resendLabels }: Pr
             </Link>
           }
         />
+        <noscript>
+          {/* Không JS: POST trả về chỉ phần động của trang (Cache Components), trình duyệt hiện trang trắng
+              (docs/plans/no-js.md, đo cả production) → báo trước ngay trên nút gửi */}
+          <p className="text-base text-muted-foreground" data-testid="no-script-submit">
+            {labels.noScript}
+          </p>
+        </noscript>
         <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
           {labels.submit}
         </SubmitButton>

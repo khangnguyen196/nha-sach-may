@@ -12,8 +12,9 @@ import { ReviewForm } from './review-form'
 type Props = { bookId: number; review: MyReview | null; messages: FormMessages }
 
 /**
- * Đánh giá ngay trên dòng sách của đơn đã giao. <details> mở form ngay dưới dòng, không thêm JS và chạy được khi chưa
- * có JS. Cùng action với trang sách (mỗi người một đánh giá / sách): lưu ở đây thì trang sách cũng đổi (updateTag).
+ * Đánh giá ngay trên dòng sách của đơn đã giao. <details> mở form ngay dưới dòng, không thêm JS (mở / đóng không cần
+ * JS). Tắt JS thì trang đơn (trong Suspense) không hiện, gửi đánh giá ra trang trắng (docs/plans/no-js.md).
+ * Cùng action với trang sách (mỗi người một đánh giá / sách): lưu ở đây thì trang sách cũng đổi (updateTag).
  */
 export async function OrderItemReview({ bookId, review, messages }: Props) {
   const [t, labels] = await Promise.all([getTranslations('review'), getReviewFormLabels(review !== null)])

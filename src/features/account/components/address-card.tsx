@@ -8,7 +8,10 @@ import { deleteAddress, setDefaultAddress } from '../actions'
 import { localizeDivisionNames } from '../divisions'
 import type { Address } from '../queries'
 
-/** Một địa chỉ trong sổ. Mọi nút là form + Server Action → chạy được không cần JS. */
+/**
+ * Một địa chỉ trong sổ. Mọi nút là form + Server Action. Tắt JS thì sổ địa chỉ (trong Suspense) không hiện, và đặt
+ * mặc định / xóa trả về trang trắng (docs/plans/no-js.md).
+ */
 export async function AddressCard({ address, locale }: { address: Address; locale: Locale }) {
   const [t, tAuth] = await Promise.all([getTranslations('address'), getTranslations('auth')])
   const { province, ward } = localizeDivisionNames(address, locale)
@@ -41,7 +44,7 @@ export async function AddressCard({ address, locale }: { address: Address; local
             </SubmitButton>
           </form>
         )}
-        {/* Xác nhận xóa bằng <details>: không cần JS, bàn phím mở/đóng được, không thêm dialog vào bundle */}
+        {/* Xác nhận xóa bằng <details>: mở / đóng không cần JS, bàn phím dùng được, không thêm dialog vào bundle */}
         <details className="group">
           <summary
             aria-label={t('deleteLabel', { name })}

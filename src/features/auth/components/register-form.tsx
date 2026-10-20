@@ -18,6 +18,7 @@ type Labels = {
   checkInboxTitle: string
   /** Có link đăng nhập / quên mật khẩu (server dựng bằng t.rich) */
   checkInbox: ReactNode
+  noScript: string
 }
 
 type Props = {
@@ -69,6 +70,12 @@ export function RegisterForm({ action, messages, labels }: Props) {
         required
         error={fieldError('password')}
       />
+      <noscript>
+        {/* Như login-form.tsx: tắt JS thì sau khi gửi là trang trắng */}
+        <p className="text-base text-muted-foreground" data-testid="no-script-submit">
+          {labels.noScript}
+        </p>
+      </noscript>
       <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
         {labels.submit}
       </SubmitButton>

@@ -2,7 +2,8 @@
   "common": {
     "siteName": "Nhà Sách Mây",
     "skipToContent": "Skip to main content",
-    "signInAgain": "Sign in again"
+    "signInAgain": "Sign in again",
+    "noScript": "This site needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page."
   },
   "metadata": {
     "title": "Nhà Sách Mây — good books for quiet reading hours",
@@ -422,7 +423,8 @@
       "pending": "Sending…",
       "sent": "If this email still needs confirming, a confirmation email will arrive within a few minutes. If you don’t see it, check your Spam folder or try again in a few minutes.",
       "wait": "Resend in {seconds}s"
-    }
+    },
+    "noScriptSubmit": "With JavaScript turned off, you won’t see the result after submitting. Please turn on JavaScript."
   },
   "account": {
     "title": "Account",

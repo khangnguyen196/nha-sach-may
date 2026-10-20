@@ -33,7 +33,7 @@ type Props = {
 }
 
 /**
- * Khối hủy đơn. Xác nhận bằng <details> (không cần JS, bàn phím mở / đóng được, không thêm dialog vào bundle) như
+ * Khối hủy đơn. Xác nhận bằng <details> (mở / đóng không cần JS, bàn phím dùng được, không thêm dialog vào bundle) như
  * xóa địa chỉ. Page luôn render component này ở cùng vị trí, kể cả khi đơn không còn hủy được: action hủy xong (hoặc
  * bị từ chối, VD ORDER_IN_PROGRESS) thì refresh() → server render lại với `cancellable = false`, component không bị gỡ nên
  * thông báo kết quả trong state vẫn còn để hiện.
@@ -71,7 +71,7 @@ export function CancelOrderForm({ action, messages, labels, cancellable, reasonM
   if (!cancellable) return state ? <div className="mt-6">{feedback}</div> : null
 
   return (
-    // Không JS: trang render lại sau khi gửi → mở sẵn khi có lỗi để thấy lỗi
+    // Có lỗi → mở sẵn để thấy khối lỗi. Tắt JS thì sau khi gửi là trang trắng, không tới được đây (docs/plans/no-js.md)
     <details className="group mt-6 rounded-lg border bg-surface p-5" open={failure ? true : undefined}>
       <summary
         className={cn(

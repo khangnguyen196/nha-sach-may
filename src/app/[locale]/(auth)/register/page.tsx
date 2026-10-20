@@ -41,6 +41,7 @@ export default async function RegisterPage() {
           submit: t('register.submit'),
           pending: t('pending'),
           checkInboxTitle: t('register.checkInboxTitle'),
+          noScript: t('noScriptSubmit'),
           checkInbox: t.rich('register.checkInbox', {
             login: (chunks) => (
               <Link href="/login" className={authLinkClass}>

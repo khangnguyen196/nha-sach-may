@@ -26,6 +26,7 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
     pending: t('pending'),
     sentTitle: t('forgot.sentTitle'),
     sent: t('forgot.sent'),
+    noScript: t('noScriptSubmit'),
   }
 
   return (

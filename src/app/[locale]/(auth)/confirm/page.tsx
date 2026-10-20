@@ -21,8 +21,9 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 
 /**
  * Trang trung gian của link trong email auth: GET /api/auth/confirm chuyển tới đây (không tiêu thụ token), người dùng
- * bấm nút → form POST (không cần JS) về /api/auth/confirm mới gọi verifyOtp. Trình quét link chỉ mở GET nên không
- * dùng mất token.
+ * bấm nút → form POST về /api/auth/confirm mới gọi verifyOtp. Trình quét link chỉ mở GET nên không dùng mất token.
+ * Form nằm trong Suspense (đọc `token_hash` từ searchParams) nên tắt JS thì không hiện; dải noscript ở layout giải
+ * thích (docs/plans/no-js.md).
  */
 export default async function ConfirmPage({ searchParams }: Props) {
   const [t, locale] = await Promise.all([getTranslations('auth.confirm'), getLocale()])

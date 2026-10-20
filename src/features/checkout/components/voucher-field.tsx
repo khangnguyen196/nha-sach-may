@@ -20,7 +20,8 @@ type Props = {
 
 /**
  * Ô mã giảm giá trong cột tóm tắt. Áp dụng = GET `/thanh-toan?voucher=…` (mã nằm trên URL, server tính lại bằng
- * quote_order), chạy không cần JS. Form lồng nhau không hợp lệ nên ô và nút thuộc form riêng qua `form="…"`.
+ * quote_order), gửi không cần JS (nhưng tắt JS thì nội dung trang thanh toán nằm trong stream, không hiện:
+ * docs/plans/no-js.md). Form lồng nhau không hợp lệ nên ô và nút thuộc form riêng qua `form="…"`.
  */
 export async function VoucherField({ voucher, addressId, suggestions }: Props) {
   const [t, format, locale] = await Promise.all([getTranslations('checkout'), getFormatter(), getLocale()])

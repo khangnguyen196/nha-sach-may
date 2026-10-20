@@ -2,7 +2,8 @@
   "common": {
     "siteName": "Nhà Sách Mây",
     "skipToContent": "Bỏ qua, tới nội dung chính",
-    "signInAgain": "Đăng nhập lại"
+    "signInAgain": "Đăng nhập lại",
+    "noScript": "Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang."
   },
   "metadata": {
     "title": "Nhà Sách Mây — sách hay cho những giờ đọc yên tĩnh",
@@ -838,7 +839,8 @@
       "pending": "Đang gửi…",
       "sent": "Nếu email này cần xác nhận, thư sẽ tới trong vài phút. Không thấy thư thì bạn xem mục Spam hoặc thử lại sau vài phút.",
       "wait": "Gửi lại sau {seconds} giây"
-    }
+    },
+    "noScriptSubmit": "Khi tắt JavaScript, sau khi gửi bạn sẽ không thấy kết quả. Hãy bật JavaScript."
   },
   "account": {
     "title": "Tài khoản",
