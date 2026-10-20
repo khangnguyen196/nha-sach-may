@@ -16,9 +16,9 @@ type Props = {
   maxBytes: number
 }
 
-/** Upload bìa. Không JS: React tự đặt form multipart gửi thẳng Server Action, server kiểm tra cỡ / loại như nhau. */
+/** Upload bìa. Form multipart gửi thẳng Server Action (React tự đặt), server kiểm tra cỡ / loại; nút khóa tới khi hydrate. */
 export function CoverForm({ action, messages, labels, maxBytes }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
   const [tooLarge, setTooLarge] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const uploaded = state?.ok === true && !pending
@@ -55,7 +55,7 @@ export function CoverForm({ action, messages, labels, maxBytes }: Props) {
         error={tooLarge ? messages.validation.coverTooLarge : fieldError('cover')}
       />
       <div className="flex flex-wrap items-center gap-4">
-        <SubmitButton pending={pending} pendingLabel={labels.uploading} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.uploading} size="lg" className="h-11 px-5">
           {labels.upload}
         </SubmitButton>
         <p role="status" className="text-sm text-success">

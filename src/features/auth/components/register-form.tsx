@@ -28,7 +28,7 @@ type Props = {
 }
 
 export function RegisterForm({ action, messages, labels }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
 
   // Luôn cùng một thông báo dù email đã có tài khoản hay chưa, kể cả khi gửi thư lỗi (không lộ email đã đăng ký)
   if (state?.ok) {
@@ -71,12 +71,12 @@ export function RegisterForm({ action, messages, labels }: Props) {
         error={fieldError('password')}
       />
       <noscript>
-        {/* Như login-form.tsx: tắt JS thì sau khi gửi là trang trắng */}
+        {/* Như login-form.tsx: tắt JS thì nút gửi khóa */}
         <p className="text-base text-muted-foreground" data-testid="no-script-submit">
           {labels.noScript}
         </p>
       </noscript>
-      <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
+      <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
         {labels.submit}
       </SubmitButton>
     </form>

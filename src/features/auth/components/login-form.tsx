@@ -22,7 +22,7 @@ type Props = {
 
 /** Form đăng nhập; trang quay lại sau đăng nhập lấy từ `?next=` ở client (NextField), thông báo của URL nằm ngoài form */
 export function LoginForm({ action, resend, messages, labels, resendLabels }: Props) {
-  const { state, formProps, pending, formError: error, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError: error, quietError, fieldError } = useFormAction(action, messages)
   const unconfirmed = state && !state.ok && state.code === 'EMAIL_NOT_CONFIRMED' ? state.details?.email : undefined
 
   return (
@@ -55,13 +55,13 @@ export function LoginForm({ action, resend, messages, labels, resendLabels }: Pr
           }
         />
         <noscript>
-          {/* Không JS: POST trả về chỉ phần động của trang (Cache Components), trình duyệt hiện trang trắng
-              (docs/plans/no-js.md, đo cả production) → báo trước ngay trên nút gửi */}
+          {/* Không JS: nút gửi khóa (useFormAction `ready`) vì POST thường chỉ nhận phần động của trang (Cache Components),
+              trình duyệt hiện trang trắng (docs/plans/no-js.md ★8) → nói vì sao không gửi được */}
           <p className="text-base text-muted-foreground" data-testid="no-script-submit">
             {labels.noScript}
           </p>
         </noscript>
-        <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
           {labels.submit}
         </SubmitButton>
       </form>

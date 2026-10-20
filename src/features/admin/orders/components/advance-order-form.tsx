@@ -22,7 +22,7 @@ type Props = {
  * component không bị gỡ nên thông báo kết quả vẫn còn.
  */
 export function AdvanceOrderForm({ action, messages, label, pendingLabel, doneLabel }: Props) {
-  const { state, formProps, pending, formError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError } = useFormAction(action, messages)
   const feedback = (
     <>
       {formError && <FormAlert>{formError}</FormAlert>}
@@ -38,7 +38,7 @@ export function AdvanceOrderForm({ action, messages, label, pendingLabel, doneLa
   return (
     <form {...formProps} className="grid justify-items-start gap-3">
       {feedback}
-      <SubmitButton pending={pending} pendingLabel={pendingLabel} size="lg" className="h-11 px-5">
+      <SubmitButton pending={pending} ready={ready} pendingLabel={pendingLabel} size="lg" className="h-11 px-5">
         {label}
       </SubmitButton>
     </form>

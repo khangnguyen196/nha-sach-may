@@ -18,7 +18,7 @@ type Props = {
 }
 
 export function EmailLocaleForm({ action, messages, labels, options, defaultValue }: Props) {
-  const { state, formProps, pending, formError, signIn } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, signIn } = useFormAction(action, messages)
 
   return (
     <form {...formProps} className="grid gap-4">
@@ -31,7 +31,14 @@ export function EmailLocaleForm({ action, messages, labels, options, defaultValu
         ))}
       </SelectField>
       <div className="flex items-center gap-3">
-        <SubmitButton pending={pending} pendingLabel={labels.pending} variant="secondary" size="lg" className="h-10 px-4">
+        <SubmitButton
+          pending={pending}
+          ready={ready}
+          pendingLabel={labels.pending}
+          variant="secondary"
+          size="lg"
+          className="h-10 px-4"
+        >
           {labels.save}
         </SubmitButton>
         <p role="status" className="text-sm text-success">

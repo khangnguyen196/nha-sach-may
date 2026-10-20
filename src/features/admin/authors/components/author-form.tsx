@@ -29,7 +29,7 @@ type Props = {
 }
 
 export function AuthorForm({ action, messages, labels, initial }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
 
   return (
     <form {...formProps} noValidate className="grid max-w-2xl gap-5">
@@ -71,7 +71,7 @@ export function AuthorForm({ action, messages, labels, initial }: Props) {
         error={fieldError('bio_en')}
       />
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.submit}
         </SubmitButton>
         <AdminLink href="/admin/tac-gia" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>

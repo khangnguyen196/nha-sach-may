@@ -163,3 +163,44 @@ export async function expectLazyChunkError(
   // Lỗi tải chunk được LazyBoundary bắt (console.error của React), không có lỗi nào lọt ra ngoài (pageerror)
   expect(pageErrors).toEqual([])
 }
+
+/**
+ * ★8 (docs/plans/no-js.md): chặn mọi chunk JS TRƯỚC khi vào trang (không chặn CSS: CSS trong <head> chặn hiển thị, mạng
+ * chậm thật vẫn có CSS trước khi khách bấm được) → React không hydrate, script inline `$RC` vẫn lộ phần stream. Đếm
+ * request POST để chứng minh bấm nút khóa không gửi gì.
+ */
+export async function blockHydration(page: Page) {
+  const pattern = /\/_next\/static\/chunks\/.*\.js(\?|$)/
+  const abort = (route: Route) => route.abort()
+  await page.route(pattern, abort)
+  let posts = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST') posts += 1
+  })
+  return { posts: () => posts, unblock: () => page.unroute(pattern, abort) }
+}
+
+/**
+ * Nút gửi khóa khi chưa hydrate (disabled + aria-disabled), bấm (cả Enter trong ô nhập nếu có) không gửi POST, trang
+ * không trắng (`visible` vẫn hiện). Sau đó bỏ chặn, tải lại, chờ hydrate → nút bật.
+ */
+export async function expectLockedUntilHydrated(
+  page: Page,
+  blocked: Awaited<ReturnType<typeof blockHydration>>,
+  { submit, selector, input, visible }: { submit: Locator; selector: string; input?: Locator; visible: Locator },
+) {
+  await expect(submit).toBeVisible()
+  await expect(submit).toBeDisabled()
+  await expect(submit).toHaveAttribute('aria-disabled', 'true')
+  await submit.click({ force: true })
+  if (input) await input.press('Enter')
+  await page.waitForTimeout(500)
+  expect(blocked.posts()).toBe(0)
+  await expect(visible).toBeVisible()
+
+  await blocked.unblock()
+  await page.reload()
+  await waitForHydration(page, selector)
+  await expect(page.locator(selector).first()).toBeEnabled()
+  await expect(page.locator(selector).first()).toHaveAttribute('aria-disabled', 'false')
+}

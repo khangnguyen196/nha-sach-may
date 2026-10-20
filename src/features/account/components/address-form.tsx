@@ -72,7 +72,7 @@ export function AddressForm({
   initial,
   cancelHref = '/account/addresses',
 }: Props) {
-  const { formProps, pending, formError, quietError, fieldError, signIn } = useFormAction(action, messages)
+  const { formProps, pending, ready, formError, quietError, fieldError, signIn } = useFormAction(action, messages)
   const [provinceCode, setProvinceCode] = useState(initial.provinceCode)
   const [wardCode, setWardCode] = useState(initial.wardCode)
   const [wards, setWards] = useState(initial.wards)
@@ -183,7 +183,7 @@ export function AddressForm({
         error={fieldError('street')}
       />
       <div className="flex flex-wrap gap-3 pt-2">
-        <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.save}
         </SubmitButton>
         <Link href={cancelHref} className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>

@@ -92,7 +92,7 @@ export function CheckoutForm({
   voucher,
   problems,
 }: Props) {
-  const { state, formProps, pending, formError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, fieldError } = useFormAction(action, messages)
   const [noteLength, setNoteLength] = useState(0)
   const alertRef = useRef<HTMLDivElement>(null)
   const noteRef = useRef<HTMLTextAreaElement>(null)
@@ -173,9 +173,9 @@ export function CheckoutForm({
         </p>
         <SubmitButton
           pending={pending}
+          ready={ready}
           pendingLabel={labels.placing}
-          disabled={pending || blocked || syncing}
-          aria-disabled={pending || blocked || syncing}
+          disabled={blocked || syncing}
           size="lg"
           className="mt-2 h-11 w-full text-base"
         >

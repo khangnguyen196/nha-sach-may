@@ -53,7 +53,7 @@ type Props = {
 }
 
 export function CategoryForm({ action, messages, labels, initial, parents, cancelHref }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
 
   return (
     <form {...formProps} noValidate className="grid max-w-2xl gap-5">
@@ -132,7 +132,7 @@ export function CategoryForm({ action, messages, labels, initial, parents, cance
       </div>
       <CheckboxField name="is_active" label={labels.active} hint={labels.activeHint} defaultChecked={initial.is_active} />
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.submit}
         </SubmitButton>
         <AdminLink href={cancelHref} className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>

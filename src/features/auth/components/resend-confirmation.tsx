@@ -40,7 +40,7 @@ function useNow(active: boolean) {
  * trước, xem docs/progress.md).
  */
 export function ResendConfirmation({ action, messages, labels, email }: Props) {
-  const { state, formProps, pending, formError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError } = useFormAction(action, messages)
   const [submittedAt, setSubmittedAt] = useState<number | null>(null)
   const sent = state?.ok === true
   const now = useNow(sent && submittedAt !== null)
@@ -60,8 +60,9 @@ export function ResendConfirmation({ action, messages, labels, email }: Props) {
         size="lg"
         className="h-11 w-full"
         pending={pending}
+        ready={ready}
         pendingLabel={labels.pending}
-        disabled={pending || remaining > 0}
+        disabled={remaining > 0}
       >
         {remaining > 0 ? fillTemplate(labels.wait, { seconds: remaining }) : labels.submit}
       </SubmitButton>

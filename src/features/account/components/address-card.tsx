@@ -9,8 +9,8 @@ import { localizeDivisionNames } from '../divisions'
 import type { Address } from '../queries'
 
 /**
- * Một địa chỉ trong sổ. Mọi nút là form + Server Action. Tắt JS thì sổ địa chỉ (trong Suspense) không hiện, và đặt
- * mặc định / xóa trả về trang trắng (docs/plans/no-js.md).
+ * Một địa chỉ trong sổ. Mọi nút là form + Server Action trả `void` + `refresh()` (không qua useFormAction) → nút khóa tới
+ * khi hydrate (`lockUntilHydrated`): gửi trước đó là POST thường, ra trang trắng (docs/plans/no-js.md, ★8).
  */
 export async function AddressCard({ address, locale }: { address: Address; locale: Locale }) {
   const [t, tAuth] = await Promise.all([getTranslations('address'), getTranslations('auth')])
@@ -39,7 +39,7 @@ export async function AddressCard({ address, locale }: { address: Address; local
         </Link>
         {!address.is_default && (
           <form action={setDefaultAddress.bind(null, address.id)}>
-            <SubmitButton variant="ghost" size="sm" className="h-8 px-3" pendingLabel={tAuth('pending')}>
+            <SubmitButton lockUntilHydrated variant="ghost" size="sm" className="h-8 px-3" pendingLabel={tAuth('pending')}>
               {t('setDefault')}
             </SubmitButton>
           </form>
@@ -55,7 +55,13 @@ export async function AddressCard({ address, locale }: { address: Address; local
           <div className="mt-2 flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
             <span className="text-sm">{t('confirmDelete')}</span>
             <form action={deleteAddress.bind(null, address.id)}>
-              <SubmitButton variant="destructive" size="sm" className="h-8 px-3" pendingLabel={tAuth('pending')}>
+              <SubmitButton
+                lockUntilHydrated
+                variant="destructive"
+                size="sm"
+                className="h-8 px-3"
+                pendingLabel={tAuth('pending')}
+              >
                 {t('confirmDeleteAction')}
               </SubmitButton>
             </form>

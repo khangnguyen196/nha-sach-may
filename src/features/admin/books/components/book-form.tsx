@@ -41,8 +41,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 const text = (value: string | number | null) => (value === null ? '' : String(value))
 
 export function BookForm({ action, messages, labels, book, categoryGroups, publishers, authors }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
-  // Luôn có thêm một dòng trống (không JS vẫn thêm được một tác giả); "Thêm dòng" thêm dòng trống nữa
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
+  // Luôn có thêm một dòng trống (thêm được một tác giả mà không cần bấm "Thêm dòng"); "Thêm dòng" thêm dòng trống nữa
   const [rowCount, setRowCount] = useState(book.book_authors.length + 1)
   const label = (template: string, n: number) => fillTemplate(template, { n })
 
@@ -286,7 +286,7 @@ export function BookForm({ action, messages, labels, book, categoryGroups, publi
       </Section>
 
       <div className="flex flex-wrap items-center gap-4">
-        <SubmitButton pending={pending} pendingLabel={labels.saving} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.saving} size="lg" className="h-11 px-5">
           {labels.save}
         </SubmitButton>
         <p role="status" className="text-sm text-success">

@@ -39,7 +39,7 @@ type Props = {
  * thông báo kết quả trong state vẫn còn để hiện.
  */
 export function CancelOrderForm({ action, messages, labels, cancellable, reasonMax }: Props) {
-  const { state, formProps, pending, formError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, fieldError } = useFormAction(action, messages)
   const [reasonLength, setReasonLength] = useState(0)
   const alertRef = useRef<HTMLDivElement>(null)
 
@@ -103,6 +103,7 @@ export function CancelOrderForm({ action, messages, labels, cancellable, reasonM
           size="lg"
           className="h-10 w-fit px-4"
           pending={pending}
+          ready={ready}
           pendingLabel={labels.cancelling}
         >
           {labels.confirmCancel}

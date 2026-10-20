@@ -125,7 +125,13 @@ export function ReviewForm({
           <FormAlert action={saving.signIn && <SignInAgainLink signIn={saving.signIn} />}>{saving.formError}</FormAlert>
         )}
         <div className="flex flex-wrap items-center gap-4">
-          <SubmitButton pending={saving.pending} pendingLabel={labels.saving} size="lg" className="h-11 px-5">
+          <SubmitButton
+            pending={saving.pending}
+            ready={saving.ready}
+            pendingLabel={labels.saving}
+            size="lg"
+            className="h-11 px-5"
+          >
             {labels.submit}
           </SubmitButton>
           <p role="status" className="text-sm text-success">
@@ -138,7 +144,13 @@ export function ReviewForm({
           {deleting.formError && (
             <FormAlert action={deleting.signIn && <SignInAgainLink signIn={deleting.signIn} />}>{deleting.formError}</FormAlert>
           )}
-          <SubmitButton pending={deleting.pending} pendingLabel={labels.deleting} variant="outline" className="h-9">
+          <SubmitButton
+            pending={deleting.pending}
+            ready={deleting.ready}
+            pendingLabel={labels.deleting}
+            variant="outline"
+            className="h-9"
+          >
             {labels.delete}
           </SubmitButton>
         </form>

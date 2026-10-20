@@ -16,13 +16,20 @@ type Props = {
   variant?: ComponentProps<typeof Button>['variant']
 }
 
-/** Form chỉ có một nút (ẩn / hiện sách, xóa tác giả): lỗi hiện ngay trên nút, chạy được không cần JS */
+/** Form chỉ có một nút (ẩn / hiện sách, xóa tác giả): lỗi hiện ngay trên nút; nút khóa tới khi hydrate (useFormAction) */
 export function ActionButtonForm({ action, messages, label, pendingLabel, variant = 'outline' }: Props) {
-  const { formProps, pending, formError } = useFormAction(action, messages)
+  const { formProps, pending, ready, formError } = useFormAction(action, messages)
   return (
     <form {...formProps} className="grid justify-items-start gap-3">
       {formError && <FormAlert>{formError}</FormAlert>}
-      <SubmitButton pending={pending} pendingLabel={pendingLabel} variant={variant} size="lg" className="h-11 px-5">
+      <SubmitButton
+        pending={pending}
+        ready={ready}
+        pendingLabel={pendingLabel}
+        variant={variant}
+        size="lg"
+        className="h-11 px-5"
+      >
         {label}
       </SubmitButton>
     </form>

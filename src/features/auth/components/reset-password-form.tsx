@@ -26,7 +26,7 @@ type Props = {
 }
 
 export function ResetPasswordForm({ action, messages, labels }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
 
   if (state?.ok) {
     return (
@@ -57,7 +57,7 @@ export function ResetPasswordForm({ action, messages, labels }: Props) {
         required
         error={fieldError('password')}
       />
-      <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
+      <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 w-full">
         {labels.submit}
       </SubmitButton>
     </form>

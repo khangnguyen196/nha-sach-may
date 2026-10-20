@@ -842,7 +842,7 @@
       "sent": "Nếu email này cần xác nhận, thư sẽ tới trong vài phút. Không thấy thư thì bạn xem mục Spam hoặc thử lại sau vài phút.",
       "wait": "Gửi lại sau {seconds} giây"
     },
-    "noScriptSubmit": "Khi tắt JavaScript, sau khi gửi bạn sẽ không thấy kết quả. Hãy bật JavaScript."
+    "noScriptSubmit": "Cần bật JavaScript để gửi biểu mẫu này."
   },
   "account": {
     "title": "Tài khoản",

@@ -64,7 +64,7 @@ type Props = {
 const numberInput = { type: 'text', inputMode: 'numeric', autoComplete: 'off' } as const
 
 export function VoucherForm({ action, messages, labels, initial }: Props) {
-  const { state, formProps, pending, formError, quietError, fieldError } = useFormAction(action, messages)
+  const { state, formProps, pending, ready, formError, quietError, fieldError } = useFormAction(action, messages)
 
   return (
     <form {...formProps} noValidate className="grid max-w-2xl gap-5">
@@ -167,7 +167,7 @@ export function VoucherForm({ action, messages, labels, initial }: Props) {
       <CheckboxField name="is_active" label={labels.active} hint={labels.activeHint} defaultChecked={initial.is_active} />
       <CheckboxField name="is_public" label={labels.public} hint={labels.publicHint} defaultChecked={initial.is_public} />
       <div className="flex flex-wrap items-center gap-3 pt-2">
-        <SubmitButton pending={pending} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
+        <SubmitButton pending={pending} ready={ready} pendingLabel={labels.pending} size="lg" className="h-11 px-5">
           {labels.submit}
         </SubmitButton>
         <AdminLink href="/admin/voucher" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'h-11 px-5' })}>

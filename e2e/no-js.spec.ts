@@ -2,13 +2,14 @@ import { expect, test } from '@playwright/test'
 import { collectErrors, waitForHydration } from './helpers'
 
 // Tắt JavaScript (docs/plans/no-js.md, phần A): phần stream (Suspense) không hiện, form Server Action trả kết quả ra
-// trang trắng (đo cả production) → dải <noscript> ở [locale]/layout.tsx + câu báo ngay trên nút gửi của 3 form auth.
+// trang trắng (đo cả production) → dải <noscript> ở [locale]/layout.tsx + câu báo ngay trên nút gửi của 3 form auth;
+// nút gửi khóa tới khi hydrate (★8), nên tắt JS thì không gửi được.
 // Không hứa chạy được khi tắt JS; chỉ kiểm câu giải thích hiện đúng chỗ, và không hiện / không lỗi hydrate khi có JS.
 
 const BAND = 'Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang.'
 const BAND_EN =
   'This page needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page.'
-const SUBMIT_NOTE = 'Khi tắt JavaScript, sau khi gửi bạn sẽ không thấy kết quả. Hãy bật JavaScript.'
+const SUBMIT_NOTE = 'Cần bật JavaScript để gửi biểu mẫu này.'
 
 test.describe('tắt JavaScript', () => {
   test.use({ javaScriptEnabled: false })
@@ -33,7 +34,7 @@ test.describe('tắt JavaScript', () => {
   })
 
   for (const path of ['/dang-nhap', '/dang-ky', '/quen-mat-khau']) {
-    test(`form ${path}: câu báo ngay trên nút gửi`, async ({ page }) => {
+    test(`form ${path}: câu báo ngay trên nút gửi, nút gửi khóa`, async ({ page }) => {
       await page.goto(path)
       const form = page.getByRole('main').locator('form')
       const note = form.getByTestId('no-script-submit')
@@ -43,6 +44,9 @@ test.describe('tắt JavaScript', () => {
       const [noteBox, submitBox] = await Promise.all([note.boundingBox(), submit.boundingBox()])
       if (!noteBox || !submitBox) throw new Error('Không đo được vị trí câu noscript / nút gửi')
       expect(noteBox.y).toBeLessThan(submitBox.y)
+      // ★8: không JS thì nút khóa (gửi lúc này là POST thường → trang trắng), giữ nguyên chữ
+      await expect(submit).toBeDisabled()
+      await expect(submit).toHaveAttribute('aria-disabled', 'true')
     })
   }
 })
