@@ -37,7 +37,7 @@ export function FilterSheet({ labels, children, icon }: Props) {
           setMounted(true)
           setOpen(true)
         }}
-        // Tải trước lỗi (mạng chập chờn) thì bỏ qua: lần bấm sẽ tải lại
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: đợt error boundary (docs/progress.md)
         onPointerEnter={() => void loadContent().catch(() => {})}
         onFocus={() => void loadContent().catch(() => {})}
       >

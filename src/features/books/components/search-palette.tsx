@@ -3,7 +3,7 @@
 import { ArrowRightIcon, BookIcon } from 'lucide-react'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Command,
   CommandDialog,
@@ -28,13 +28,20 @@ async function fetchHits(q: string, signal: AbortSignal): Promise<SearchResult> 
   return hits ? { q, status: 'success', hits } : { q, status: 'error' }
 }
 
-type Props = { open: boolean; onOpenChange: (open: boolean) => void }
+type Props = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** Đóng không phải do chọn kết quả (Esc, bấm ra ngoài, Ctrl K lần nữa) → trả focus về chỗ đã mở palette */
+  returnFocus: () => void
+}
 
-export default function SearchPalette({ open, onOpenChange }: Props) {
+export default function SearchPalette({ open, onOpenChange, returnFocus }: Props) {
   const t = useTranslations('search')
   const router = useRouter()
   const [input, setInput] = useState('')
   const [result, setResult] = useState<SearchResult | null>(null)
+  // Chọn kết quả → chuyển trang, không kéo focus về header (như trước)
+  const navigating = useRef(false)
 
   const q = normalizeSearchQuery(input)
   // Kết quả của từ khóa cũ (đang chờ debounce / fetch) coi như đang tải, không hiện lẫn
@@ -60,11 +67,13 @@ export default function SearchPalette({ open, onOpenChange }: Props) {
   }
 
   function openBook(slug: string) {
+    navigating.current = true
     handleOpenChange(false)
     router.push({ pathname: '/books/[slug]', params: { slug } })
   }
 
   function openSearchPage() {
+    navigating.current = true
     handleOpenChange(false)
     router.push({ pathname: '/search', query: { q: input.trim() } })
   }
@@ -76,6 +85,14 @@ export default function SearchPalette({ open, onOpenChange }: Props) {
       title={t('title')}
       description={t('description')}
       className="top-4 sm:top-[12dvh] sm:max-w-xl"
+      onCloseAutoFocus={(event) => {
+        event.preventDefault()
+        if (navigating.current) {
+          navigating.current = false
+          return
+        }
+        returnFocus()
+      }}
     >
       <Command shouldFilter={false} loop className="rounded-none! p-0">
         <CommandInput value={input} onValueChange={setInput} placeholder={t('placeholder')} />

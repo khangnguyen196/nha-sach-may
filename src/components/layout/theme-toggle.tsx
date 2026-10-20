@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 // Icon và nhãn đổi theo class .dark trên <html> (next-themes gắn trước khi paint) thay vì theo state JS:
 // server không biết theme → không cần chờ mounted, không lệch hydration.
 // Nhãn nhận từ Server Component: client leaf không gọi useTranslations để intl-messageformat
-// không vào bundle ban đầu (CLAUDE.md → ngân sách JS). Icon cũng do Server Component cha render rồi truyền vào: client
-// leaf không import lucide (lõi Icon không vào bundle, perf-js bước C).
+// không vào bundle ban đầu (CLAUDE.md → ngân sách JS). Icon cũng do Server Component cha render rồi truyền vào: chỉ bớt
+// module của từng icon; lõi Icon vẫn tải (CLAUDE.md → Hiệu năng).
 type Props = { labels: { toLight: string; toDark: string }; icons: { sun: ReactNode; moon: ReactNode } }
 
 export function ThemeToggle({ labels, icons }: Props) {

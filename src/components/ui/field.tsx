@@ -101,7 +101,8 @@ export function SelectField({
           {children}
         </select>
         {/* Vẽ thẳng hình chevron-down của lucide: field.tsx chạy trong nhiều client form (đăng nhập, đánh giá ở trang
-            sách…), import lucide ở đây kéo lõi Icon vào bundle của các trang đó (perf-js bước C) */}
+            sách…); import lucide ở đây thêm createLucideIcon + module chevron-down vào bundle của các trang đó (lõi Icon
+            thì đã có sẵn, CLAUDE.md → Hiệu năng) */}
         <svg
           aria-hidden
           viewBox="0 0 24 24"

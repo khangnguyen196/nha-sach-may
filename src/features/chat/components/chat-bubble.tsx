@@ -111,8 +111,9 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-testid="chat-bubble"
-        onPointerEnter={() => void loadPanel()}
-        onFocus={() => void loadPanel()}
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: đợt error boundary (docs/progress.md)
+        onPointerEnter={() => void loadPanel().catch(() => {})}
+        onFocus={() => void loadPanel().catch(() => {})}
         onClick={() => {
           setMounted(true)
           // sessionStorage chỉ đọc ở client, khi khách mở khung (không lệch markup lúc hydrate)
