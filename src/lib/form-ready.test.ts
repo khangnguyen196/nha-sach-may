@@ -197,12 +197,15 @@ describe('form POST gửi bằng SubmitButton (form của hook: đúng ready c�
         expect(buttons.length, `form POST không có SubmitButton: ${tag}`).toBeGreaterThan(0)
         // Nút submit thường (không khóa) trong cùng form
         expect(body, `form POST có nút type="submit" không phải SubmitButton: ${tag}`).not.toMatch(/type=(?:\{\s*)?["']submit["']/)
-        // <Button> / <button> không ghi type mặc định là submit, không khóa (Enter có thể gửi qua nó) → phải ghi type=.
-        // Giới hạn: nút do component con / slot render (VD prop `voucher` của checkout-form) thì kiểm tĩnh không thấy.
+        // <Button> / <button> không ghi type mặc định là submit, không khóa (Enter có thể gửi qua nó) → phải ghi rõ
+        // type="button" / "reset" (không nhận `type={biểu thức}`, type nằm trong spread). Giới hạn: nút do component con /
+        // slot render (VD prop `voucher` của checkout-form) thì kiểm tĩnh không thấy.
         for (const name of ['<Button', '<button']) {
           for (const start of tagStarts(body, name)) {
             const button = openingTag(body, start, name)
-            expect(button, `nút trong form POST không ghi type (mặc định submit): ${button}`).toMatch(/(?<![\w-])type=/)
+            expect(button, `nút trong form POST phải ghi type="button" / "reset": ${button}`).toMatch(
+              /(?<![\w-])type=(?:\{\s*)?["'](?:button|reset)["']/,
+            )
           }
         }
         // Form của hook (`{...x.formProps}` / `action={x.formProps.action}`): nút trong form dùng `ready` của đúng hook đó.

@@ -7,7 +7,7 @@
 - [Đã làm A 2026-10-20 (production 7e30f6c); ★8 lên production 005c550; B hoãn; ★9 / ★10 đã đo; ★7 đã có issue vercel/next.js#99756] docs/plans/no-js.md
 - [Xong 2026-10-20, main 005c550] Khách có JS gửi form trước khi hydrate → trang trắng: nút gửi khóa tới khi hydrate (★8 a1+; 17 component + 2 form sổ địa chỉ; đăng xuất / thêm giỏ không khóa; autocomplete="off"). Chủ dự án test điện thoại ĐẠT. no-js.md.
 - [Đã quyết 2026-10-20] Nút khóa trước hydrate giữ độ mờ của Button (disabled:opacity-50): mạng chậm thì đây là dấu hiệu duy nhất nút chưa bấm được.
-- [Không làm, quyết 2026-10-20] Câu giải thích khi nút khóa lâu (một câu chung ở layout sau ~4 s): khóa thường ~0,2 s, đồ án học tập.
+- [Không làm, quyết 2026-10-20] Câu giải thích khi nút khóa lâu (một câu chung ở layout sau ~4 s): khóa thường ~0,2 s, đồ án học tập. Chấp nhận cả ca xấu nhất: chunk JS chính tải lỗi → nút khóa mãi, không có câu giải thích.
 - [Đã đo 2026-10-20, đề xuất chưa làm] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (★9): nội dung lộ ~0,25 s sau FCP, LCP trang sách 2,5 s (mobile 4G mô phỏng); xem lại khi có số liệu thật của khách (no-js.md).
 - [Đã đo 2026-10-20] ★10: bot mạng xã hội thấy đủ og:* trong <head>, không cần sửa; còn thiếu user agent thật của Zalo. ★7: đã có issue vercel/next.js#99756 (open), không gửi bài mới; chủ dự án tùy chọn 👍 / bình luận thêm dữ kiện Vercel.
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.

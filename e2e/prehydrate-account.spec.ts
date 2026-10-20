@@ -55,10 +55,13 @@ test.beforeAll(async ({ browser, baseURL }) => {
   await setCartItem(user.id, cancelBook.id, 1)
 
   const context = await browser.newContext({ baseURL, storageState: NO_SESSION })
-  const page = await context.newPage()
-  await login(page, user)
-  storageState = await context.storageState()
-  await context.close()
+  try {
+    const page = await context.newPage()
+    await login(page, user)
+    storageState = await context.storageState()
+  } finally {
+    await context.close()
+  }
 })
 
 test.afterAll(async () => {

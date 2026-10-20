@@ -166,9 +166,9 @@ JS bật, `context.route` chặn mọi `/_next/static/chunks/*.js` **trước** 
 - CI: e2e `32efcbf` run 39370803906 và `d389e67` run 39371894904: 454 qua / 10 skip / 0 flaky (main `51bf49f`: 427 qua + 1 flaky / 10 skip → +26 = 13 test `no-js.spec` × desktop + mobile); CI check `32efcbf` run 39370803903, `d389e67` run 39371894903 xanh; e2e `8b2a69f` (code cuối trước merge) run 39373668503: 454 qua / 10 skip / 0 flaky; sau khi merge `main` (chunk-loi `355f257`) vào `no-js` (`967a009`, push cùng `485ad18`): e2e run 39379786667 (463 qua / 11 skip / 0 flaky; CI check 39379786722 xanh).
 
 **Chỗ hở còn lại sau A** (chấp nhận theo ★1; đã đổi ở ★8: nút gửi form Server Action khóa tới khi hydrate, nên khách tắt JS / gửi trước hydrate không gửi được nữa thay vì ra trang trắng; ý 1 và 3 dưới đây đã đóng: form không khóa (`UNLOCKED_FORMS` trong `src/lib/form-ready.test.ts`: đăng xuất, thêm giỏ không JS, `/xac-nhan`) đều kết thúc bằng 303):
-- Sau khi gửi form trả `Result` (3 form auth và mọi form trong tài khoản), khách tắt JS vẫn thấy **trang trắng không lời giải thích**: thân POST không có `<html>` / layout nên dải noscript không có trong đó (review bản 2, NGHIÊM TRỌNG 1). Câu noscript trên nút chỉ báo **trước** khi gửi, và chỉ ở 3 form khách thấy được (form khác nằm trong stream, không thấy khi tắt JS).
-- Câu báo trên URL (`?error=LINK_EXPIRED`, `?confirmed=1`, `UrlNotices`) không hiện khi tắt JS (II.1a).
-- Khách có JS gửi trước hydrate: không được A che (★8).
+- (Đã đóng ở ★8) Sau khi gửi form trả `Result` (3 form auth và mọi form trong tài khoản), khách tắt JS vẫn thấy **trang trắng không lời giải thích**: thân POST không có `<html>` / layout nên dải noscript không có trong đó (review bản 2, NGHIÊM TRỌNG 1). Câu noscript trên nút chỉ báo **trước** khi gửi, và chỉ ở 3 form khách thấy được (form khác nằm trong stream, không thấy khi tắt JS).
+- (Còn mở) Câu báo trên URL (`?error=LINK_EXPIRED`, `?confirmed=1`, `UrlNotices`) không hiện khi tắt JS (II.1a).
+- (Đã đóng ở ★8) Khách có JS gửi trước hydrate: không được A che (★8).
 
 ### Chi tiết B (hoãn, ghi lại để làm sau nếu cần)
 
