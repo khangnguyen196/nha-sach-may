@@ -143,3 +143,23 @@ test('đặt hàng: trước hydrate nút khóa, không POST; sau hydrate nút b
   expect((await ordersOf(user.id)).length).toBe(2)
   await context.close()
 })
+
+test('giữ nguyên trước hydrate: nút "Đăng xuất" và "Thêm vào giỏ" (form không JS, kết thúc bằng redirect) không khóa', async ({
+  browser,
+  baseURL,
+}) => {
+  const [, cartBook] = books
+  if (!cartBook) throw new Error('Thiếu sách test')
+  const context = await browser.newContext({ baseURL, storageState })
+  const page = await context.newPage()
+  const blocked = await blockHydration(page)
+  await page.goto('/tai-khoan')
+  // Chỉ kiểm trạng thái nút, không bấm (đăng xuất sẽ thu hồi phiên dùng chung của spec)
+  await expect(page.getByRole('main').getByRole('button', { name: 'Đăng xuất' })).toBeEnabled()
+  await page.goto(`/sach/${cartBook.slug}`)
+  const addToCart = page.getByRole('main').locator('form').getByRole('button', { name: /Thêm vào giỏ/ }).first()
+  await expect(addToCart).toBeVisible()
+  await expect(addToCart).toBeEnabled()
+  expect(blocked.posts()).toBe(0)
+  await context.close()
+})

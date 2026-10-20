@@ -46,7 +46,17 @@ test('khoảng khóa khi tải bình thường: từ lúc nút gửi hiện tớ
   await page.goto('/dang-nhap')
   await waitForHydration(page, 'main form button[type="submit"]')
   await expect(page.getByRole('main').locator('form button[type="submit"]')).toBeEnabled()
-  const times = await page.evaluate(() => Reflect.get(window, '__lock'))
+  const times: unknown = await page.evaluate(() => Reflect.get(window, '__lock'))
+  if (
+    typeof times !== 'object' ||
+    times === null ||
+    !('shown' in times) ||
+    !('enabled' in times) ||
+    typeof times.shown !== 'number' ||
+    typeof times.enabled !== 'number'
+  ) {
+    throw new Error('Không đo được lúc nút hiện / bật')
+  }
   const lockMs = Math.round(times.enabled - times.shown)
   testInfo.annotations.push({ type: 'lock-ms', description: String(lockMs) })
   console.log(`KHOA-NUT ${testInfo.project.name} /dang-nhap lockMs=${lockMs}`)

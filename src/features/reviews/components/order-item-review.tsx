@@ -13,7 +13,7 @@ type Props = { bookId: number; review: MyReview | null; messages: FormMessages }
 
 /**
  * Đánh giá ngay trên dòng sách của đơn đã giao. <details> mở form ngay dưới dòng, không thêm JS (mở / đóng không cần
- * JS). Tắt JS thì trang đơn (trong Suspense) không hiện, gửi đánh giá ra trang trắng (docs/plans/no-js.md).
+ * JS). Tắt JS thì trang đơn (trong Suspense) không hiện; chưa hydrate thì nút gửi khóa (docs/plans/no-js.md ★8).
  * Cùng action với trang sách (mỗi người một đánh giá / sách): lưu ở đây thì trang sách cũng đổi (updateTag).
  */
 export async function OrderItemReview({ bookId, review, messages }: Props) {

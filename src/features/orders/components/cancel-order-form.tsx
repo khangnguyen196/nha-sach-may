@@ -71,7 +71,7 @@ export function CancelOrderForm({ action, messages, labels, cancellable, reasonM
   if (!cancellable) return state ? <div className="mt-6">{feedback}</div> : null
 
   return (
-    // Có lỗi → mở sẵn để thấy khối lỗi. Tắt JS thì sau khi gửi là trang trắng, không tới được đây (docs/plans/no-js.md)
+    // Có lỗi → mở sẵn để thấy khối lỗi. Tắt JS / chưa hydrate thì nút gửi khóa (docs/plans/no-js.md ★8)
     <details className="group mt-6 rounded-lg border bg-surface p-5" open={failure ? true : undefined}>
       <summary
         className={cn(

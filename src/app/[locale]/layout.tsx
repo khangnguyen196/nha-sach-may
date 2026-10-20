@@ -52,8 +52,8 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
               chuỗi đã dịch qua props → không gửi cả file messages xuống, không kéo intl-messageformat vào bundle đầu. */}
           <NextIntlClientProvider messages={{ search: messages.search }}>
             <Header />
-            {/* Tắt JS: phần stream (Suspense) không hiện, form Server Action trả kết quả ra trang trắng
-                (docs/plans/no-js.md) → nói rõ thay vì để trang thiếu nội dung không lời giải thích */}
+            {/* Tắt JS: phần stream (Suspense) không hiện, nút gửi form Server Action khóa (docs/plans/no-js.md ★8)
+                → nói rõ thay vì để trang thiếu nội dung không lời giải thích */}
             <noscript>
               <p
                 data-testid="no-script"

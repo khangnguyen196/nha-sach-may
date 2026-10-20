@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { useHydrated } from '@/lib/use-hydrated'
 import { Button } from './button'
 
-type Props = Omit<ComponentProps<typeof Button>, 'type'> & {
+type Props = Omit<ComponentProps<typeof Button>, 'type' | 'aria-disabled'> & {
   pendingLabel: string
   /** Truyền vào khi form tự dispatch (useFormAction): useFormStatus chỉ theo dõi `<form action>` */
   pending?: boolean

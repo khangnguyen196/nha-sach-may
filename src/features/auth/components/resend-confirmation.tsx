@@ -36,8 +36,8 @@ function useNow(active: boolean) {
 
 /**
  * Nút "Gửi lại email xác nhận" dưới lỗi EMAIL_NOT_CONFIRMED ở trang đăng nhập. Form riêng (không lồng trong form đăng
- * nhập); khóa nút 60 giây sau khi gửi xong, đếm ngược trên nút. Tắt JS: form vẫn gửi nhưng trang kết quả trắng (lỗi có từ
- * trước, xem docs/progress.md).
+ * nhập); khóa nút 60 giây sau khi gửi xong, đếm ngược trên nút. Chỉ hiện sau lỗi của form đăng nhập (đã có JS); nút
+ * vẫn khóa tới khi hydrate như mọi form dùng useFormAction (docs/plans/no-js.md ★8).
  */
 export function ResendConfirmation({ action, messages, labels, email }: Props) {
   const { state, formProps, pending, ready, formError } = useFormAction(action, messages)

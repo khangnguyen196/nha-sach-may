@@ -56,7 +56,8 @@ export async function signIn(locale: Locale, _prev: Result<null> | null, formDat
     return withAuthMessage(parseLocale(locale), failure)
   }
 
-  // Gửi trước khi JS điền input `next` (hoặc tắt JS) → lấy từ URL trang đăng nhập
+  // Input `next` trống (NextField điền ở client sau hydrate; form gửi không qua nút khóa, VD HTML cũ còn trong bộ đệm)
+  // → lấy từ URL trang đăng nhập
   const next = parsed.data.next || nextFromReferer((await headers()).get('referer'))
   redirectToPath(safeNextPath(next, getPathname({ href: '/account', locale: parseLocale(locale) })))
 }
