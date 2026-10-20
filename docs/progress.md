@@ -5,7 +5,7 @@
 - [Chờ quyết lại ★4 / ★5] B: client component dùng clsx thay cn; chỉ giữ cn ở chỗ cần gộp class đè (VD Button nhận className). Ước tính −8 đến −10KB gzip mọi trang. Phải rà mọi chỗ className đè và kiểm giao diện bằng mắt.
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
 - [Đã làm A 2026-10-20 (production 7e30f6c); ★8 trên khoa-nut; B hoãn; ★9 / ★10 đã đo; ★7 đã có issue vercel/next.js#99756] docs/plans/no-js.md
-- [Đã code trên khoa-nut, chờ test điện thoại] Khách có JS gửi form trước khi hydrate → trang trắng (★8 (a1+): nút gửi khóa tới khi hydrate, autocomplete="off" cho Firefox; no-js.md).
+- [Chủ dự án test điện thoại ĐẠT 2026-10-20, chờ merge] Khách có JS gửi form trước khi hydrate → trang trắng (★8 (a1+): nút gửi khóa tới khi hydrate, autocomplete="off" cho Firefox; no-js.md).
 - [Đã quyết 2026-10-20] Nút khóa trước hydrate giữ độ mờ của Button (disabled:opacity-50): mạng chậm thì đây là dấu hiệu duy nhất nút chưa bấm được.
 - [Chờ quyết, sau ★8] Nút khóa lâu không có câu giải thích (Preview mạng chậm ~21 s; chunk JS chính lỗi → khóa mãi). Phương án: một câu chung ở layout, hiện sau ~4 s bằng CSS (animation-delay, không cần JS), ẩn khi hydrate.
 - [Đã đo 2026-10-20, đề xuất chưa làm] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (★9): nội dung lộ ~0,25 s sau FCP, LCP trang sách 2,5 s (mobile 4G mô phỏng); xem lại khi có số liệu thật của khách (no-js.md).
@@ -21,7 +21,7 @@
 - [Mức thấp] Khung chat đang mở (desktop, không modal) khi sang /thanh-toan vẫn giữ `open = true`; quay về trang khác thì khung tự mở lại và kéo focus (có từ Phase 11; review chunk-loi). Hướng sửa: ở nhánh trang ẩn chat của `ChatBubbleInner` đặt `open = false` (giữ `entries`).
 - [Theo dõi] Lỗi #3 build ('use cache' took too long, getRelatedBooks) gặp lại 2 lần khi build local 2026-10-20; CI / Vercel xanh.
 - [Mức thấp] scripts/analyze-diff.mjs:16-17 comment còn ghi 'polyfill noModule, measure:js cũng đếm' (sau perf-js ★8 measure:js in nhưng không cộng).
-- [Theo dõi] Request RSC 404 sau đăng xuất (sửa ở bc1718b): cần 15 lượt e2e đầy đủ liên tiếp sạch; hiện 3/15 (main bc1718b run 39391179766, khoa-nut 178b092 run 39392430246, khoa-nut 9c1d5a9 run 39418804347; đều 0 flaky / 0 fail). Request `/dang-nhap?next=%2Ftai-khoan…&_rsc=…` (cart-account.spec.ts "gộp giỏ…"); bản sửa: prefetch={false} cho link /account khi đã đăng nhập + 2 thẻ trang tài khoản; e2e logout-prefetch-account.spec.ts. Chi tiết: docs/plans/sau-ux.md mục 4.
+- [Theo dõi] Request RSC 404 sau đăng xuất (sửa ở bc1718b): cần 15 lượt e2e đầy đủ liên tiếp sạch; hiện 4/15 (main bc1718b run 39391179766, khoa-nut 178b092 run 39392430246, 9c1d5a9 run 39418804347, ab0459b run 39433888961; đều 0 flaky / 0 fail). Request `/dang-nhap?next=%2Ftai-khoan…&_rsc=…` (cart-account.spec.ts "gộp giỏ…"); bản sửa: prefetch={false} cho link /account khi đã đăng nhập + 2 thẻ trang tài khoản; e2e logout-prefetch-account.spec.ts. Chi tiết: docs/plans/sau-ux.md mục 4.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 

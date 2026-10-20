@@ -143,7 +143,8 @@ describe('SubmitButton khóa tới khi hydrate (ready / lockUntilHydrated)', () 
         if (start === exempt) continue
         const tag = openingTag(source, start)
         expect(isLocked(tag), `thiếu ready / lockUntilHydrated: ${tag}`).toBe(true)
-        // File không gọi hook: `ready` không có nguồn đúng (VD `ready={!pending}`) → phải dùng lockUntilHydrated
+        // File không gọi hook: `ready` không có nguồn đúng (VD `ready={!pending}`) → phải dùng lockUntilHydrated. Nếu sau này có
+        // component con nhận `ready` qua prop từ file cha gọi hook thì sửa test cho ca đó, đừng đổi nút sang lockUntilHydrated
         if (!source.includes('useFormAction(')) {
           expect(hasLockUntilHydrated(tag), `file không gọi useFormAction phải dùng lockUntilHydrated: ${tag}`).toBe(true)
         }
@@ -195,8 +196,9 @@ describe('form POST gửi bằng SubmitButton (form của hook: đúng ready c�
         const buttons = tagStarts(body).map((start) => openingTag(body, start))
         expect(buttons.length, `form POST không có SubmitButton: ${tag}`).toBeGreaterThan(0)
         // Nút submit thường (không khóa) trong cùng form
-        expect(body, `form POST có nút type="submit" không phải SubmitButton: ${tag}`).not.toMatch(/type=["']submit["']/)
-        // Form của hook (`{...x.formProps}` / `action={x.formProps.action}`): nút trong form dùng `ready` của đúng hook đó
+        expect(body, `form POST có nút type="submit" không phải SubmitButton: ${tag}`).not.toMatch(/type=(?:\{\s*)?["']submit["']/)
+        // Form của hook (`{...x.formProps}` / `action={x.formProps.action}`): nút trong form dùng `ready` của đúng hook đó.
+        // Giả định không đổi tên khi destructure (`{ ready: isReady }`, `{ formProps: fp }` → đỏ giả, sửa test khi gặp)
         const hook = /(?:\.\.\.\s*|action=\{\s*)((?:\w+\.)?)formProps\b/.exec(tag)
         if (hook) {
           const expected = `${hook[1] ?? ''}ready`
