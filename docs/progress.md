@@ -6,7 +6,8 @@
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
 - [Đã làm A 2026-10-20: dải noscript + câu trong 3 form auth; B hoãn; ★9 / ★10 chờ đo (chỉ đọc); ★7 chờ (tìm issue / soạn, không gửi)] docs/plans/no-js.md
 - [Đã code trên khoa-nut, chờ duyệt] Khách có JS gửi form trước khi hydrate → trang trắng (★8 (a1+): nút gửi khóa tới khi hydrate; no-js.md).
-- [Chờ quyết] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (no-js.md, ★9).
+- [Đã đo 2026-10-20, đề xuất chưa làm] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (★9): nội dung lộ ~0,25 s sau FCP, LCP trang sách 2,5 s (mobile 4G mô phỏng); xem lại khi có số liệu thật của khách (no-js.md).
+- [Đã đo 2026-10-20] ★10: bot mạng xã hội thấy đủ og:* trong <head>, không cần sửa; còn thiếu user agent thật của Zalo. ★7: đã có issue vercel/next.js#99756 (open), không gửi bài mới; chủ dự án tùy chọn 👍 / bình luận thêm dữ kiện Vercel.
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.
 - [Đã quyết 2026-10-19] Giữ TEST10 hiện trong gợi ý (demo); không còn việc gì.
 - [Dọn 2026-10-26] xóa nhánh backup/main-local-06d5009 và stash eb9bb91.
