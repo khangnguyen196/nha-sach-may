@@ -4,8 +4,8 @@
 
 - [Chờ quyết lại ★4 / ★5] B: client component dùng clsx thay cn; chỉ giữ cn ở chỗ cần gộp class đè (VD Button nhận className). Ước tính −8 đến −10KB gzip mọi trang. Phải rà mọi chỗ className đè và kiểm giao diện bằng mắt.
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
-- [Plan bản 3 + phần A trên nhánh no-js, chờ duyệt] Tắt JS: phần trong Suspense không hiện (kể cả trang đã prerender, cả production), form Server Action trả kết quả ra trang trắng (POST chỉ trả phần động, Cache Components; production cũng trắng). A (dải noscript ở layout + câu noscript trên nút 3 form auth) đã code; B (PRG, route tĩnh B1) hoãn; ★7 (issue upstream), ★10 (htmlLimitedBots với PPR) chờ quyết. Chi tiết: docs/plans/no-js.md.
-- [Chờ quyết] Khách có JS gửi form trước khi hydrate → trang trắng (số liệu: no-js.md, ★8).
+- [Đã làm A 2026-10-20: dải noscript + câu trong 3 form auth; B hoãn; ★7 / ★9 / ★10 đang đo] docs/plans/no-js.md
+- [Đang làm ★8 (a1+), nhánh khoa-nut] Khách có JS gửi form trước khi hydrate → trang trắng (no-js.md, ★8).
 - [Chờ quyết] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (no-js.md, ★9).
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.
 - [Đã quyết 2026-10-19] Giữ TEST10 hiện trong gợi ý (demo); không còn việc gì.
