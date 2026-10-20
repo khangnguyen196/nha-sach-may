@@ -2,10 +2,12 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-// docs/plans/no-js.md ★8: nút gửi của form dùng useFormAction khóa tới khi hydrate nhờ `ready={ready}` (gửi trước đó là
-// POST thường → trang trắng). Form mới quên truyền thì lỗi quay lại mà không ai thấy → kiểm tĩnh: file nào gọi
-// `useFormAction(` thì mọi `<SubmitButton` trong file phải có `ready=`.
+// docs/plans/no-js.md ★8: nút gửi form Server Action khóa tới khi hydrate (gửi trước đó là POST thường → trang trắng).
+// Form dùng useFormAction truyền `ready={ready}`; form `<form action>` thường dùng `lockUntilHydrated`. Quên thì lỗi quay
+// lại mà không ai thấy → kiểm tĩnh mọi `<SubmitButton` trong src. Ngoại lệ có chủ đích: nút đăng xuất (kết thúc bằng
+// redirect(), gửi được trước hydrate).
 const SRC = join(import.meta.dirname, '..')
+const ALLOWED = new Set(['app/[locale]/(shop)/account/page.tsx'])
 
 function tsxFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true, recursive: true })
@@ -13,20 +15,44 @@ function tsxFiles(dir: string): string[] {
     .map((entry) => join(entry.parentPath, entry.name))
 }
 
-const formFiles = tsxFiles(SRC).filter((file) => readFileSync(file, 'utf8').includes('useFormAction('))
+/** Thẻ mở `<SubmitButton …>`: bỏ qua `>` nằm trong `{…}` (VD `disabled={remaining > 0}`, `() =>`) */
+function openingTags(source: string) {
+  const tags: string[] = []
+  for (let start = source.indexOf('<SubmitButton'); start !== -1; start = source.indexOf('<SubmitButton', start + 1)) {
+    if (!/[\s>/]/.test(source[start + '<SubmitButton'.length] ?? '')) continue
+    let depth = 0
+    for (let i = start; i < source.length; i++) {
+      const char = source[i]
+      if (char === '{') depth += 1
+      else if (char === '}') depth -= 1
+      else if (char === '>' && depth === 0) {
+        tags.push(source.slice(start, i + 1))
+        break
+      }
+    }
+  }
+  return tags
+}
 
-describe('form dùng useFormAction truyền `ready` cho SubmitButton', () => {
-  it('có ít nhất một file (bộ lọc còn đúng)', () => {
-    expect(formFiles.length).toBeGreaterThan(10)
+const files = tsxFiles(SRC)
+  .map((file) => ({ path: relative(SRC, file).replaceAll('\\', '/'), source: readFileSync(file, 'utf8') }))
+  .filter(({ path, source }) => source.includes('<SubmitButton') && !path.startsWith('components/ui/'))
+
+describe('SubmitButton khóa tới khi hydrate (ready / lockUntilHydrated)', () => {
+  it('bộ lọc còn đúng: có các file dùng useFormAction và cả 2 nguồn cờ', () => {
+    expect(files.filter(({ source }) => source.includes('useFormAction(')).length).toBeGreaterThan(10)
+    expect(files.some(({ source }) => source.includes('lockUntilHydrated'))).toBe(true)
   })
 
-  for (const file of formFiles) {
-    it(relative(SRC, file).replaceAll('\\', '/'), () => {
-      const source = readFileSync(file, 'utf8')
-      // Thẻ mở `<SubmitButton …>`: dừng ở `>` không thuộc `=>`
-      const tags = source.match(/<SubmitButton\b[\s\S]*?(?<!=)>/g) ?? []
+  for (const { path, source } of files) {
+    if (ALLOWED.has(path)) continue
+    it(path, () => {
+      const tags = openingTags(source)
       expect(tags.length).toBeGreaterThan(0)
-      for (const tag of tags) expect(tag).toMatch(/\bready=\{/)
+      for (const tag of tags) {
+        const locked = /\bready=\{(?!true\})/.test(tag) || /\blockUntilHydrated\b/.test(tag)
+        expect(locked, `thiếu ready / lockUntilHydrated: ${tag}`).toBe(true)
+      }
     })
   }
 })

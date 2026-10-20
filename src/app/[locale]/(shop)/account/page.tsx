@@ -84,7 +84,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
         />
       </section>
 
-      {/* Form + Server Action: đăng xuất chạy được cả khi không có JS */}
+      {/* Form + Server Action kết thúc bằng redirect(): gửi được trước hydrate, nút không khóa (docs/plans/no-js.md ★8) */}
       <SignOutForm action={signOut.bind(null, locale)} className="mt-10">
         <SubmitButton variant="outline" size="lg" className="h-11 px-5" pendingLabel={tAuth('pending')}>
           {t('signOut')}
