@@ -21,6 +21,27 @@ test('palette: chunk tải lỗi → khối lỗi, header còn (không global-er
   await expect(page.getByTestId('lazy-error')).toHaveCount(0)
 })
 
+test('palette mở bằng Ctrl K: chunk tải lỗi → khối lỗi; Đóng / Esc → focus về phần tử đang focus lúc nhấn', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await waitForHydration(page, SEARCH_TRIGGER)
+  await page.waitForLoadState('networkidle')
+  // Phần tử đang focus lúc nhấn Ctrl K: logo (link đầu header), không phải nút tìm kiếm (focus nút sẽ tải trước chunk)
+  const logo = page.getByRole('banner').locator('a[href="/"]')
+  await logo.focus()
+
+  await expectLazyChunkError(page, page.locator(SEARCH_TRIGGER), {
+    open: () => page.keyboard.press('ControlOrMeta+k'),
+    returnTo: logo,
+  })
+
+  await waitForHydration(page, SEARCH_TRIGGER)
+  await page.waitForLoadState('networkidle')
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
 test('sheet bộ lọc: chunk tải lỗi → khối lỗi tại chỗ; tải lại trang → mở được', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Nút "Bộ lọc" chỉ hiện dưới md')
   const selector = 'main button[aria-haspopup="dialog"]'

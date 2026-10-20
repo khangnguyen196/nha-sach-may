@@ -86,12 +86,18 @@ export async function failServerActions(page: Page, url: string) {
  * Chunk tải lười hỏng (LazyBoundary, `components/lazy-boundary.tsx`). Gọi khi trang đã tải xong và CHƯA rê chuột / focus
  * vào `trigger` (rê chuột / focus tải trước chunk → bấm sẽ không cần request nào, test qua giả). Chặn mọi chunk tải sau
  * lúc này → bấm `trigger` → khối lỗi tại chỗ: có request bị chặn thật, trang không thành trang lỗi / global-error, header
- * còn; "Đóng" → focus về nút, bấm lại vẫn lỗi (React.lazy giữ lỗi tới khi tải lại trang). Cuối cùng bỏ chặn + bấm
- * "Tải lại trang"; người gọi chờ hydrate rồi kiểm phần tải lười mở được.
+ * còn; "Đóng" → focus về nút, bấm lại vẫn lỗi (React.lazy giữ lỗi tới khi tải lại trang), Esc cũng đóng. Cuối cùng bỏ
+ * chặn + bấm "Tải lại trang"; người gọi chờ hydrate rồi kiểm phần tải lười mở được.
+ * `open`: cách mở (mặc định bấm `trigger`; palette còn mở bằng Ctrl K, focus về phần tử đang focus lúc nhấn: `returnTo`).
  */
-export async function expectLazyChunkError(page: Page, trigger: Locator) {
+export async function expectLazyChunkError(
+  page: Page,
+  trigger: Locator,
+  { open = () => trigger.click(), returnTo = trigger }: { open?: () => Promise<void>; returnTo?: Locator } = {},
+) {
   const pageErrors: string[] = []
-  page.on('pageerror', (error) => pageErrors.push(error.message))
+  const onPageError = (error: Error) => pageErrors.push(error.message)
+  page.on('pageerror', onPageError)
   const pattern = '**/_next/static/chunks/**'
   let aborted = 0
   const abort = (route: Route) => {
@@ -100,7 +106,7 @@ export async function expectLazyChunkError(page: Page, trigger: Locator) {
   }
   await page.route(pattern, abort)
 
-  await trigger.click()
+  await open()
   const alert = page.getByTestId('lazy-error')
   await expect(alert).toBeVisible()
   await expect(alert).toContainText('Không tải được phần này. Kiểm tra kết nối mạng rồi tải lại trang.')
@@ -111,15 +117,22 @@ export async function expectLazyChunkError(page: Page, trigger: Locator) {
 
   await alert.getByRole('button', { name: 'Đóng' }).click()
   await expect(alert).toHaveCount(0)
-  await expect(trigger).toBeFocused()
-  await trigger.click()
+  await expect(returnTo).toBeFocused()
+  await open()
   await expect(alert).toBeVisible()
   await expect(page.getByTestId('error-page')).toHaveCount(0)
+  await expect(alert.getByRole('button', { name: 'Tải lại trang' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(alert).toHaveCount(0)
+  await expect(returnTo).toBeFocused()
+  await open()
+  await expect(alert).toBeVisible()
 
   await page.unroute(pattern, abort)
   const reloaded = page.waitForEvent('load')
   await alert.getByRole('button', { name: 'Tải lại trang' }).click()
   await reloaded
+  page.off('pageerror', onPageError)
   // Lỗi tải chunk được LazyBoundary bắt (console.error của React), không có lỗi nào lọt ra ngoài (pageerror)
   expect(pageErrors).toEqual([])
 }

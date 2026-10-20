@@ -1,15 +1,23 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode, type ReactPortal } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LazyBoundary } from './lazy-boundary'
 
 // Không có DOM trong Vitest (environment node) và error boundary không chạy khi render ở server → kiểm đúng hai bước
-// React làm khi phần con ném lỗi: getDerivedStateFromError, rồi render() với state đó.
+// React làm khi phần con ném lỗi: getDerivedStateFromError, rồi render() với state đó. Hành vi thật trên trình duyệt
+// (chunk bị chặn, focus, Esc, Đóng, Tải lại trang) do e2e `expectLazyChunkError` (e2e/helpers.ts) kiểm.
 const props = {
   labels: { message: 'Không tải được phần này.', reload: 'Tải lại trang', close: 'Đóng' },
   onDismiss: () => {},
   children: createElement('p', null, 'nội dung tải lười'),
 }
+
+const isPortal = (node: ReactNode): node is ReactPortal & { containerInfo: unknown } =>
+  typeof node === 'object' && node !== null && 'containerInfo' in node
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('LazyBoundary', () => {
   it('chưa lỗi: render phần con (trong Suspense), không có khối lỗi', () => {
@@ -18,15 +26,28 @@ describe('LazyBoundary', () => {
     expect(html).not.toContain('lazy-error')
   })
 
-  it('phần con ném lỗi (chunk tải lỗi) → khối báo + nút "Tải lại trang", không render lại phần con', () => {
+  it('phần con ném lỗi (chunk tải lỗi) → khối báo + nút "Tải lại trang" portal ra body, không render lại phần con', () => {
+    // createPortal chỉ cần container có nodeType của Element
+    const body = { nodeType: 1 }
+    vi.stubGlobal('document', { body })
     const boundary = new LazyBoundary(props)
-    boundary.state = LazyBoundary.getDerivedStateFromError()
-    const html = renderToStaticMarkup(boundary.render())
+    boundary.state = LazyBoundary.getDerivedStateFromError(new Error('Failed to load chunk'))
+    const portal = boundary.render()
+    if (!isPortal(portal)) throw new Error('render() phải trả portal')
+    expect(portal.containerInfo).toBe(body)
+    const html = renderToStaticMarkup(portal.children)
     expect(html).toContain('role="alert"')
     expect(html).toContain('data-testid="lazy-error"')
     expect(html).toContain('Không tải được phần này.')
     expect(html).toContain('>Tải lại trang</button>')
     expect(html).toContain('>Đóng</button>')
     expect(html).not.toContain('nội dung tải lười')
+  })
+
+  it('lỗi điều hướng của Next (digest NEXT_…) → ném tiếp cho boundary của Next', () => {
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT;replace;/x;307;' })
+    const boundary = new LazyBoundary(props)
+    boundary.state = LazyBoundary.getDerivedStateFromError(redirect)
+    expect(() => boundary.render()).toThrow(redirect)
   })
 })

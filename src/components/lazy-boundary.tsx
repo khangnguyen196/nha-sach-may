@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, Suspense, useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 /** Chuỗi của khối lỗi, dịch sẵn ở server (getLazyErrorLabels) */
 export type LazyErrorLabels = { message: string; reload: string; close: string }
@@ -24,25 +25,37 @@ type Props = {
  * Bắt mọi lỗi của phần con, không chỉ lỗi chunk: chữ của lỗi tải chunk khác nhau giữa Turbopack / trình duyệt, nhận
  * diện sai thì lỗi chunk lại lên global-error; lỗi render của dialog báo "không tải được phần này" vẫn hơn mất trang.
  *
+ * Ngoại lệ: lỗi điều hướng của Next (`redirect()` / `notFound()`, digest `NEXT_…`) ném tiếp cho boundary của Next.
+ *
  * Suspense riêng (fallback null): `dynamic()` không `ssr: false` và không `loading` không tự bọc Suspense
  * (loadable.js:49) → lần bấm đầu treo lên Suspense gần nhất phía trên, fallback của cả vùng đó có thể nháy. Có Suspense
  * ở đây nên không cần thêm `ssr: false`: phần con chỉ render sau khi bấm (state ở client), không có trong HTML server.
  */
-export class LazyBoundary extends Component<Props, { failed: boolean }> {
-  state = { failed: false }
+export class LazyBoundary extends Component<Props, { error: unknown }> {
+  state: { error: unknown } = { error: null }
 
-  static getDerivedStateFromError() {
-    return { failed: true }
+  static getDerivedStateFromError(error: unknown) {
+    return { error }
   }
 
   render() {
-    if (this.state.failed) return <LazyError labels={this.props.labels} onDismiss={this.props.onDismiss} />
-    return <Suspense fallback={null}>{this.props.children}</Suspense>
+    const { error } = this.state
+    if (error === null) return <Suspense fallback={null}>{this.props.children}</Suspense>
+    if (isNextNavigation(error)) throw error
+    // Portal ra body: palette nằm trong <header> có backdrop-blur (khung chứa của `fixed`, z-index bị nhốt trong z-40)
+    // → khối lỗi phải ở cấp trang để `fixed` tính theo màn hình và không bị khung chat (z-50) đè
+    return createPortal(<LazyError labels={this.props.labels} onDismiss={this.props.onDismiss} />, document.body)
   }
 }
 
+function isNextNavigation(error: unknown) {
+  if (typeof error !== 'object' || error === null || !('digest' in error)) return false
+  return typeof error.digest === 'string' && error.digest.startsWith('NEXT_')
+}
+
 /**
- * Khối báo nổi ngay dưới header (fixed): phần tải lười là dialog / sheet, không có chỗ trong bố cục để hiện tại chỗ.
+ * Khối báo nổi ngay dưới header (fixed, portal ra body): phần tải lười là dialog / sheet, không có chỗ trong bố cục để
+ * hiện tại chỗ.
  * Không Radix / Button / lucide: module này nằm trong bundle đầu của mọi trang (palette ở header).
  */
 function LazyError({ labels, onDismiss }: { labels: LazyErrorLabels; onDismiss: () => void }) {
