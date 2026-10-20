@@ -9,6 +9,7 @@ import { LazyBoundary } from './lazy-boundary'
 const props = {
   labels: { message: 'Không tải được phần này.', reload: 'Tải lại trang', close: 'Đóng' },
   onDismiss: () => {},
+  onError: () => {},
   children: createElement('p', null, 'nội dung tải lười'),
 }
 
@@ -42,6 +43,15 @@ describe('LazyBoundary', () => {
     expect(html).toContain('>Tải lại trang</button>')
     expect(html).toContain('>Đóng</button>')
     expect(html).not.toContain('nội dung tải lười')
+  })
+
+  it('componentDidCatch báo cha (đóng trạng thái mở), trừ lỗi điều hướng của Next', () => {
+    const onError = vi.fn()
+    const boundary = new LazyBoundary({ ...props, onError })
+    boundary.componentDidCatch(Object.assign(new Error('NEXT_NOT_FOUND'), { digest: 'NEXT_HTTP_ERROR_FALLBACK;404' }))
+    expect(onError).not.toHaveBeenCalled()
+    boundary.componentDidCatch(new Error('Failed to load chunk'))
+    expect(onError).toHaveBeenCalledTimes(1)
   })
 
   it('lỗi điều hướng của Next (digest NEXT_…) → ném tiếp cho boundary của Next', () => {

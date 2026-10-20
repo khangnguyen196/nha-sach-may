@@ -114,6 +114,8 @@ export async function expectLazyChunkError(
   await expect(page.getByTestId('error-page')).toHaveCount(0)
   await expect(page.getByRole('banner').locator('a[href="/"]')).toBeVisible()
   await expect(alert.getByRole('button', { name: 'Tải lại trang' })).toBeFocused()
+  // Không có gì mở ra → nút mở không báo "đang mở" (nút nào có aria-expanded)
+  if ((await trigger.getAttribute('aria-expanded')) !== null) await expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
   await alert.getByRole('button', { name: 'Đóng' }).click()
   await expect(alert).toHaveCount(0)

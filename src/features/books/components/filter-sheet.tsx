@@ -50,6 +50,7 @@ export function FilterSheet({ labels, lazyError, children, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
+          onError={() => setOpen(false)}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)

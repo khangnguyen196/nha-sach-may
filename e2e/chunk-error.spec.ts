@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-import { bubble } from './chat'
+import { expect, test } from '@playwright/test'
+import { bubble, waitForBubble } from './chat'
 import { expectLazyChunkError, waitForHydration } from './helpers'
 
 // Chunk JS tải lười hỏng khi bấm (mạng chập chờn, bản deploy mới): LazyBoundary giữ lỗi tại chỗ, không lên error
@@ -70,11 +70,3 @@ test('khung chat: chunk tải lỗi → khối lỗi tại chỗ; tải lại tr
   await bubble(page).click()
   await expect(page.getByTestId('chat-panel')).toBeVisible()
 })
-
-// Như openChat (e2e/chat.ts): chờ React gắn handler lên đúng bong bóng đang hiển thị
-async function waitForBubble(page: Page) {
-  await expect(bubble(page)).toBeVisible()
-  await expect
-    .poll(() => bubble(page).evaluate((element) => Object.keys(element).some((key) => key.startsWith('__reactProps'))))
-    .toBe(true)
-}

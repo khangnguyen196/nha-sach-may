@@ -13,6 +13,8 @@ type Props = {
    * lại đúng lỗi cũ → khối lỗi hiện lại; chỉ tải lại trang mới tải lại được chunk.
    */
   onDismiss: () => void
+  /** Phần con vừa lỗi: cha đặt `open = false` (aria-expanded của nút mở không báo "đang mở" khi không có gì mở ra) */
+  onError: () => void
   children: ReactNode
 }
 
@@ -36,6 +38,10 @@ export class LazyBoundary extends Component<Props, { error: unknown }> {
 
   static getDerivedStateFromError(error: unknown) {
     return { error }
+  }
+
+  componentDidCatch(error: unknown) {
+    if (!isNextNavigation(error)) this.props.onError()
   }
 
   render() {
@@ -66,14 +72,26 @@ function LazyError({ labels, onDismiss }: { labels: LazyErrorLabels; onDismiss: 
     reloadRef.current?.focus({ preventScroll: true })
   }, [])
 
+  // Esc đóng khối lỗi dù focus ở đâu. Nghe ở window, pha capture (chạy trước listener Esc của Radix ở document) rồi
+  // chặn lan truyền: khung chat đang mở không bị đóng theo khi khách chỉ muốn tắt khối lỗi
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      onDismiss()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [onDismiss])
+
   return (
+    // pointer-events-auto: dialog modal của Radix đang mở (sheet, chat trên mobile) đặt pointer-events: none lên body.
+    // Hai boundary cùng lỗi (hiếm) thì hai khối chồng cùng chỗ.
     <div
       role="alert"
       data-testid="lazy-error"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onDismiss()
-      }}
-      className="fixed inset-x-4 top-20 z-50 mx-auto max-w-md rounded-xl border bg-surface p-4 text-base text-foreground"
+      data-lazy-error=""
+      className="pointer-events-auto fixed inset-x-4 top-20 z-50 mx-auto max-w-md rounded-xl border bg-surface p-4 text-base text-foreground"
     >
       <p>{labels.message}</p>
       <div className="mt-4 flex flex-wrap gap-3">

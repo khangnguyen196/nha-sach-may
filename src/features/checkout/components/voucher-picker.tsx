@@ -56,6 +56,7 @@ export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: 
       {mounted && (
         <LazyBoundary
           labels={lazyError}
+          onError={() => setOpen(false)}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)

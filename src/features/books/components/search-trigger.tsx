@@ -47,9 +47,9 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
         // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở. Vừa đóng mà hiệu ứng đóng chưa xong (focus còn ở ô
-        // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ.
+        // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ; focus đang ở khối lỗi chunk (LazyBoundary, sắp bị gỡ) cũng vậy.
         const active = document.activeElement
-        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root]'))) {
+        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root], [data-lazy-error]'))) {
           returnTo.current = active instanceof HTMLElement ? active : null
         }
         setMounted(true)
@@ -89,6 +89,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
+          onError={() => setOpen(false)}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)

@@ -137,6 +137,7 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
+          onError={() => setOpen(false)}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)
