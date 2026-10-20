@@ -66,8 +66,15 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
     }
   }, [q])
 
+  // Mọi đường đóng (Esc, bấm ra ngoài, chọn kết quả, Ctrl K ở search-trigger) đều xóa chữ đã gõ: theo `open`, không theo
+  // từng chỗ gọi (đổi state khi prop đổi, trong lúc render)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (!open) setInput('')
+  }
+
   function handleOpenChange(next: boolean) {
-    if (!next) setInput('')
     onOpenChange(next)
   }
 

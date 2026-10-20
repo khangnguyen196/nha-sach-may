@@ -32,9 +32,10 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
     function onKeyDown(event: KeyboardEvent) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
-        // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở
-        if (!openRef.current) {
-          const active = document.activeElement
+        // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở. Vừa đóng mà hiệu ứng đóng chưa xong (focus còn ở ô
+        // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ.
+        const active = document.activeElement
+        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root]'))) {
           returnTo.current = active instanceof HTMLElement ? active : null
         }
         setMounted(true)

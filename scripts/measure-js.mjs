@@ -4,15 +4,15 @@
 //   node scripts/measure-js.mjs vi                     # trang chủ tiếng Việt
 //   node scripts/measure-js.mjs en/books/<slug>        # đường dẫn NỘI BỘ (tên thư mục trong app/[locale])
 //
-// Baseline: app Next 16.4 + React 19.3 trống ≈ 170KB gzip. Ngân sách trong CLAUDE.md tính phần vượt baseline.
-// Số đo cộng cả polyfill `noModule` (~38.6KB gzip, trình duyệt hiện đại không tải) vì baseline 170KB cũng đo kèm nó:
-// giữ như vậy suốt đợt perf-js (★8, docs/plans/perf-js.md); bỏ thì phải sửa cả BASELINE_GZIP_KB lẫn mốc trong CLAUDE.md.
+// Baseline: app Next 16.4 + React 19.3 trống ≈ 131.4KB gzip, KHÔNG tính polyfill `noModule` (~38.6KB gzip, trình duyệt
+// hiện đại không tải; trước perf-js ★8 baseline là 170KB có kèm polyfill). Ngân sách trong CLAUDE.md tính phần vượt
+// baseline nên số "ngoài baseline" không đổi khi bỏ polyfill khỏi tổng. Script `noModule` vẫn in trong bảng, không cộng.
 // Vượt ngân sách của route → in "VƯỢT" và exit code 1.
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
 
-const BASELINE_GZIP_KB = 170
+const BASELINE_GZIP_KB = 131.4
 // Ngân sách phần vượt baseline (KB gzip) theo route nội bộ, CLAUDE.md → Hiệu năng. Route không có trong bảng: DEFAULT.
 // Hiện mọi route cùng 50KB; bảng ghi rõ route nào có ngân sách đã quyết (perf-js ★1), để sẵn khi siết từng route.
 const DEFAULT_BUDGET_KB = 50
@@ -30,28 +30,37 @@ if (!existsSync(htmlPath)) {
 }
 
 const html = readFileSync(htmlPath, 'utf8')
-const sources = [...new Set([...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]))]
+// Mỗi <script src> một lần; `noModule` = polyfill cho trình duyệt cũ, không cộng vào tổng
+const scripts = new Map()
+for (const [, attributes] of html.matchAll(/<script\b([^>]*)>/g)) {
+  const src = /\ssrc="([^"]+)"/.exec(attributes)?.[1]
+  if (src && !scripts.has(src)) scripts.set(src, /\snomodule\b/i.test(attributes))
+}
 const kb = (bytes) => (bytes / 1024).toFixed(1)
 
 let gzipTotal = 0
 let brotliTotal = 0
-const rows = sources.map((src) => {
+const rows = [...scripts].map(([src, noModule]) => {
   const file = join('.next', src.replace(/^\/_next\//, '').split('?')[0])
   const body = readFileSync(file)
   const gzip = gzipSync(body, { level: 9 }).length
   const brotli = brotliCompressSync(body, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length
-  gzipTotal += gzip
-  brotliTotal += brotli
-  return { src, raw: kb(body.length), gzip: kb(gzip), brotli: kb(brotli) }
+  if (!noModule) {
+    gzipTotal += gzip
+    brotliTotal += brotli
+  }
+  return { src, noModule, raw: kb(body.length), gzip: kb(gzip), brotli: kb(brotli) }
 })
 
 console.table(rows)
-console.log(`Route ${route}: ${rows.length} script, ${kb(gzipTotal)}KB gzip, ${kb(brotliTotal)}KB brotli`)
+const counted = rows.filter((row) => !row.noModule).length
+console.log(`Route ${route}: ${counted} script (không tính ${rows.length - counted} noModule), ${kb(gzipTotal)}KB gzip, ${kb(brotliTotal)}KB brotli`)
 const overBaselineKb = (gzipTotal - BASELINE_GZIP_KB * 1024) / 1024
 const budgetKb = BUDGETS_KB.find(([pattern]) => pattern.test(route))?.[1] ?? DEFAULT_BUDGET_KB
 const within = overBaselineKb <= budgetKb
-console.log(`Ngoài baseline framework (${BASELINE_GZIP_KB}KB gzip): ${overBaselineKb.toFixed(1)}KB gzip`)
-console.log(
-  `Ngân sách ${budgetKb}KB: ${within ? 'ĐẠT' : 'VƯỢT'} (${within ? 'còn' : 'vượt'} ${Math.abs(budgetKb - overBaselineKb).toFixed(1)}KB)`,
-)
+// Sát ngân sách (< 0.1KB) thì in 2 chữ số thập phân, tránh "50.0KB … VƯỢT (vượt 0.0KB)"
+const gap = Math.abs(budgetKb - overBaselineKb)
+const digits = gap < 0.1 ? 2 : 1
+console.log(`Ngoài baseline framework (${BASELINE_GZIP_KB}KB gzip): ${overBaselineKb.toFixed(digits)}KB gzip`)
+console.log(`Ngân sách ${budgetKb}KB: ${within ? 'ĐẠT' : 'VƯỢT'} (${within ? 'còn' : 'vượt'} ${gap.toFixed(digits)}KB)`)
 if (!within) process.exitCode = 1
