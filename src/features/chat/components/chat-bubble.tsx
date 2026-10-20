@@ -106,7 +106,7 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
 
   if (isChatHidden(pathname)) {
     // Trang ẩn chat (thanh toán): gỡ khối lỗi chunk nếu đang hiện, để khi quay lại nó không tự hiện và kéo focus
-    // (đặt state trong lúc render khi pathname đổi, không dùng effect)
+    // (đặt lại trong lúc render, có điều kiện `failed` nên chỉ render lại một lần; không dùng effect)
     if (failed) {
       setFailed(false)
       setMounted(false)
