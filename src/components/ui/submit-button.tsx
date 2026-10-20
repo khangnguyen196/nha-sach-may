@@ -5,7 +5,8 @@ import { useFormStatus } from 'react-dom'
 import { useHydrated } from '@/lib/use-hydrated'
 import { Button } from './button'
 
-// Firefox giữ trạng thái disabled của <button> qua lần tải lại (MDN) → nút có thể bật sẵn trước hydrate (type <button> của React thiếu autoComplete)
+// Firefox giữ trạng thái disabled của <button> qua lần tải lại (MDN) → nút có thể bật sẵn trước hydrate. autocomplete trên
+// <button> là thuộc tính phi chuẩn (chỉ Firefox dùng, trình kiểm HTML báo), nên type <button> của React không có autoComplete
 const NO_STATE_RESTORE: Pick<AllHTMLAttributes<HTMLButtonElement>, 'autoComplete'> = { autoComplete: 'off' }
 
 type Props = Omit<ComponentProps<typeof Button>, 'type' | 'aria-disabled'> & {

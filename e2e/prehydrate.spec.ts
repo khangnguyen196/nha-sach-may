@@ -30,7 +30,7 @@ for (const { path, field, heading } of AUTH_FORMS) {
       submit: form.locator('button[type="submit"]'),
       selector: `main form:has(input[name="${field}"]) button[type="submit"]`,
       input,
-      visible: page.getByRole('heading', { level: 1, name: heading }),
+      visible: page.getByRole('main').getByRole('heading', { level: 1, name: heading }),
     })
   })
 }

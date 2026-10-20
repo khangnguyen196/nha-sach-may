@@ -174,6 +174,7 @@ test('trước hydrate: "Đăng xuất" vẫn gửi được, 303 về trang ch�
     await login(page, own)
     const blocked = await blockHydration(page)
     await page.goto('/tai-khoan')
+    blocked.resetPosts()
     const signOut = page.getByRole('main').getByRole('button', { name: 'Đăng xuất' })
     await expect(signOut).toBeEnabled()
     await signOut.click()

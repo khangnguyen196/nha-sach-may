@@ -71,6 +71,7 @@ test.describe('tắt JavaScript', () => {
       await expect(form.locator('button[type="submit"]')).toBeDisabled()
       for (const { name, value } of [...before, enter]) await form.locator(`input[name="${name}"]`).fill(value)
       await form.locator(`input[name="${enter.name}"]`).press('Enter')
+      // Request (nếu có) đi ngay khi bấm Enter; 500 ms đủ để trình duyệt phát POST ra mạng
       await page.waitForTimeout(500)
       expect(posts).toBe(0)
       await expect(page).toHaveURL(new RegExp(`${path}$`))

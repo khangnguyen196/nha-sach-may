@@ -20,7 +20,7 @@
 - [Mức thấp] Chỗ lệch đã biết của LazyBoundary: (1) dialog modal đang mở mà palette lỗi → 'Đóng' đóng luôn dialog, bẫy focus kéo khỏi nút Tải lại; (2) hai boundary cùng lỗi → hai khối chồng một chỗ; (3) khối lỗi che nút 'Bộ lọc' trên mobile (Đóng / Esc được). (Chat lỗi rồi sang /thanh-toan: đã sửa, quay lại không tự hiện.)
 - [Mức thấp] Khung chat đang mở (desktop, không modal) khi sang /thanh-toan vẫn giữ `open = true`; quay về trang khác thì khung tự mở lại và kéo focus (có từ Phase 11; review chunk-loi). Hướng sửa: ở nhánh trang ẩn chat của `ChatBubbleInner` đặt `open = false` (giữ `entries`).
 - [Theo dõi] Lỗi #3 build ('use cache' took too long, getRelatedBooks) gặp lại 2 lần khi build local 2026-10-20; CI / Vercel xanh.
-- [Mức thấp] scripts/analyze-diff.mjs:16-17 comment còn ghi 'polyfill noModule, measure:js cũng đếm' (sau ★8 measure:js in nhưng không cộng).
+- [Mức thấp] scripts/analyze-diff.mjs:16-17 comment còn ghi 'polyfill noModule, measure:js cũng đếm' (sau perf-js ★8 measure:js in nhưng không cộng).
 - [Theo dõi] Request RSC 404 sau đăng xuất (sửa ở bc1718b): cần 15 lượt e2e đầy đủ liên tiếp sạch; hiện 3/15 (main bc1718b run 39391179766, khoa-nut 178b092 run 39392430246, khoa-nut 9c1d5a9 run 39418804347; đều 0 flaky / 0 fail). Request `/dang-nhap?next=%2Ftai-khoan…&_rsc=…` (cart-account.spec.ts "gộp giỏ…"); bản sửa: prefetch={false} cho link /account khi đã đăng nhập + 2 thẻ trang tài khoản; e2e logout-prefetch-account.spec.ts. Chi tiết: docs/plans/sau-ux.md mục 4.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):

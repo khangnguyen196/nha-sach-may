@@ -50,7 +50,8 @@ function tagStarts(source: string, tag = TAG) {
 
 /**
  * Thẻ mở `<Tag …>`: bỏ qua `>` nằm trong `{…}` (VD `disabled={remaining > 0}`, `() =>`). Ngoặc lệch (ngoặc trong chuỗi /
- * comment), chạm thẻ cùng tên kế tiếp hay hết file mà chưa đóng thẻ → throw, không bỏ qua im lặng.
+ * comment), chạm thẻ cùng tên kế tiếp hay hết file mà chưa đóng thẻ → throw, không bỏ qua im lặng. `>` trong chuỗi
+ * thuộc tính (VD `className="[&>svg]:…"`) làm cắt thẻ sớm → test đỏ giả (ồn), không lọt im lặng.
  */
 function openingTag(source: string, start: number, tag = TAG) {
   let depth = 0
@@ -65,9 +66,11 @@ function openingTag(source: string, start: number, tag = TAG) {
   throw new Error(`Không đóng được thẻ ở vị trí ${start}`)
 }
 
+/** `lockUntilHydrated` trần hoặc `={true}` (không nhận `={false}` / biểu thức) */
+const hasLockUntilHydrated = (tag: string) => /(?<![\w-])lockUntilHydrated(?:\s*=\s*\{\s*true\s*\})?(?=[\s/>])/.test(tag)
+
 /** `ready={…}` (không phải `ready={true}` / `ready={false}`, không phải `data-ready=`) hoặc `lockUntilHydrated` */
-const isLocked = (tag: string) =>
-  /(?<![\w-])ready=\{\s*(?!(?:true|false)\s*\})/.test(tag) || /(?<![\w-])lockUntilHydrated\b/.test(tag)
+const isLocked = (tag: string) => /(?<![\w-])ready=\{\s*(?!(?:true|false)\s*\})/.test(tag) || hasLockUntilHydrated(tag)
 
 /** Biểu thức trong `ready={…}` của thẻ (không có → undefined) */
 const readyExpression = (tag: string) => /(?<![\w-])ready=\{\s*([^{}]*?)\s*\}/.exec(tag)?.[1]
@@ -140,6 +143,10 @@ describe('SubmitButton khóa tới khi hydrate (ready / lockUntilHydrated)', () 
         if (start === exempt) continue
         const tag = openingTag(source, start)
         expect(isLocked(tag), `thiếu ready / lockUntilHydrated: ${tag}`).toBe(true)
+        // File không gọi hook: `ready` không có nguồn đúng (VD `ready={!pending}`) → phải dùng lockUntilHydrated
+        if (!source.includes('useFormAction(')) {
+          expect(hasLockUntilHydrated(tag), `file không gọi useFormAction phải dùng lockUntilHydrated: ${tag}`).toBe(true)
+        }
       }
     })
   }
@@ -170,7 +177,7 @@ describe('file gọi useFormAction: mọi SubmitButton truyền ready lấy từ
   }
 })
 
-describe('form POST gửi bằng SubmitButton (hoặc {...formProps} của useFormAction)', () => {
+describe('form POST gửi bằng SubmitButton (form của hook: đúng ready của hook đó), không có nút submit thường', () => {
   it('bộ lọc còn đúng: thấy form của hook, form sổ địa chỉ và đủ các file ngoại lệ', () => {
     expect(formFiles.length).toBeGreaterThan(15)
     expect(formFiles.some(({ path }) => path === 'features/account/components/address-card.tsx')).toBe(true)
@@ -185,8 +192,19 @@ describe('form POST gửi bằng SubmitButton (hoặc {...formProps} của useFo
         return
       }
       for (const { tag, body } of forms) {
-        const spreadsHook = /\{\s*\.\.\.\s*[\w.]*formProps\s*\}/.test(tag)
-        expect(spreadsHook || tagStarts(body).length > 0, `form POST không có SubmitButton: ${tag}`).toBe(true)
+        const buttons = tagStarts(body).map((start) => openingTag(body, start))
+        expect(buttons.length, `form POST không có SubmitButton: ${tag}`).toBeGreaterThan(0)
+        // Nút submit thường (không khóa) trong cùng form
+        expect(body, `form POST có nút type="submit" không phải SubmitButton: ${tag}`).not.toMatch(/type=["']submit["']/)
+        // Form của hook (`{...x.formProps}` / `action={x.formProps.action}`): nút trong form dùng `ready` của đúng hook đó
+        const hook = /(?:\.\.\.\s*|action=\{\s*)((?:\w+\.)?)formProps\b/.exec(tag)
+        if (hook) {
+          const expected = `${hook[1] ?? ''}ready`
+          expect(
+            buttons.some((button) => readyExpression(button) === expected),
+            `SubmitButton trong form không dùng ready={${expected}}: ${tag}`,
+          ).toBe(true)
+        }
       }
     })
   }

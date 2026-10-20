@@ -177,7 +177,14 @@ export async function blockHydration(page: Page) {
   page.on('request', (request) => {
     if (request.method() === 'POST') posts += 1
   })
-  return { posts: () => posts, unblock: () => page.unroute(pattern, abort) }
+  return {
+    posts: () => posts,
+    /** Đếm lại từ 0 (bỏ POST của bước trước, VD trang vừa đăng nhập còn chạy effect lúc vào trang cần đo) */
+    resetPosts: () => {
+      posts = 0
+    },
+    unblock: () => page.unroute(pattern, abort),
+  }
 }
 
 /**
@@ -194,6 +201,7 @@ export async function expectLockedUntilHydrated(
   await expect(submit).toHaveAttribute('aria-disabled', 'true')
   await submit.click({ force: true })
   if (input) await input.press('Enter')
+  // Request (nếu có) đi ngay khi bấm; 500 ms đủ để trình duyệt phát POST ra mạng (chỉ đo có / không, không chờ phản hồi)
   await page.waitForTimeout(500)
   expect(blocked.posts()).toBe(0)
   await expect(visible).toBeVisible()
