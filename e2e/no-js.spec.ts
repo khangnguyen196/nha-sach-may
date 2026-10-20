@@ -41,7 +41,8 @@ test.describe('tắt JavaScript', () => {
       await expect(note).toHaveText(SUBMIT_NOTE)
       const submit = form.locator('button[type="submit"]')
       const [noteBox, submitBox] = await Promise.all([note.boundingBox(), submit.boundingBox()])
-      expect(noteBox?.y ?? Infinity).toBeLessThan(submitBox?.y ?? 0)
+      if (!noteBox || !submitBox) throw new Error('Không đo được vị trí câu noscript / nút gửi')
+      expect(noteBox.y).toBeLessThan(submitBox.y)
     })
   }
 })

@@ -59,7 +59,7 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
                 data-testid="no-script"
                 className="border-b bg-surface-raised px-4 py-3 text-center text-base text-foreground sm:px-6"
               >
-                {t('noScript')}
+                <span className="mx-auto block max-w-reading">{t('noScript')}</span>
               </p>
             </noscript>
             {/* <main> + footer do layout của từng route group dựng: (shop) có footer đầy đủ, (auth) chỉ dòng bản quyền */}
