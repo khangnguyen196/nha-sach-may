@@ -13,7 +13,11 @@ type Props = {
    * lại đúng lỗi cũ → khối lỗi hiện lại; chỉ tải lại trang mới tải lại được chunk.
    */
   onDismiss: () => void
-  /** Phần con vừa lỗi: cha đặt `open = false` (aria-expanded của nút mở không báo "đang mở" khi không có gì mở ra) */
+  /**
+   * Phần con vừa lỗi: cha đặt `open = false` (aria-expanded của nút mở không báo "đang mở" khi không có gì mở ra), và
+   * cha còn phải khóa mở lại trong lúc khối lỗi hiện (`failed`): boundary đã lỗi không render lại phần con nên
+   * componentDidCatch / onError không chạy lần nữa.
+   */
   onError: () => void
   children: ReactNode
 }

@@ -68,6 +68,7 @@ src/
     books/  cart/  checkout/  orders/  account/  reviews/  admin/  chat/
       components/  actions.ts  queries.ts  schemas.ts  types.ts
   components/ui/       # shadcn primitives
+  components/lazy-boundary.tsx  lazy-error-labels.ts   # error boundary cho nội dung tải lười (next/dynamic) + chuỗi của nó
   components/layout/   # Header, Footer, LocaleSwitcher, ThemeToggle
   components/admin/    # AdminLink, khung admin, ShopLink, bảng / form dùng chung của admin
   lib/                 # supabase/{server,client,public,env}.ts, i18n-db.ts, errors.ts, utils.ts
