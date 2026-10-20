@@ -69,6 +69,10 @@ describe('e2e/fixtures/books.json', () => {
     expect(roomy.some((b) => b.price < FREE_SHIP_FROM && Math.ceil(FREE_SHIP_FROM / b.price) <= Math.min(b.stock, 99))).toBe(true)
   })
 
+  it('có sách tồn ≥ 20 (prehydrate.spec, login-typing.spec: thêm vào giỏ trên sách thật)', () => {
+    expect(books.some((b) => b.stock >= 20)).toBe(true)
+  })
+
   it('có giá 100.000 – 200.000 ₫ (lọc giá)', () => {
     expect(books.some((b) => b.price >= 100_000 && b.price <= 200_000)).toBe(true)
   })

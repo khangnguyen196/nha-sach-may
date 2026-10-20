@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { createE2eUser, deleteE2eUsers } from '../scripts/e2e-user'
 import { addFromBookPage } from './cart'
 import { collectErrors, waitForHydration } from './helpers'
 
 // Mục 14 (ux-messages): trang đăng nhập / quên mật khẩu chỉ có MỘT form ngay từ đầu. Trước đây form nằm trong Suspense
 // với fallback là một form khác; sau điều hướng phía client, fallback hydrate trước rồi bị thay ~60 ms sau → chữ khách
 // gõ ngay lúc ô hiện ra bị mất (CI tái hiện ~3/24 lần trên mobile). Ở đây gõ ngay khi ô hiện ra, không chờ hydrate.
+// Đăng nhập khi tắt JS (cần user): login-nojs-account.spec.ts.
 
 // Playwright chạy từ thư mục gốc repo và biên dịch spec sang CommonJS (không có import.meta)
 const fixture: { slug: string; stock: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
@@ -76,33 +76,4 @@ test('đăng nhập → "Quên mật khẩu?" (điều hướng phía client) �
     expect(await addedForms(page), `lượt ${round}`).toBe(1)
   }
   expect(errors).toEqual([])
-})
-
-test.describe('không có JavaScript', () => {
-  test.use({ javaScriptEnabled: false })
-
-  test('/dang-nhap?next=%2Fgio-hang: nút đăng nhập khóa (★8); form gửi thẳng (không qua nút) với input next trống → server lấy next từ URL trang, về giỏ', async ({
-    page,
-  }, testInfo) => {
-    const user = await createE2eUser(`${testInfo.project.name}-nojs`)
-    try {
-      await page.goto('/dang-nhap?next=%2Fgio-hang')
-      const main = page.getByRole('main')
-      await expect(main.locator('form')).toHaveCount(1)
-      await expect(main.locator('form input[type="hidden"][name="next"]')).toHaveValue('')
-      await main.getByLabel('Email').fill(user.email)
-      await main.getByLabel('Mật khẩu', { exact: true }).fill(user.password)
-      // Tắt JS: nút gửi khóa (gửi được thì trang lỗi / kết quả ra trắng, docs/plans/no-js.md ★8)
-      const submit = main.getByRole('button', { name: 'Đăng nhập' })
-      await expect(submit).toBeDisabled()
-      await expect(submit).toHaveAttribute('aria-disabled', 'true')
-      // Đường server vẫn giữ (form gửi không qua nút, VD trang HTML cũ còn trong bộ nhớ đệm): next lấy từ Referer
-      await main.locator('form').evaluate((form) => {
-        if (form instanceof HTMLFormElement) form.requestSubmit()
-      })
-      await expect(page).toHaveURL(/\/gio-hang$/, { timeout: 20_000 })
-    } finally {
-      await deleteE2eUsers([user.id])
-    }
-  })
 })

@@ -165,7 +165,7 @@ JS bật, `context.route` chặn mọi `/_next/static/chunks/*.js` **trước** 
 - JS client không đổi: `measure:js` (build local, cùng cách đo perf-js ★8: không tính polyfill, baseline 131.4KB) `main` `2cefa0a` → `no-js` `32efcbf`: `vi` 41.5 → 41.5KB, `vi/login` 36.2 → 36.2KB ngoài baseline (ngân sách 50KB, ĐẠT; số trước khi merge chunk-loi). Sau `32efcbf` chỉ đổi comment / docs / e2e, chuỗi `common.noScript` (en) và markup trong `<noscript>` của layout (Server Component, không vào chunk JS client; `measure:js` chỉ đếm `<script src>`) → số JS ở SHA cuối như trên. Thay đổi chỉ là HTML trong `<noscript>` (không phải JS) nên các route khác cũng không đổi; chưa đo riêng `vi/books/<slug>`.
 - CI: e2e `32efcbf` run 39370803906 và `d389e67` run 39371894904: 454 qua / 10 skip / 0 flaky (main `51bf49f`: 427 qua + 1 flaky / 10 skip → +26 = 13 test `no-js.spec` × desktop + mobile); CI check `32efcbf` run 39370803903, `d389e67` run 39371894903 xanh; e2e `8b2a69f` (code cuối trước merge) run 39373668503: 454 qua / 10 skip / 0 flaky; sau khi merge `main` (chunk-loi `355f257`) vào `no-js` (`967a009`, push cùng `485ad18`): e2e run 39379786667 (463 qua / 11 skip / 0 flaky; CI check 39379786722 xanh).
 
-**Chỗ hở còn lại sau A** (chấp nhận theo ★1; đã đổi ở ★8: nút gửi form Server Action khóa tới khi hydrate, nên khách tắt JS / gửi trước hydrate không gửi được nữa thay vì ra trang trắng; ý 1 và 3 dưới đây chỉ còn với form không khóa, xem ★8):
+**Chỗ hở còn lại sau A** (chấp nhận theo ★1; đã đổi ở ★8: nút gửi form Server Action khóa tới khi hydrate, nên khách tắt JS / gửi trước hydrate không gửi được nữa thay vì ra trang trắng; ý 1 và 3 dưới đây đã đóng: form không khóa (`UNLOCKED_FORMS` trong `src/lib/form-ready.test.ts`: đăng xuất, thêm giỏ không JS, `/xac-nhan`) đều kết thúc bằng 303):
 - Sau khi gửi form trả `Result` (3 form auth và mọi form trong tài khoản), khách tắt JS vẫn thấy **trang trắng không lời giải thích**: thân POST không có `<html>` / layout nên dải noscript không có trong đó (review bản 2, NGHIÊM TRỌNG 1). Câu noscript trên nút chỉ báo **trước** khi gửi, và chỉ ở 3 form khách thấy được (form khác nằm trong stream, không thấy khi tắt JS).
 - Câu báo trên URL (`?error=LINK_EXPIRED`, `?confirmed=1`, `UrlNotices`) không hiện khi tắt JS (II.1a).
 - Khách có JS gửi trước hydrate: không được A che (★8).
@@ -254,7 +254,7 @@ Khách mở link email thường có JS. Chỉ sửa comment sai (`confirm/page.
 ## Test
 
 - `e2e/no-js.spec.ts` (desktop + mobile): như "Phần A".
-- e2e có JS hiện có (`auth-email.spec.ts`, `account.spec.ts`) giữ nguyên. `login-typing.spec.ts` test không JS (đăng nhập rồi về `/gio-hang`) **đã đổi** ở ★8: kiểm nút khóa, đường `next` lấy từ Referer kiểm bằng `form.requestSubmit()`.
+- e2e có JS hiện có (`auth-email.spec.ts`, `account.spec.ts`) giữ nguyên. `login-typing.spec.ts` test không JS (đăng nhập rồi về `/gio-hang`; đợt ron-test chuyển sang `login-nojs-account.spec.ts`, chạy sau `setup`) **đã đổi** ở ★8: kiểm nút khóa, đường `next` lấy từ Referer kiểm bằng `form.requestSubmit()`.
 - (Đợt nhỏ) e2e chunk lỗi + Vitest `LazyBoundary`: nhánh `chunk-loi`.
 
 ## Ước lượng
