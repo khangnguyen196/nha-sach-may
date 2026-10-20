@@ -4,6 +4,7 @@ import { cn } from 'cn'
 import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { LazyBoundary, type LazyErrorLabels } from '@/components/lazy-boundary'
 import { usePathname } from '@/i18n/navigation'
 import type { ChatBrowseCategory, ChatLabels } from '../labels'
 import { currentBookSlug, isChatHidden } from '../visibility'
@@ -20,6 +21,8 @@ const AVOID_SELECTOR = '[data-chat-avoid]'
 type Props = {
   labels: ChatLabels
   categories: ChatBrowseCategory[]
+  /** Chunk khung chat tải lỗi (LazyBoundary) */
+  lazyError: LazyErrorLabels
   /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
   icon: ReactNode
 }
@@ -84,7 +87,7 @@ function useAvoidBottomBand(pathname: string) {
   return covered
 }
 
-function ChatBubbleInner({ labels, categories, icon }: Props) {
+function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
   const pathname = usePathname()
   const params = useParams()
   const [mounted, setMounted] = useState(false)
@@ -111,7 +114,7 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-testid="chat-bubble"
-        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: đợt error boundary (docs/progress.md)
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: LazyBoundary
         onPointerEnter={() => void loadPanel().catch(() => {})}
         onFocus={() => void loadPanel().catch(() => {})}
         onClick={() => {
@@ -132,18 +135,27 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
         {icon}
       </button>
       {mounted && (
-        <ChatPanel
-          open={open}
-          onOpenChange={setOpen}
-          labels={labels}
-          categories={categories}
-          slug={currentBookSlug(pathname, params)}
-          entries={entries}
-          setEntries={setEntries}
-          ageConfirmed={ageConfirmed}
-          onConfirmAge={confirmAge}
-          returnFocus={button}
-        />
+        <LazyBoundary
+          labels={lazyError}
+          onDismiss={() => {
+            setOpen(false)
+            setMounted(false)
+            button.current?.focus()
+          }}
+        >
+          <ChatPanel
+            open={open}
+            onOpenChange={setOpen}
+            labels={labels}
+            categories={categories}
+            slug={currentBookSlug(pathname, params)}
+            entries={entries}
+            setEntries={setEntries}
+            ageConfirmed={ageConfirmed}
+            onConfirmAge={confirmAge}
+            returnFocus={button}
+          />
+        </LazyBoundary>
       )}
     </>
   )

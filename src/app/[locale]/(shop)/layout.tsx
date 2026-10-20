@@ -1,6 +1,7 @@
 import { MessageCircleIcon } from 'lucide-react'
 import { locale as rootLocale } from 'next/root-params'
 import { Footer } from '@/components/layout/footer'
+import { getLazyErrorLabels } from '@/components/lazy-error-labels'
 import { ChatBubble } from '@/features/chat/components/chat-bubble'
 import { chatEnabled } from '@/features/chat/env'
 import { getChatBrowseCategories, getChatLabels } from '@/features/chat/labels'
@@ -25,6 +26,17 @@ export default function ShopLayout({ children }: LayoutProps<'/[locale]'>) {
  */
 async function Chat() {
   if ((await rootLocale()) !== 'vi' || !chatEnabled()) return null
-  const [labels, categories] = await Promise.all([getChatLabels(), getChatBrowseCategories()])
-  return <ChatBubble labels={labels} categories={categories} icon={<MessageCircleIcon aria-hidden />} />
+  const [labels, categories, lazyError] = await Promise.all([
+    getChatLabels(),
+    getChatBrowseCategories(),
+    getLazyErrorLabels(),
+  ])
+  return (
+    <ChatBubble
+      labels={labels}
+      categories={categories}
+      lazyError={lazyError}
+      icon={<MessageCircleIcon aria-hidden />}
+    />
+  )
 }

@@ -10,7 +10,6 @@
 - [Dọn 2026-10-26] xóa nhánh backup/main-local-06d5009 và stash eb9bb91.
 - [Mức thấp] Thay 5 bìa sai + 6 bìa đáng ngờ (làm từ từ).
 - [Mức thấp] sitemap còn trang tác giả chỉ có sách thuộc danh mục ẩn (gợi ý 2 review sau-ux).
-- [Đợt nhỏ] Tải chunk lỗi khi bấm (sheet bộ lọc, gợi ý mã, khung chat, palette): next/dynamic (React.lazy) giữ lỗi tới khi tải lại trang → error boundary + nút 'Thử lại'.
 - [Chấp nhận 2026-10-20] Lõi lucide Icon ('use client' trong lucide-react 1.57) vẫn tải ở mọi trang cửa hàng; mọi route đã dưới ngân sách.
 - [Mức thấp] cart-view.tsx, checkout-form.tsx (client) còn import lucide (ngoài plan C).
 - [Theo dõi] Lỗi #3 build ('use cache' took too long, getRelatedBooks) gặp lại 2 lần khi build local 2026-10-20; CI / Vercel xanh.

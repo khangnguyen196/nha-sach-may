@@ -1,4 +1,5 @@
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
+import { getLazyErrorLabels } from '@/components/lazy-error-labels'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
@@ -23,7 +24,12 @@ type Props = {
  * quote_order), chạy không cần JS. Form lồng nhau không hợp lệ nên ô và nút thuộc form riêng qua `form="…"`.
  */
 export async function VoucherField({ voucher, addressId, suggestions }: Props) {
-  const [t, format, locale] = await Promise.all([getTranslations('checkout'), getFormatter(), getLocale()])
+  const [t, format, locale, lazyError] = await Promise.all([
+    getTranslations('checkout'),
+    getFormatter(),
+    getLocale(),
+    getLazyErrorLabels(),
+  ])
   const applied = voucher && !voucher.failure ? voucher.code : null
   const error = voucher?.failure?.message
   const cards = suggestions.map((suggestion) =>
@@ -58,6 +64,7 @@ export async function VoucherField({ voucher, addressId, suggestions }: Props) {
                 vouchers={cards}
                 formId={VOUCHER_FORM_ID}
                 inputId={INPUT_ID}
+                lazyError={lazyError}
                 labels={{
                   pick: t('voucherPick'),
                   title: t('voucherListTitle'),
