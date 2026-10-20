@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 import { blockHydration, expectLockedUntilHydrated, waitForHydration } from './helpers'
+
+// Playwright chạy từ thư mục gốc repo và biên dịch spec sang CommonJS (không có import.meta)
+const fixture: { slug: string; stock: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
+const book = fixture.find((entry) => entry.stock >= 20)
+if (!book) throw new Error('e2e/fixtures/books.json thiếu sách còn hàng (tồn ≥ 20)')
 
 // ★8 (docs/plans/no-js.md): khách có JS bấm gửi trước khi React hydrate (4G chậm) từng đi đường POST thường → trang
 // trắng dù action đã chạy. Nút gửi của form dùng useFormAction khóa tới khi hydrate. Form cần tài khoản:
@@ -29,7 +35,43 @@ for (const { path, field, heading } of AUTH_FORMS) {
   })
 }
 
-test('khoảng khóa khi tải bình thường: từ lúc nút gửi hiện tới lúc nút bật (ghi lại, không kiểm ngưỡng)', async ({
+// Ngoại lệ không khóa (src/lib/form-ready.test.ts → UNLOCKED_FORMS): thêm giỏ không JS kết thúc bằng 303 → khách chưa
+// đăng nhập bấm trước hydrate được chuyển tới trang đăng nhập (trang thật, không trắng). Đăng xuất: prehydrate-account.spec.ts.
+test('trước hydrate: "Thêm vào giỏ" (khách) vẫn gửi được, 303 sang đăng nhập kèm next, trang không trắng', async ({ page }) => {
+  const blocked = await blockHydration(page)
+  await page.goto(`/sach/${book.slug}`)
+  const addToCart = page.getByRole('main').locator('form').getByRole('button', { name: /Thêm vào giỏ/ }).first()
+  await expect(addToCart).toBeEnabled()
+  await addToCart.click()
+  await expect(page).toHaveURL(new RegExp(`/dang-nhap\\?next=%2Fsach%2F${book.slug}$`))
+  expect(blocked.posts()).toBe(1)
+  await expect(page.getByRole('main').locator('form:has(input[name="password"])')).toBeVisible()
+})
+
+// HTML server trả (chưa qua trình duyệt): nút gửi khóa sẵn, và autocomplete="off" để Firefox không khôi phục trạng thái
+// disabled cũ của nút khi tải lại (nút bật sẵn trước hydrate). Chỉ trên nút, form không có (giữ tự điền email / mật khẩu).
+for (const path of ['/dang-nhap', '/dang-ky', '/quen-mat-khau', '/en/login', '/en/register', '/en/forgot-password']) {
+  test(`HTML thô ${path}: nút gửi có disabled + autocomplete="off", form không tắt autocomplete`, async ({ request }) => {
+    const response = await request.get(path)
+    expect(response.status()).toBe(200)
+    const html = await response.text()
+    const submits = html.match(/<button\b[^>]*\btype="submit"[^>]*>/g) ?? []
+    expect(submits).toHaveLength(1)
+    const [submit] = submits
+    expect(submit).toMatch(/\sdisabled(=""|\s|>)/)
+    expect(submit).toContain('aria-disabled="true"')
+    // React SSR viết tên thuộc tính theo prop (`autoComplete="off"`); tên thuộc tính HTML không phân biệt hoa thường
+    expect(submit).toMatch(/\sautocomplete="off"/i)
+    const forms = html.match(/<form\b[^>]*>/g) ?? []
+    expect(forms.length).toBeGreaterThan(0)
+    for (const form of forms) expect(form).not.toMatch(/\sautocomplete=/i)
+  })
+}
+
+// Đo (không kiểm) thời gian nút gửi khóa khi tải bình thường, in ra log CI (dòng KHOA-NUT) để ghi vào no-js.md ★8.
+// Việc kiểm nút khóa trước hydrate / bật sau hydrate nằm ở các test theo AUTH_FORMS phía trên (expectLockedUntilHydrated)
+// và no-js.spec.ts (tắt JS).
+test('khoảng khóa /dang-nhap khi tải bình thường: đo và ghi thời gian từ lúc nút gửi hiện tới lúc bật', async ({
   page,
 }, testInfo) => {
   await page.addInitScript(() => {

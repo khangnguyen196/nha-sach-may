@@ -47,6 +47,35 @@ test.describe('tắt JavaScript', () => {
       // ★8: không JS thì nút khóa (gửi lúc này là POST thường → trang trắng), giữ nguyên chữ
       await expect(submit).toBeDisabled()
       await expect(submit).toHaveAttribute('aria-disabled', 'true')
+      // Trình duyệt đọc `autoComplete="off"` của HTML server thành thuộc tính `autocomplete` (Firefox: không khôi phục disabled cũ)
+      await expect(submit).toHaveAttribute('autocomplete', 'off')
+    })
+  }
+
+  // Phím "Đi" của bàn phím điện thoại là Enter: nút gửi khóa thì Enter trong ô cũng không được gửi form (implicit
+  // submission). Tắt JS giống lúc trước hydrate: nút disabled ngay từ HTML server. Chromium (WebKit: no-js.md ★8).
+  // `enter`: ô điền sau cùng rồi bấm Enter
+  const EMAIL = { name: 'email', value: 'enter-khoa@example.com' }
+  const ENTER_FORMS = [
+    { path: '/quen-mat-khau', before: [], enter: EMAIL },
+    { path: '/dang-nhap', before: [EMAIL], enter: { name: 'password', value: 'mat-khau-gia-123' } },
+  ]
+  for (const { path, before, enter } of ENTER_FORMS) {
+    test(`form ${path}: nút khóa thì Enter trong ô không gửi POST`, async ({ page }) => {
+      let posts = 0
+      page.on('request', (request) => {
+        if (request.method() === 'POST') posts += 1
+      })
+      await page.goto(path)
+      const form = page.getByRole('main').locator('form')
+      await expect(form.locator('button[type="submit"]')).toBeDisabled()
+      for (const { name, value } of [...before, enter]) await form.locator(`input[name="${name}"]`).fill(value)
+      await form.locator(`input[name="${enter.name}"]`).press('Enter')
+      await page.waitForTimeout(500)
+      expect(posts).toBe(0)
+      await expect(page).toHaveURL(new RegExp(`${path}$`))
+      await expect(form).toBeVisible()
+      await expect(form.locator(`input[name="${enter.name}"]`)).toHaveValue(enter.value)
     })
   }
 })

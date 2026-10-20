@@ -163,3 +163,28 @@ test('giữ nguyên trước hydrate: nút "Đăng xuất" và "Thêm vào giỏ
   await expect(addToCart).toHaveAttribute('aria-disabled', 'false')
   await context.close()
 })
+
+// Ngoại lệ không khóa (src/lib/form-ready.test.ts → UNLOCKED_FORMS): signOut kết thúc bằng 303 → bấm trước hydrate về
+// trang chủ (trang thật, không trắng), hết phiên. User riêng: đăng xuất thu hồi phiên, không dùng phiên chung của spec.
+test('trước hydrate: "Đăng xuất" vẫn gửi được, 303 về trang chủ, trang không trắng, hết phiên', async ({ browser, baseURL }) => {
+  const own = await createE2eUser('khoa-nut-dang-xuat')
+  const context = await browser.newContext({ baseURL, storageState: NO_SESSION })
+  try {
+    const page = await context.newPage()
+    await login(page, own)
+    const blocked = await blockHydration(page)
+    await page.goto('/tai-khoan')
+    const signOut = page.getByRole('main').getByRole('button', { name: 'Đăng xuất' })
+    await expect(signOut).toBeEnabled()
+    await signOut.click()
+    await expect(page).toHaveURL(/\/$/)
+    expect(blocked.posts()).toBe(1)
+    await expect(page.getByRole('main')).toBeVisible()
+    await blocked.unblock()
+    await page.goto('/tai-khoan')
+    await expect(page).toHaveURL(/\/dang-nhap\?next=%2Ftai-khoan$/)
+  } finally {
+    await context.close()
+    await deleteE2eUsers([own.id])
+  }
+})

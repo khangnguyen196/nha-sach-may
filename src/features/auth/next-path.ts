@@ -17,8 +17,9 @@ export function safeNextPath(value: unknown, fallback: string): string {
 }
 
 /**
- * Form đăng nhập gửi khi JS chưa chạy / bị tắt: input ẩn `next` (điền ở client) còn trống → lấy `next` trong URL trang
- * đăng nhập (header Referer của chính lần POST đó). Kết quả vẫn phải qua safeNextPath.
+ * Dự phòng khi input ẩn `next` (NextField điền ở client sau hydrate) còn trống lúc gửi: lấy `next` trong URL trang đăng
+ * nhập (header Referer của chính lần POST đó). Nút gửi khóa tới khi hydrate (★8) nên tắt JS không gửi được; ca còn lại
+ * là form không qua nút khóa (VD HTML cũ còn trong bộ đệm từ trước ★8). Kết quả vẫn phải qua safeNextPath.
  */
 export function nextFromReferer(referer: string | null): string {
   if (!referer) return ''

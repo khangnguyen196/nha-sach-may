@@ -4,8 +4,10 @@
 
 - [Chờ quyết lại ★4 / ★5] B: client component dùng clsx thay cn; chỉ giữ cn ở chỗ cần gộp class đè (VD Button nhận className). Ước tính −8 đến −10KB gzip mọi trang. Phải rà mọi chỗ className đè và kiểm giao diện bằng mắt.
 - [Không làm] E: bỏ next-intl ở client (đụng quy ước Link / i18n/navigation).
-- [Đã làm A 2026-10-20: dải noscript + câu trong 3 form auth; B hoãn; ★9 / ★10 chờ đo (chỉ đọc); ★7 chờ (tìm issue / soạn, không gửi)] docs/plans/no-js.md
-- [Đã code trên khoa-nut, chờ duyệt] Khách có JS gửi form trước khi hydrate → trang trắng (★8 (a1+): nút gửi khóa tới khi hydrate; no-js.md).
+- [Đã làm A 2026-10-20 (production 7e30f6c); ★8 trên khoa-nut; B hoãn; ★9 / ★10 đã đo; ★7 đã có issue vercel/next.js#99756] docs/plans/no-js.md
+- [Đã code trên khoa-nut, chờ test điện thoại] Khách có JS gửi form trước khi hydrate → trang trắng (★8 (a1+): nút gửi khóa tới khi hydrate, autocomplete="off" cho Firefox; no-js.md).
+- [Đã quyết 2026-10-20] Nút khóa trước hydrate giữ độ mờ của Button (disabled:opacity-50): mạng chậm thì đây là dấu hiệu duy nhất nút chưa bấm được.
+- [Chờ quyết, sau ★8] Nút khóa lâu không có câu giải thích (Preview mạng chậm ~21 s; chunk JS chính lỗi → khóa mãi). Phương án: một câu chung ở layout, hiện sau ~4 s bằng CSS (animation-delay, không cần JS), ẩn khi hydrate.
 - [Đã đo 2026-10-20, đề xuất chưa làm] Trang sách / danh mục / tác giả đã prerender không có nội dung trong HTML tĩnh (★9): nội dung lộ ~0,25 s sau FCP, LCP trang sách 2,5 s (mobile 4G mô phỏng); xem lại khi có số liệu thật của khách (no-js.md).
 - [Đã đo 2026-10-20] ★10: bot mạng xã hội thấy đủ og:* trong <head>, không cần sửa; còn thiếu user agent thật của Zalo. ★7: đã có issue vercel/next.js#99756 (open), không gửi bài mới; chủ dự án tùy chọn 👍 / bình luận thêm dữ kiện Vercel.
 - [Rủi ro chấp nhận] Dò email qua thời gian phản hồi (GoTrue gửi thư đồng bộ khi có tài khoản); app không chặn được.

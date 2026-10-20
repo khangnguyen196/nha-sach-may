@@ -1,9 +1,12 @@
 'use client'
 
-import type { ComponentProps } from 'react'
+import type { AllHTMLAttributes, ComponentProps } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useHydrated } from '@/lib/use-hydrated'
 import { Button } from './button'
+
+// Firefox giữ trạng thái disabled của <button> qua lần tải lại (MDN) → nút có thể bật sẵn trước hydrate (type <button> của React thiếu autoComplete)
+const NO_STATE_RESTORE: Pick<AllHTMLAttributes<HTMLButtonElement>, 'autoComplete'> = { autoComplete: 'off' }
 
 type Props = Omit<ComponentProps<typeof Button>, 'type' | 'aria-disabled'> & {
   pendingLabel: string
@@ -34,7 +37,7 @@ export function SubmitButton({
   const pending = pendingProp ?? status.pending
   const off = pending || disabled || !ready || (lockUntilHydrated && !hydrated)
   return (
-    <Button type="submit" {...props} disabled={off} aria-disabled={off}>
+    <Button type="submit" {...props} {...NO_STATE_RESTORE} disabled={off} aria-disabled={off}>
       {pending ? pendingLabel : children}
     </Button>
   )
