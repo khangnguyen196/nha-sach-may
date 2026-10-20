@@ -1,6 +1,6 @@
 # Đợt "giảm JS client" (perf-js)
 
-Trạng thái (2026-10-20, đêm): **D, sheet lazy, C xong trên nhánh `perf-js`** (từ `sau-ux` `56bcf5e`), CI check + e2e xanh từng bước, **chưa merge** (chờ review + duyệt). B chưa làm (★4 / ★5). Kết quả ở mục "Báo cáo" cuối file. Plan viết 2026-10-19 trên nhánh `ux-messages`, ★ đã quyết 2026-10-19. Thứ tự đợt: **`scripts/analyze-diff.mjs` → D → sheet lazy → C**; B để sau.
+Trạng thái (2026-10-20): **đã merge `main`**: ff `ddf769b..51bf49f` (`git push origin perf-js:main`, không force) 2026-10-20 02:46Z; CI check `main` run 39360765505 ✔; e2e `main` run 39360765659 ✔ 427 qua / 10 skip / **1 flaky** (`cart-account.spec.ts:94`, RSC 404, xem dưới); Vercel Production Ready 2026-10-20T02:49:05Z (deployment 7190235128). D, sheet lazy, C, ★8 xong; sáng 2026-10-20: palette trả focus (quyết định (d)) + 4 lượt review; code cuối `51bf49f`. B chưa làm (★4 / ★5, chờ quyết lại). Kết quả: mục "Báo cáo", "Sáng 2026-10-20", "Trước merge" cuối file.
 
 Mục tiêu: giảm JS tải ngay ở mọi trang, đưa `/sach` + trang danh mục về dưới ngân sách, bỏ zod khỏi client của cửa hàng.
 

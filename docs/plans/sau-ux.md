@@ -124,7 +124,9 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 
 **Xong khi**: bước CI ở chế độ fail, xanh trên `sau-ux`; đã chứng minh đỏ khi lệch.
 
-## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — đã sửa `d60b369`, **ĐÓNG 2026-10-20**
+## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — đã sửa `d60b369`, đóng sáng 2026-10-20, **TÁI DIỄN, mở lại**
+
+**Tái diễn 2026-10-20** (sau khi đóng sáng cùng ngày): e2e `main` run 39360765659 (`51bf49f`), `cart-account.spec.ts:94` (desktop-account) flaky 1 lần, qua ở lần thử lại; console "Failed to load resource: 404 … /dang-nhap?next=%2Ftai-khoan&_rsc=IP9tvrHI0WPQ482u" (cùng `_rsc` như trước bản sửa). Bản sửa `d60b369` (bỏ prefetch ở fallback `AccountLink`) chưa đủ; 16 run liền trước đó không tái diễn (7 tới `49c4d1b` + 8 run nhánh perf-js + 1 run `main` sau merge sau-ux). **Mở lại**, điều tra ở đợt riêng.
 
 **Đóng (2026-10-20)**: 11 run e2e liền không tái diễn sau bản sửa (7 run tới `49c4d1b` + 4 run của nhánh `perf-js`: 39296425020, 39297885209, 39299313775, 39300594469), 0 flaky; e2e `main` sau merge (39349331712) cũng 0 flaky.
 
