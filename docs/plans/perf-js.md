@@ -222,6 +222,16 @@ CI sáng 2026-10-20:
 |---|---|---|
 | `36267fb` (merge `origin/main`, chỉ `.md`) | 39350768858 ✔ | không chạy (chỉ `.md`) |
 | `25df4c5` (cùng lần push với `84cb1c7`) | 39351444864 ✔ | 39351444838 ✔ 424 qua / 10 skip / 0 flaky |
+| `637fac5` (sửa theo review lượt 3) | 39352817986 ✔ | 39352818023 ✔ 424 qua / 10 skip / 0 flaky |
 
 Review lượt 3 (`origin/main..25df4c5`): 0 NGHIÊM TRỌNG; NÊN SỬA (1) Ctrl K khi focus trong dialog khác, (2) test zod chỉ một bước → đã sửa; GỢI Ý đã làm: `preventScroll`, reset `navigating`, 2 ca e2e thêm (đóng bằng phím tắt, focus ở `body`), docs; chưa làm: ca e2e "chọn kết quả → focus không lên nút", các lỗ hổng nhỏ của test tĩnh (`require`, `.js`).
+
+measure:js ở `637fac5` (SHA code cuối): `vi` 41.5, `vi/books` 42.0, `vi/categories/van-hoc` 42.0, `vi/books/sapiens` 44.3, `vi/cart` 46.0, `vi/checkout` 45.0, `vi/login` 36.1KB — mọi route ĐẠT ngân sách 50KB (`vi/cart` +0.1KB so với lượt đo trước: dao động do chia chunk).
+
+Kiểm bằng mắt (Claude in Chrome, Preview `637fac5` https://nha-sach-j08l2naul-khangtpvl1-3775.vercel.app, chỉ xem):
+- Bấm nút tìm kiếm → palette mở (focus ở ô nhập) → Esc → palette đóng, focus ở nút tìm kiếm (có vòng focus). Production (code cũ) cùng thao tác → focus ở `body`.
+- Focus CTA "Xem tất cả sách" → Ctrl K → Esc → focus về CTA, trang không cuộn (`scrollY` 0).
+- Qua công cụ này, phím Esc **đầu tiên** sau khi palette mở không đóng palette, lần 2 mới đóng; production (code cũ) y hệt → do cách công cụ gửi phím, không phải lỗi mới (e2e Playwright đóng bằng 1 lần Esc, desktop + mobile).
+- `/sach`: sheet "Bộ lọc" (mở bằng `click()` qua JS vì nút `md:hidden` ở desktop): 14 link, focus trong sheet, 18 lần Tab vẫn trong sheet, Esc đóng, `aria-expanded` về `false`. Console không lỗi.
+- Chưa kiểm mobile (Chrome không thu được cửa sổ, đêm qua): chờ chủ dự án test iPhone.
 
