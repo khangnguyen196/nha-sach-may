@@ -1,6 +1,6 @@
 # Đợt "sau-ux"
 
-Trạng thái (2026-10-20): **đã duyệt merge 2026-10-20** (merge fast-forward sáng 2026-10-20). **Mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh. Test đăng ký trên Preview: không làm; thay bằng kiểm phản hồi GoTrue production (báo cáo đêm 2026-10-20). Mục 6: đã đo trên dữ liệu thật (thay cho H1–H3: không có danh mục ẩn, 0 sách biến mất, 0 sách thiếu danh mục), ★6c giữ như code. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql`: khối DO đã chạy 2026-10-19 16:52:48Z (23:52 giờ VN, chủ dự án, SQL Editor); C1–C7 khớp (kiểm qua MCP chỉ đọc 2026-10-20); không có bản chụp trước DO; quét R1–R7 2026-10-20: không còn ứng viên lỗi dữ liệu. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong; perf-js tiếp tục trên nhánh `perf-js`.
+Trạng thái (2026-10-20): **đã merge `main`**: ff `1016280..89d7f35` (`git push origin sau-ux:main`, không force) 2026-10-20 00:43Z; CI check `main` run 39349331758 ✔; e2e `main` run 39349331712 ✔ 421 qua / 9 skip / 0 flaky; Vercel Production Ready 2026-10-20T00:45:45Z (deployment 7188572014). Mục 1, 2, 3, 4 (bản sửa prefetch, RSC 404 **đã đóng**), 6 (A1), 8 xong; mục 7: khối DO của `catalog-fix.sql` đã chạy 2026-10-19 16:52:48Z (23:52 giờ VN, chủ dự án, SQL Editor), C1–C7 khớp (kiểm qua MCP chỉ đọc 2026-10-20), không có bản chụp trước DO, quét R1–R7 2026-10-20: không còn ứng viên lỗi dữ liệu. Kiểm production sau deploy (chỉ xem) ĐẠT, không cần Redeploy (chi tiết: `docs/plans/handoff.md`). Mục 5 (tắt JS): đợt riêng. perf-js (bước 0 `scripts/analyze-diff.mjs` ở đây) tiếp tục trên nhánh `perf-js`.
 
 Kiểm thêm đêm 2026-10-20 (trước merge):
 - Đăng ký trên GoTrue production (★1, thay test tay): **không gọi**. JS client của production không có publishable key (mọi gọi Supabase ở server, không module client nào import `lib/supabase/client`), không đọc `.env.local`. Kết luận ★1 theo code (`signUp` chỉ báo `PRE_LOOKUP_SIGNUP_CODES` + `NETWORK_ERROR`, mọi phản hồi khác → "Kiểm tra hộp thư") + e2e `auth-email.spec.ts` trên Supabase local. Chủ dự án thử tay trên production sau merge.
@@ -124,7 +124,9 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 
 **Xong khi**: bước CI ở chế độ fail, xanh trên `sau-ux`; đã chứng minh đỏ khi lệch.
 
-## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — chẩn đoán, chưa sửa
+## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — đã sửa `d60b369`, **ĐÓNG 2026-10-20**
+
+**Đóng (2026-10-20)**: 11 run e2e liền không tái diễn sau bản sửa (7 run tới `49c4d1b` + 4 run của nhánh `perf-js`: 39296425020, 39297885209, 39299313775, 39300594469), 0 flaky; e2e `main` sau merge (39349331712) cũng 0 flaky.
 
 **Đã biết**: `cart-account.spec.ts:94` (desktop-account) chập chờn 2/5 lượt đêm 18→19/10, qua ở retry; console "Failed to load resource: 404 … /dang-nhap?next=%2Ftai-khoan&_rsc=IP9tvrHI0WPQ482u" (cùng `_rsc` cả 2 lần). Có từ trước ux-messages. Giả thuyết: router prefetch / điều hướng `/tai-khoan` khi phiên vừa hết → proxy 307 sang `/dang-nhap?next=…` → request RSC (prefetch / segment prefetch) tới URL đó nhận 404. `(auth)` là route group có layout lồng (`src/app/[locale]/(auth)/layout.tsx`), **không** phải root layout khác (root layout khác chỉ có `app/admin`).
 
