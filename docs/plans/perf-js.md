@@ -123,7 +123,7 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 | `vi/checkout` | 45.0 | 45.0 | 45.1 | **44.8** | ĐẠT |
 | `vi/login` | 36.6 | 36.6 | 36.7 | **36.0** | ĐẠT |
 
-±0.1KB ở bước sheet (route không có sheet) là do chia chunk lại (số script 15 → 14), không phải module mới. Commit sửa theo review (`0ef0086`) chỉ đổi comment / class / `.catch` của prefetch, không đo lại.
+±0.1KB ở bước sheet (route không có sheet) là do chia chunk lại (số script 15 → 14), không phải module mới. Commit sửa theo review (`0ef0086`) đổi comment / class / `.catch` của prefetch, thêm test tĩnh `src/lib/client-no-zod.test.ts`, đổi chữ in của `measure-js.mjs` ("thừa" → "vượt"); không đo lại (đo lại sau đợt sửa sáng 2026-10-20, mục cuối). `vi/checkout` 44.9 ở "Hiện trạng" (bản build cuối của ux-messages) và 45.0 ở cột "Trước" (build `56bcf5e` đêm 2026-10-20): hai bản build khác nhau, chênh 0.1KB trong mức dao động do chia chunk.
 
 ### next analyze (`scripts/analyze-diff.mjs`, ước lượng theo module, dùng để so chênh lệch)
 
@@ -132,7 +132,7 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 | D | mọi route có palette | 0 | −33.6KB (16 module zod + `schemas.ts` bớt, `search-input.ts` +0.3KB) |
 | Sheet | `/[locale]/books`, `/[locale]/categories/[slug]` | −48.2KB | +48.5KB (Radix Dialog, focus-scope, dismissable-layer, react-remove-scroll, aria-hidden… chuyển sang chunk tải khi bấm) |
 | Sheet | route khác | −0.1KB | 0 |
-| C | `/[locale]` −1.6, `/books` −1.7, `/books/[slug]` −1.9, `/cart` −0.6, `/login` −1.3KB | | +0.7 đến +1.2KB (icon chỉ còn trong chunk lười của palette / khung chat) |
+| C | `/[locale]` −1.6, `/books` −1.7, `/books/[slug]` −1.9, `/cart` −0.6, `/login` −1.3KB | | +0.7 đến +1.2KB (ở các route liệt kê, icon chỉ còn trong chunk lười của palette / khung chat; `/gio-hang` và `/thanh-toan` vẫn còn icon tải ngay từ `cart-view.tsx`, `checkout-form.tsx`) |
 | Cả đợt | `/[locale]/books` | 306.6 → 256.7KB (−49.9) | 60.6 → 76.6KB (+16.1) |
 | Cả đợt | `/[locale]/books/[slug]` | 262.1 → 260.0KB (−2.1) | 92.2 → 59.8KB (−32.4) |
 
@@ -140,7 +140,7 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 
 - **D**: zod 4.6 đếm độ dài chuỗi theo **code point** (`'📚'` dài 1), không theo UTF-16 unit → `normalizeSearchQuery` đếm `[...s].length`. Vitest bắt được lệch này ở lần chạy đầu.
 - **C**: `lucide-react` 1.57 đánh dấu `Icon.mjs` là `"use client"` (dùng `LucideProvider` context) → icon render ở Server Component **vẫn** kéo lõi `Icon` (~2KB ước lượng) xuống client. Bước C chỉ bớt module từng icon; ước tính "−2 đến −3KB khi không còn client module nào import lucide" của plan không đạt được bằng cách này (bỏ hẳn lõi phải vẽ SVG thẳng mọi icon hoặc bỏ lucide: không làm, cần quyết). Đo thật: −0.3 đến −1.2KB.
-- **C** làm thêm `sort-select.tsx`, `filter-sheet.tsx` (cùng trang `/sach`), `components/ui/field.tsx` (`SelectField` vẽ thẳng SVG chevron vì file dùng ở nhiều client form: đăng nhập, đánh giá…). Icon truyền vào không kèm class; class kích thước nằm ở component (`[&_svg]:size-…`, span `hidden dark:contents` cho sun / moon).
+- **C** làm thêm `sort-select.tsx`, `filter-sheet.tsx` (cùng trang `/sach`), `components/ui/field.tsx` (`SelectField` vẽ thẳng SVG chevron vì file dùng ở nhiều client form: đăng nhập, đánh giá…). Cũng làm `add-to-cart-button.tsx`, `chat-bubble.tsx` (plan để tùy chọn); `components/admin/admin-shell.tsx` (admin) phải sửa theo vì prop `icons` của `ThemeToggle` bắt buộc. Icon truyền vào không kèm class; class kích thước nằm ở component (`[&_svg]:size-…`, span `hidden dark:contents` cho sun / moon).
 - Sheet: nút giữ `aria-haspopup="dialog"`, thêm `aria-expanded`; mất `aria-controls` / `data-state` của `SheetTrigger` (nội dung chưa có trong DOM khi chưa mở).
 - Theo review: `review-form` bỏ class `group` của label sao (`has-checked:[&_svg]:fill-primary` trên label thay `group-has-checked:fill-primary` trên svg). Bản cũ khớp với mọi tổ tiên `.group`, nên ở trang đơn (`<details class="group">`) chọn 1 sao làm cả 5 sao tô kín. Lỗi này reviewer suy ra từ CSS, chưa kiểm bằng mắt (cần đăng nhập + đơn đã giao).
 - Build local lỗi tạm 2 lần ở bước C (`getRelatedBooks: Internal server error` lúc prerender, rồi "`use cache` took too long" ở `getHomeShelves`), cùng loại "Lỗi #3 (build)" ở `handoff.md`; lần 3 qua (health Supabase lúc đó 0,2 s). `next analyze` cùng code build qua cả 3 lần.
@@ -159,7 +159,8 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 | `8c7c5a7` (D) | 39296424992 ✔ | 39296425020 ✔ 421 qua / 9 skip / 0 flaky |
 | `46719ef` (sheet + docs) | 39297885429 ✔ | 39297885209 ✔ 422 qua / 10 skip / 0 flaky |
 | `3334285` (C) | 39299313643 ✔ | 39299313775 ✔ 422 qua / 10 skip / 0 flaky |
-| `0ef0086` (sửa theo review) | 39300594509 ✔ | 39300594469 (kết quả: báo cáo đêm) |
+| `0ef0086` (sửa theo review) | 39300594509 ✔ | 39300594469 ✔ 422 qua / 10 skip / 0 flaky |
+| `823e3f0` (docs) | 39300884807 ✔ | không chạy (chỉ `.md`) |
 
 ### Kiểm bằng mắt (Claude in Chrome, Preview `3334285`, chỉ xem)
 
@@ -184,5 +185,33 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 - Xóa: dòng D (`[Đợt "giảm JS client" – làm D trước]`), dòng C, dòng sheet lazy, dòng `[Đo] scripts/measure-js.mjs thêm cột ngân sách theo route`, dòng `[Đợt perf-js] cập nhật mốc JS trong CLAUDE.md:153`, dòng `[Đã quyết 2026-10-19] ★ perf-js`.
 - Giữ: dòng B (`[Đợt "giảm JS client"] B: … cn`), `[Đo] … polyfill noModule` (★8: quyết sau đợt), `[Không làm] E`.
 - Thêm:
-  - "[perf-js, chờ quyết] Lõi lucide `Icon` (`"use client"` từ lucide-react 1.x) vẫn tải ở mọi trang có icon; bỏ hẳn cần vẽ SVG thẳng / bỏ lucide (docs/plans/perf-js.md → Báo cáo)."
-  - "[Mức thấp] Dialog tải lười (sheet bộ lọc, gợi ý mã, khung chat): tải chunk lỗi khi bấm → error boundary của route; palette chưa trả focus về nút khi đóng; gợi ý mã chưa tải trước (CLAUDE.md → Hiệu năng)."
+  - "[Đợt nhỏ] Tải chunk lỗi khi bấm (sheet bộ lọc, gợi ý mã, khung chat, palette): next/dynamic (React.lazy) giữ lỗi tới khi tải lại trang → error boundary + nút 'Thử lại'."
+  - "[Chấp nhận 2026-10-20] Lõi lucide Icon ('use client' trong lucide-react 1.57) vẫn tải ở mọi trang cửa hàng; mọi route đã dưới ngân sách."
+  - "[Mức thấp] cart-view.tsx, checkout-form.tsx (client) còn import lucide (ngoài plan C)."
+  - "[Theo dõi] Lỗi #3 build ('use cache' took too long, getRelatedBooks) gặp lại 2 lần khi build local 2026-10-20; CI / Vercel xanh."
+- Đổi nhãn dòng B thành "[Chờ quyết lại ★4 / ★5]".
+
+## Sáng 2026-10-20: sửa theo review lượt 2 + palette trả focus (quyết định (d))
+
+Quyết định của chủ dự án (2026-10-20): (b) chấp nhận lõi lucide `Icon` vẫn tải; (c) error boundary khi tải chunk lỗi → đợt nhỏ riêng; (d) palette trả focus về nút → sửa trong perf-js. `origin/main` (sau khi `sau-ux` merge, `ddf769b`) đã merge vào nhánh (`36267fb`, không xung đột).
+
+- Palette (`search-trigger.tsx`, `search-palette.tsx`, `components/ui/command.tsx` thêm `onCloseAutoFocus` cho `CommandDialog`): đóng bằng Esc / bấm ra ngoài / Ctrl K lần nữa → focus về chỗ đã mở (nút nếu mở bằng nút; phần tử đang focus lúc nhấn Ctrl K, trừ `body`); chọn kết quả → chuyển trang như cũ, không kéo focus về header. Trước đây Radix trả focus về Trigger, mà palette không có Trigger → focus rơi về `body`.
+- Prefetch bỏ qua lỗi tải trước ở `search-trigger.tsx`, `chat-bubble.tsx` (như `filter-sheet.tsx`); comment ghi lỗi tải khi bấm để đợt error boundary.
+- Comment đúng lý do: `theme-toggle.tsx` (chỉ bớt module từng icon, lõi `Icon` vẫn tải), `field.tsx` (bớt `createLucideIcon` + module `chevron-down`).
+- `src/lib/client-no-zod.test.ts` viết lại: lập danh sách mọi module của `src` có import / re-export / `import()` giá trị từ `zod` (bỏ file `'use server'`: import vào client chỉ là tham chiếu action), cấm file `'use client'` của cửa hàng import giá trị từ `zod` hoặc từ các module đó; bỏ regex `isSchemas`; loại `app/admin`, `features/admin`, `components/admin` trừ `admin-link.tsx`. Thử 3 import cấm (`searchQuerySchema` từ `../schemas` vào palette, `@/lib/text-schema` vào `theme-toggle.tsx`, `export { z } from 'zod'` vào `cart-badge.tsx`) → 3 ca fail đúng file, rồi trả lại.
+- e2e mới `e2e/layout.spec.ts` "palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → focus về phần tử trước đó" (desktop + mobile).
+
+measure:js (KB ngoài baseline, so với `3334285`; mọi route ngân sách 50KB, ĐẠT):
+
+| Route | `3334285` | Sau sửa (`84cb1c7` + e2e) |
+|---|---:|---:|
+| `vi` | 41.4 | 41.5 |
+| `vi/books` | 41.9 | 42.0 |
+| `vi/categories/van-hoc` | 41.9 | 42.0 |
+| `vi/books/sapiens` | 44.2 | 44.3 |
+| `vi/cart` | 45.8 | 45.9 |
+| `vi/checkout` | 44.8 | 45.0 |
+| `vi/login` | 36.0 | 36.1 |
+
++0.1–0.2KB: logic trả focus của nút tìm kiếm (header, mọi trang) + `.catch` của prefetch.
+

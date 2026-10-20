@@ -100,6 +100,32 @@ test('palette: có kết quả, điều hướng bằng phím, Enter → trang t
   await expect(page).toHaveURL(/\/tim-kiem\?q=978$/)
 })
 
+test('palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → focus về phần tử trước đó', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/')
+  await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
+  await page.waitForLoadState('networkidle')
+  // Palette mở thì phần ngoài bị aria-hidden → tìm nút bằng CSS, không bằng role
+  const trigger = page.locator('header button[aria-keyshortcuts]')
+  const dialog = page.getByRole('dialog')
+
+  await trigger.click()
+  await expect(dialog).toBeVisible({ timeout: 10_000 })
+  await expect(dialog.getByRole('combobox')).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(trigger).toBeFocused()
+
+  const cta = page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách', exact: true })
+  await cta.focus()
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(cta).toBeFocused()
+  expect(errors).toEqual([])
+})
+
 test('palette: từ khóa vô nghĩa → trạng thái rỗng; Esc đóng', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/en')
