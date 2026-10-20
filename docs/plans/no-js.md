@@ -7,9 +7,9 @@ Chẩn đoán chạy trên nhánh nháp (`no-js-diag`: 4 lượt; `no-js-diag2`:
 ## Quyết định của chủ dự án (2026-10-20)
 
 - ★0: Claude Code tự đo trên production (II.1, fetch không cookie, không gõ mật khẩu). **Đã đo: production cũng trắng** (dưới).
-- ★1: **chỉ A** (dải noscript ở layout) + noscript ngay trong 3 form auth vì production POST cũng trắng. B (PRG) **hoãn**; ★4, ★6 hoãn theo B.
+- ★1: **chỉ A** (dải noscript ở layout) + noscript ngay trong 3 form auth vì production POST cũng trắng. B (PRG) **hoãn**; ★4 (cách hiện kết quả của B: route tĩnh B1 hay trang chặn B2, tín hiệu không JS) và ★6 (`EMAIL_NOT_CONFIRMED` khi không JS) hoãn theo B.
 - ★2: tách đợt "tải chunk lỗi", làm trước → nhánh `chunk-loi`.
-- ★3: nút "Tải lại trang".
+- ★3: nút trong khối lỗi chunk là "Tải lại trang" (không tự viết loader để "Thử lại"): đã làm ở nhánh `chunk-loi`.
 - ★5: `/xac-nhan` chỉ sửa comment + dải A.
 - ★7: quyết sau khi có số liệu production → đề xuất ở mục ★ (dưới).
 - Ca "khách CÓ JS gửi form trước khi hydrate": đo (II.2a) rồi đề xuất thành ★8, **chưa sửa code**.
@@ -85,14 +85,14 @@ Cách đo: mở trang bằng GET, ghi form có hiện không và có nằm trong
 | Quên mật khẩu (`/quen-mat-khau`) | Server Action | Có | 200, chỉ phần động | **Trắng** | Có (payload ok; production: `"ok":true`) |
 | Đặt lại mật khẩu (`/dat-lai-mat-khau`, phiên thường) | Server Action | **Không** (trong stream) | 200, chỉ phần động | **Trắng** | Có (mật khẩu mới đăng nhập được) |
 | Gửi lại email xác nhận | Server Action | **Không tới được**: chỉ hiện sau lỗi `EMAIL_NOT_CONFIRMED` của form đăng nhập (state ở client) | — | — | Không thử |
-| Xác nhận email / đặt lại mật khẩu từ link (`/xac-nhan`, POST tới Route Handler `/api/auth/confirm`) | Route Handler | **Không** theo code: form trong `<Suspense>` vì đọc `token_hash` từ `searchParams` (`(auth)/confirm/page.tsx:31-33`, `:81`) | Chưa đo | — | — |
+| Xác nhận email / đặt lại mật khẩu từ link (`/xac-nhan`, POST tới Route Handler `/api/auth/confirm`) | Route Handler | **Không** theo code: form trong `<Suspense>` vì đọc `token_hash` từ `searchParams` (`(auth)/confirm/page.tsx:32-34`, `:82`, số dòng sau khi sửa comment) | Chưa đo | — | — |
 | Thêm địa chỉ (`/tai-khoan/dia-chi/moi`) | Server Action | **Không** | 200 (lượt 4 chèn tay option phường) | **Trắng** | Không: `INVALID_INPUT` vì ô phường render `disabled` (`address-form.tsx:164`: `disabled={!provinceCode …}`, `provinceCode` ban đầu rỗng) → ô `disabled` không được gửi. Hệ quả: **khách không JS không thêm được địa chỉ** kể cả khi thấy form |
 | Sửa địa chỉ (`/tai-khoan/dia-chi/<id>`) | Server Action | **Không** | **303** → `/tai-khoan/dia-chi` | 493 ký tự (danh sách ẩn) | Có |
 | Đặt địa chỉ mặc định (`/tai-khoan/dia-chi`) | Server Action (`void` + `refresh()`) | **Không** | 200, chỉ phần động | **Trắng** | Có |
 | Xóa địa chỉ (`address-card.tsx`, form trong `<details>`) | Server Action (`void` + `refresh()`) | **Không, và không nằm trong `<details>`** (II.2c): mỗi form xóa là một segment stream riêng: trong `<details>` chỉ có `<template id="P:b">`, form thật nằm ở `<div hidden id="S:b">` cuối `<body>` (cần script `$RS` chuyển vào). Vì vậy selector `details form` của spec cũ ra 0 | Không đo (theo code: như đặt mặc định → 200 trắng) | — | — |
 | Ngôn ngữ email (`/tai-khoan`) | Server Action | **Không** | 200, chỉ phần động | **Trắng** | Có (`vi` → `en`) |
 | Viết đánh giá (`/sach/<slug>`) | Server Action | **Không** | 200, chỉ phần động | **Trắng** | Có (0 → 1) |
-| Đánh giá ở trang đơn đã giao (`order-item-review.tsx:21`, `<details>` + cùng `ReviewForm`) | Server Action | **Không** (trang đơn trong stream) | Theo code: như viết đánh giá → 200 trắng | — | Không thử |
+| Đánh giá ở trang đơn đã giao (`order-item-review.tsx:22`, `<details>` + cùng `ReviewForm`) | Server Action | **Không** (trang đơn trong stream) | Theo code: như viết đánh giá → 200 trắng | — | Không thử |
 | Xóa đánh giá (`review-form.tsx:137`) | Server Action | **Không** | Theo code: 200 trắng | — | Không thử |
 | Thêm vào giỏ, form không JS (`/sach/sapiens`) | Server Action | **Không** | **303** → `/gio-hang` | 447 ký tự (dòng giỏ ẩn) | Có |
 | Áp mã giảm giá (form GET `#checkout-voucher`) | GET | Không đo được: form `hidden` theo thiết kế (`checkout/page.tsx:120`), ô + nút gắn bằng `form=` | GET 200, HTML đầy đủ (có `<html>`) | 449 ký tự: nội dung thanh toán ẩn | — |
@@ -157,10 +157,11 @@ JS bật, `context.route` chặn mọi `/_next/static/chunks/*.js` **trước** 
 
 - `common.noScript` (vi / en): "Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang." `<noscript>` một lần ở `src/app/[locale]/layout.tsx`, ngay dưới `<Header />` (phủ `(shop)`, `(auth)`, not-found, `[...rest]`), `bg-surface-raised`, `border-b`, chữ 16px. `global-error` / `ErrorView` không đổi. `/admin` ngoài phạm vi (root layout khác, chỉ admin dùng).
 - `auth.noScriptSubmit` (vi / en): "Khi tắt JavaScript, sau khi gửi bạn sẽ không thấy kết quả. Hãy bật JavaScript." `<noscript>` ngay trên nút gửi trong `login-form.tsx`, `register-form.tsx`, `forgot-password-form.tsx` (client component, chuỗi qua props từ page).
-- Sửa comment "không cần JS" sai: `(auth)/confirm/page.tsx:24`, `address-card.tsx:11` (+ `:44`), `cancel-order-form.tsx:36` (+ comment "Không JS: trang render lại sau khi gửi"), `order-item-review.tsx:15`, `review-form.tsx:48`, `voucher-field.tsx:23`. Các comment "link thật / radio gốc / form GET chạy không cần JS" còn lại nói về phần tử HTML gốc (link, radio, form GET tự chạy), giữ nguyên.
-- CLAUDE.md: quy ước "trang cần JS có dải noscript; không hứa chạy không JS"; sửa câu `useFormAction` "giữ progressive enhancement" (chỉ đúng với action kết thúc bằng `redirect()`).
+- Sửa comment "không cần JS" sai (số dòng trước khi sửa): `(auth)/confirm/page.tsx:24`, `address-card.tsx:11` (+ `:44`), `cancel-order-form.tsx:36` (+ comment "Không JS: trang render lại sau khi gửi"), `order-item-review.tsx:15`, `review-form.tsx:48`, `voucher-field.tsx:23`, `checkout-form.tsx:76` ("Không JS vẫn đặt được"), docstring `lib/use-form-action.ts:16-18` ("giữ progressive enhancement… server render lại kèm state"), và "slug đã prerender vẫn là HTML tĩnh đầy đủ" ở `books/[slug]/page.tsx:42`, `categories/[slug]/page.tsx:19`, `authors/[slug]/page.tsx:19` (sửa comment luôn; ★9 chỉ hoãn phần đo / kiến trúc). Các comment "link thật / radio gốc / form GET chạy không cần JS" còn lại nói về phần tử HTML gốc (link, radio, form GET tự chạy), giữ nguyên.
+- CLAUDE.md: quy ước "Tắt JavaScript" (cửa hàng cần JS, dải noscript, câu trên nút 3 form auth, không viết "chạy không cần JS" cho form trả `Result`); câu `useFormAction` (Mutation) "giữ progressive enhancement" → chỉ action kết thúc bằng `redirect()` cho trang dùng được; câu "slug đã prerender vẫn là HTML tĩnh" (Cấu trúc) thêm "nằm trong boundary ẩn chờ `$RC`".
 - `e2e/no-js.spec.ts` (desktop + mobile): tắt JS → dải hiện dưới header ở `/`, `/sach`, `/dang-nhap` (chữ ≥ 16px), tiếng Anh ở `/en`; câu báo nằm trên nút gửi ở 3 form auth. Bật JS → không có dải / câu, `collectErrors` rỗng (không cảnh báo hydrate) ở `/`, `/sach`, 3 trang auth, `/en`.
-- JS client không đổi (`measure:js` vi/login, xem báo cáo).
+- JS client không đổi: `measure:js` (build local, cùng cách đo ★8) `main` `2cefa0a` → `no-js` `32efcbf`: `vi` 41.5 → 41.5KB, `vi/login` 36.2 → 36.2KB ngoài baseline (ngân sách 50KB, ĐẠT). Thay đổi chỉ là HTML trong `<noscript>` (không phải JS) nên các route khác cũng không đổi; chưa đo riêng `vi/books/<slug>`.
+- CI: xem báo cáo của đợt (run e2e của nhánh `no-js` ở SHA cuối; `no-js.spec` chạy ở project `desktop` + `mobile`).
 
 **Chỗ hở còn lại sau A** (chấp nhận theo ★1):
 - Sau khi gửi form trả `Result` (3 form auth và mọi form trong tài khoản), khách tắt JS vẫn thấy **trang trắng không lời giải thích**: thân POST không có `<html>` / layout nên dải noscript không có trong đó (review bản 2, NGHIÊM TRỌNG 1). Câu noscript trên nút chỉ báo **trước** khi gửi, và chỉ ở 3 form khách thấy được (form khác nằm trong stream, không thấy khi tắt JS).
@@ -189,21 +190,25 @@ JS bật, `context.route` chặn mọi `/_next/static/chunks/*.js` **trước** 
 
 ### `/xac-nhan` (★5, đã quyết)
 
-Khách mở link email thường có JS. Chỉ sửa comment sai (`confirm/page.tsx:24`, đã làm); dải A giải thích khi tắt JS.
+Khách mở link email thường có JS. Chỉ sửa comment sai (`confirm/page.tsx:24`, đã làm); dải A giải thích khi tắt JS. Form ở đây POST tới Route Handler (`confirm/page.tsx:82`), không phải Server Action, nên không dính ★8 (Route Handler trả 303 / trang lỗi như thường).
 
 ### Ngoài phạm vi
 
-- `/admin` (root layout khác, chỉ admin dùng): không có dải noscript, không đo.
+- `/admin` (root layout khác, chỉ admin dùng): không có dải noscript, không đo. Comment "chạy được không cần JS" ở `components/admin/action-button-form.tsx:19`, `features/admin/books/components/cover-form.tsx:19` (Server Action trả `Result`) **chưa kiểm**, nhiều khả năng cũng ra trang trắng (admin dùng chung `cacheComponents`).
 - Thêm địa chỉ không JS (`address-form.tsx:164` ô phường `disabled`, phường nạp bằng `fetch`): không sửa ở đợt này; ghi để biết "không JS không thêm được địa chỉ" kể cả khi sau này form hiện được.
 
 ## ★ Cần quyết
 
 - ★7 **Gửi issue upstream (F)**: production đã xác nhận POST không JS trắng với PPR + `cacheComponents` (II.1b), trái tài liệu Next (`07-mutating-data.md:132`). Đề xuất: **có**. Claude viết repro tối giản (app Next 16.4 trống: 1 trang có `<Suspense>` + form Server Action trả state, `cacheComponents: true`) trong `D:/Bán sách-backup/`, kèm số liệu `next start`; chủ dự án gửi bằng tài khoản GitHub của mình. ~0,5 ngày.
 - ★8 **Khách có JS gửi form trước khi hydrate → trang trắng** (II.2a). Phương án:
-  - (a) **Khóa nút gửi tới khi hydrate** cho form dùng `useFormAction`: nút render `disabled` + `aria-disabled` ở server, bật trong `useEffect`. JS client ~0 (đã có `useFormAction` / `SubmitButton`). Khách tắt JS: **không gửi được form nào dùng `useFormAction`** (3 form auth trong khung tĩnh) → mất cả đăng nhập đúng (đang chạy được nhờ 303) trừ khi giữ ngoại lệ cho form có redirect. ~0,5 ngày + rà e2e bấm sớm.
-  - (b) **Cờ do JS gắn + PRG**: `useFormAction` thêm ô ẩn `js=1` sau hydrate; action thiếu cờ thì `redirect()` sang trang kết quả hiện được (route tĩnh như B1). Che cả tắt JS lẫn gửi sớm, không chặn ai. Cần B1 cho mọi form trả `Result` khách thấy được (3 form auth; form trong stream chỉ thấy khi có JS → trang kết quả cũng phải hiện không cần `$RC`). 2–3 ngày.
-  - (c) **Chấp nhận**, chỉ ghi lại: khoảng hở thường < 1–2 giây trên 4G; action vẫn chạy đúng; e2e đã chờ hydrate.
-  - Đề xuất: **(a) cho mọi form dùng `useFormAction`**, nút hiện "Đang tải…" khi chưa hydrate để khách hiểu. Form đăng nhập có cả hai kết quả (sai → `Result`, đúng → 303) nên cũng khóa. Ảnh hưởng người tắt JS: không gửi được form nào dùng `useFormAction`, mất cả đăng nhập đúng (hiện chạy được nhưng phần còn lại của site không dùng được khi tắt JS, và dải A đã bảo bật JS) → mất ít. Muốn giữ đăng nhập / đăng ký không JS thì chọn (b).
+  - (a) **Khóa nút gửi tới khi hydrate**: nút render `disabled` + `aria-disabled` ở server, bật trong `useEffect`. JS client ~0. Hai phạm vi:
+    - (a1) chỉ form dùng `useFormAction` (khóa trong hook): **còn hở** form `<form action>` thường trả `void` + `refresh()` không qua hook, VD đặt mặc định / xóa địa chỉ (`address-card.tsx:41`, `SubmitButton` trần) → gửi sớm vẫn trắng.
+    - (a2) khóa ở `SubmitButton` (dùng chung): che hết, nhưng khóa luôn các form kết thúc bằng `redirect()` đang chạy được trước hydrate / khi tắt JS: thêm giỏ không JS, đặt hàng, đăng xuất, sửa địa chỉ. Muốn giữ chúng thì thêm prop ngoại lệ cho từng form redirect.
+    - Khách tắt JS: không gửi được form bị khóa (3 form auth trong khung tĩnh: mất cả đăng nhập đúng, đang chạy được nhờ 303). Khi đó phải sửa câu của A: `auth.noScriptSubmit` ("sau khi gửi bạn sẽ không thấy kết quả") thành "cần bật JavaScript để gửi", và câu CLAUDE.md (Mutation) "form vẫn gửi được khi chưa có JS".
+    - ~0,5 ngày (a1) / ~1 ngày (a2, rà form redirect) + rà e2e bấm sớm.
+  - (b) **Cờ do JS gắn + PRG**: `useFormAction` thêm ô ẩn `js=1` sau hydrate; action thiếu cờ thì `redirect()` sang trang kết quả hiện được (route tĩnh như B1). Che cả tắt JS lẫn gửi sớm, không chặn ai. Cần B1 cho mọi form trả `Result` khách thấy được (3 form auth; form trong stream chỉ thấy khi có JS → trang kết quả cũng phải hiện không cần `$RC`); form `void` + `refresh()` cần cờ riêng. JS client ~0. 2–3 ngày.
+  - (c) **Chấp nhận**, chỉ ghi lại: khoảng hở **ước đoán** < 1–2 giây trên 4G (chưa đo; lấy thời điểm hydrate từ lượt Lighthouse của ★9 nếu cần); action vẫn chạy đúng; e2e đã chờ hydrate.
+  - Đề xuất: **(a1) + khóa thêm 2 form địa chỉ `void` + `refresh()`** (đặt mặc định, xóa) bằng prop của `SubmitButton`, nút hiện "Đang tải…" khi chưa hydrate. Form redirect không qua hook (thêm giỏ không JS, đặt hàng, đăng xuất, sửa địa chỉ) giữ nguyên. Form đăng nhập có cả hai kết quả (sai → `Result`, đúng → 303) nên cũng khóa. Ảnh hưởng người tắt JS: không gửi được form dùng `useFormAction` (mất cả đăng nhập đúng; phần còn lại của site vốn không dùng được khi tắt JS và dải A đã bảo bật JS) → mất ít; sửa câu `auth.noScriptSubmit` + CLAUDE.md cùng lúc. Muốn giữ đăng nhập / đăng ký không JS thì chọn (b).
 - ★9 **Trang sách / danh mục / tác giả đã prerender không có nội dung hiện được trong HTML tĩnh** (II.2b, production II.1a): h1, bìa, giá nằm trong `<div hidden id="S:…">` chờ `$RC`. Ảnh hưởng: (1) comment "slug đã prerender vẫn là HTML tĩnh đầy đủ" (3 file `[slug]/page.tsx`, CLAUDE.md) gây hiểu sai; (2) LCP: bìa sách chỉ vẽ được sau khi trình duyệt chạy script inline ngay sau khối ẩn (thường rất nhanh vì cùng tài liệu, nhưng chưa đo); (3) SEO: bot không chạy JS (không thuộc `htmlLimitedBots`) không thấy nội dung. Đề xuất: **đo trước** (Lighthouse / WebPageTest trang sách trên production: LCP element, thời điểm `$RC` chạy; Googlebot render có JS nên SEO chính không ảnh hưởng), sửa comment ở đợt đó; chỉ đổi kiến trúc (đưa phần đọc `params` ra khung tĩnh của slug đã prerender) nếu số đo xấu. Không làm ở đợt này.
 - ★10 **`htmlLimitedBots` với PPR**: chưa kiểm bot có nhận HTML chặn (đầy đủ) ở route PPR không. Đề xuất: kiểm cùng ★9 bằng `curl -A "Twitterbot"` trên production (chỉ đọc).
 
@@ -229,4 +234,4 @@ Khách mở link email thường có JS. Chỉ sửa comment sai (`confirm/page.
 - ★8: (a) ~0,5 ngày; (b) 2–3 ngày.
 - ★9 / ★10 đo: ~0,5 ngày.
 
-JS client: 0 cho A / B / F; ★8 (a) ~0.
+JS client: 0 cho A / B / F; ★8 (a) / (b) ~0.

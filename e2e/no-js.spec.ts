@@ -7,7 +7,7 @@ import { collectErrors, waitForHydration } from './helpers'
 
 const BAND = 'Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang.'
 const BAND_EN =
-  'This site needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page.'
+  'This page needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page.'
 const SUBMIT_NOTE = 'Khi tắt JavaScript, sau khi gửi bạn sẽ không thấy kết quả. Hãy bật JavaScript.'
 
 test.describe('tắt JavaScript', () => {
@@ -20,7 +20,8 @@ test.describe('tắt JavaScript', () => {
       await expect(band).toBeVisible()
       await expect(band).toHaveText(BAND)
       const [bandBox, headerBox] = await Promise.all([band.boundingBox(), page.getByRole('banner').boundingBox()])
-      expect(bandBox?.y ?? 0).toBeGreaterThanOrEqual((headerBox?.y ?? 0) + (headerBox?.height ?? 0) - 1)
+      if (!bandBox || !headerBox) throw new Error('Không đo được vị trí dải noscript / header')
+      expect(bandBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1)
       const fontSize = await band.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))
       expect(fontSize).toBeGreaterThanOrEqual(16)
     })
@@ -46,16 +47,19 @@ test.describe('tắt JavaScript', () => {
 })
 
 test.describe('bật JavaScript', () => {
-  for (const path of ['/', '/sach', '/dang-nhap', '/dang-ky', '/quen-mat-khau', '/en']) {
+  const AUTH_PAGES = ['/dang-nhap', '/dang-ky', '/quen-mat-khau']
+  for (const path of ['/', '/sach', ...AUTH_PAGES, '/en']) {
     test(`không hiện câu noscript, không lỗi hydrate: ${path}`, async ({ page }) => {
       const errors = collectErrors(page)
       await page.goto(path)
       await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
       await page.waitForLoadState('networkidle')
+      // Bật JS: nội dung <noscript> chỉ là chữ, không thành phần tử
       await expect(page.getByTestId('no-script')).toHaveCount(0)
       await expect(page.getByTestId('no-script-submit')).toHaveCount(0)
-      await expect(page.getByText(BAND)).toBeHidden()
-      await expect(page.getByText(SUBMIT_NOTE)).toBeHidden()
+      // …nhưng thẻ vẫn có trong trang (không ai lỡ xóa)
+      await expect(page.locator('header + noscript')).toHaveCount(1)
+      if (AUTH_PAGES.includes(path)) await expect(page.getByRole('main').locator('form noscript')).toHaveCount(1)
       expect(errors).toEqual([])
     })
   }

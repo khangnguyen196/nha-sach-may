@@ -39,7 +39,8 @@ const LOW_STOCK = 5
 
 // Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
 // dựng App Shell cho tham số chưa biết. Page chỉ đọc `params` bên trong <Suspense> (và LocaleSwitcher đọc useParams
-// trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn là HTML tĩnh đầy đủ.
+// trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn có sẵn trong HTML tĩnh,
+// nhưng nằm trong boundary ẩn `<div hidden id="S:…">` chờ script `$RC` (không hiện khi tắt JS: docs/plans/no-js.md ★9).
 
 export async function generateStaticParams() {
   const slugs = await getAllBookSlugs()

@@ -13,9 +13,11 @@ const NETWORK_FAILURE: Failure = { ok: false, code: 'NETWORK_ERROR' }
 const SIGN_IN_CODES = new Set(['AUTH_REQUIRED', 'SESSION_EXPIRED'])
 
 /**
- * useActionState cho form gửi Server Action, giữ progressive enhancement:
- * - Không JS: `formProps.action` là chính Server Action (React render thành URL), trình duyệt POST, server render
- *   lại kèm state. Hook này phải nhận đúng server reference, bọc lại thì mất progressive enhancement.
+ * useActionState cho form gửi Server Action:
+ * - Không JS (hoặc chưa hydrate): `formProps.action` là chính Server Action (React render thành URL), trình duyệt POST.
+ *   Hook này phải nhận đúng server reference, bọc lại thì form không gửi được trước hydrate. Chỉ action kết thúc bằng
+ *   `redirect()` (303) cho trang dùng được; action trả `Result` thì server chỉ trả phần động (Cache Components) → trang
+ *   trắng dù action đã chạy (docs/plans/no-js.md, ★8).
  * - Có JS: onSubmit tự dispatch (React KHÔNG reset form như mặc định của `<form action>`) qua bản bọc của action:
  *   request không tới / không về được server (mất mạng) thì action ném lỗi → đổi thành NETWORK_ERROR, hiện trong khối
  *   lỗi của form thay vì ném lên error boundary. Lỗi điều hướng của Next (redirect, notFound) vẫn ném tiếp.

@@ -73,7 +73,8 @@ function FixAction({ code, labels }: { code: ErrorCode; labels: CheckoutFormLabe
 
 /**
  * Client leaf duy nhất của trang thanh toán: ghi chú (bộ đếm), nút đặt hàng, khối lỗi. Địa chỉ, thanh toán,
- * tóm tắt là Server Component truyền vào qua props. Không JS vẫn đặt được (radio + textarea gốc).
+ * tóm tắt là Server Component truyền vào qua props. Radio + textarea gốc; tắt JS thì cả trang thanh toán nằm trong
+ * stream, không hiện (docs/plans/no-js.md).
  */
 export function CheckoutForm({
   userId,
