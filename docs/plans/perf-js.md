@@ -92,7 +92,7 @@ node scripts/analyze-diff.mjs ../before.jsonl ../after.jsonl --route "/[locale]/
 - ★4 + ★5 **CHƯA** làm B và test screenshot; quyết lại sau khi xong D → sheet lazy → C và đo lại (B không cần để đạt ngân sách).
 - ★6 **để nguyên** `book-form.tsx` (admin).
 - ★7 **có**: thêm `scripts/analyze-diff.mjs`, làm **trước** D (2026-10-19, theo gợi ý reviewer: bước D đổi chunk palette tải lười, `measure:js` không thấy, cần so module).
-- ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt (sửa cả mốc 170KB trong `CLAUDE.md` mục Hiệu năng và `BASELINE_GZIP_KB` trong `scripts/measure-js.mjs`).
+- ★8 **giữ** polyfill `noModule` trong số đo suốt đợt, ghi chú trong `scripts/measure-js.mjs`; đổi baseline sau đợt (sửa cả mốc 170KB trong `CLAUDE.md` mục Hiệu năng và `BASELINE_GZIP_KB` trong `scripts/measure-js.mjs`). **Đã làm ở `9a26b40`** (cuối đợt, trước merge): baseline 131.4KB, mục "Trước merge (2026-10-20)" cuối file.
 
 Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B để sau.
 
@@ -183,12 +183,14 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 ### Ghi vào progress.md khi merge
 
 - Xóa: dòng D (`[Đợt "giảm JS client" – làm D trước]`), dòng C, dòng sheet lazy, dòng `[Đo] scripts/measure-js.mjs thêm cột ngân sách theo route`, dòng `[Đợt perf-js] cập nhật mốc JS trong CLAUDE.md:153`, dòng `[Đã quyết 2026-10-19] ★ perf-js`.
-- Giữ: dòng B (`[Đợt "giảm JS client"] B: … cn`), `[Đo] … polyfill noModule` (★8: quyết sau đợt), `[Không làm] E`.
+- Xóa thêm: dòng `[Đo] measure:js đang cộng cả polyfill noModule…` (★8 đã làm ở `9a26b40`).
+- Giữ: dòng B (đổi nhãn, dưới), `[Không làm] E`.
 - Thêm:
   - "[Đợt nhỏ] Tải chunk lỗi khi bấm (sheet bộ lọc, gợi ý mã, khung chat, palette): next/dynamic (React.lazy) giữ lỗi tới khi tải lại trang → error boundary + nút 'Thử lại'."
   - "[Chấp nhận 2026-10-20] Lõi lucide Icon ('use client' trong lucide-react 1.57) vẫn tải ở mọi trang cửa hàng; mọi route đã dưới ngân sách."
   - "[Mức thấp] cart-view.tsx, checkout-form.tsx (client) còn import lucide (ngoài plan C)."
   - "[Theo dõi] Lỗi #3 build ('use cache' took too long, getRelatedBooks) gặp lại 2 lần khi build local 2026-10-20; CI / Vercel xanh."
+  - "[Mức thấp] scripts/analyze-diff.mjs:16-17 comment còn ghi 'polyfill noModule, measure:js cũng đếm' (sau ★8 measure:js in nhưng không cộng)."
 - Đổi nhãn dòng B thành "[Chờ quyết lại ★4 / ★5]".
 
 ## Sáng 2026-10-20: sửa theo review lượt 2 + palette trả focus (quyết định (d))
@@ -226,7 +228,7 @@ CI sáng 2026-10-20:
 
 Review lượt 3 (`origin/main..25df4c5`): 0 NGHIÊM TRỌNG; NÊN SỬA (1) Ctrl K khi focus trong dialog khác, (2) test zod chỉ một bước → đã sửa; GỢI Ý đã làm: `preventScroll`, reset `navigating`, 2 ca e2e thêm (đóng bằng phím tắt, focus ở `body`), docs; chưa làm: ca e2e "chọn kết quả → focus không lên nút", các lỗ hổng nhỏ của test tĩnh (`require`, `.js`).
 
-measure:js ở `637fac5` (SHA code cuối): `vi` 41.5, `vi/books` 42.0, `vi/categories/van-hoc` 42.0, `vi/books/sapiens` 44.3, `vi/cart` 46.0, `vi/checkout` 45.0, `vi/login` 36.1KB — mọi route ĐẠT ngân sách 50KB (`vi/cart` +0.1KB so với lượt đo trước: dao động do chia chunk).
+measure:js ở `637fac5` (SHA code cuối lúc đó; mốc mới ở mục "Trước merge"): `vi` 41.5, `vi/books` 42.0, `vi/categories/van-hoc` 42.0, `vi/books/sapiens` 44.3, `vi/cart` 46.0, `vi/checkout` 45.0, `vi/login` 36.1KB — mọi route ĐẠT ngân sách 50KB (`vi/cart` +0.1KB so với lượt đo trước: dao động do chia chunk).
 
 Kiểm bằng mắt (Claude in Chrome, Preview `637fac5` https://nha-sach-j08l2naul-khangtpvl1-3775.vercel.app, chỉ xem):
 - Bấm nút tìm kiếm → palette mở (focus ở ô nhập) → Esc → palette đóng, focus ở nút tìm kiếm (có vòng focus). Production (code cũ) cùng thao tác → focus ở `body`.
@@ -234,4 +236,26 @@ Kiểm bằng mắt (Claude in Chrome, Preview `637fac5` https://nha-sach-j08l2n
 - Qua công cụ này, phím Esc **đầu tiên** sau khi palette mở không đóng palette, lần 2 mới đóng; production (code cũ) y hệt → do cách công cụ gửi phím, không phải lỗi mới (e2e Playwright đóng bằng 1 lần Esc, desktop + mobile).
 - `/sach`: sheet "Bộ lọc" (mở bằng `click()` qua JS vì nút `md:hidden` ở desktop): 14 link, focus trong sheet, 18 lần Tab vẫn trong sheet, Esc đóng, `aria-expanded` về `false`. Console không lỗi.
 - Chưa kiểm mobile (Chrome không thu được cửa sổ, đêm qua): chờ chủ dự án test iPhone.
+
+## Trước merge (2026-10-20, sau khi chủ dự án test ĐẠT)
+
+Chủ dự án test 2026-10-20, ĐẠT: (A) đăng ký trên production bằng email đã có tài khoản, vi + en → "Kiểm tra hộp thư" + 2 link, không lộ email; (B) Preview perf-js trên điện thoại: sheet "Bộ lọc" ở `/sach` và `/danh-muc/van-hoc` (mở / lọc / "Xong" / trang sau không cuộn), tìm kiếm, icon, sáng / tối.
+
+Sửa theo review cuối (`9a26b40`, + docs / dọn nhỏ ở commit sau):
+- Đóng palette bằng Ctrl K cũng xóa chữ đã gõ: `search-palette.tsx` xóa theo `open` (đổi state khi prop đổi, trong lúc render) thay vì trong từng chỗ đóng; bỏ `handleOpenChange` chỉ chuyển tiếp.
+- `search-trigger.tsx`: không ghi đè chỗ trả focus khi phần tử đang focus nằm trong `[cmdk-root]` (Esc rồi Ctrl K ngay, lúc palette đang đóng dở).
+- ★8: `measure-js.mjs` không cộng script `noModule` (polyfill 38.59KB gzip), `BASELINE_GZIP_KB` 170 → 131.4; in 2 chữ số thập phân khi cách ngân sách < 0.1KB. So cách đo cũ / mới trên cùng bản build `637fac5`: số "ngoài baseline" vi 41.5 / 41.5, `/sach` 42.0 / 42.1, danh mục 42.0 / 42.1, sách 44.3 / 44.3, giỏ 46.0 / 46.0, thanh toán 45.0 / 45.0, đăng nhập 36.1 / 36.1 (lệch ≤ 0.1KB do làm tròn) → giữ thay đổi. Các bảng trước mục này tính theo baseline 170KB có polyfill; số "ngoài baseline" so được với nhau.
+- e2e `e2e/layout.spec.ts`: ca "focus ở body" kiểm khẳng định (`expect.poll(… document.activeElement === document.body)`); test mới "palette: đóng bằng Ctrl K cũng xóa chữ đã gõ"; test mới "palette: Esc rồi Ctrl K ngay (palette đang đóng dở) → lần đóng sau vẫn về phần tử ban đầu". Ca sau kiểm trên nhánh nháp `palette-diag` (chỉ test palette, `--repeat-each 10 --retries 0`, desktop + mobile): bỏ bản sửa → ca mới fail 20/20, ca palette khác 80/80 qua (run 39357491566); có bản sửa → 100/100 qua (run 39358065123). Nhánh nháp đã xóa (local + remote).
+
+measure:js ở `9a26b40` (cách đo mới, ngân sách 50KB, tất cả ĐẠT):
+
+| Route | `637fac5` (cách cũ) | `9a26b40` (cách mới) |
+|---|---:|---:|
+| `vi` | 41.5 | 41.5 |
+| `vi/books` | 42.0 | 42.1 |
+| `vi/categories/van-hoc` | 42.0 | 42.1 |
+| `vi/books/sapiens` | 44.3 | 44.3 |
+| `vi/cart` | 46.0 | 46.0 |
+| `vi/checkout` | 45.0 | 45.0 |
+| `vi/login` | 36.1 | 36.2 |
 

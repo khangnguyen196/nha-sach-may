@@ -6,7 +6,7 @@
 //
 // Baseline: app Next 16.4 + React 19.3 trống ≈ 131.4KB gzip, KHÔNG tính polyfill `noModule` (~38.6KB gzip, trình duyệt
 // hiện đại không tải; trước perf-js ★8 baseline là 170KB có kèm polyfill). Ngân sách trong CLAUDE.md tính phần vượt
-// baseline nên số "ngoài baseline" không đổi khi bỏ polyfill khỏi tổng. Script `noModule` vẫn in trong bảng, không cộng.
+// baseline nên số "ngoài baseline" gần như không đổi khi bỏ polyfill khỏi tổng (170 − 38.59 = 131.41: lệch ≤ 0.01KB). Script `noModule` vẫn in trong bảng, không cộng.
 // Vượt ngân sách của route → in "VƯỢT" và exit code 1.
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'

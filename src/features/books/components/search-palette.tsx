@@ -74,26 +74,23 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
     if (!open) setInput('')
   }
 
-  function handleOpenChange(next: boolean) {
-    onOpenChange(next)
-  }
 
   function openBook(slug: string) {
     navigating.current = true
-    handleOpenChange(false)
+    onOpenChange(false)
     router.push({ pathname: '/books/[slug]', params: { slug } })
   }
 
   function openSearchPage() {
     navigating.current = true
-    handleOpenChange(false)
+    onOpenChange(false)
     router.push({ pathname: '/search', query: { q: input.trim() } })
   }
 
   return (
     <CommandDialog
       open={open}
-      onOpenChange={handleOpenChange}
+      onOpenChange={onOpenChange}
       title={t('title')}
       description={t('description')}
       className="top-4 sm:top-[12dvh] sm:max-w-xl"
