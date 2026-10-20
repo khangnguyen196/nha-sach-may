@@ -32,7 +32,7 @@ function tagStarts(source: string) {
 function openingTag(source: string, start: number) {
   let depth = 0
   for (let i = start + TAG.length; i < source.length; i++) {
-    if (source.startsWith(TAG, i)) throw new Error(`Chưa đóng thẻ ở vị trí ${start} đã gặp ${TAG} kế tiếp`)
+    if (source.startsWith(TAG, i) && /[\s>/]/.test(source[i + TAG.length] ?? '')) throw new Error(`Chưa đóng thẻ ở vị trí ${start} đã gặp ${TAG} kế tiếp`)
     const char = source[i]
     if (char === '{') depth += 1
     else if (char === '}') depth -= 1
@@ -44,7 +44,7 @@ function openingTag(source: string, start: number) {
 
 /** `ready={…}` (không phải `ready={true}` / `ready={false}`, không phải `data-ready=`) hoặc `lockUntilHydrated` */
 const isLocked = (tag: string) =>
-  /(?<![\w-])ready=\{(?!(?:true|false)\})/.test(tag) || /(?<![\w-])lockUntilHydrated\b/.test(tag)
+  /(?<![\w-])ready=\{\s*(?!(?:true|false)\s*\})/.test(tag) || /(?<![\w-])lockUntilHydrated\b/.test(tag)
 
 const files = tsxFiles(SRC)
   .map((file) => ({ path: relative(SRC, file).replaceAll('\\', '/'), source: readFileSync(file, 'utf8') }))
@@ -61,10 +61,14 @@ describe('SubmitButton khóa tới khi hydrate (ready / lockUntilHydrated)', () 
     it(path, () => {
       const starts = tagStarts(source)
       expect(starts.length).toBeGreaterThan(0)
-      // Ngoại lệ đúng một thẻ: nút đăng xuất ngay trong <SignOutForm
-      const signOut = path === SIGN_OUT_PAGE ? source.indexOf('<SignOutForm') : -1
-      const exempt = signOut === -1 ? undefined : starts.find((start) => start > signOut)
-      if (path === SIGN_OUT_PAGE) expect(exempt, 'không thấy nút đăng xuất trong <SignOutForm').toBeDefined()
+      // Ngoại lệ đúng một thẻ: nút đăng xuất nằm giữa <SignOutForm …> và </SignOutForm>
+      let exempt: number | undefined
+      if (path === SIGN_OUT_PAGE) {
+        const open = source.indexOf('<SignOutForm')
+        const close = open === -1 ? -1 : source.indexOf('</SignOutForm>', open)
+        exempt = starts.find((start) => start > open && start < close)
+        expect(exempt, 'không thấy nút đăng xuất trong <SignOutForm>…</SignOutForm>').toBeDefined()
+      }
       for (const start of starts) {
         if (start === exempt) continue
         const tag = openingTag(source, start)
