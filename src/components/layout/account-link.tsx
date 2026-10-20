@@ -14,10 +14,11 @@ const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 
 /**
  * Icon tài khoản ở header. Phần đọc phiên (cookies) nằm trong Suspense → header vẫn prerender, 0 JS client.
  * Fallback = icon trỏ /tai-khoan (proxy tự chuyển sang đăng nhập nếu chưa có phiên).
- * Link /account KHÔNG prefetch, cả fallback lẫn khi đã đăng nhập: prefetch chạy lúc chưa có phiên (fallback) hoặc bị hoãn
- * tới đúng lúc đăng xuất vừa xóa cookie (giả thuyết, e2e chập chờn cart-account.spec.ts:94) → proxy 307 sang
- * /dang-nhap, Next 307 thêm `_rsc` rồi trả 404 cho segment `account/__PAGE__` (trang đăng nhập không có) → lỗi 404
- * trong console (docs/plans/sau-ux.md mục 4). Khu tài khoản là trang động nên prefetch lợi ít.
+ * Link /account KHÔNG prefetch, cả fallback lẫn khi đã đăng nhập: prefetch chạy lúc chưa có phiên (fallback), hoặc
+ * Server Action đổi cookie (đăng xuất) → router bỏ cache và prefetch lại link đang hiện khi cookie đã bị xóa (giả thuyết,
+ * e2e chập chờn "gộp giỏ khách khi đăng nhập, đăng xuất rồi đăng nhập lại") → proxy 307 sang /dang-nhap, Next 307 thêm
+ * `_rsc` rồi trả 404 cho segment `account/__PAGE__` (trang đăng nhập không có) → lỗi 404 trong console
+ * (docs/plans/sau-ux.md mục 4; e2e logout-prefetch-account.spec.ts). Khu tài khoản là trang động nên prefetch lợi ít.
  */
 export async function AccountLink() {
   const t = await getTranslations('layout')
