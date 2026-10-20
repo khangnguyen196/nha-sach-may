@@ -13,18 +13,20 @@ export async function expectReadableInputs(scope: Locator, label: string) {
   const fields = scope.locator(TYPEABLE).filter({ visible: true })
   let checked = 0
   // Ô trong Suspense có thể bị script `$RC` thay đúng lúc đo: ô cũ tách khỏi DOM → fontSize rỗng → NaN (flaky ở /tim-kiem).
-  // Đo lại cả lượt (query lại locator) tới khi mọi ô còn trong DOM đo được; điều kiện ≥ 16px và số ô > 0 giữ nguyên.
-  // 5 s = timeout mặc định của expect (bản cũ chờ ô hiện bằng toHaveCount); không đặt thì toPass chờ tới hết giờ của test.
+  // Lượt nào có ô đã bị tách thì đo lại cả lượt (query lại locator); chỉ qua khi cả lượt đo trọn: số ô > 0, mọi ô ≥ 16px.
+  // 5 s = timeout mặc định của expect (bản cũ chờ ô hiện bằng toHaveCount; config không đặt expect.timeout, đặt thì sửa
+  // theo); không đặt thì toPass chờ tới hết giờ của test.
   await expect(async () => {
     const sizes = await fields.evaluateAll((elements) =>
-      elements
-        .filter((element) => element.isConnected)
-        .map((element) => ({
-          field: element.getAttribute('name') ?? element.getAttribute('id') ?? element.tagName.toLowerCase(),
-          size: Number.parseFloat(getComputedStyle(element).fontSize),
-        })),
+      elements.map((element) => ({
+        field: element.getAttribute('name') ?? element.getAttribute('id') ?? element.tagName.toLowerCase(),
+        connected: element.isConnected,
+        size: Number.parseFloat(getComputedStyle(element).fontSize),
+      })),
     )
     expect(sizes.length, `${label}: không thấy ô nhập nào`).toBeGreaterThan(0)
+    const detached = sizes.filter(({ connected }) => !connected).map(({ field }) => field)
+    expect(detached, `${label}: ô bị thay giữa lúc đo`).toEqual([])
     for (const { field, size } of sizes) {
       expect(Number.isFinite(size), `${label} → ${field}: không đo được cỡ chữ (${size})`).toBe(true)
       expect(size, `${label} → ${field}: ${size}px`).toBeGreaterThanOrEqual(MIN_INPUT_FONT_PX)
