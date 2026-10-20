@@ -94,7 +94,7 @@ export async function expectLazyChunkError(
   page: Page,
   trigger: Locator,
   {
-    open = () => trigger.click(),
+    open: customOpen,
     returnTo = trigger,
     expanded = false,
   }: {
@@ -104,6 +104,14 @@ export async function expectLazyChunkError(
     expanded?: boolean
   } = {},
 ) {
+  const open = customOpen ?? (() => trigger.click())
+  // Khối lỗi nổi dưới header có thể che nút mở (sheet bộ lọc trên mobile) → khi khối lỗi còn hiện, mở lại bằng bàn phím
+  const reopenWhileShown =
+    customOpen ??
+    (async () => {
+      await trigger.focus()
+      await page.keyboard.press('Enter')
+    })
   const pageErrors: string[] = []
   const onPageError = (error: Error) => pageErrors.push(error.message)
   page.on('pageerror', onPageError)
@@ -129,7 +137,7 @@ export async function expectLazyChunkError(
       : expect(trigger).not.toHaveAttribute('aria-expanded')
   // Không có gì mở ra → nút mở không báo "đang mở"; mở lại khi khối lỗi còn hiện cũng không đổi gì
   await expectNotExpanded()
-  await open()
+  await reopenWhileShown()
   await expect(alert).toBeVisible()
   await expectNotExpanded()
   await alert.getByRole('button', { name: 'Tải lại trang' }).focus()
