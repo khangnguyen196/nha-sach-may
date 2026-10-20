@@ -56,6 +56,8 @@ export const ERROR_CODES = [
   'CHAT_FREE_QUOTA',
   'CHAT_UNAVAILABLE',
   'CHAT_REGION',
+  // Chunk JS tải lười (palette, sheet bộ lọc, gợi ý mã, khung chat) không tải được: LazyBoundary, chỉ ở client
+  'CHUNK_LOAD_FAILED',
   // Không tới được máy chủ: request Server Action fail ở client, hoặc server không gọi được Supabase
   'NETWORK_ERROR',
   'UNKNOWN',

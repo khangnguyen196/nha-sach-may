@@ -30,7 +30,7 @@ import {
   type ProjectUsers,
 } from './auth'
 import { addFromBookPage, badge, vnd } from './cart'
-import { collectErrors, fillAddress, waitForHydration } from './helpers'
+import { collectErrors, expectLazyChunkError, fillAddress, waitForHydration } from './helpers'
 
 // Đặt hàng thật trên sách thật: mỗi test bắt đầu từ giỏ / sổ địa chỉ / đơn rỗng của user checkout (user riêng, không
 // đụng giỏ của cart-account.spec). Sau mỗi test, đơn bị hủy (trigger hoàn tồn kho, sold_count) rồi xóa.
@@ -706,6 +706,35 @@ test('gợi ý mã: chỉ mã public; mã chưa đủ điều kiện mờ + lý 
     expect(errors).toEqual([])
   } finally {
     await deleteE2eVouchers([eligible.code, highMin.code, hidden.code])
+  }
+})
+
+test('gợi ý mã: chunk danh sách mã tải lỗi → khối lỗi tại chỗ, không thành trang lỗi; tải lại trang → mở được', async ({
+  page,
+  users,
+  projectIndex,
+}) => {
+  test.setTimeout(60_000)
+  const book = pick(regular, projectIndex)
+  // Nút "Chọn mã giảm giá" chỉ có khi có mã public; tạo lỗi thì createE2eVoucher throw
+  const voucher = await createE2eVoucher({ isPublic: true })
+  const selector = 'main [data-testid="checkout-voucher"] button[aria-haspopup="dialog"]'
+  try {
+    await seedAddress(users.checkout.id)
+    await setCartItem(users.checkout.id, book.id, 1)
+    await openCheckout(page)
+    await waitForHydration(page, selector)
+    await page.waitForLoadState('networkidle')
+    const trigger = page.locator(selector)
+    await expect(trigger).toHaveText('Chọn mã giảm giá')
+
+    await expectLazyChunkError(page, trigger)
+
+    await waitForHydration(page, selector)
+    await trigger.click()
+    await expect(page.getByRole('dialog', { name: 'Mã giảm giá cho đơn này' })).toBeVisible()
+  } finally {
+    await deleteE2eVouchers([voucher.code])
   }
 })
 

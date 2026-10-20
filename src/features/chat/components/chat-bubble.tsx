@@ -4,6 +4,7 @@ import { cn } from 'cn'
 import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { LazyBoundary, type LazyErrorLabels } from '@/components/lazy-boundary'
 import { usePathname } from '@/i18n/navigation'
 import type { ChatBrowseCategory, ChatLabels } from '../labels'
 import { currentBookSlug, isChatHidden } from '../visibility'
@@ -20,6 +21,8 @@ const AVOID_SELECTOR = '[data-chat-avoid]'
 type Props = {
   labels: ChatLabels
   categories: ChatBrowseCategory[]
+  /** Chunk khung chat tải lỗi (LazyBoundary) */
+  lazyError: LazyErrorLabels
   /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
   icon: ReactNode
 }
@@ -84,11 +87,13 @@ function useAvoidBottomBand(pathname: string) {
   return covered
 }
 
-function ChatBubbleInner({ labels, categories, icon }: Props) {
+function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
   const pathname = usePathname()
   const params = useParams()
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
+  // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở (aria-expanded giữ false), chỉ Đóng / Tải lại
+  const [failed, setFailed] = useState(false)
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
@@ -99,7 +104,16 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
     setAgeConfirmed(true)
   }, [])
 
-  if (isChatHidden(pathname)) return null
+  if (isChatHidden(pathname)) {
+    // Trang ẩn chat (thanh toán): gỡ khối lỗi chunk nếu đang hiện, để khi quay lại nó không tự hiện và kéo focus
+    // (đặt lại trong lúc render, có điều kiện `failed` nên chỉ render lại một lần; không dùng effect)
+    if (failed) {
+      setFailed(false)
+      setMounted(false)
+      setOpen(false)
+    }
+    return null
+  }
   const hidden = covered && !open
 
   return (
@@ -111,10 +125,11 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-testid="chat-bubble"
-        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: đợt error boundary (docs/progress.md)
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: LazyBoundary
         onPointerEnter={() => void loadPanel().catch(() => {})}
         onFocus={() => void loadPanel().catch(() => {})}
         onClick={() => {
+          if (failed) return
           setMounted(true)
           // sessionStorage chỉ đọc ở client, khi khách mở khung (không lệch markup lúc hydrate)
           setAgeConfirmed((current) => current || readAgeConfirmed())
@@ -132,18 +147,32 @@ function ChatBubbleInner({ labels, categories, icon }: Props) {
         {icon}
       </button>
       {mounted && (
-        <ChatPanel
-          open={open}
-          onOpenChange={setOpen}
-          labels={labels}
-          categories={categories}
-          slug={currentBookSlug(pathname, params)}
-          entries={entries}
-          setEntries={setEntries}
-          ageConfirmed={ageConfirmed}
-          onConfirmAge={confirmAge}
-          returnFocus={button}
-        />
+        <LazyBoundary
+          labels={lazyError}
+          onError={() => {
+            setOpen(false)
+            setFailed(true)
+          }}
+          onDismiss={() => {
+            setOpen(false)
+            setMounted(false)
+            setFailed(false)
+            button.current?.focus()
+          }}
+        >
+          <ChatPanel
+            open={open}
+            onOpenChange={setOpen}
+            labels={labels}
+            categories={categories}
+            slug={currentBookSlug(pathname, params)}
+            entries={entries}
+            setEntries={setEntries}
+            ageConfirmed={ageConfirmed}
+            onConfirmAge={confirmAge}
+            returnFocus={button}
+          />
+        </LazyBoundary>
       )}
     </>
   )

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { LazyBoundary, type LazyErrorLabels } from '@/components/lazy-boundary'
 
 // Palette (cmdk + dialog) chỉ tải khi mở lần đầu; rê chuột / focus vào nút thì tải trước
 const loadPalette = () => import('./search-palette')
@@ -12,8 +13,15 @@ const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 type Labels = { placeholder: string; open: string }
 
-/** `icon`: Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
-export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNode }) {
+type Props = {
+  labels: Labels
+  /** Chunk palette tải lỗi (LazyBoundary): không còn lên global-error (palette nằm trong Header của root layout) */
+  lazyError: LazyErrorLabels
+  /** Icon do Server Component cha render (client leaf không import lucide, perf-js bước C) */
+  icon: ReactNode
+}
+
+export function SearchTrigger({ labels, lazyError, icon }: Props) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   // Đóng palette (Esc, bấm ra ngoài, Ctrl K lần nữa) → focus về chỗ đã mở: nút (bấm) hoặc phần tử đang focus lúc nhấn
@@ -21,6 +29,8 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
   const returnTo = useRef<HTMLElement | null>(null)
   // Listener keydown đăng ký một lần → đọc trạng thái mở qua ref
   const openRef = useRef(false)
+  // Chunk palette tải lỗi (LazyBoundary): khối lỗi đang hiện → nút / Ctrl K không mở lại, chỉ Đóng / Tải lại
+  const failedRef = useRef(false)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
   const isApple = useSyncExternalStore(subscribeNothing, isApplePlatform, () => false)
 
@@ -28,10 +38,17 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
     openRef.current = open
   }, [open])
 
+  function returnFocus() {
+    const target = returnTo.current
+    // Như FocusScope của Radix: không cuộn trang tới phần tử
+    if (target?.isConnected && target !== document.body) target.focus({ preventScroll: true })
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
+        if (failedRef.current) return
         // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở. Vừa đóng mà hiệu ứng đóng chưa xong (focus còn ở ô
         // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ.
         const active = document.activeElement
@@ -53,11 +70,12 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
         aria-haspopup="dialog"
         aria-keyshortcuts="Meta+K Control+K"
         onClick={(event) => {
+          if (failedRef.current) return
           returnTo.current = event.currentTarget
           setMounted(true)
           setOpen(true)
         }}
-        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: đợt error boundary (docs/progress.md)
+        // Tải trước lỗi (mạng chập chờn) thì bỏ qua; lỗi tải khi bấm: LazyBoundary
         onPointerEnter={() => void loadPalette().catch(() => {})}
         onFocus={() => void loadPalette().catch(() => {})}
         className="inline-flex size-9 items-center justify-center gap-2 rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 md:w-full md:max-w-sm md:justify-start md:border md:border-input md:bg-surface md:px-3 md:text-sm [&_svg]:size-4 [&_svg]:shrink-0"
@@ -73,15 +91,21 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
         </kbd>
       </button>
       {mounted && (
-        <SearchPalette
-          open={open}
-          onOpenChange={setOpen}
-          returnFocus={() => {
-            const target = returnTo.current
-            // Như FocusScope của Radix: không cuộn trang tới phần tử
-            if (target?.isConnected && target !== document.body) target.focus({ preventScroll: true })
+        <LazyBoundary
+          labels={lazyError}
+          onError={() => {
+            failedRef.current = true
+            setOpen(false)
           }}
-        />
+          onDismiss={() => {
+            failedRef.current = false
+            setOpen(false)
+            setMounted(false)
+            returnFocus()
+          }}
+        >
+          <SearchPalette open={open} onOpenChange={setOpen} returnFocus={returnFocus} />
+        </LazyBoundary>
       )}
     </>
   )

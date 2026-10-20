@@ -1,5 +1,6 @@
 import { MoonIcon, SearchIcon, SunIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import { getLazyErrorLabels } from '@/components/lazy-error-labels'
 import { SearchTrigger } from '@/features/books/components/search-trigger'
 import { CartLink } from '@/features/cart/components/cart-link'
 import { Link } from '@/i18n/navigation'
@@ -8,7 +9,11 @@ import { LocaleSwitcher } from './locale-switcher'
 import { ThemeToggle } from './theme-toggle'
 
 export async function Header() {
-  const [t, tCommon] = await Promise.all([getTranslations('layout'), getTranslations('common')])
+  const [t, tCommon, lazyError] = await Promise.all([
+    getTranslations('layout'),
+    getTranslations('common'),
+    getLazyErrorLabels(),
+  ])
 
   return (
     <header className="sticky top-0 z-40 h-16 border-b bg-background/80 backdrop-blur">
@@ -25,6 +30,7 @@ export async function Header() {
         <div className="flex flex-1 justify-end md:justify-center md:px-6">
           <SearchTrigger
             labels={{ placeholder: t('searchPlaceholder'), open: t('openSearch') }}
+            lazyError={lazyError}
             icon={<SearchIcon aria-hidden />}
           />
         </div>

@@ -3,7 +3,9 @@
     "siteName": "Nhà Sách Mây",
     "skipToContent": "Skip to main content",
     "signInAgain": "Sign in again",
-    "noScript": "This page needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page."
+    "noScript": "This page needs JavaScript to show books, your cart and your account in full. Please turn on JavaScript and reload the page.",
+    "reloadPage": "Reload page",
+    "close": "Close"
   },
   "metadata": {
     "title": "Nhà Sách Mây — good books for quiet reading hours",
@@ -507,6 +509,7 @@
     "CHAT_FREE_QUOTA": "Mây has used up its free requests; the website is working normally.",
     "CHAT_UNAVAILABLE": "Mây is a bit tired, please come back in a few minutes.",
     "CHAT_REGION": "Mây is not available in your region yet.",
+    "CHUNK_LOAD_FAILED": "Couldn’t load this part. Check your connection, then reload the page.",
     "NETWORK_ERROR": "Couldn’t reach the server. Check your connection and try again; everything you entered is still here.",
     "UNKNOWN": "Something went wrong on our side, not yours. Please try again; if it keeps happening, email {email}.",
     "VOUCHER_NOT_FOUND": "We couldn’t find this code. Please check it letter by letter.",

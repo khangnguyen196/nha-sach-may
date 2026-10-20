@@ -3,7 +3,9 @@
     "siteName": "Nhà Sách Mây",
     "skipToContent": "Bỏ qua, tới nội dung chính",
     "signInAgain": "Đăng nhập lại",
-    "noScript": "Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang."
+    "noScript": "Trang này cần bật JavaScript để hiện đầy đủ sách, giỏ hàng và tài khoản. Hãy bật JavaScript rồi tải lại trang.",
+    "reloadPage": "Tải lại trang",
+    "close": "Đóng"
   },
   "metadata": {
     "title": "Nhà Sách Mây — sách hay cho những giờ đọc yên tĩnh",
@@ -923,6 +925,7 @@
     "CHAT_FREE_QUOTA": "Mây đã dùng hết lượt hỏi miễn phí, website vẫn hoạt động bình thường.",
     "CHAT_UNAVAILABLE": "Mây hơi mệt rồi, bạn quay lại sau ít phút nhé.",
     "CHAT_REGION": "Mây chưa hỗ trợ khu vực của bạn.",
+    "CHUNK_LOAD_FAILED": "Không tải được phần này. Kiểm tra kết nối mạng rồi tải lại trang.",
     "NETWORK_ERROR": "Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé, thông tin đã nhập vẫn còn nguyên.",
     "UNKNOWN": "Có lỗi phía Nhà Sách Mây, không phải do bạn. Bạn thử lại nhé; nếu vẫn lỗi, gửi email tới {email}.",
     "VOUCHER_NOT_FOUND": "Không có mã giảm giá này. Bạn kiểm tra lại từng ký tự nhé.",

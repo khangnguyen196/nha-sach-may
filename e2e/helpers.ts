@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from '@playwright/test'
+import { expect, type Locator, type Page, type Route } from '@playwright/test'
 
 export function collectErrors(page: Page) {
   const errors: string[] = []
@@ -80,4 +80,86 @@ export async function failServerActions(page: Page, url: string) {
   }
   await page.route(url, handler)
   return () => page.unroute(url, handler)
+}
+
+/**
+ * Chunk tải lười hỏng (LazyBoundary, `components/lazy-boundary.tsx`). Gọi khi trang đã tải xong và CHƯA rê chuột / focus
+ * vào `trigger` (rê chuột / focus tải trước chunk → bấm sẽ không cần request nào, test qua giả). Chặn mọi chunk tải sau
+ * lúc này → bấm `trigger` → khối lỗi tại chỗ: có request bị chặn thật, trang không thành trang lỗi / global-error, header
+ * còn; "Đóng" → focus về nút, bấm lại vẫn lỗi (React.lazy giữ lỗi tới khi tải lại trang), Esc cũng đóng. Cuối cùng bỏ
+ * chặn + bấm "Tải lại trang"; người gọi chờ hydrate rồi kiểm phần tải lười mở được.
+ * `open`: cách mở (mặc định bấm `trigger`; palette còn mở bằng Ctrl K, focus về phần tử đang focus lúc nhấn: `returnTo`).
+ */
+export async function expectLazyChunkError(
+  page: Page,
+  trigger: Locator,
+  {
+    open: customOpen,
+    returnTo = trigger,
+    expanded = false,
+  }: {
+    open?: () => Promise<void>
+    returnTo?: Locator
+    /** Nút có aria-expanded (sheet, chat): phải là false khi khối lỗi hiện, kể cả khi bấm lại */
+    expanded?: boolean
+  } = {},
+) {
+  const open = customOpen ?? (() => trigger.click())
+  // Khối lỗi nổi dưới header có thể che nút mở (sheet bộ lọc trên mobile) → khi khối lỗi còn hiện, mở lại bằng bàn phím
+  const reopenWhileShown =
+    customOpen ??
+    (async () => {
+      await trigger.focus()
+      await page.keyboard.press('Enter')
+    })
+  const pageErrors: string[] = []
+  const onPageError = (error: Error) => pageErrors.push(error.message)
+  page.on('pageerror', onPageError)
+  const pattern = '**/_next/static/chunks/**'
+  let aborted = 0
+  const abort = (route: Route) => {
+    aborted += 1
+    return route.abort('internetdisconnected')
+  }
+  await page.route(pattern, abort)
+
+  await open()
+  const alert = page.getByTestId('lazy-error')
+  await expect(alert).toBeVisible()
+  await expect(alert).toContainText('Không tải được phần này. Kiểm tra kết nối mạng rồi tải lại trang.')
+  expect(aborted).toBeGreaterThan(0)
+  await expect(page.getByTestId('error-page')).toHaveCount(0)
+  await expect(page.getByRole('banner').locator('a[href="/"]')).toBeVisible()
+  await expect(alert.getByRole('button', { name: 'Tải lại trang' })).toBeFocused()
+  const expectNotExpanded = () =>
+    expanded
+      ? expect(trigger).toHaveAttribute('aria-expanded', 'false')
+      : expect(trigger).not.toHaveAttribute('aria-expanded')
+  // Không có gì mở ra → nút mở không báo "đang mở"; mở lại khi khối lỗi còn hiện cũng không đổi gì
+  await expectNotExpanded()
+  await reopenWhileShown()
+  await expect(alert).toBeVisible()
+  await expectNotExpanded()
+  await alert.getByRole('button', { name: 'Tải lại trang' }).focus()
+
+  await alert.getByRole('button', { name: 'Đóng' }).click()
+  await expect(alert).toHaveCount(0)
+  await expect(returnTo).toBeFocused()
+  await open()
+  await expect(alert).toBeVisible()
+  await expect(page.getByTestId('error-page')).toHaveCount(0)
+  await expect(alert.getByRole('button', { name: 'Tải lại trang' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(alert).toHaveCount(0)
+  await expect(returnTo).toBeFocused()
+  await open()
+  await expect(alert).toBeVisible()
+
+  await page.unroute(pattern, abort)
+  const reloaded = page.waitForEvent('load')
+  await alert.getByRole('button', { name: 'Tải lại trang' }).click()
+  await reloaded
+  page.off('pageerror', onPageError)
+  // Lỗi tải chunk được LazyBoundary bắt (console.error của React), không có lỗi nào lọt ra ngoài (pageerror)
+  expect(pageErrors).toEqual([])
 }

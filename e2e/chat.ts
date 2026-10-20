@@ -8,12 +8,16 @@ export const CONFIRM_AGE = 'Tôi từ 18 tuổi trở lên, bắt đầu hỏi M
 // Theo vai trò + tên (cây accessibility): bỏ qua bản sao không hiển thị của bong bóng nếu có (xem báo cáo Phase 11)
 export const bubble = (page: Page) => page.getByRole('button', { name: 'Hỏi Mây gợi ý sách' })
 
-export async function openChat(page: Page, { confirm = true } = {}) {
+/** Chờ React gắn handler lên đúng nút đang hiển thị (bấm trước hydrate thì không mở) */
+export async function waitForBubble(page: Page) {
   await expect(bubble(page)).toBeVisible()
-  // Chờ React gắn handler lên đúng nút đang hiển thị (bấm trước hydrate thì không mở)
   await expect
     .poll(() => bubble(page).evaluate((element) => Object.keys(element).some((key) => key.startsWith('__reactProps'))))
     .toBe(true)
+}
+
+export async function openChat(page: Page, { confirm = true } = {}) {
+  await waitForBubble(page)
   await bubble(page).click()
   const panel = page.getByTestId('chat-panel')
   await expect(panel).toBeVisible()

@@ -1,6 +1,7 @@
 import { ChevronDownIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
+import { getLazyErrorLabels } from '@/components/lazy-error-labels'
 import { buttonVariants } from '@/components/ui/button'
 import { Link, type Href } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
@@ -40,7 +41,7 @@ type Props = {
 type FilterGroup = { key: string; label: string; options: { label: string; href: Href; active: boolean }[] }
 
 export async function CatalogView({ params, context, base, result, subcategories, filters, empty }: Props) {
-  const t = await getTranslations('catalog')
+  const [t, lazyError] = await Promise.all([getTranslations('catalog'), getLazyErrorLabels()])
   const href = (patch: Partial<CatalogParams>) => catalogHref(base, withParams(params, patch), context)
 
   // Ở trang danh mục, `cat` là điều hướng (chip danh mục con) nên "Xóa bộ lọc" giữ nguyên nó
@@ -142,6 +143,7 @@ export async function CatalogView({ params, context, base, result, subcategories
           {groups.length > 0 && (
             <FilterSheet
               labels={{ trigger: t('filtersActive', { count: activeCount }), title: t('filters'), close: t('close') }}
+              lazyError={lazyError}
               icon={<SlidersHorizontalIcon aria-hidden />}
             >
               <FilterGroups groups={groups} />

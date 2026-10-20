@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
+import { LazyBoundary, type LazyErrorLabels } from '@/components/lazy-boundary'
 import type { VoucherCard } from '../voucher-suggestions'
 
 // Danh sách mã (Radix Dialog) chỉ tải khi khách bấm nút: phần lớn lượt mở trang thanh toán không cần tới
@@ -12,6 +13,8 @@ export type VoucherPickerLabels = { pick: string; title: string; use: string; cl
 type Props = {
   vouchers: VoucherCard[]
   labels: VoucherPickerLabels
+  /** Chunk danh sách mã tải lỗi (LazyBoundary) */
+  lazyError: LazyErrorLabels
   /** Form GET của ô mã (VOUCHER_FORM_ID) và ô nhập: "Áp dụng" = điền mã + gửi đúng form đó */
   formId: string
   inputId: string
@@ -21,10 +24,12 @@ type Props = {
  * Nút "Chọn mã giảm giá" cạnh ô mã. Áp dụng một mã đi qua đúng luồng gõ tay: điền ô rồi gửi form GET
  * (`/thanh-toan?voucher=…`), server kiểm lại bằng quote_order, VoucherPending hiện "Đang tính lại…".
  */
-export function VoucherPicker({ vouchers, labels, formId, inputId }: Props) {
+export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: Props) {
   const [open, setOpen] = useState(false)
   // Giữ dialog trong cây sau lần mở đầu để có hiệu ứng đóng
   const [mounted, setMounted] = useState(false)
+  // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở, chỉ Đóng / Tải lại
+  const [failed, setFailed] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   function apply(code: string) {
@@ -43,6 +48,7 @@ export function VoucherPicker({ vouchers, labels, formId, inputId }: Props) {
         type="button"
         aria-haspopup="dialog"
         onClick={() => {
+          if (failed) return
           setMounted(true)
           setOpen(true)
         }}
@@ -51,14 +57,28 @@ export function VoucherPicker({ vouchers, labels, formId, inputId }: Props) {
         {labels.pick}
       </button>
       {mounted && (
-        <VoucherPickerDialog
-          open={open}
-          onOpenChange={setOpen}
-          vouchers={vouchers}
-          labels={labels}
-          onApply={apply}
-          returnFocus={() => triggerRef.current?.focus()}
-        />
+        <LazyBoundary
+          labels={lazyError}
+          onError={() => {
+            setOpen(false)
+            setFailed(true)
+          }}
+          onDismiss={() => {
+            setOpen(false)
+            setMounted(false)
+            setFailed(false)
+            triggerRef.current?.focus()
+          }}
+        >
+          <VoucherPickerDialog
+            open={open}
+            onOpenChange={setOpen}
+            vouchers={vouchers}
+            labels={labels}
+            onApply={apply}
+            returnFocus={() => triggerRef.current?.focus()}
+          />
+        </LazyBoundary>
       )}
     </>
   )
