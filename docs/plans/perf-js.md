@@ -148,7 +148,7 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 ### Test thêm / đổi
 
 - Vitest mới `src/features/books/search-input.test.ts` (65 ca): `normalizeSearchQuery` ↔ `searchQuerySchema` (rỗng, 1 / 2 / 100 / 101 ký tự, khoảng trắng hai đầu, NBSP, U+3000, U+FEFF, U+2028/2029, em / thin space, zero-width space, tab / xuống dòng, có dấu / không dấu / NFD, emoji, surrogate lẻ, 100 / 101 code point); `parseSearchResponse` ↔ `searchResponseSchema` (hợp lệ, rỗng, `coverUrl` null / thiếu / undefined / số, `ok` false / "true" / thiếu, `data` thiếu / null / không phải mảng, hit null / mảng, `id` chuỗi / NaN / Infinity / số lẻ, thiếu `slug`, `title` số, `authors` sai kiểu, key thừa bị bỏ).
-- Vitest mới `src/lib/client-no-zod.test.ts` (44 ca, theo gợi ý review): mọi file `'use client'` của cửa hàng (trừ admin, ★6) không import giá trị từ `zod` / `…/schemas` (`import type` được phép). Đã thử thêm `searchQuerySchema` vào import của palette → test fail, rồi trả lại.
+- Vitest mới `src/lib/client-no-zod.test.ts` (bản đêm: 44 ca; đã viết lại sáng 2026-10-20, xem mục cuối; theo gợi ý review): mọi file `'use client'` của cửa hàng (trừ admin, ★6) không import giá trị từ `zod` / `…/schemas` (`import type` được phép). Đã thử thêm `searchQuerySchema` vào import của palette → test fail, rồi trả lại.
 - e2e mới `e2e/catalog.spec.ts` "mobile: sheet bộ lọc (tải lười) — Enter mở, Tab ở trong sheet, Esc / "Xong" đóng, focus về nút" (desktop skip: nút chỉ hiện dưới `md`).
 - Không xóa / skip / nới test nào; không đổi chuỗi expected nào.
 
@@ -196,10 +196,11 @@ Thứ tự đợt perf-js: `analyze-diff.mjs` → D → sheet lazy → C. B đ�
 Quyết định của chủ dự án (2026-10-20): (b) chấp nhận lõi lucide `Icon` vẫn tải; (c) error boundary khi tải chunk lỗi → đợt nhỏ riêng; (d) palette trả focus về nút → sửa trong perf-js. `origin/main` (sau khi `sau-ux` merge, `ddf769b`) đã merge vào nhánh (`36267fb`, không xung đột).
 
 - Palette (`search-trigger.tsx`, `search-palette.tsx`, `components/ui/command.tsx` thêm `onCloseAutoFocus` cho `CommandDialog`): đóng bằng Esc / bấm ra ngoài / Ctrl K lần nữa → focus về chỗ đã mở (nút nếu mở bằng nút; phần tử đang focus lúc nhấn Ctrl K, trừ `body`); chọn kết quả → chuyển trang như cũ, không kéo focus về header. Trước đây Radix trả focus về Trigger, mà palette không có Trigger → focus rơi về `body`.
+- Theo review lượt 3: nhớ chỗ trả focus theo trạng thái mở của chính palette (`openRef`), không theo `closest('[role="dialog"]')` (trước đó Ctrl K trong ô nhập của khung chat — dialog không modal trên desktop — không lưu chỗ); `focus({ preventScroll: true })` như FocusScope của Radix; mở lại palette thì reset cờ `navigating` (chọn kết quả rồi Ctrl K trước khi hiệu ứng đóng xong).
 - Prefetch bỏ qua lỗi tải trước ở `search-trigger.tsx`, `chat-bubble.tsx` (như `filter-sheet.tsx`); comment ghi lỗi tải khi bấm để đợt error boundary.
 - Comment đúng lý do: `theme-toggle.tsx` (chỉ bớt module từng icon, lõi `Icon` vẫn tải), `field.tsx` (bớt `createLucideIcon` + module `chevron-down`).
-- `src/lib/client-no-zod.test.ts` viết lại: lập danh sách mọi module của `src` có import / re-export / `import()` giá trị từ `zod` (bỏ file `'use server'`: import vào client chỉ là tham chiếu action), cấm file `'use client'` của cửa hàng import giá trị từ `zod` hoặc từ các module đó; bỏ regex `isSchemas`; loại `app/admin`, `features/admin`, `components/admin` trừ `admin-link.tsx`. Thử 3 import cấm (`searchQuerySchema` từ `../schemas` vào palette, `@/lib/text-schema` vào `theme-toggle.tsx`, `export { z } from 'zod'` vào `cart-badge.tsx`) → 3 ca fail đúng file, rồi trả lại.
-- e2e mới `e2e/layout.spec.ts` "palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → focus về phần tử trước đó" (desktop + mobile).
+- `src/lib/client-no-zod.test.ts` viết lại (45 ca: 44 file client + 1 ca kiểm đầu vào): lập danh sách module zod = module (không phải `'use server'`: import vào client chỉ là tham chiếu action) có import / re-export / `import()` giá trị từ `zod`, cộng **bắc cầu** mọi module import giá trị từ một module đã có trong danh sách (theo review lượt 3; VD Phase 5a: badge giỏ → `store.ts` → `guest-cart.ts` → `schemas.ts`); cấm file `'use client'` của cửa hàng import giá trị từ `zod` hoặc từ các module đó; bỏ regex `isSchemas`; loại `app/admin`, `features/admin`, `components/admin` trừ `admin-link.tsx`. Thử import cấm rồi trả lại: (1) `searchQuerySchema` từ `../schemas` vào palette, `@/lib/text-schema` vào `theme-toggle.tsx`, `export { z } from 'zod'` vào `cart-badge.tsx` → 3 ca fail đúng file; (2) bắc cầu: `import { cartItemsSchema } from './schemas'` vào `guest-cart.ts` → 7 ca fail (`add-to-cart-button`, `cart-badge`, `cart-sync`, `cart-view`, `guest-cart.tsx`, `user-cart`, `checkout-form`). Không bắt: `import x = require(...)`, `require()`, specifier `.js` → `.ts` (repo chưa dùng).
+- e2e mới `e2e/layout.spec.ts` "palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → focus về phần tử trước đó" (desktop + mobile): mở bằng nút → Esc → focus ở nút; focus CTA "Xem tất cả sách" → Ctrl K → Esc → focus ở CTA; Ctrl K → Ctrl K (đóng bằng phím tắt) → focus ở CTA; focus ở `body` → Ctrl K → Esc → nút không được focus.
 
 measure:js (KB ngoài baseline, so với `3334285`; mọi route ngân sách 50KB, ĐẠT):
 
@@ -214,4 +215,13 @@ measure:js (KB ngoài baseline, so với `3334285`; mọi route ngân sách 50KB
 | `vi/login` | 36.0 | 36.1 |
 
 +0.1–0.2KB: logic trả focus của nút tìm kiếm (header, mọi trang) + `.catch` của prefetch.
+
+CI sáng 2026-10-20:
+
+| Commit | CI check | e2e |
+|---|---|---|
+| `36267fb` (merge `origin/main`, chỉ `.md`) | 39350768858 ✔ | không chạy (chỉ `.md`) |
+| `25df4c5` (cùng lần push với `84cb1c7`) | 39351444864 ✔ | 39351444838 ✔ 424 qua / 10 skip / 0 flaky |
+
+Review lượt 3 (`origin/main..25df4c5`): 0 NGHIÊM TRỌNG; NÊN SỬA (1) Ctrl K khi focus trong dialog khác, (2) test zod chỉ một bước → đã sửa; GỢI Ý đã làm: `preventScroll`, reset `navigating`, 2 ca e2e thêm (đóng bằng phím tắt, focus ở `body`), docs; chưa làm: ca e2e "chọn kết quả → focus không lên nút", các lỗ hổng nhỏ của test tĩnh (`require`, `.js`).
 

@@ -16,19 +16,27 @@ type Labels = { placeholder: string; open: string }
 export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
-  // Đóng palette (Esc, bấm ra ngoài) → focus về chỗ đã mở: nút (bấm) hoặc phần tử đang focus lúc nhấn Ctrl K.
-  // Palette không phải Dialog.Trigger của Radix nên Radix không tự trả focus (rơi về body).
+  // Đóng palette (Esc, bấm ra ngoài, Ctrl K lần nữa) → focus về chỗ đã mở: nút (bấm) hoặc phần tử đang focus lúc nhấn
+  // Ctrl K (kể cả ô nhập của khung chat). Palette không phải Dialog.Trigger của Radix nên Radix không tự trả focus.
   const returnTo = useRef<HTMLElement | null>(null)
+  // Listener keydown đăng ký một lần → đọc trạng thái mở qua ref
+  const openRef = useRef(false)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
   const isApple = useSyncExternalStore(subscribeNothing, isApplePlatform, () => false)
+
+  useEffect(() => {
+    openRef.current = open
+  }, [open])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
-        const active = document.activeElement
-        // Đang mở thì focus nằm trong palette: giữ chỗ đã lưu lúc mở
-        if (active instanceof HTMLElement && !active.closest('[role="dialog"]')) returnTo.current = active
+        // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở
+        if (!openRef.current) {
+          const active = document.activeElement
+          returnTo.current = active instanceof HTMLElement ? active : null
+        }
         setMounted(true)
         setOpen((current) => !current)
       }
@@ -69,7 +77,8 @@ export function SearchTrigger({ labels, icon }: { labels: Labels; icon: ReactNod
           onOpenChange={setOpen}
           returnFocus={() => {
             const target = returnTo.current
-            if (target?.isConnected && target !== document.body) target.focus()
+            // Như FocusScope của Radix: không cuộn trang tới phần tử
+            if (target?.isConnected && target !== document.body) target.focus({ preventScroll: true })
           }}
         />
       )}

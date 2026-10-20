@@ -43,6 +43,11 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
   // Chọn kết quả → chuyển trang, không kéo focus về header (như trước)
   const navigating = useRef(false)
 
+  // Chọn kết quả rồi mở lại trước khi hiệu ứng đóng xong (content chưa unmount) → lần đóng sau vẫn trả focus
+  useEffect(() => {
+    if (open) navigating.current = false
+  }, [open])
+
   const q = normalizeSearchQuery(input)
   // Kết quả của từ khóa cũ (đang chờ debounce / fetch) coi như đang tải, không hiện lẫn
   const current = q !== null && result?.q === q ? result : null

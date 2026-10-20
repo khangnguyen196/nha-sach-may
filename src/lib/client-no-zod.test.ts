@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest'
 
 // CLAUDE.md → Hiệu năng: module chạy ở client của cửa hàng không import zod (≈30KB gzip; từng lọt vào mọi trang qua badge
 // giỏ, rồi vào palette ⌘K qua features/books/schemas.ts). Test lập danh sách mọi module của src có import / export GIÁ
-// TRỊ từ 'zod' (kể cả `export … from 'zod'`, `import('zod')`), rồi cấm file 'use client' import giá trị từ zod hoặc từ các
-// module đó (`import type` được phép). Chỉ xét một bước: file client → util → module zod vẫn phải xem bằng
-// `next analyze` / scripts/analyze-diff.mjs.
+// TRỊ từ 'zod' (kể cả `export … from 'zod'`, `import('zod')`), cộng bắc cầu mọi module import giá trị từ một module đã có
+// trong danh sách (VD Phase 5a: badge giỏ → store.ts → guest-cart.ts → schemas.ts), rồi cấm file 'use client' import
+// giá trị từ zod hoặc từ các module đó (`import type` được phép). Module zod chạy code ở cấp module (`z.object(…)`), app
+// không khai `sideEffects: false` → import bất kỳ giá trị nào cũng kéo zod theo.
 // Admin không có ngân sách JS (perf-js ★6: book-form.tsx giữ zod) → bỏ qua, trừ admin-link.tsx (client chạy ở cửa hàng:
 // link "Quản trị" ở header).
 
@@ -87,11 +88,29 @@ function resolveLocal(from: string, specifier: string): string | null {
 
 // File 'use server' (Server Action) import vào client chỉ còn tham chiếu tới action, code + zod ở lại server
 const isServerActionFile = (file: string) => /^\s*['"]use server['"]/.test(readFileSync(file, 'utf8'))
-const zodModules = new Set(
+/** Module (không phải 'use server') → các import giá trị đã resolve ('zod' hoặc file trong src) */
+const graph = new Map(
   sourceFiles
     .filter((file) => !isServerActionFile(file))
-    .filter((file) => valueImports(file).some(({ specifier }) => isZod(specifier))),
+    .map((file) => [
+      file,
+      valueImports(file)
+        .map(({ specifier }) => (isZod(specifier) ? 'zod' : resolveLocal(file, specifier)))
+        .filter((target) => target !== null),
+    ]),
 )
+
+const zodModules = new Set<string>()
+for (let changed = true; changed; ) {
+  changed = false
+  for (const [file, targets] of graph) {
+    if (zodModules.has(file)) continue
+    if (targets.some((target) => target === 'zod' || zodModules.has(target))) {
+      zodModules.add(file)
+      changed = true
+    }
+  }
+}
 
 const shopClientFiles = sourceFiles
   .filter((file) => {

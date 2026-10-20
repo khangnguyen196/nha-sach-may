@@ -123,6 +123,21 @@ test('palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → 
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(cta).toBeFocused()
+
+  // Đóng bằng chính phím tắt
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog).toBeHidden()
+  await expect(cta).toBeFocused()
+
+  // Focus ở body → không kéo focus lên nút
+  await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(trigger).not.toBeFocused()
   expect(errors).toEqual([])
 })
 
