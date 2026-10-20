@@ -29,6 +29,8 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
   const returnTo = useRef<HTMLElement | null>(null)
   // Listener keydown đăng ký một lần → đọc trạng thái mở qua ref
   const openRef = useRef(false)
+  // Chunk palette tải lỗi (LazyBoundary): khối lỗi đang hiện → nút / Ctrl K không mở lại, chỉ Đóng / Tải lại
+  const failedRef = useRef(false)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
   const isApple = useSyncExternalStore(subscribeNothing, isApplePlatform, () => false)
 
@@ -46,10 +48,11 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
+        if (failedRef.current) return
         // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở. Vừa đóng mà hiệu ứng đóng chưa xong (focus còn ở ô
-        // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ; focus đang ở khối lỗi chunk (LazyBoundary, sắp bị gỡ) cũng vậy.
+        // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ.
         const active = document.activeElement
-        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root], [data-lazy-error]'))) {
+        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root]'))) {
           returnTo.current = active instanceof HTMLElement ? active : null
         }
         setMounted(true)
@@ -67,6 +70,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
         aria-haspopup="dialog"
         aria-keyshortcuts="Meta+K Control+K"
         onClick={(event) => {
+          if (failedRef.current) return
           returnTo.current = event.currentTarget
           setMounted(true)
           setOpen(true)
@@ -89,8 +93,12 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
-          onError={() => setOpen(false)}
+          onError={() => {
+            failedRef.current = true
+            setOpen(false)
+          }}
           onDismiss={() => {
+            failedRef.current = false
             setOpen(false)
             setMounted(false)
             returnFocus()

@@ -52,7 +52,7 @@ test('sheet bộ lọc: chunk tải lỗi → khối lỗi tại chỗ; tải l�
   const trigger = page.locator(selector)
   await expect(trigger).toHaveText('Bộ lọc')
 
-  await expectLazyChunkError(page, trigger)
+  await expectLazyChunkError(page, trigger, { expanded: true })
 
   await waitForHydration(page, selector)
   await trigger.click()
@@ -64,7 +64,7 @@ test('khung chat: chunk tải lỗi → khối lỗi tại chỗ; tải lại tr
   await waitForBubble(page)
   await page.waitForLoadState('networkidle')
 
-  await expectLazyChunkError(page, bubble(page))
+  await expectLazyChunkError(page, bubble(page), { expanded: true })
 
   await waitForBubble(page)
   await bubble(page).click()

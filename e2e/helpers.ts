@@ -93,7 +93,16 @@ export async function failServerActions(page: Page, url: string) {
 export async function expectLazyChunkError(
   page: Page,
   trigger: Locator,
-  { open = () => trigger.click(), returnTo = trigger }: { open?: () => Promise<void>; returnTo?: Locator } = {},
+  {
+    open = () => trigger.click(),
+    returnTo = trigger,
+    expanded = false,
+  }: {
+    open?: () => Promise<void>
+    returnTo?: Locator
+    /** Nút có aria-expanded (sheet, chat): phải là false khi khối lỗi hiện, kể cả khi bấm lại */
+    expanded?: boolean
+  } = {},
 ) {
   const pageErrors: string[] = []
   const onPageError = (error: Error) => pageErrors.push(error.message)
@@ -114,8 +123,16 @@ export async function expectLazyChunkError(
   await expect(page.getByTestId('error-page')).toHaveCount(0)
   await expect(page.getByRole('banner').locator('a[href="/"]')).toBeVisible()
   await expect(alert.getByRole('button', { name: 'Tải lại trang' })).toBeFocused()
-  // Không có gì mở ra → nút mở không báo "đang mở" (nút nào có aria-expanded)
-  if ((await trigger.getAttribute('aria-expanded')) !== null) await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  const expectNotExpanded = () =>
+    expanded
+      ? expect(trigger).toHaveAttribute('aria-expanded', 'false')
+      : expect(trigger).not.toHaveAttribute('aria-expanded')
+  // Không có gì mở ra → nút mở không báo "đang mở"; mở lại khi khối lỗi còn hiện cũng không đổi gì
+  await expectNotExpanded()
+  await open()
+  await expect(alert).toBeVisible()
+  await expectNotExpanded()
+  await alert.getByRole('button', { name: 'Tải lại trang' }).focus()
 
   await alert.getByRole('button', { name: 'Đóng' }).click()
   await expect(alert).toHaveCount(0)

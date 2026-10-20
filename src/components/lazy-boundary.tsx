@@ -74,19 +74,25 @@ function LazyError({ labels, onDismiss }: { labels: LazyErrorLabels; onDismiss: 
 
   // Esc đóng khối lỗi dù focus ở đâu. Nghe ở window, pha capture (chạy trước listener Esc của Radix ở document) rồi
   // chặn lan truyền: khung chat đang mở không bị đóng theo khi khách chỉ muốn tắt khối lỗi
+  // onDismiss của cha là hàm mới mỗi lần render → giữ trong ref để listener chỉ đăng ký một lần
+  const dismissRef = useRef(onDismiss)
+  useEffect(() => {
+    dismissRef.current = onDismiss
+  }, [onDismiss])
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       event.stopPropagation()
-      onDismiss()
+      dismissRef.current()
     }
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
-  }, [onDismiss])
+  }, [])
 
   return (
     // pointer-events-auto: dialog modal của Radix đang mở (sheet, chat trên mobile) đặt pointer-events: none lên body.
-    // Hai boundary cùng lỗi (hiếm) thì hai khối chồng cùng chỗ.
+    // Chỗ lệch đã biết (hiếm): khi dialog modal đang mở, bấm "Đóng" cũng đóng dialog đó (bấm ngoài layer) và FocusScope
+    // kéo focus khỏi nút "Tải lại trang". Hai boundary cùng lỗi thì hai khối chồng cùng chỗ.
     <div
       role="alert"
       data-testid="lazy-error"

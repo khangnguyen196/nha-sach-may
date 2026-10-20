@@ -92,6 +92,8 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
   const params = useParams()
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
+  // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở (aria-expanded giữ false), chỉ Đóng / Tải lại
+  const [failed, setFailed] = useState(false)
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
@@ -118,6 +120,7 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
         onPointerEnter={() => void loadPanel().catch(() => {})}
         onFocus={() => void loadPanel().catch(() => {})}
         onClick={() => {
+          if (failed) return
           setMounted(true)
           // sessionStorage chỉ đọc ở client, khi khách mở khung (không lệch markup lúc hydrate)
           setAgeConfirmed((current) => current || readAgeConfirmed())
@@ -137,10 +140,14 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
-          onError={() => setOpen(false)}
+          onError={() => {
+            setOpen(false)
+            setFailed(true)
+          }}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)
+            setFailed(false)
             button.current?.focus()
           }}
         >

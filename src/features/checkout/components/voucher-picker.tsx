@@ -28,6 +28,8 @@ export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: 
   const [open, setOpen] = useState(false)
   // Giữ dialog trong cây sau lần mở đầu để có hiệu ứng đóng
   const [mounted, setMounted] = useState(false)
+  // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở (aria-expanded giữ false), chỉ Đóng / Tải lại
+  const [failed, setFailed] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   function apply(code: string) {
@@ -46,6 +48,7 @@ export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: 
         type="button"
         aria-haspopup="dialog"
         onClick={() => {
+          if (failed) return
           setMounted(true)
           setOpen(true)
         }}
@@ -56,10 +59,14 @@ export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: 
       {mounted && (
         <LazyBoundary
           labels={lazyError}
-          onError={() => setOpen(false)}
+          onError={() => {
+            setOpen(false)
+            setFailed(true)
+          }}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)
+            setFailed(false)
             triggerRef.current?.focus()
           }}
         >

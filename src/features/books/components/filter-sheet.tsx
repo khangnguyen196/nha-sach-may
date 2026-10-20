@@ -24,6 +24,8 @@ export function FilterSheet({ labels, lazyError, children, icon }: Props) {
   const [open, setOpen] = useState(false)
   // Giữ sheet trong cây sau lần mở đầu để có hiệu ứng đóng
   const [mounted, setMounted] = useState(false)
+  // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở (aria-expanded giữ false), chỉ Đóng / Tải lại
+  const [failed, setFailed] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
@@ -37,6 +39,7 @@ export function FilterSheet({ labels, lazyError, children, icon }: Props) {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
+          if (failed) return
           setMounted(true)
           setOpen(true)
         }}
@@ -50,10 +53,14 @@ export function FilterSheet({ labels, lazyError, children, icon }: Props) {
       {mounted && (
         <LazyBoundary
           labels={lazyError}
-          onError={() => setOpen(false)}
+          onError={() => {
+            setOpen(false)
+            setFailed(true)
+          }}
           onDismiss={() => {
             setOpen(false)
             setMounted(false)
+            setFailed(false)
             triggerRef.current?.focus()
           }}
         >
