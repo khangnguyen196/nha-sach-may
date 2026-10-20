@@ -104,7 +104,16 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
     setAgeConfirmed(true)
   }, [])
 
-  if (isChatHidden(pathname)) return null
+  if (isChatHidden(pathname)) {
+    // Trang ẩn chat (thanh toán): gỡ khối lỗi chunk nếu đang hiện, để khi quay lại nó không tự hiện và kéo focus
+    // (đặt state trong lúc render khi pathname đổi, không dùng effect)
+    if (failed) {
+      setFailed(false)
+      setMounted(false)
+      setOpen(false)
+    }
+    return null
+  }
   const hidden = covered && !open
 
   return (

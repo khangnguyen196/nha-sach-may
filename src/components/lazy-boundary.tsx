@@ -14,7 +14,7 @@ type Props = {
    */
   onDismiss: () => void
   /**
-   * Phần con vừa lỗi: cha đặt `open = false` (aria-expanded của nút mở không báo "đang mở" khi không có gì mở ra), và
+   * Phần con vừa lỗi: cha đặt `open = false` (trạng thái mở không lệch với thực tế: aria-expanded, phím tắt bật / tắt), và
    * cha còn phải khóa mở lại trong lúc khối lỗi hiện (`failed`): boundary đã lỗi không render lại phần con nên
    * componentDidCatch / onError không chạy lần nữa.
    */
