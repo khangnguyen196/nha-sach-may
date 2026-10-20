@@ -36,9 +36,10 @@ test('palette mở bằng Ctrl K: chunk tải lỗi → khối lỗi; Đóng / E
     returnTo: logo,
   })
 
+  // Sau khi tải lại: mở bằng nút như test trên (Ctrl K đã kiểm ở phần lỗi; chờ listener Ctrl K cần networkidle, sau
+  // tải lại có thể không bao giờ tới trong thời gian của test)
   await waitForHydration(page, SEARCH_TRIGGER)
-  await page.waitForLoadState('networkidle')
-  await page.keyboard.press('ControlOrMeta+k')
+  await page.locator(SEARCH_TRIGGER).click()
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
