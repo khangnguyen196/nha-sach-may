@@ -1,6 +1,10 @@
 # Đợt "sau-ux"
 
-Trạng thái (2026-10-20): **đã duyệt merge 2026-10-20** (merge fast-forward sáng 2026-10-20, sau khi chủ dự án chạy khối DO của `catalog-fix.sql`). **Mục 1, 2, 3, 4 (bản sửa prefetch), 6 (A1) code xong** trên nhánh `sau-ux` (tạo từ `main` `1016280`), CI check + e2e xanh. Test đăng ký trên Preview: không làm; thay bằng kiểm phản hồi GoTrue production (báo cáo đêm 2026-10-20). Mục 6: đã đo trên dữ liệu thật (thay cho H1–H3: không có danh mục ẩn, 0 sách biến mất, 0 sách thiếu danh mục), ★6c giữ như code. Mục 5: đợt riêng. Mục 7: `catalog-fix.sql` đã viết, chủ dự án chạy khối DO sáng 2026-10-20. Mục 8: xong. perf-js bước 0 (`scripts/analyze-diff.mjs`): xong; perf-js tiếp tục trên nhánh `perf-js`.
+Trạng thái (2026-10-20): **đã merge `main`**: ff `1016280..89d7f35` (`git push origin sau-ux:main`, không force) 2026-10-20 00:43Z; CI check `main` run 39349331758 ✔; e2e `main` run 39349331712 ✔ 421 qua / 9 skip / 0 flaky; Vercel Production Ready 2026-10-20T00:45:45Z (deployment 7188572014). Mục 1, 2, 3, 4 (bản sửa prefetch, RSC 404 **đã đóng**), 6 (A1), 8 xong; mục 7: khối DO của `catalog-fix.sql` đã chạy 2026-10-19 16:52:48Z (23:52 giờ VN, chủ dự án, SQL Editor), C1–C7 khớp (kiểm qua MCP chỉ đọc 2026-10-20), không có bản chụp trước DO, quét R1–R7 2026-10-20: không còn ứng viên lỗi dữ liệu. Kiểm production sau deploy (chỉ xem) ĐẠT, không cần Redeploy (chi tiết: `docs/plans/handoff.md`). Mục 5 (tắt JS): đợt riêng. perf-js (bước 0 `scripts/analyze-diff.mjs` ở đây) tiếp tục trên nhánh `perf-js`.
+
+Kiểm thêm đêm 2026-10-20 (trước merge):
+- Đăng ký trên GoTrue production (★1, thay test tay): **không gọi**. JS client của production không có publishable key (mọi gọi Supabase ở server, không module client nào import `lib/supabase/client`), không đọc `.env.local`. Kết luận ★1 theo code (`signUp` chỉ báo `PRE_LOOKUP_SIGNUP_CODES` + `NETWORK_ERROR`, mọi phản hồi khác → "Kiểm tra hộp thư") + e2e `auth-email.spec.ts` trên Supabase local. Chủ dự án thử tay trên production sau merge.
+- Lượt dùng chatbot (`supabase/checks/chat-usage.sql`, MCP chỉ đọc): lượt gọi Gemini 17/10 = 10, 18/10 = 20 / 400; mỗi khách tối đa 7 / 30 câu; phút đông nhất 6 / 10.
 
 Kết quả từng mục:
 - Mục 1 `45970e8`: e2e 411 qua / 9 skip / 0 flaky (run 39240347309).
@@ -120,7 +124,9 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 
 **Xong khi**: bước CI ở chế độ fail, xanh trên `sau-ux`; đã chứng minh đỏ khi lệch.
 
-## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — chẩn đoán, chưa sửa
+## 4. Request RSC 404 `/dang-nhap?next=%2Ftai-khoan&_rsc=…` (P2) — đã sửa `d60b369`, **ĐÓNG 2026-10-20**
+
+**Đóng (2026-10-20)**: 11 run e2e liền không tái diễn sau bản sửa (7 run tới `49c4d1b` + 4 run của nhánh `perf-js`: 39296425020, 39297885209, 39299313775, 39300594469), 0 flaky; e2e `main` sau merge (39349331712) cũng 0 flaky.
 
 **Đã biết**: `cart-account.spec.ts:94` (desktop-account) chập chờn 2/5 lượt đêm 18→19/10, qua ở retry; console "Failed to load resource: 404 … /dang-nhap?next=%2Ftai-khoan&_rsc=IP9tvrHI0WPQ482u" (cùng `_rsc` cả 2 lần). Có từ trước ux-messages. Giả thuyết: router prefetch / điều hướng `/tai-khoan` khi phiên vừa hết → proxy 307 sang `/dang-nhap?next=…` → request RSC (prefetch / segment prefetch) tới URL đó nhận 404. `(auth)` là route group có layout lồng (`src/app/[locale]/(auth)/layout.tsx`), **không** phải root layout khác (root layout khác chỉ có `app/admin`).
 
@@ -169,7 +175,7 @@ Quy ước chung: nhánh `sau-ux`, worktree riêng; mỗi mục một commit (ho
 
 Ẩn danh mục = ẩn luôn sách của nó ở trang chủ (đã có), `/sach`, tìm kiếm (palette + trang tìm kiếm), chatbot (`getChatCatalog`). Chi tiết (kiểm kê mọi chỗ liệt kê sách, định nghĩa "danh mục đang hiện", cache, ★ A1 / A2, test): mục "6 — chi tiết" bên dưới.
 
-## 7. Dọn dữ liệu tác giả / tên sách — SQL sửa đã viết (`catalog-fix.sql`), CHƯA chạy
+## 7. Dọn dữ liệu tác giả / tên sách — SQL sửa đã viết (`catalog-fix.sql`), khối DO đã chạy 2026-10-19 16:52:48Z
 
 File `supabase/checks/catalog-data-r.sql` (CHỈ ĐỌC) + đề xuất xử lý từng nhóm. Chi tiết: mục "7 — chi tiết" bên dưới. File SQL sửa viết SAU khi chủ dự án duyệt kết quả câu chỉ đọc, theo mẫu `authors-fix` (guard theo id + giá trị cũ, đếm dòng, rollback nếu lệch).
 
@@ -269,7 +275,7 @@ Phần A (plan này) → mục 1 → 2 → 3 (mỗi mục CI check + e2e xanh) �
 
 **Xong khi** (đợt này): file chỉ đọc + plan; chủ dự án chạy R1–R7, dán kết quả, duyệt ★7a / ★7b → đợt sau viết `supabase/checks/catalog-fix.sql`.
 
-**SQL sửa đã viết (2026-10-19; chủ dự án chạy khối DO sáng 2026-10-20)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 0 (chỉ đọc) lưu slug hiện tại để đối chiếu. Review toàn đợt: thêm guard "tên mới không trùng sách khác đang có" (bản bìa mềm "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai" đã có) → tên mới của bản bìa cứng là "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)"; C5 thêm `so_sach_cung_ten`. Claude (chat review) đã chạy thử trên Postgres 16 local (schema của nhánh + dữ liệu mẫu dựng theo danh sách đã duyệt), lần 1 bản `81c3ab8`, lần 2 bản `49c4d1b`: cả file chạy đúng, C1–C7 khớp; khối DO chạy lần 2 → rollback; tên mới trùng sách khác → rollback; tên mới lặp trong kế hoạch → rollback. 4 guard tên sách: (1) tên mới ở dạng NFC; (2) tên cũ khớp đúng 1 sách; (3) tên mới không lặp trong kế hoạch; (4) tên mới không trùng sách khác đang có. Phần 1 một khối DO (lệnh nguyên tử, không bọc begin / commit), mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
+**SQL sửa đã viết (2026-10-19; khối DO đã chạy 2026-10-19 16:52:48Z (23:52 giờ VN, chủ dự án, SQL Editor); C1–C7 khớp (kiểm qua MCP chỉ đọc 2026-10-20); không có bản chụp trước DO; quét R1–R7 2026-10-20: không còn ứng viên lỗi dữ liệu)**: `supabase/checks/catalog-fix.sql` theo danh sách chủ dự án duyệt. Phần 0 (chỉ đọc) lưu slug hiện tại để đối chiếu. Review toàn đợt: thêm guard "tên mới không trùng sách khác đang có" (bản bìa mềm "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai" đã có) → tên mới của bản bìa cứng là "Lịch Sử Việt Nam Thời Tự Chủ - Tập Hai (bìa cứng)"; C5 thêm `so_sach_cung_ten`. Claude (chat review) đã chạy thử trên Postgres 16 local (schema của nhánh + dữ liệu mẫu dựng theo danh sách đã duyệt), lần 1 bản `81c3ab8`, lần 2 bản `49c4d1b`: cả file chạy đúng, C1–C7 khớp; khối DO chạy lần 2 → rollback; tên mới trùng sách khác → rollback; tên mới lặp trong kế hoạch → rollback. 4 guard tên sách: (1) tên mới ở dạng NFC; (2) tên cũ khớp đúng 1 sách; (3) tên mới không lặp trong kế hoạch; (4) tên mới không trùng sách khác đang có. Phần 1 một khối DO (lệnh nguyên tử, không bọc begin / commit), mỗi thay đổi guard theo id + tên cũ (tên sách: tên cũ chính xác, đúng 1 dòng), đếm dòng, lệch → `raise exception` → rollback cả khối:
 1. Gộp (id giữ ← id gộp): 87 "Peter F. Drucker" ← 86 "Peter Ferdinand Drucker", 88 "Peter Drucker"; 114 "Stephen Hawking" ← 113 "Stephen W. Hawking"; 90 "Jim Collins" ← 92 "James Charles Collins"; 94 "Jerry Porras" ← 93 "Jerry I. Porras". Chuyển `book_authors` (`on conflict do nothing`), kiểm mọi liên kết đã có ở id giữ, rồi xóa liên kết + tác giả của id gộp (đúng 5). Không gộp 101 / 104 (Covey), không đụng 99.
 2. Tách id 75 → "Trần Tuyết Nhung" (giữ slug); "Anthony Reid" (slug `anthony-reid`, đã có thì dùng dòng đó) gắn đúng các sách của id 75, cùng vai trò.
 3. Bỏ liên kết 89 "Harvard Business Review" khỏi "The Peter F. Drucker Reader" và 107 "Ladybird" khỏi "Ladybird Readers Level 4 - Roald Dahl - Esio Trot (ELT Graded Reader)" chỉ khi sách còn ≥ 1 tác giả role `author` khác (sau bước gộp); xóa 89 / 107 nếu không còn liên kết (còn thì NOTICE, giữ). Giữ 22, 24.
