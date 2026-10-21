@@ -12,6 +12,7 @@ import { CHAT_INPUT } from '../config'
 import { checkMessage } from '../input'
 import type { ChatBrowseCategory, ChatLabels } from '../labels'
 import { recentTurns, visibleSuggestion, type ChatEntry } from './chat-state'
+import { appendEntry, type NewChatEntry } from './entry-id'
 
 // Khung chat, tải lười từ chat-bubble.tsx. ≥ 640px: khung nổi 360px, dialog KHÔNG modal (vẫn đọc trang được);
 // < 640px: tấm toàn màn hình, modal (khóa cuộn nền, giữ focus). Chỉ render chữ thuần (React tự escape), không HTML /
@@ -57,7 +58,6 @@ export default function ChatPanel({
   const desktop = useDesktop()
   const [draft, setDraft] = useState('')
   const [pending, startTransition] = useTransition()
-  const nextId = useRef(entries.length)
   const input = useRef<HTMLTextAreaElement>(null)
   const confirm = useRef<HTMLButtonElement>(null)
   const log = useRef<HTMLDivElement>(null)
@@ -70,22 +70,23 @@ export default function ChatPanel({
     const check = checkMessage(raw)
     if (!check.ok || pending || !ageConfirmed) return
     const history = recentTurns(entries)
-    setEntries((current) => [...current, { id: nextId.current++, role: 'user', text: check.message }])
+    setEntries((current) => appendEntry(current, { role: 'user', text: check.message }))
     setDraft('')
     startTransition(async () => {
-      let entry: ChatEntry
+      let entry: NewChatEntry
       try {
         const result = await askMay({ message: check.message, history, slug, ageConfirmed: true })
         entry = result.ok
-          ? { id: nextId.current++, role: 'assistant', reply: result.data }
-          : { id: nextId.current++, role: 'error', code: result.code, details: result.details }
+          ? { role: 'assistant', reply: result.data }
+          : { role: 'error', code: result.code, details: result.details }
       } catch {
         // Không tới được server (mất mạng…): báo trong khung, không lên error boundary; trả câu hỏi lại ô nhập để gửi
         // lại (trừ khi khách đã gõ câu khác trong lúc chờ)
-        entry = { id: nextId.current++, role: 'error', code: 'NETWORK_ERROR' }
+        entry = { role: 'error', code: 'NETWORK_ERROR' }
         setDraft((current) => current || check.message)
       }
-      setEntries((current) => [...current, entry])
+      // id tính theo danh sách lúc thêm: khung có thể đã bị gỡ rồi mount lại trong lúc chờ (sang trang ẩn chat rồi về)
+      setEntries((current) => appendEntry(current, entry))
     })
   }
 
