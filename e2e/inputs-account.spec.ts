@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { createE2eUser, deleteE2eUsers, seedAddress, setCartItem } from '../scripts/e2e-user'
 import { login, NO_SESSION, readShopBooks } from './auth'
 import { expectReadableInputs } from './inputs'
@@ -19,10 +19,20 @@ test('ô nhập ở thanh toán, giỏ, sổ địa chỉ, tài khoản ≥ 16px
     await setCartItem(user.id, book.id, 1)
     await login(page, user)
 
-    for (const path of ['/thanh-toan', '/gio-hang', '/tai-khoan/dia-chi/moi', '/tai-khoan']) {
+    // Đo phải trúng ô của nội dung thật: fallback của cả 4 trang là skeleton không có ô (CheckoutSkeleton, CartSkeleton,
+    // AddressFormSkeleton, AccountSkeleton) → chờ một phần tử chỉ có ở nội dung thật trước khi đo
+    const main = page.getByRole('main')
+    const ready: Record<string, Locator> = {
+      '/thanh-toan': main.getByTestId('checkout-summary'),
+      '/gio-hang': main.getByRole('link', { name: book.title, exact: true }),
+      '/tai-khoan/dia-chi/moi': main.getByRole('button', { name: 'Lưu địa chỉ' }),
+      '/tai-khoan': main.getByRole('button', { name: 'Đăng xuất' }),
+    }
+    for (const [path, content] of Object.entries(ready)) {
       await page.goto(path)
       await expect(page).toHaveURL(new RegExp(`${path}$`))
-      await expectReadableInputs(page.getByRole('main'), path)
+      await expect(content).toBeVisible()
+      await expectReadableInputs(main, path)
     }
   } finally {
     await deleteE2eUsers([user.id])
