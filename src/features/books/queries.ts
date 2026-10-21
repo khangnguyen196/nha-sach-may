@@ -266,6 +266,27 @@ export async function getSitemapBooks() {
   return data
 }
 
+/**
+ * Sitemap: slug tác giả + danh mục các sách đang bán của họ (RLS bỏ sách ẩn → embed null), để sitemap.ts bỏ tác giả
+ * không còn sách nào lên danh sách (chỉ có sách thuộc danh mục ẩn / không có sách đang bán: trang tác giả rỗng).
+ * Tag như getSitemapBooks: `books` (đổi danh mục / tác giả của sách, ẩn / hiện danh mục), `authors` (thêm / sửa tác giả).
+ */
+export async function getSitemapAuthors() {
+  'use cache'
+  cacheTag('authors', 'books')
+  cacheLife('hours')
+
+  const { data, error } = await createPublicClient()
+    .from('authors')
+    .select('slug, book_authors(books(category_id))')
+    .order('id')
+  if (error) throw new Error(`getSitemapAuthors: ${error.message}`)
+  return data.map((author) => ({
+    slug: author.slug,
+    books: author.book_authors.flatMap(({ books }) => (books ? [{ category_id: books.category_id }] : [])),
+  }))
+}
+
 export async function getAllAuthorSlugs() {
   'use cache'
   cacheTag('authors')
