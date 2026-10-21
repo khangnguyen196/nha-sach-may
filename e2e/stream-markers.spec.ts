@@ -15,7 +15,7 @@ test('HTML trang sách có marker Suspense mà waitForSettled đếm', async ({ 
   // Không toContain: đỏ thì in cả trang vào log
   expect(html.includes('<!--$?-->'), 'comment <!--$?--> của boundary đang chờ').toBe(true)
   const runtime = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
-    .map(([, body]) => body)
+    .map(([, body = '']) => body)
     .find((body) => body.includes('$RC='))
   expect(runtime, 'script $RC nội tuyến').toBeDefined()
   expect(runtime).toMatch(/\.data\s*=\s*"\$~"/)
