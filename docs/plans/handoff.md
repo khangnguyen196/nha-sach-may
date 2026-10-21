@@ -1,4 +1,4 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-21, muc-thap-1 đã lên production)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-21, muc-thap-2 đã lên production)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
@@ -6,6 +6,10 @@
 
 - **Hiện tại**: `main` mới nhất là trạng thái đang chạy trên production (https://nha-sach-may.vercel.app). **Không còn migration nào chờ chạy.**
 - **Việc tiếp theo**: không có đợt đang mở. RSC 404 sau đăng xuất **đã đóng** (15/15 lượt e2e đầy đủ liên tiếp không tái diễn). ★9 / ★10 đã đo, ★7 đã có issue upstream (`docs/plans/no-js.md`). Việc để sau: `docs/progress.md`.
+- **Đợt muc-thap-2 (networkidle, modal chat mobile, id tin nhắn, đo prefetch)**: **đã merge `main`** ff `5b09627..0fb9eef` (`git push origin muc-thap-2:main`, không force) 2026-10-21 04:28:34Z; CI check `main` run 39544236575 ✔; e2e `main` run 39544236509 ✔ 505 qua / 13 skip / 0 flaky; Vercel Production Ready 2026-10-21T04:31:32Z (deployment 7217753489).
+  - e2e nhánh: push `0fb9eef` run 39542045579 505 / 13 / 0; chạy tay run 39543142318 505 / 13 / 0. Thử đỏ trên nhánh tạm (đã xóa): run 39535994693 (chèn lỗi sau mỗi chỗ thay networkidle → đỏ đúng các test đó); run 39538755746 / 39540610867 (test "câu hỏi đang chờ" trên code cũ: không dựng được, xem progress).
+  - measure:js (build ở thư mục chính, không hard link): `5b09627` → `7917ffa` / `241c133` không đổi ở 8 route (trang chủ 42.1, `/sach` 42.7, danh mục 42.7, trang sách 45.1, giỏ 46.6, thanh toán 45.8, đăng nhập 36.8, tài khoản 38.7KB); bản cuối `0fb9eef` chỉ đổi chat-panel (chunk tải lười) so với `7917ffa`.
+  - Kiểm production (Claude in Chrome, desktop, tài khoản đang đăng nhập, giỏ có sẵn 1 dòng; không gửi chat / không đổi giỏ): mở chat → link "Thanh toán" → Back: khung không tự mở, focus ở body; mở lại / đóng bình thường; không khóa cuộn; console không lỗi. **ĐẠT**. Chưa test tay trên điện thoại (bước cho chủ dự án: mở /gio-hang trên điện thoại khi giỏ có hàng → bấm "Thanh toán" → Back → mở chat (tấm toàn màn hình) → vuốt Forward / nút tiến của trình duyệt → /thanh-toan cuộn và bấm được → Back → /gio-hang cuộn và bấm được, khung chat đóng).
 - **Đợt muc-thap-1 (mục mức thấp + chốt RSC 15/15)**: **đã merge `main`** ff `5891c25..48c5b2f` (`git push origin muc-thap-1:main`, không force) 2026-10-21 01:54:32Z; CI check `main` run 39530003256 ✔; e2e `main` run 39530003305 ✔ 504 qua / 12 skip / 0 flaky; Vercel Production Ready 2026-10-21T01:56:37Z (deployment 7215677657).
   - Khung chat (desktop) đang mở khi sang `/thanh-toan` → `open` về false (`chat-bubble.tsx`, đặt lại trong lúc render, giữ `entries` / `ageConfirmed`, giữ `mounted`). e2e `chat-hidden-account.spec.ts` (desktop-account): đỏ trên code cũ `57d73f0` (run 39526000621, `aria-expanded` "true" sau khi quay lại, 3/3 lần thử), xanh trên `48c5b2f`.
   - `inputs*.spec`: chờ phần tử chỉ có ở nội dung thật ở 6 path có fallback skeleton không ô; sitemap bỏ tác giả không có sách nào lên danh sách (DB thật 21/10: 0 tác giả như vậy, sitemap production 89 tác giả / 189 sách / 24 danh mục); comment `scripts/analyze-diff.mjs`.
