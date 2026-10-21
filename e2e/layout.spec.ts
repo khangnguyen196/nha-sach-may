@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { collectErrors, openPalette, waitForHydration } from './helpers'
+import { collectErrors, openPalette, waitForHydration, waitForSettled } from './helpers'
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')
@@ -16,8 +16,8 @@ test('không tràn ngang: layout viewport bằng bề rộng màn hình (trang c
   const bookHref = await page.locator('main a[href^="/sach/"]').first().getAttribute('href')
   for (const path of ['/', bookHref ?? '/']) {
     await page.goto(path)
-    // Kệ "Cùng danh mục" stream sau trong Suspense
-    await page.waitForLoadState('networkidle')
+    // Đo bề rộng cả trang: chờ mọi phần stream (kệ "Cùng danh mục" trong Suspense) đã hiện + font đã tải
+    await waitForSettled(page)
     const { innerWidth, scrollWidth, viewport } = await page.evaluate(() => ({
       innerWidth: window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -104,7 +104,8 @@ test('palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → 
   const errors = collectErrors(page)
   await page.goto('/')
   await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
-  await page.waitForLoadState('networkidle')
+  // Listener Ctrl K gắn trong useEffect: chờ main thread rảnh (như openPalette)
+  await waitForSettled(page)
   // Palette mở thì phần ngoài bị aria-hidden → tìm nút bằng CSS, không bằng role
   const trigger = page.locator('header button[aria-keyshortcuts]')
   const dialog = page.getByRole('dialog')
@@ -159,7 +160,8 @@ test('palette: Esc rồi Ctrl K ngay (palette đang đóng dở) → lần đón
   const errors = collectErrors(page)
   await page.goto('/')
   await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
-  await page.waitForLoadState('networkidle')
+  // Listener Ctrl K gắn trong useEffect: chờ main thread rảnh (như openPalette)
+  await waitForSettled(page)
   const dialog = page.getByRole('dialog')
   const cta = page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách', exact: true })
   await cta.focus()

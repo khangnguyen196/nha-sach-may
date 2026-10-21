@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { collectErrors, openPalette, waitForHydration } from './helpers'
+import { collectErrors, openPalette, waitForHydration, waitForSettled } from './helpers'
 
 // Không phụ thuộc một cuốn cụ thể: lấy sách từ lưới rồi đi tiếp. Chỉ giả định danh mục "Văn học" có sách
 // ở ít nhất hai danh mục con, và mọi sách có ISBN-13 bắt đầu bằng 978/979 (như layout.spec).
@@ -247,7 +247,20 @@ test('lưới stream vào không gây nhảy layout (CLS < 0.1)', async ({ page 
   for (const url of ['/danh-muc/van-hoc', '/tim-kiem?q=978', '/en/categories/van-hoc?sort=newest']) {
     await page.goto(url)
     await expect(cards(page).first()).toBeVisible()
-    await page.waitForLoadState('networkidle')
+    // CLS tính tới lúc đo: chờ mọi phần stream đã hiện, font và ảnh trong khung nhìn đã tải (ảnh lazy ngoài khung chưa tải,
+    // như lúc dùng networkidle)
+    await waitForSettled(page)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.querySelectorAll('main img')].every((img) => {
+            if (!(img instanceof HTMLImageElement)) return true
+            const box = img.getBoundingClientRect()
+            return img.complete || box.top >= window.innerHeight || box.bottom <= 0
+          }),
+        ),
+      )
+      .toBe(true)
     const cls = await page.evaluate(() => Number(Reflect.get(window, '__cls')))
     expect(cls, url).toBeLessThan(0.1)
   }

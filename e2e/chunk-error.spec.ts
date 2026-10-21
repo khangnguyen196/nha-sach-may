@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { bubble, waitForBubble } from './chat'
-import { expectLazyChunkError, waitForHydration } from './helpers'
+import { expectLazyChunkError, waitForHydration, waitForSettled } from './helpers'
 
 // Chunk JS tải lười hỏng khi bấm (mạng chập chờn, bản deploy mới): LazyBoundary giữ lỗi tại chỗ, không lên error
 // boundary của route / global-error. Gợi ý mã ở trang thanh toán: checkout.spec.ts (cần user).
@@ -10,7 +10,8 @@ const SEARCH_TRIGGER = 'header button[aria-haspopup="dialog"]'
 test('palette: chunk tải lỗi → khối lỗi, header còn (không global-error); tải lại trang → mở được', async ({ page }) => {
   await page.goto('/')
   await waitForHydration(page, SEARCH_TRIGGER)
-  await page.waitForLoadState('networkidle')
+  // Trang chủ nhiều Link prefetch liên tục (networkidle có thể không tới): chờ hydrate + effect xong
+  await waitForSettled(page)
   const trigger = page.locator(SEARCH_TRIGGER)
 
   await expectLazyChunkError(page, trigger)
@@ -26,7 +27,8 @@ test('palette mở bằng Ctrl K: chunk tải lỗi → khối lỗi; Đóng / E
 }) => {
   await page.goto('/')
   await waitForHydration(page, SEARCH_TRIGGER)
-  await page.waitForLoadState('networkidle')
+  // Trang chủ nhiều Link prefetch liên tục (networkidle có thể không tới): chờ hydrate + effect xong
+  await waitForSettled(page)
   // Phần tử đang focus lúc nhấn Ctrl K: logo (link đầu header), không phải nút tìm kiếm (focus nút sẽ tải trước chunk)
   const logo = page.getByRole('banner').locator('a[href="/"]')
   await logo.focus()
@@ -48,7 +50,8 @@ test('sheet bộ lọc: chunk tải lỗi → khối lỗi tại chỗ; tải l�
   const selector = 'main button[aria-haspopup="dialog"]'
   await page.goto('/sach')
   await waitForHydration(page, selector)
-  await page.waitForLoadState('networkidle')
+  // /sach: lưới nhiều Link prefetch liên tục; chờ hydrate + effect xong
+  await waitForSettled(page)
   const trigger = page.locator(selector)
   await expect(trigger).toHaveText('Bộ lọc')
 
@@ -62,7 +65,8 @@ test('sheet bộ lọc: chunk tải lỗi → khối lỗi tại chỗ; tải l�
 test('khung chat: chunk tải lỗi → khối lỗi tại chỗ; tải lại trang → mở được', async ({ page }) => {
   await page.goto('/')
   await waitForBubble(page)
-  await page.waitForLoadState('networkidle')
+  // Trang chủ nhiều Link prefetch liên tục; chờ hydrate + effect xong
+  await waitForSettled(page)
 
   await expectLazyChunkError(page, bubble(page), { expanded: true })
 

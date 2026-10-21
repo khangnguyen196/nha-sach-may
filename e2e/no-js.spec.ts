@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { collectErrors, waitForHydration } from './helpers'
+import { collectErrors, waitForHydration, waitForSettled } from './helpers'
 
 // Tắt JavaScript (docs/plans/no-js.md, phần A): phần stream (Suspense) không hiện, form Server Action trả kết quả ra
 // trang trắng (đo cả production) → dải <noscript> ở [locale]/layout.tsx + câu báo ngay trên nút gửi của 3 form auth;
@@ -88,7 +88,8 @@ test.describe('bật JavaScript', () => {
       const errors = collectErrors(page)
       await page.goto(path)
       await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
-      await page.waitForLoadState('networkidle')
+      // Lỗi hydrate (nếu có) hiện khi các boundary đã stream được hydrate: chờ hiện hết + main thread rảnh
+      await waitForSettled(page)
       // Bật JS: nội dung <noscript> chỉ là chữ, không thành phần tử
       await expect(page.getByTestId('no-script')).toHaveCount(0)
       await expect(page.getByTestId('no-script-submit')).toHaveCount(0)

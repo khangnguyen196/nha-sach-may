@@ -32,13 +32,41 @@ export function collectErrorsAllow404(page: Page) {
   return errors
 }
 
+/**
+ * Trang đã ổn định để đo / bấm phím tắt: mọi Suspense đã stream và đã hiện (không còn comment `$?` chờ dữ liệu hay `$~`
+ * chờ `$RV` của React hiện ra), font đã tải, main thread rảnh (requestIdleCallback: React hydrate xong, effect đã chạy).
+ * Thay waitForLoadState('networkidle'): trang có nhiều Link (kệ, lưới sách) prefetch `_rsc` liên tục nên mạng có thể không
+ * bao giờ yên (flaky layout.spec.ts run 39527729395: quá 30 s, mọi request 200).
+ */
+export async function waitForSettled(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT)
+          let pending = 0
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            if (node.nodeValue === '$?' || node.nodeValue === '$~') pending += 1
+          }
+          return pending
+        }),
+      // Phần stream chậm nhất (kệ "Cùng danh mục", lưới) lần đầu chưa có cache; vẫn dưới 30 s của test
+      { timeout: 15_000 },
+    )
+    .toBe(0)
+  await page.evaluate(async () => {
+    await document.fonts.ready
+    await new Promise((resolve) => requestIdleCallback(() => resolve(null)))
+  })
+}
+
 // Phím tắt chỉ có tác dụng sau hydration. Không bấm lặp tới khi mở: ⌘K là toggle, nếu chunk palette tải chậm
 // thì lần bấm thứ hai đóng nó lại. React gắn `__reactProps$…` lên DOM node khi hydrate nút, nhưng listener ⌘K
 // gắn trong useEffect, chạy sau khi cả cây hydrate xong: trang nhiều card (nhiều Link) + máy bận thì khoảng hở
-// này đủ dài để phím bị nuốt → chờ thêm networkidle.
+// này đủ dài để phím bị nuốt → chờ trang ổn định (waitForSettled: main thread rảnh tức effect đã chạy).
 export async function openPalette(page: Page) {
   await waitForHydration(page, 'header button[aria-haspopup="dialog"]')
-  await page.waitForLoadState('networkidle')
+  await waitForSettled(page)
   await page.keyboard.press('ControlOrMeta+k')
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible({ timeout: 10_000 })
