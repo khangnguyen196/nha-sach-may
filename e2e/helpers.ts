@@ -57,7 +57,7 @@ export async function waitForSettled(page: Page) {
     .toBe(0)
   await page.evaluate(async () => {
     await document.fonts.ready
-    // Hai lần: lần đầu có thể rơi vào khoảng main thread chờ chunk JS giữa lúc hydrate (chưa commit, effect chưa chạy)
+    // Hai lần: giảm (không loại bỏ) khả năng rơi vào khoảng main thread rảnh vì chờ chunk JS giữa lúc hydrate
     for (let round = 0; round < 2; round++) await new Promise((resolve) => requestIdleCallback(() => resolve(null)))
   })
 }

@@ -21,7 +21,7 @@ describe('appendEntry', () => {
   })
 
   it('hai lượt thêm nối tiếp (lượt trả lời cũ về sau khi đã có câu mới) không trùng id', () => {
-    // Bản ChatPanel cũ gửi câu 0 rồi bị gỡ; bản mới gửi câu tiếp theo; trả lời của bản cũ về sau
+    // Nếu khung bị gỡ giữa lúc chờ (hiện router của Next không làm vậy): bản mới gửi câu tiếp, trả lời của bản cũ về sau
     const afterNewQuestion = appendEntry([user(0)], { role: 'user', text: 'câu mới' })
     const afterOldReply = appendEntry(afterNewQuestion, { role: 'error', code: 'NETWORK_ERROR' })
     expect(new Set(afterOldReply.map((entry) => entry.id)).size).toBe(afterOldReply.length)
