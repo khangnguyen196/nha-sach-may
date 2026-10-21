@@ -95,7 +95,6 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
   // Chunk tải lỗi (LazyBoundary): khối lỗi đang hiện → bấm lại không mở (aria-expanded giữ false), chỉ Đóng / Tải lại
   const [failed, setFailed] = useState(false)
   const [entries, setEntries] = useState<ChatEntry[]>([])
-  const [waiting, setWaiting] = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
   const covered = useAvoidBottomBand(pathname)
@@ -170,8 +169,6 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
             slug={currentBookSlug(pathname, params)}
             entries={entries}
             setEntries={setEntries}
-            waiting={waiting}
-            setWaiting={setWaiting}
             ageConfirmed={ageConfirmed}
             onConfirmAge={confirmAge}
             returnFocus={button}
