@@ -14,8 +14,9 @@
 // Cỡ là `compressed_size` của next analyze (ước lượng nén theo từng module), KHÔNG cộng ra đúng số gzip của measure:js;
 // dùng để so chênh lệch giữa hai lần đo.
 // "tải ngay": chunk nằm trong nhóm bootstrap / render_dependent của route, hoặc không thuộc nhóm nào (VD polyfill
-// noModule: từ perf-js ★8 measure:js chỉ in dòng của nó, không cộng vào tổng); "tải lười": chỉ nằm trong nhóm async
-// (next/dynamic, import()). Chỉ tính file .js client (`[client-fs]/_next/static/…`), bỏ chunk server, font, ảnh.
+// noModule: script này vẫn cộng vào "tải ngay", còn measure:js từ perf-js ★8 chỉ in dòng của nó, không cộng vào tổng);
+// "tải lười": chỉ nằm trong nhóm async (next/dynamic, import()). Chỉ tính file .js client (`[client-fs]/_next/static/…`),
+// bỏ chunk server, font, ảnh.
 import { readFileSync } from 'node:fs'
 
 const args = process.argv.slice(2)
