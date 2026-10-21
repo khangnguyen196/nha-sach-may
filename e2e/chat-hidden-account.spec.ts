@@ -130,12 +130,13 @@ test('mobile: tấm chat đang mở bị gỡ khi Forward sang /thanh-toan → c
 
 // Câu hỏi đang chờ trả lời khi sang trang ẩn chat rồi quay lại: khung mount lại vẫn biết đang chờ (cờ `waiting` ở bong
 // bóng), không gửi chồng được; trả lời cũ về rồi mới gửi tiếp. Làm chậm đúng request Server Action của chat (AI giả,
-// CHAT_AI_MOCK, không có chế độ chậm).
-test('câu hỏi đang chờ → sang /thanh-toan → quay lại: vẫn "đang tìm", không gửi chồng; trả lời cũ về rồi gửi tiếp được', async ({
+// CHAT_AI_MOCK, không có chế độ chậm). Đi bằng Forward / Back của trình duyệt: Link (điều hướng của router) xếp hàng sau
+// Server Action đang chờ nên không rời trang được khi đang chờ (run 39538755746, 39539370707).
+test('câu hỏi đang chờ → Forward sang /thanh-toan → Back: vẫn "đang tìm", không gửi chồng; trả lời cũ về rồi gửi tiếp được', async ({
   page,
   isMobile,
 }, testInfo) => {
-  test.skip(isMobile, 'Mobile: tấm modal che link "Thanh toán" (luồng Link đi qua desktop)')
+  test.skip(isMobile, 'Mobile: tấm modal (test mobile ở trên); luồng chờ trả lời kiểm ở desktop')
   const [book] = readShopBooks(testInfo.project.name).regular
   if (!book) throw new Error('Thiếu sách e2e regular của project')
   const user = await createE2eUser(`${testInfo.project.name}-chat-cho`)
@@ -143,22 +144,24 @@ test('câu hỏi đang chờ → sang /thanh-toan → quay lại: vẫn "đang t
     await setCartItem(user.id, book.id, 1)
     await login(page, user)
     const errors = collectErrors(page)
+    await page.goto('/gio-hang')
+    await page.getByRole('main').getByRole('link', { name: 'Thanh toán' }).click()
+    await expect(page).toHaveURL(/\/thanh-toan$/)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/gio-hang$/)
     await page.route('**/gio-hang', async (route) => {
       const request = route.request()
       if (request.method() === 'POST' && request.headers()['next-action']) await new Promise((resolve) => setTimeout(resolve, 6_000))
       await route.fallback()
     })
-    await page.goto('/gio-hang')
-    const checkout = page.getByRole('main').getByRole('link', { name: 'Thanh toán' })
-    await expect(checkout).toBeVisible()
 
     const panel = await openChat(page)
     await panel.getByLabel('Câu hỏi cho Mây').fill('Gợi ý sách lịch sử')
     await panel.getByRole('button', { name: 'Gửi' }).click()
     await expect(panel.getByText('Mây đang tìm sách…')).toBeVisible()
-    await checkout.focus()
-    await page.keyboard.press('Enter')
+    await page.goForward()
     await expect(page).toHaveURL(/\/thanh-toan$/)
+    await expect(page.getByTestId('chat-panel')).toHaveCount(0)
     await page.goBack()
     await expect(page).toHaveURL(/\/gio-hang$/)
 
