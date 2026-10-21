@@ -105,12 +105,13 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
   }, [])
 
   if (isChatHidden(pathname)) {
-    // Trang ẩn chat (thanh toán): gỡ khối lỗi chunk nếu đang hiện, để khi quay lại nó không tự hiện và kéo focus
-    // (đặt lại trong lúc render, có điều kiện `failed` nên chỉ render lại một lần; không dùng effect)
+    // Trang ẩn chat (thanh toán): đóng khung và gỡ khối lỗi chunk nếu đang hiện, để khi quay lại khung / khối lỗi không tự
+    // hiện và kéo focus; giữ cuộc trò chuyện (`entries`) và xác nhận tuổi (đặt lại trong lúc render, có điều kiện nên chỉ
+    // render lại một lần; không dùng effect)
+    if (open) setOpen(false)
     if (failed) {
       setFailed(false)
       setMounted(false)
-      setOpen(false)
     }
     return null
   }
