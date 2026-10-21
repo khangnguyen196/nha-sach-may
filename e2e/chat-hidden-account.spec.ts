@@ -101,7 +101,8 @@ test('mobile: tấm chat đang mở bị gỡ khi Forward sang /thanh-toan → c
     await expect(page).toHaveURL(/\/gio-hang$/)
 
     await openChat(page, { confirm: false })
-    await expect(bubble(page)).toHaveAttribute('aria-expanded', 'true')
+    // Tấm modal đang mở: Radix ẩn phần còn lại khỏi cây accessibility (getByRole không thấy bong bóng) → tìm theo test id
+    await expect(page.getByTestId('chat-bubble')).toHaveAttribute('aria-expanded', 'true')
     await page.goForward()
     await expect(page).toHaveURL(/\/thanh-toan$/)
     await expect(page.getByTestId('chat-panel')).toHaveCount(0)
