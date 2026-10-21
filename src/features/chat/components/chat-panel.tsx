@@ -38,6 +38,12 @@ type Props = {
   slug: string | null
   entries: ChatEntry[]
   setEntries: (update: (entries: ChatEntry[]) => ChatEntry[]) => void
+  /**
+   * Đang chờ trả lời: giữ ở bong bóng như `entries`. Khung bị gỡ khi sang trang ẩn chat rồi mount lại thì `pending` của
+   * useTransition mới là false trong khi lượt cũ vẫn chờ → không có cờ này khách gửi chồng được, trả lời cũ về sau câu mới.
+   */
+  waiting: boolean
+  setWaiting: (waiting: boolean) => void
   ageConfirmed: boolean
   onConfirmAge: () => void
   returnFocus: RefObject<HTMLButtonElement | null>
@@ -51,13 +57,16 @@ export default function ChatPanel({
   slug,
   entries,
   setEntries,
+  waiting,
+  setWaiting,
   ageConfirmed,
   onConfirmAge,
   returnFocus,
 }: Props) {
   const desktop = useDesktop()
   const [draft, setDraft] = useState('')
-  const [pending, startTransition] = useTransition()
+  const [transitionPending, startTransition] = useTransition()
+  const pending = transitionPending || waiting
   const input = useRef<HTMLTextAreaElement>(null)
   const confirm = useRef<HTMLButtonElement>(null)
   const log = useRef<HTMLDivElement>(null)
@@ -72,6 +81,7 @@ export default function ChatPanel({
     const history = recentTurns(entries)
     setEntries((current) => appendEntry(current, { role: 'user', text: check.message }))
     setDraft('')
+    setWaiting(true)
     startTransition(async () => {
       let entry: NewChatEntry
       try {
@@ -87,6 +97,7 @@ export default function ChatPanel({
       }
       // id tính theo danh sách lúc thêm: khung có thể đã bị gỡ rồi mount lại trong lúc chờ (sang trang ẩn chat rồi về)
       setEntries((current) => appendEntry(current, entry))
+      setWaiting(false)
     })
   }
 

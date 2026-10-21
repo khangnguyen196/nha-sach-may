@@ -1,7 +1,9 @@
 import type { ChatEntry } from './chat-state'
 
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+
 /** Một mục hội thoại chưa có id (id gán lúc thêm vào danh sách, xem appendEntry) */
-export type NewChatEntry = ChatEntry extends infer Entry ? (Entry extends ChatEntry ? Omit<Entry, 'id'> : never) : never
+export type NewChatEntry = DistributiveOmit<ChatEntry, 'id'>
 
 /**
  * Thêm một mục vào cuối hội thoại, id = id lớn nhất hiện có + 1, tính trên chính danh sách đang có (updater của

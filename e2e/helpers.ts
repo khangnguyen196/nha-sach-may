@@ -50,13 +50,15 @@ export async function waitForSettled(page: Page) {
           }
           return pending
         }),
-      // Phần stream chậm nhất (kệ "Cùng danh mục", lưới) lần đầu chưa có cache; vẫn dưới 30 s của test
+      // Thay networkidle (vốn chờ tới hết 30 s của test), không phải tăng timeout: phần stream chậm nhất (kệ "Cùng danh
+      // mục", lưới) lần đầu chưa có cache
       { timeout: 15_000 },
     )
     .toBe(0)
   await page.evaluate(async () => {
     await document.fonts.ready
-    await new Promise((resolve) => requestIdleCallback(() => resolve(null)))
+    // Hai lần: lần đầu có thể rơi vào khoảng main thread chờ chunk JS giữa lúc hydrate (chưa commit, effect chưa chạy)
+    for (let round = 0; round < 2; round++) await new Promise((resolve) => requestIdleCallback(() => resolve(null)))
   })
 }
 

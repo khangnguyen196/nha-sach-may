@@ -47,6 +47,8 @@ test('khung chat đang mở → sang /thanh-toan (Link) → quay lại: khung kh
 
 /** Trang không còn dấu vết tấm modal của Radix: khóa cuộn, chặn bấm, aria-hidden / inert quanh <main>; cuộn được */
 async function expectPageUsable(page: Page, label: string) {
+  // Back / Forward có thể khôi phục vị trí cuộn: đo ở đầu trang để điểm thử elementFromPoint nằm trong khung nhìn
+  await page.evaluate(() => window.scrollTo(0, 0))
   const state = await page.evaluate(() => {
     const main = document.querySelector('main')
     const box = main?.getBoundingClientRect()
@@ -100,6 +102,8 @@ test('mobile: tấm chat đang mở bị gỡ khi Forward sang /thanh-toan → c
     await page.goBack()
     await expect(page).toHaveURL(/\/gio-hang$/)
 
+    // Back có thể khôi phục vị trí cuộn; link "Thanh toán" (data-chat-avoid) ở dải đáy thì bong bóng ẩn → về đầu trang
+    await page.evaluate(() => window.scrollTo(0, 0))
     await openChat(page, { confirm: false })
     // Tấm modal đang mở: Radix ẩn phần còn lại khỏi cây accessibility (getByRole không thấy bong bóng) → tìm theo test id
     await expect(page.getByTestId('chat-bubble')).toHaveAttribute('aria-expanded', 'true')
