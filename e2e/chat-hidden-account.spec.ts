@@ -127,3 +127,56 @@ test('mobile: tấm chat đang mở bị gỡ khi Forward sang /thanh-toan → c
     await deleteE2eUsers([user.id])
   }
 })
+
+// Câu hỏi đang chờ trả lời khi sang trang ẩn chat rồi quay lại: khung mount lại vẫn biết đang chờ (cờ `waiting` ở bong
+// bóng), không gửi chồng được; trả lời cũ về rồi mới gửi tiếp. Làm chậm đúng request Server Action của chat (AI giả,
+// CHAT_AI_MOCK, không có chế độ chậm).
+test('câu hỏi đang chờ → sang /thanh-toan → quay lại: vẫn "đang tìm", không gửi chồng; trả lời cũ về rồi gửi tiếp được', async ({
+  page,
+  isMobile,
+}, testInfo) => {
+  test.skip(isMobile, 'Mobile: tấm modal che link "Thanh toán" (luồng Link đi qua desktop)')
+  const [book] = readShopBooks(testInfo.project.name).regular
+  if (!book) throw new Error('Thiếu sách e2e regular của project')
+  const user = await createE2eUser(`${testInfo.project.name}-chat-cho`)
+  try {
+    await setCartItem(user.id, book.id, 1)
+    await login(page, user)
+    const errors = collectErrors(page)
+    await page.route('**/gio-hang', async (route) => {
+      const request = route.request()
+      if (request.method() === 'POST' && request.headers()['next-action']) await new Promise((resolve) => setTimeout(resolve, 6_000))
+      await route.fallback()
+    })
+    await page.goto('/gio-hang')
+    const checkout = page.getByRole('main').getByRole('link', { name: 'Thanh toán' })
+    await expect(checkout).toBeVisible()
+
+    const panel = await openChat(page)
+    await panel.getByLabel('Câu hỏi cho Mây').fill('Gợi ý sách lịch sử')
+    await panel.getByRole('button', { name: 'Gửi' }).click()
+    await expect(panel.getByText('Mây đang tìm sách…')).toBeVisible()
+    await checkout.focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/thanh-toan$/)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/gio-hang$/)
+
+    await bubble(page).click()
+    const again = page.getByTestId('chat-panel')
+    await expect(again).toBeVisible()
+    await expect(again.getByText('Mây đang tìm sách…')).toBeVisible()
+    await again.getByLabel('Câu hỏi cho Mây').fill('Gợi ý sách văn học')
+    await expect(again.getByRole('button', { name: 'Gửi' })).toBeDisabled()
+
+    const replies = again.locator('[data-testid="chat-reply"], [data-testid="chat-error"]')
+    await expect(replies).toHaveCount(1, { timeout: 15_000 })
+    await expect(again.getByTestId('chat-reply')).toHaveCount(1)
+    await again.getByRole('button', { name: 'Gửi' }).click()
+    await expect(replies).toHaveCount(2, { timeout: 15_000 })
+    await expect(again.getByTestId('chat-reply')).toHaveCount(2)
+    expect(errors).toEqual([])
+  } finally {
+    await deleteE2eUsers([user.id])
+  }
+})
