@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import type { Locale } from 'next-intl'
 import { fillTemplate } from '@/lib/template'
-import { formatVnTime, isStoreOpen, msUntilNextMinute, vnDateTimeAttr } from '../hours'
+import { formatVnTime, isStoreOpen, msUntilNext, vnDateTimeAttr } from '../hours'
 
 const MINUTE_MS = 60_000
 
@@ -15,7 +15,7 @@ function subscribeMinute(onChange: () => void) {
     timer = setTimeout(() => {
       onChange()
       schedule()
-    }, msUntilNextMinute(new Date()))
+    }, msUntilNext(new Date(), MINUTE_MS))
   }
   const onVisibilityChange = () => {
     if (document.visibilityState !== 'visible') return
@@ -63,8 +63,8 @@ export function StoreClock({
   const now = new Date(minute * MINUTE_MS)
   return (
     <p className={`${lineClass} ${className}`} data-testid="store-clock">
-      <time dateTime={vnDateTimeAttr(now)} className="whitespace-nowrap">
-        {fillTemplate(timeTemplate, { time: formatVnTime(now, locale) })}
+      <time dateTime={vnDateTimeAttr(now, false)} className="whitespace-nowrap">
+        {fillTemplate(timeTemplate, { time: formatVnTime(now, locale, false) })}
       </time>
       <span aria-hidden="true">{'\u00a0· '}</span>
       <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>

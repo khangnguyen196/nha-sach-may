@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Hours = typeof import('./hours')
 
-// ICU mới chèn U+202F (narrow no-break space) hoặc U+00A0 trước AM / PM
+// Tùy bản ICU / V8, giữa giờ và AM / PM có thể là U+202F, U+00A0 hoặc dấu cách thường
 const normalizeSpaces = (text: string) => text.replace(/[\u202f\u00a0]/g, ' ')
 
 const at = (iso: string) => new Date(iso)
@@ -16,7 +16,7 @@ function defineCases(load: () => Hours) {
     ['2026-10-22T17:00:00Z', '00:00', false],
   ])('%s = %s giờ VN → mở cửa: %s', (iso, vnTime, open) => {
     const { isStoreOpen, formatVnTime } = load()
-    expect(formatVnTime(at(iso), 'vi')).toBe(vnTime)
+    expect(formatVnTime(at(iso), 'vi', false)).toBe(vnTime)
     expect(isStoreOpen(at(iso))).toBe(open)
   })
 
@@ -27,25 +27,60 @@ function defineCases(load: () => Hours) {
 
   it('định dạng giờ theo locale', () => {
     const { formatVnTime } = load()
-    expect(formatVnTime(at('2026-10-22T07:35:00Z'), 'vi')).toBe('14:35')
-    expect(formatVnTime(at('2026-10-22T17:00:00Z'), 'vi')).toBe('00:00')
-    expect(normalizeSpaces(formatVnTime(at('2026-10-22T07:35:00Z'), 'en'))).toBe('2:35 PM')
-    expect(normalizeSpaces(formatVnTime(at('2026-10-22T17:00:00Z'), 'en'))).toBe('12:00 AM')
+    expect(formatVnTime(at('2026-10-22T07:35:00Z'), 'vi', false)).toBe('14:35')
+    expect(formatVnTime(at('2026-10-22T17:00:00Z'), 'vi', false)).toBe('00:00')
+    expect(normalizeSpaces(formatVnTime(at('2026-10-22T07:35:00Z'), 'en', false))).toBe('2:35 PM')
+    expect(normalizeSpaces(formatVnTime(at('2026-10-22T17:00:00Z'), 'en', false))).toBe('12:00 AM')
+  })
+
+  it('định dạng giờ có giây theo locale', () => {
+    const { formatVnTime } = load()
+    expect(formatVnTime(at('2026-10-22T16:31:05Z'), 'vi', true)).toBe('23:31:05')
+    expect(formatVnTime(at('2026-10-22T17:00:00Z'), 'vi', true)).toBe('00:00:00')
+    expect(formatVnTime(at('2026-10-21T22:59:59Z'), 'vi', true)).toBe('05:59:59')
+    expect(normalizeSpaces(formatVnTime(at('2026-10-22T16:31:05Z'), 'en', true))).toBe('11:31:05 PM')
+    expect(normalizeSpaces(formatVnTime(at('2026-10-22T17:00:00Z'), 'en', true))).toBe('12:00:00 AM')
+    // Formatter cache theo cả kiểu: gọi xen kẽ không lẫn có / không giây
+    expect(formatVnTime(at('2026-10-22T16:31:05Z'), 'vi', false)).toBe('23:31')
   })
 
   it('vnDateTimeAttr lấy cả ngày theo giờ VN', () => {
     const { vnDateTimeAttr } = load()
-    expect(vnDateTimeAttr(at('2026-10-22T07:35:00Z'))).toBe('2026-10-22T14:35+07:00')
+    expect(vnDateTimeAttr(at('2026-10-22T07:35:00Z'), false)).toBe('2026-10-22T14:35+07:00')
     // 00:00 ngày 23/10 giờ VN = 17:00Z ngày 22/10
-    expect(vnDateTimeAttr(at('2026-10-22T17:00:00Z'))).toBe('2026-10-23T00:00+07:00')
-    expect(vnDateTimeAttr(at('2026-12-31T17:05:00Z'))).toBe('2027-01-01T00:05+07:00')
+    expect(vnDateTimeAttr(at('2026-10-22T17:00:00Z'), false)).toBe('2026-10-23T00:00+07:00')
+    expect(vnDateTimeAttr(at('2026-12-31T17:05:00Z'), false)).toBe('2027-01-01T00:05+07:00')
   })
 
-  it('msUntilNextMinute', () => {
-    const { msUntilNextMinute } = load()
-    expect(msUntilNextMinute(at('2026-10-22T07:35:00.000Z'))).toBe(60_000)
-    expect(msUntilNextMinute(at('2026-10-22T07:35:30.500Z'))).toBe(29_500)
-    expect(msUntilNextMinute(at('2026-10-22T07:35:59.999Z'))).toBe(1)
+  it('vnDateTimeAttr có giây', () => {
+    const { vnDateTimeAttr } = load()
+    expect(vnDateTimeAttr(at('2026-10-22T16:31:05Z'), true)).toBe('2026-10-22T23:31:05+07:00')
+    expect(vnDateTimeAttr(at('2026-10-22T16:59:59Z'), true)).toBe('2026-10-22T23:59:59+07:00')
+    expect(vnDateTimeAttr(at('2026-12-31T17:00:00Z'), true)).toBe('2027-01-01T00:00:00+07:00')
+  })
+
+  it.each([
+    // [UTC, giờ VN, kim giờ, kim phút, kim giây]
+    ['2026-10-22T17:00:00Z', '00:00:00', 0, 0, 0],
+    ['2026-10-22T05:00:00Z', '12:00:00', 0, 0, 0],
+    ['2026-10-21T20:15:30Z', '03:15:30', 97.5, 93, 180],
+    ['2026-10-22T07:35:05Z', '14:35:05', 77.5, 210.5, 30],
+    ['2026-10-22T14:59:59Z', '21:59:59', 299.5, 359.9, 354],
+  ])('góc 3 kim lúc %s (%s giờ VN)', (iso, _vnTime, hour, minute, second) => {
+    const angles = load().clockAngles(at(iso))
+    expect(angles.hour).toBeCloseTo(hour, 6)
+    expect(angles.minute).toBeCloseTo(minute, 6)
+    expect(angles.second).toBeCloseTo(second, 6)
+  })
+
+  it('msUntilNext theo giây và theo phút', () => {
+    const { msUntilNext } = load()
+    expect(msUntilNext(at('2026-10-22T07:35:00.000Z'), 60_000)).toBe(60_000)
+    expect(msUntilNext(at('2026-10-22T07:35:30.500Z'), 60_000)).toBe(29_500)
+    expect(msUntilNext(at('2026-10-22T07:35:59.999Z'), 60_000)).toBe(1)
+    expect(msUntilNext(at('2026-10-22T07:35:00.000Z'), 1000)).toBe(1000)
+    expect(msUntilNext(at('2026-10-22T07:35:30.250Z'), 1000)).toBe(750)
+    expect(msUntilNext(at('2026-10-22T07:35:30.999Z'), 1000)).toBe(1)
   })
 }
 
