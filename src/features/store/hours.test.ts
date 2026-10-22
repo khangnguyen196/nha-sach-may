@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 type Hours = typeof import('./hours')
 
 // ICU mới chèn U+202F (narrow no-break space) hoặc U+00A0 trước AM / PM
-const normalizeSpaces = (text: string) => text.replace(/[  ]/g, ' ')
+const normalizeSpaces = (text: string) => text.replace(/[\u202f\u00a0]/g, ' ')
 
 const at = (iso: string) => new Date(iso)
 

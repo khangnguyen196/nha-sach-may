@@ -181,10 +181,10 @@ for (const path of ['/', '/en']) {
     expect(size.timeRects).toBe(1)
     expect(size.statusRects).toBe(1)
     expect(size.statusTop).toBeGreaterThan(size.timeTop + 1)
-    // Khoảng trắng trước dấu chấm là   (dấu chấm dính với giờ khi dòng 1 gần đầy). Ở 1.5rem dòng 1 còn thừa chỗ nên
-    // trình duyệt không ngắt trước dấu chấm kể cả với khoảng trắng thường → câu so top không canh được  , phải so
-    // textContent (không dùng toHaveText: Playwright gộp khoảng trắng, coi   như dấu cách).
-    expect(size.dotText).toBe(' · ')
+    // Khoảng trắng trước dấu chấm là \u00a0 (dấu chấm dính với giờ khi dòng 1 gần đầy). Ở 1.5rem dòng 1 còn thừa chỗ nên
+    // trình duyệt không ngắt trước dấu chấm kể cả với khoảng trắng thường → câu so top không canh được \u00a0, phải so
+    // textContent (không dùng toHaveText: Playwright gộp khoảng trắng, coi \u00a0 như dấu cách).
+    expect(size.dotText).toBe('\u00a0· ')
     // Dấu chấm không bị tách hẳn sang dòng 2
     expect(Math.abs(size.dotTop - size.timeTop)).toBeLessThan(1)
     expect(errors).toEqual([])
