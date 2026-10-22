@@ -5,6 +5,8 @@
 // (messages precompile, NextIntlClientProvider chỉ truyền namespace 'search'), Intl của trình duyệt tốn 0KB JS.
 // Mọi formatter đặt timeZone tường minh: kết quả không phụ thuộc múi giờ của máy khách (không dùng getHours()).
 
+import type { Locale } from 'next-intl'
+
 export const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh'
 /** Mở cửa khi STORE_OPEN_HOUR ≤ giờ VN < STORE_CLOSE_HOUR */
 export const STORE_OPEN_HOUR = 6
@@ -45,13 +47,13 @@ export function isStoreOpen(date: Date) {
   return hour >= STORE_OPEN_HOUR && hour < STORE_CLOSE_HOUR
 }
 
-const timeFormats = new Map<string, Intl.DateTimeFormat>()
+const timeFormats = new Map<Locale, Intl.DateTimeFormat>()
 
 /**
  * vi: "14:35" / "00:00", en: "2:35 PM" / "12:00 AM" (ICU có thể chèn U+202F trước AM / PM).
  * timeStyle 'short' theo mẫu giờ của locale (vi "HH:mm"): hour 'numeric' cho vi ra "0:00", "5:59".
  */
-export function formatVnTime(date: Date, locale: string) {
+export function formatVnTime(date: Date, locale: Locale) {
   let format = timeFormats.get(locale)
   if (!format) {
     format = new Intl.DateTimeFormat(locale, { timeZone: VN_TIME_ZONE, timeStyle: 'short' })

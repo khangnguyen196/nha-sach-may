@@ -1,6 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
+import type { Locale } from 'next-intl'
 import { fillTemplate } from '@/lib/template'
 import { formatVnTime, isStoreOpen, msUntilNextMinute, vnDateTimeAttr } from '../hours'
 
@@ -35,7 +36,9 @@ const getMinute = () => Math.floor(Date.now() / MINUTE_MS)
 // Server, prerender và lần hydrate: chưa biết giờ của khách → chỗ giữ rỗng (không đóng băng giờ vào HTML)
 const getServerMinute = () => null
 
-const lineClass = 'h-[1lh] text-xs whitespace-nowrap text-muted-foreground tabular-nums sm:text-sm'
+// Một dòng ở cỡ chữ mặc định (e2e 320px canh). Mỗi cụm không ngắt, chỉ xuống dòng ở " · ": chữ phóng to thì xuống dòng
+// thay vì làm cả trang cuộn ngang (chấp nhận giật một dòng trong trường hợp đó). min-h giữ chỗ rỗng cao đúng 1 dòng.
+const lineClass = 'min-h-[1lh] text-xs text-muted-foreground tabular-nums sm:text-sm'
 
 /** Giờ Việt Nam + trạng thái cửa hàng. Không aria-live: không đọc lại mỗi phút. */
 export function StoreClock({
@@ -49,7 +52,7 @@ export function StoreClock({
   timeTemplate: string
   openLabel: string
   closedLabel: string
-  locale: string
+  locale: Locale
   className?: string
 }) {
   const minute = useSyncExternalStore(subscribeMinute, getMinute, getServerMinute)
@@ -59,9 +62,11 @@ export function StoreClock({
   const now = new Date(minute * MINUTE_MS)
   return (
     <p className={`${lineClass} ${className}`} data-testid="store-clock">
-      <time dateTime={vnDateTimeAttr(now)}>{fillTemplate(timeTemplate, { time: formatVnTime(now, locale) })}</time>
+      <time dateTime={vnDateTimeAttr(now)} className="whitespace-nowrap">
+        {fillTemplate(timeTemplate, { time: formatVnTime(now, locale) })}
+      </time>
       <span aria-hidden="true"> · </span>
-      <span>{isStoreOpen(now) ? openLabel : closedLabel}</span>
+      <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>
     </p>
   )
 }
