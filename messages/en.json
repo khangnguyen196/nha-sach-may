@@ -20,7 +20,10 @@
     "newArrivalsEmpty": "No books yet.",
     "allBooks": "Browse all books",
     "featured": "Featured",
-    "bestselling": "Bestsellers"
+    "bestselling": "Bestsellers",
+    "clockTime": "{time} in Vietnam",
+    "storeOpen": "Store is open",
+    "storeClosed": "Store is closed"
   },
   "notFound": {
     "title": "Page not found",

@@ -3,11 +3,13 @@ import { buttonVariants } from '@/components/ui/button'
 import { Shelf } from '@/features/books/components/shelf'
 import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
 import { visibleCategoryIds } from '@/features/books/utils'
+import { StoreClock } from '@/features/store/components/store-clock'
 import { Link } from '@/i18n/navigation'
 import { localizedPath } from '@/i18n/paths'
 import { localize } from '@/lib/i18n-db'
 import { serializeJsonLd, websiteJsonLd } from '@/lib/json-ld'
 import { siteUrl } from '@/lib/site-url'
+import { placeholder } from '@/lib/template'
 
 const categoryLink =
   'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
@@ -22,7 +24,7 @@ function leafIds(categories: Category[], root: Category) {
 }
 
 /**
- * Hero (trích dẫn + 1 CTA) → kệ Nổi bật, Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn → lưới danh mục.
+ * Hero (trích dẫn + đồng hồ giờ VN / trạng thái cửa hàng + 1 CTA) → kệ Nổi bật, Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn → lưới danh mục.
  * Prerender: mọi query qua 'use cache' + client anon. LCP là chữ hero; ảnh kệ lazy.
  */
 export default async function HomePage() {
@@ -58,6 +60,13 @@ export default async function HomePage() {
           <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>
           <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
         </figure>
+        <StoreClock
+          className="mt-3"
+          timeTemplate={t('clockTime', { time: placeholder('time') })}
+          openLabel={t('storeOpen')}
+          closedLabel={t('storeClosed')}
+          locale={locale}
+        />
         <Link href="/books" className={buttonVariants({ size: 'lg', className: 'mt-8 h-11 px-6 text-base' })}>
           {t('allBooks')}
         </Link>

@@ -20,7 +20,10 @@
     "newArrivalsEmpty": "Chưa có sách nào.",
     "allBooks": "Xem tất cả sách",
     "featured": "Nổi bật",
-    "bestselling": "Bán chạy"
+    "bestselling": "Bán chạy",
+    "clockTime": "{time} giờ Việt Nam",
+    "storeOpen": "Cửa hàng đang mở cửa",
+    "storeClosed": "Cửa hàng đã đóng cửa"
   },
   "notFound": {
     "title": "Không tìm thấy trang",
