@@ -1,42 +1,71 @@
 import { expect, test, type Page } from '@playwright/test'
 import { collectErrors, waitForSettled } from './helpers'
 
-// Đồng hồ giờ Việt Nam + trạng thái cửa hàng ở hero trang chủ (src/features/store). Giờ lấy từ đồng hồ của trình duyệt
-// (page.clock), hiển thị theo Asia/Ho_Chi_Minh; mở cửa 06:00 ≤ giờ < 22:00. Không tính ở server / lúc prerender.
+// Đồng hồ kim giờ Việt Nam + dòng giờ số và trạng thái cửa hàng ở hero trang chủ (src/features/store). Giờ lấy từ đồng
+// hồ của trình duyệt (page.clock), hiển thị theo Asia/Ho_Chi_Minh; mở cửa 06:00 ≤ giờ < 22:00. Không tính ở server /
+// lúc prerender: mặt đồng hồ (server) có trong HTML, kim + dòng số chỉ có sau khi JS chạy.
 
 const clock = (page: Page) => page.getByRole('main').getByTestId('store-clock')
+const clockFace = (page: Page) => page.getByRole('main').getByTestId('store-clock-face')
+
+/** Góc (độ) của từng kim, đọc từ thuộc tính transform="rotate(<góc> 50 50)" */
+async function handAngles(page: Page) {
+  return clockFace(page).evaluate((face) => {
+    const angles: Record<string, number> = {}
+    for (const hand of face.querySelectorAll('[data-hand]')) {
+      const match = /^rotate\(([^\s)]+) 50 50\)$/.exec(hand.getAttribute('transform') ?? '')
+      const name = hand.getAttribute('data-hand')
+      if (!match || !name) throw new Error(`Kim không xoay bằng rotate(… 50 50): ${hand.outerHTML}`)
+      angles[name] = Number(match[1])
+    }
+    return angles
+  })
+}
+
+/**
+ * Đồng hồ chạy theo giây: install (giờ giả chạy như thật) → mở trang → chờ ổn định → dừng ở `pauseUtc`.
+ * waitForSettled dùng requestIdleCallback (Playwright làm giả cả hàm này) → gọi TRƯỚC pauseAt, không gọi khi đồng hồ
+ * đang dừng.
+ */
+async function openPausedAt(page: Page, path: string, installUtc: string, pauseUtc: string) {
+  await page.clock.install({ time: new Date(installUtc) })
+  await page.goto(path)
+  await expect(clock(page).locator('time')).toBeVisible()
+  await waitForSettled(page)
+  await page.clock.pauseAt(new Date(pauseUtc))
+}
 
 const OPEN_VI = 'Cửa hàng đang mở cửa'
 const CLOSED_VI = 'Cửa hàng đã đóng cửa'
 
-test('vi: 14:35 giờ VN, đang mở cửa, dateTime theo giờ VN', async ({ page }) => {
+test('vi: 14:35:00 giờ VN, đang mở cửa, dateTime theo giờ VN', async ({ page }) => {
   const errors = collectErrors(page)
   await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
   await page.goto('/')
   const line = clock(page)
-  await expect(line.locator('time')).toHaveText('14:35 giờ Việt Nam')
-  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T14:35+07:00')
+  await expect(line.locator('time')).toHaveText('14:35:00 giờ Việt Nam')
+  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T14:35:00+07:00')
   await expect(line).toContainText(OPEN_VI)
   await waitForSettled(page)
   expect(errors).toEqual([])
 })
 
-test('en: 2:35 PM in Vietnam, store is open', async ({ page }) => {
+test('en: 2:35:00 PM in Vietnam, store is open', async ({ page }) => {
   const errors = collectErrors(page)
   await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
   await page.goto('/en')
   const line = clock(page)
-  await expect(line.locator('time')).toHaveText(/^2:35\sPM in Vietnam$/)
-  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T14:35+07:00')
+  await expect(line.locator('time')).toHaveText(/^2:35:00\sPM in Vietnam$/)
+  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T14:35:00+07:00')
   await expect(line).toContainText('Store is open')
   await waitForSettled(page)
   expect(errors).toEqual([])
 })
 
 for (const { utc, time, status, dateTime } of [
-  { utc: '2026-10-21T22:59:00Z', time: '05:59', status: CLOSED_VI, dateTime: '2026-10-22T05:59+07:00' },
-  { utc: '2026-10-21T23:00:00Z', time: '06:00', status: OPEN_VI, dateTime: '2026-10-22T06:00+07:00' },
-  { utc: '2026-10-22T15:00:00Z', time: '22:00', status: CLOSED_VI, dateTime: '2026-10-22T22:00+07:00' },
+  { utc: '2026-10-21T22:59:59Z', time: '05:59:59', status: CLOSED_VI, dateTime: '2026-10-22T05:59:59+07:00' },
+  { utc: '2026-10-21T23:00:00Z', time: '06:00:00', status: OPEN_VI, dateTime: '2026-10-22T06:00:00+07:00' },
+  { utc: '2026-10-22T15:00:00Z', time: '22:00:00', status: CLOSED_VI, dateTime: '2026-10-22T22:00:00+07:00' },
 ]) {
   test(`vi: mốc ${time} giờ VN → ${status}`, async ({ page }) => {
     const errors = collectErrors(page)
@@ -51,34 +80,132 @@ for (const { utc, time, status, dateTime } of [
   })
 }
 
-test('vi: 21:59 → sang 22:00 thì giờ và trạng thái đổi cùng lúc', async ({ page }) => {
+test('vi: kim và dòng số theo giây, kim nhảy (không transition)', async ({ page }) => {
   const errors = collectErrors(page)
-  // install: giờ giả vẫn chạy như thật; bắt đầu đúng 21:59:00 để còn gần cả phút trước mốc 22:00
-  await page.clock.install({ time: new Date('2026-10-22T14:59:00Z') })
-  await page.goto('/')
-  const line = clock(page)
-  await expect(line.locator('time')).toHaveText('21:59 giờ Việt Nam')
-  await expect(line).toContainText(OPEN_VI)
-  await waitForSettled(page)
-  await page.clock.runFor(60_000)
-  await expect(line.locator('time')).toHaveText('22:00 giờ Việt Nam')
-  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
-  await expect(line).toContainText(CLOSED_VI)
+  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  const time = clock(page).locator('time')
+  await expect(time).toHaveText('14:35:05 giờ Việt Nam')
+  await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35:05+07:00')
+  let angles = await handAngles(page)
+  expect(angles.hour).toBeCloseTo(77.5, 1)
+  expect(angles.minute).toBeCloseTo(210.5, 1)
+  expect(angles.second).toBeCloseTo(30, 1)
+  const transitions = await clockFace(page)
+    .locator('[data-hand]')
+    .evaluateAll((hands) => hands.map((hand) => getComputedStyle(hand).transitionDuration))
+  expect(transitions).toEqual(['0s', '0s', '0s'])
+
+  await page.clock.runFor(1000)
+  await expect(time).toHaveText('14:35:06 giờ Việt Nam')
+  await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35:06+07:00')
+  angles = await handAngles(page)
+  expect(angles.hour).toBeCloseTo(77.5, 1)
+  expect(angles.minute).toBeCloseTo(210.6, 1)
+  expect(angles.second).toBeCloseTo(36, 1)
   expect(errors).toEqual([])
 })
 
-test('en: 9:59 PM → 10:00 PM, store is closed', async ({ page }) => {
+for (const { path, before, after, open, closed } of [
+  { path: '/', before: /^21:59:59 giờ Việt Nam$/, after: /^22:00:00 giờ Việt Nam$/, open: OPEN_VI, closed: CLOSED_VI },
+  {
+    path: '/en',
+    before: /^9:59:59\sPM in Vietnam$/,
+    after: /^10:00:00\sPM in Vietnam$/,
+    open: 'Store is open',
+    closed: 'Store is closed',
+  },
+]) {
+  test(`21:59:59 → 22:00:00 giờ VN: giờ và trạng thái đổi cùng lúc: ${path}`, async ({ page }) => {
+    const errors = collectErrors(page)
+    await openPausedAt(page, path, '2026-10-22T14:59:00Z', '2026-10-22T14:59:59Z')
+    const line = clock(page)
+    await expect(line.locator('time')).toHaveText(before)
+    await expect(line).toContainText(open)
+    await page.clock.runFor(1000)
+    await expect(line.locator('time')).toHaveText(after)
+    await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00:00+07:00')
+    await expect(line).toContainText(closed)
+    expect(errors).toEqual([])
+  })
+}
+
+test.describe('giảm chuyển động', () => {
+  test.use({ reducedMotion: 'reduce' })
+
+  test('không kim giây, dòng số giờ:phút', async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.clock.setFixedTime(new Date('2026-10-22T07:35:05Z'))
+    await page.goto('/')
+    const time = clock(page).locator('time')
+    await expect(time).toHaveText('14:35 giờ Việt Nam')
+    await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35+07:00')
+    await expect(clockFace(page).locator('[data-hand="second"]')).toHaveCount(0)
+    await expect(clockFace(page).locator('[data-hand="hour"]')).toHaveCount(1)
+    await expect(clockFace(page).locator('[data-hand="minute"]')).toHaveCount(1)
+    // Nhịp phút: kim phút đứng ở đầu phút (05 giây không tính)
+    const angles = await handAngles(page)
+    expect(angles.hour).toBeCloseTo(77.5, 1)
+    expect(angles.minute).toBeCloseTo(210, 1)
+    await waitForSettled(page)
+    expect(errors).toEqual([])
+  })
+
+  test('cập nhật mỗi phút: 21:59 → 22:00, đóng cửa', async ({ page }) => {
+    const errors = collectErrors(page)
+    await openPausedAt(page, '/', '2026-10-22T14:59:00Z', '2026-10-22T14:59:30Z')
+    const line = clock(page)
+    await expect(line.locator('time')).toHaveText('21:59 giờ Việt Nam')
+    await expect(line).toContainText(OPEN_VI)
+    await page.clock.runFor(30_000)
+    await expect(line.locator('time')).toHaveText('22:00 giờ Việt Nam')
+    await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
+    await expect(line).toContainText(CLOSED_VI)
+    expect(errors).toEqual([])
+  })
+})
+
+test('đổi giảm chuyển động khi trang đang mở: kim giây và giây mất / hiện lại', async ({ page }) => {
   const errors = collectErrors(page)
-  await page.clock.install({ time: new Date('2026-10-22T14:59:00Z') })
-  await page.goto('/en')
-  const line = clock(page)
-  await expect(line.locator('time')).toHaveText(/^9:59\sPM in Vietnam$/)
-  await expect(line).toContainText('Store is open')
-  await waitForSettled(page)
-  await page.clock.runFor(60_000)
-  await expect(line.locator('time')).toHaveText(/^10:00\sPM in Vietnam$/)
-  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
-  await expect(line).toContainText('Store is closed')
+  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  const time = clock(page).locator('time')
+  const secondHand = clockFace(page).locator('[data-hand="second"]')
+  await expect(time).toHaveText('14:35:05 giờ Việt Nam')
+  await expect(secondHand).toHaveCount(1)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(time).toHaveText('14:35 giờ Việt Nam')
+  await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35+07:00')
+  await expect(secondHand).toHaveCount(0)
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(time).toHaveText('14:35:05 giờ Việt Nam')
+  await expect(secondHand).toHaveCount(1)
+  expect(errors).toEqual([])
+})
+
+test('tab ẩn thì dừng hẹn giờ, hiện lại thì nhảy ngay tới giờ mới', async ({ page }) => {
+  const errors = collectErrors(page)
+  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  const time = clock(page).locator('time')
+  await expect(time).toHaveText('14:35:05 giờ Việt Nam')
+
+  const setVisibility = (state: 'hidden' | 'visible') =>
+    page.evaluate((value) => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => value === 'hidden' })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }, state)
+
+  await setVisibility('hidden')
+  await page.clock.runFor(5000)
+  // Đọc một lần, không chờ: toHaveText thử lại tới khi khớp nên không bắt được chữ đã đổi
+  expect(await time.textContent()).toBe('14:35:05 giờ Việt Nam')
+  expect((await handAngles(page)).second).toBeCloseTo(30, 1)
+
+  // Không runFor: hiện lại là tính giờ ngay
+  await setVisibility('visible')
+  await expect(time).toHaveText('14:35:10 giờ Việt Nam')
+  expect((await handAngles(page)).second).toBeCloseTo(60, 1)
   expect(errors).toEqual([])
 })
 
@@ -138,6 +265,13 @@ test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng
       clientWidth: document.documentElement.clientWidth,
     }))
     expect(doc.scrollWidth, utc).toBeLessThanOrEqual(doc.clientWidth)
+    // Mặt đồng hồ nằm trọn trong màn hình
+    const face = await clockFace(page).evaluate((element) => {
+      const box = element.getBoundingClientRect()
+      return { left: box.left, right: box.right, viewportWidth: window.innerWidth }
+    })
+    expect(face.left, utc).toBeGreaterThanOrEqual(0)
+    expect(face.right, utc).toBeLessThanOrEqual(face.viewportWidth)
   }
 })
 
@@ -151,8 +285,9 @@ for (const path of ['/', '/en']) {
     await expect(line.locator('time')).toBeVisible()
     await waitForSettled(page)
     // Chỉ phóng to đồng hồ, không phóng cả html: spacing Tailwind tính bằng rem, phóng cả trang thì phần khác có thể tràn.
-    // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu (vi ~510px, en ~390px) không
-    // vừa một dòng 288px, cụm dài nhất (trạng thái vi ~271px) vẫn vừa. 2rem thì riêng cụm giờ vi đã ~295px > 288px.
+    // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu (vi ~545px, en ~430px) không
+    // vừa một dòng 288px, từng cụm vẫn vừa (đo 2026-10-23, Chromium, có giây: giờ + dấu chấm vi "22:00:00" ~278px, en
+    // "10:00:00 PM" ~287px; trạng thái vi ~271px). Cỡ lớn hơn thì cụm giờ en dài nhất không còn vừa 288px.
     await page.addStyleTag({ content: '[data-testid="store-clock"] { font-size: 1.5rem }' })
     const size = await line.evaluate((element) => {
       const time = element.querySelector('time')
@@ -235,16 +370,34 @@ test.describe('tắt JavaScript', () => {
       await expect(line).toHaveAttribute('aria-hidden', 'true')
       await expect(line.locator('time')).toHaveCount(0)
     })
+
+    test(`mặt đồng hồ có mặt, tròn đúng cỡ, không kim: ${path}`, async ({ page }) => {
+      await page.goto(path)
+      const face = clockFace(page)
+      await expect(face).toBeVisible()
+      await expect(face.locator('[data-hand]')).toHaveCount(0)
+      const viewport = page.viewportSize()
+      if (!viewport) throw new Error('Không có viewport')
+      // size-28 (112px) dưới sm (640px), sm:size-36 (144px) từ sm: Pixel 7 rộng 412px, Desktop Chrome 1280px
+      const expected = viewport.width >= 640 ? 144 : 112
+      const box = await face.boundingBox()
+      if (!box) throw new Error('Không đo được mặt đồng hồ')
+      expect(box.width).toBeCloseTo(expected, 1)
+      expect(box.height).toBeCloseTo(expected, 1)
+    })
   }
 })
 
-test('HTML prerender không chứa giờ / trạng thái của đồng hồ', async ({ request }) => {
+test('HTML prerender không chứa giờ / trạng thái / kim của đồng hồ', async ({ request }) => {
   for (const path of ['/', '/en']) {
     const html = await (await request.get(path)).text()
     // Chuỗi đã dịch vẫn có trong dữ liệu RSC (props của client leaf), nhưng phần tử đồng hồ trong HTML phải rỗng
     const element = /<p[^>]*data-testid="store-clock"[^>]*>([\s\S]*?)<\/p>/.exec(html)
     expect(element, path).not.toBeNull()
     expect(element?.[1], path).toBe('')
-    expect(html, path).not.toMatch(/\d{1,2}:\d{2}(\s[AP]M)? (giờ Việt Nam|in Vietnam)/)
+    expect(html, path).not.toMatch(/\d{1,2}:\d{2}(:\d{2})?(\s[AP]M)? (giờ Việt Nam|in Vietnam)/)
+    // Mặt đồng hồ (server) có trong HTML, kim thì không: kim chỉ vẽ khi đã biết giờ của khách
+    expect(html, path).toContain('data-testid="store-clock-face"')
+    expect(html, path).not.toContain('data-hand')
   }
 })
