@@ -39,7 +39,7 @@
 - [Theo dõi 2026-10-22] npm 11 (máy dev) không chạy install script chưa được duyệt của @swc/core, esbuild, unrs-resolver (cảnh báo install-scripts khi npm ci trong worktree). Chưa gây lỗi. Nếu build / dev / lint trên máy báo thiếu binary hoặc lỗi lạ sau npm ci thì kiểm cái này trước.
 - [Ghi nhớ 2026-10-22] eslint bỏ qua .claude/**: file .js / .ts commit vào .claude/ sẽ không được lint.
 - [Đã quyết 2026-10-22] Đồng hồ giờ Việt Nam + trạng thái cửa hàng ở hero trang chủ, không có chi nhánh. Mở 06:00–22:00 giờ VN (hằng ở src/features/store/hours.ts), chỉ hiển thị, không ảnh hưởng giỏ / đặt hàng.
-- [Đang làm 2026-10-22, nhánh dong-ho-vn c1e3953] StoreClock (client leaf, useSyncExternalStore, Intl có sẵn, cập nhật đúng đầu phút, không tính ở server / prerender, chỗ giữ cố định). measure:js trang chủ vi 42.1 → 42.8KB, en 42.1 → 42.8KB (build ở thư mục chính, không hard link). Vitest 939. e2e store-clock.spec: chờ CI.
+- [Đang làm 2026-10-22, nhánh dong-ho-vn 607d8f4] StoreClock (client leaf, useSyncExternalStore, Intl có sẵn, cập nhật đúng đầu phút, không tính ở server / prerender, chỗ giữ min-h 1 dòng; mỗi cụm không ngắt, chữ phóng to thì xuống dòng thay vì tràn ngang). measure:js trang chủ vi 42.1 → 42.8KB, en 42.1 → 42.8KB (build ở thư mục chính, không hard link). Vitest 939. e2e store-clock.spec: chờ CI.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 
