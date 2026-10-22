@@ -77,6 +77,7 @@ test('en: 9:59 PM → 10:00 PM, store is closed', async ({ page }) => {
   await waitForSettled(page)
   await page.clock.runFor(60_000)
   await expect(line.locator('time')).toHaveText(/^10:00\sPM in Vietnam$/)
+  await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
   await expect(line).toContainText('Store is closed')
   expect(errors).toEqual([])
 })
@@ -104,15 +105,32 @@ test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng
     const line = clock(page)
     await expect(line.locator('time')).toBeVisible()
     await waitForSettled(page)
-    const size = await line.evaluate((element) => ({
-      height: element.getBoundingClientRect().height,
-      lineHeight: parseFloat(getComputedStyle(element).lineHeight),
-      scrollWidth: element.scrollWidth,
-      clientWidth: element.clientWidth,
-    }))
+    const size = await line.evaluate((element) => {
+      const time = element.querySelector('time')
+      const status = element.lastElementChild
+      if (!time || !status) throw new Error('Thiếu <time> hoặc trạng thái trong đồng hồ')
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(getComputedStyle(element).lineHeight),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+        timeRects: time.getClientRects().length,
+        statusRects: status.getClientRects().length,
+        timeTop: time.getBoundingClientRect().top,
+        statusTop: status.getBoundingClientRect().top,
+      }
+    })
+    // Chữ xuống dòng làm ô cao hơn chỗ giữ (min-h 1 dòng) → hai câu so chiều cao bắt được
     expect(size.height, utc).toBeCloseTo(placeholderHeight, 1)
     expect(size.height, utc).toBeCloseTo(size.lineHeight, 1)
     expect(size.scrollWidth, utc).toBeLessThanOrEqual(size.clientWidth)
+    expect(size.scrollHeight, utc).toBeLessThanOrEqual(size.clientHeight)
+    // Giờ và trạng thái cùng một dòng
+    expect(size.timeRects, utc).toBe(1)
+    expect(size.statusRects, utc).toBe(1)
+    expect(Math.abs(size.timeTop - size.statusTop), utc).toBeLessThan(1)
     const doc = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
