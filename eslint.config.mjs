@@ -60,7 +60,7 @@ const eslintConfig = defineConfig([
     files: ['src/components/admin/admin-link.tsx'],
     rules: { 'no-restricted-imports': 'off' },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/types/database.ts', 'playwright-report/**', 'test-results/**']),
+  globalIgnores(['.next/**', '.claude/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/types/database.ts', 'playwright-report/**', 'test-results/**']),
 ])
 
 export default eslintConfig
