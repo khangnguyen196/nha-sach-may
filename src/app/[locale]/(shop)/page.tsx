@@ -3,6 +3,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Shelf } from '@/features/books/components/shelf'
 import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
 import { visibleCategoryIds } from '@/features/books/utils'
+import { ClockFace } from '@/features/store/components/clock-face'
 import { StoreClock } from '@/features/store/components/store-clock'
 import { Link } from '@/i18n/navigation'
 import { localizedPath } from '@/i18n/paths'
@@ -61,12 +62,14 @@ export default async function HomePage() {
           <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
         </figure>
         <StoreClock
-          className="mt-3"
+          className="mt-6"
           timeTemplate={t('clockTime', { time: placeholder('time') })}
           openLabel={t('storeOpen')}
           closedLabel={t('storeClosed')}
           locale={locale}
-        />
+        >
+          <ClockFace />
+        </StoreClock>
         <Link href="/books" className={buttonVariants({ size: 'lg', className: 'mt-8 h-11 px-6 text-base' })}>
           {t('allBooks')}
         </Link>
