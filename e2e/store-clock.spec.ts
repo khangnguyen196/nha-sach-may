@@ -25,9 +25,13 @@ async function handAngles(page: Page) {
 /**
  * Đồng hồ chạy theo giây: install (giờ giả chạy như thật) → mở trang → chờ ổn định → dừng ở `pauseUtc`.
  * waitForSettled dùng requestIdleCallback (Playwright làm giả cả hàm này) → gọi TRƯỚC pauseAt, không gọi khi đồng hồ
- * đang dừng.
+ * đang dừng. `installUtc` sớm hơn `pauseUtc` ít nhất 3 phút: goto + waitForSettled trên CI (mobile) có thể ăn vài chục
+ * giây giờ giả, pauseAt không lùi giờ được.
  */
 async function openPausedAt(page: Page, path: string, installUtc: string, pauseUtc: string) {
+  if (Date.parse(pauseUtc) - Date.parse(installUtc) < 3 * 60_000) {
+    throw new Error('installUtc phải sớm hơn pauseUtc ≥ 3 phút')
+  }
   await page.clock.install({ time: new Date(installUtc) })
   await page.goto(path)
   await expect(clock(page).locator('time')).toBeVisible()
@@ -80,9 +84,9 @@ for (const { utc, time, status, dateTime } of [
   })
 }
 
-test('vi: kim và dòng số theo giây, kim nhảy (không transition)', async ({ page }) => {
+test('vi: kim và dòng số theo giây, kim nhảy (không transition / animation)', async ({ page }) => {
   const errors = collectErrors(page)
-  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  await openPausedAt(page, '/', '2026-10-22T07:32:00Z', '2026-10-22T07:35:05Z')
   const time = clock(page).locator('time')
   await expect(time).toHaveText('14:35:05 giờ Việt Nam')
   await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35:05+07:00')
@@ -90,12 +94,24 @@ test('vi: kim và dòng số theo giây, kim nhảy (không transition)', async 
   expect(angles.hour).toBeCloseTo(77.5, 1)
   expect(angles.minute).toBeCloseTo(210.5, 1)
   expect(angles.second).toBeCloseTo(30, 1)
-  const transitions = await clockFace(page)
+  const motion = await clockFace(page)
     .locator('[data-hand]')
-    .evaluateAll((hands) => hands.map((hand) => getComputedStyle(hand).transitionDuration))
-  expect(transitions).toEqual(['0s', '0s', '0s'])
+    .evaluateAll((hands) =>
+      hands.map((hand) => {
+        const style = getComputedStyle(hand)
+        return { transition: style.transitionDuration, animation: style.animationName }
+      }),
+    )
+  const jump = { transition: '0s', animation: 'none' }
+  expect(motion).toEqual([jump, jump, jump])
 
-  await page.clock.runFor(1000)
+  // Chưa tới đầu giây kế: chữ và kim giữ nguyên (đọc một lần, không chờ: toHaveText thử lại tới khi khớp). Canh cách
+  // cài đổi chữ trước ranh giới giây (VD làm tròn lên, đếm +1 mỗi lần hẹn giờ bắn).
+  await page.clock.runFor(999)
+  expect(await time.textContent()).toBe('14:35:05 giờ Việt Nam')
+  expect((await handAngles(page)).second).toBeCloseTo(30, 1)
+
+  await page.clock.runFor(1)
   await expect(time).toHaveText('14:35:06 giờ Việt Nam')
   await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35:06+07:00')
   angles = await handAngles(page)
@@ -117,11 +133,15 @@ for (const { path, before, after, open, closed } of [
 ]) {
   test(`21:59:59 → 22:00:00 giờ VN: giờ và trạng thái đổi cùng lúc: ${path}`, async ({ page }) => {
     const errors = collectErrors(page)
-    await openPausedAt(page, path, '2026-10-22T14:59:00Z', '2026-10-22T14:59:59Z')
+    await openPausedAt(page, path, '2026-10-22T14:56:00Z', '2026-10-22T14:59:59Z')
     const line = clock(page)
     await expect(line.locator('time')).toHaveText(before)
     await expect(line).toContainText(open)
-    await page.clock.runFor(1000)
+    // Đọc một lần ngay trước 22:00:00: chưa đổi giờ, chưa đóng cửa
+    await page.clock.runFor(999)
+    expect(await line.locator('time').textContent()).toMatch(before)
+    expect(await line.textContent()).toContain(open)
+    await page.clock.runFor(1)
     await expect(line.locator('time')).toHaveText(after)
     await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00:00+07:00')
     await expect(line).toContainText(closed)
@@ -152,11 +172,15 @@ test.describe('giảm chuyển động', () => {
 
   test('cập nhật mỗi phút: 21:59 → 22:00, đóng cửa', async ({ page }) => {
     const errors = collectErrors(page)
-    await openPausedAt(page, '/', '2026-10-22T14:59:00Z', '2026-10-22T14:59:30Z')
+    await openPausedAt(page, '/', '2026-10-22T14:56:00Z', '2026-10-22T14:59:30Z')
     const line = clock(page)
     await expect(line.locator('time')).toHaveText('21:59 giờ Việt Nam')
     await expect(line).toContainText(OPEN_VI)
-    await page.clock.runFor(30_000)
+    // Đọc một lần ngay trước 22:00: chưa đổi giờ, chưa đóng cửa
+    await page.clock.runFor(29_999)
+    expect(await line.locator('time').textContent()).toBe('21:59 giờ Việt Nam')
+    expect(await line.textContent()).toContain(OPEN_VI)
+    await page.clock.runFor(1)
     await expect(line.locator('time')).toHaveText('22:00 giờ Việt Nam')
     await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
     await expect(line).toContainText(CLOSED_VI)
@@ -166,7 +190,7 @@ test.describe('giảm chuyển động', () => {
 
 test('đổi giảm chuyển động khi trang đang mở: kim giây và giây mất / hiện lại', async ({ page }) => {
   const errors = collectErrors(page)
-  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  await openPausedAt(page, '/', '2026-10-22T07:32:00Z', '2026-10-22T07:35:05Z')
   const time = clock(page).locator('time')
   const secondHand = clockFace(page).locator('[data-hand="second"]')
   await expect(time).toHaveText('14:35:05 giờ Việt Nam')
@@ -185,7 +209,7 @@ test('đổi giảm chuyển động khi trang đang mở: kim giây và giây m
 
 test('tab ẩn thì dừng hẹn giờ, hiện lại thì nhảy ngay tới giờ mới', async ({ page }) => {
   const errors = collectErrors(page)
-  await openPausedAt(page, '/', '2026-10-22T07:34:00Z', '2026-10-22T07:35:05Z')
+  await openPausedAt(page, '/', '2026-10-22T07:32:00Z', '2026-10-22T07:35:05Z')
   const time = clock(page).locator('time')
   await expect(time).toHaveText('14:35:05 giờ Việt Nam')
 
@@ -286,8 +310,9 @@ for (const path of ['/', '/en']) {
     await waitForSettled(page)
     // Chỉ phóng to đồng hồ, không phóng cả html: spacing Tailwind tính bằng rem, phóng cả trang thì phần khác có thể tràn.
     // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu (vi ~545px, en ~430px) không
-    // vừa một dòng 288px, từng cụm vẫn vừa (đo 2026-10-23, Chromium, có giây: giờ + dấu chấm vi "22:00:00" ~278px, en
-    // "10:00:00 PM" ~287px; trạng thái vi ~271px). Cỡ lớn hơn thì cụm giờ en dài nhất không còn vừa 288px.
+    // vừa một dòng 288px, từng cụm vẫn vừa (đo 2026-10-23, Chromium, có giây: giờ + dấu chấm vi "22:00:00" ~278px;
+    // en "10:00:00 PM": riêng cụm giờ ~275px, cụm giờ + dấu chấm ~287px; trạng thái vi ~271px). Cỡ lớn hơn thì cụm
+    // giờ + dấu chấm en dài nhất không còn vừa 288px.
     await page.addStyleTag({ content: '[data-testid="store-clock"] { font-size: 1.5rem }' })
     const size = await line.evaluate((element) => {
       const time = element.querySelector('time')
