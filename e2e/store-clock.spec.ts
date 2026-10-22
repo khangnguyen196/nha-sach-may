@@ -122,7 +122,9 @@ test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng
         statusTop: status.getBoundingClientRect().top,
       }
     })
-    // Chữ xuống dòng làm ô cao hơn chỗ giữ (min-h 1 dòng) → hai câu so chiều cao bắt được
+    // Chữ xuống dòng làm ô cao hơn chỗ giữ (min-h 1 dòng) → hai câu so chiều cao bắt được.
+    // scrollHeight ≤ clientHeight: canh trường hợp quay lại chiều cao cố định h-[1lh]; lỗi xuống dòng do hai câu so chiều
+    // cao và câu so top bắt.
     expect(size.height, utc).toBeCloseTo(placeholderHeight, 1)
     expect(size.height, utc).toBeCloseTo(size.lineHeight, 1)
     expect(size.scrollWidth, utc).toBeLessThanOrEqual(size.clientWidth)
@@ -138,6 +140,47 @@ test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng
     expect(doc.scrollWidth, utc).toBeLessThanOrEqual(doc.clientWidth)
   }
 })
+
+for (const path of ['/', '/en']) {
+  test(`màn hình 320px, chữ đồng hồ phóng to: xuống dòng sau dấu chấm, không tràn ngang: ${path}`, async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.setViewportSize({ width: 320, height: 640 })
+    await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
+    await page.goto(path)
+    const line = clock(page)
+    await expect(line.locator('time')).toBeVisible()
+    await waitForSettled(page)
+    // Chỉ phóng to đồng hồ, không phóng cả html: spacing Tailwind tính bằng rem, phóng cả trang thì phần khác có thể tràn.
+    // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu (vi ~510px, en ~390px) không
+    // vừa một dòng 288px, cụm dài nhất (trạng thái vi ~271px) vẫn vừa. 2rem thì riêng cụm giờ vi đã ~295px > 288px.
+    await page.addStyleTag({ content: '[data-testid="store-clock"] { font-size: 1.5rem }' })
+    const size = await line.evaluate((element) => {
+      const time = element.querySelector('time')
+      const dot = element.children[1]
+      const status = element.lastElementChild
+      if (!time || !dot || !status) throw new Error('Thiếu <time>, dấu chấm hoặc trạng thái trong đồng hồ')
+      return {
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        right: element.getBoundingClientRect().right,
+        viewportWidth: window.innerWidth,
+        timeRects: time.getClientRects().length,
+        statusRects: status.getClientRects().length,
+        timeTop: time.getBoundingClientRect().top,
+        dotTop: dot.getBoundingClientRect().top,
+        statusTop: status.getBoundingClientRect().top,
+      }
+    })
+    expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth)
+    expect(size.right).toBeLessThanOrEqual(size.viewportWidth)
+    // Mỗi cụm nguyên một dòng, trạng thái xuống dòng dưới giờ, dấu chấm ở lại cùng dòng với giờ
+    expect(size.timeRects).toBe(1)
+    expect(size.statusRects).toBe(1)
+    expect(size.statusTop).toBeGreaterThan(size.timeTop + 1)
+    expect(Math.abs(size.dotTop - size.timeTop)).toBeLessThan(1)
+    expect(errors).toEqual([])
+  })
+}
 
 test('trang chủ vi + en không nhảy layout (CLS < 0.1)', async ({ page }) => {
   const errors = collectErrors(page)
