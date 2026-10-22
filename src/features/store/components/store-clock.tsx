@@ -36,8 +36,9 @@ const getMinute = () => Math.floor(Date.now() / MINUTE_MS)
 // Server, prerender và lần hydrate: chưa biết giờ của khách → chỗ giữ rỗng (không đóng băng giờ vào HTML)
 const getServerMinute = () => null
 
-// Một dòng ở cỡ chữ mặc định (e2e 320px canh). Mỗi cụm không ngắt, chỉ xuống dòng ở " · ": chữ phóng to thì xuống dòng
-// thay vì làm cả trang cuộn ngang (chấp nhận giật một dòng trong trường hợp đó). min-h giữ chỗ rỗng cao đúng 1 dòng.
+// Một dòng ở cỡ chữ mặc định (e2e 320px canh). Mỗi cụm không ngắt, chỉ xuống dòng sau dấu " · " (khoảng trắng trước dấu
+// chấm là \u00a0: dấu chấm dính với giờ, dòng 2 không bắt đầu bằng "·"): chữ phóng to thì xuống dòng thay vì làm cả trang
+// cuộn ngang (chấp nhận giật một dòng trong trường hợp đó). min-h giữ chỗ rỗng cao đúng 1 dòng.
 const lineClass = 'min-h-[1lh] text-xs text-muted-foreground tabular-nums sm:text-sm'
 
 /** Giờ Việt Nam + trạng thái cửa hàng. Không aria-live: không đọc lại mỗi phút. */
@@ -65,7 +66,7 @@ export function StoreClock({
       <time dateTime={vnDateTimeAttr(now)} className="whitespace-nowrap">
         {fillTemplate(timeTemplate, { time: formatVnTime(now, locale) })}
       </time>
-      <span aria-hidden="true"> · </span>
+      <span aria-hidden="true">{'\u00a0· '}</span>
       <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>
     </p>
   )
