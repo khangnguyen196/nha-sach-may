@@ -162,21 +162,30 @@ for (const path of ['/', '/en']) {
       return {
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
-        right: element.getBoundingClientRect().right,
+        // Đo mép phải của chữ, không của <p>: <p> là khối rộng cả dòng nên mép phải luôn trong màn hình dù chữ tràn
+        statusRight: status.getBoundingClientRect().right,
+        dotRight: dot.getBoundingClientRect().right,
         viewportWidth: window.innerWidth,
         timeRects: time.getClientRects().length,
         statusRects: status.getClientRects().length,
         timeTop: time.getBoundingClientRect().top,
+        dotText: dot.textContent,
         dotTop: dot.getBoundingClientRect().top,
         statusTop: status.getBoundingClientRect().top,
       }
     })
     expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth)
-    expect(size.right).toBeLessThanOrEqual(size.viewportWidth)
-    // Mỗi cụm nguyên một dòng, trạng thái xuống dòng dưới giờ, dấu chấm ở lại cùng dòng với giờ
+    expect(size.statusRight).toBeLessThanOrEqual(size.viewportWidth)
+    expect(size.dotRight).toBeLessThanOrEqual(size.viewportWidth)
+    // Mỗi cụm nguyên một dòng, trạng thái xuống dòng dưới giờ
     expect(size.timeRects).toBe(1)
     expect(size.statusRects).toBe(1)
     expect(size.statusTop).toBeGreaterThan(size.timeTop + 1)
+    // Khoảng trắng trước dấu chấm là   (dấu chấm dính với giờ khi dòng 1 gần đầy). Ở 1.5rem dòng 1 còn thừa chỗ nên
+    // trình duyệt không ngắt trước dấu chấm kể cả với khoảng trắng thường → câu so top không canh được  , phải so
+    // textContent (không dùng toHaveText: Playwright gộp khoảng trắng, coi   như dấu cách).
+    expect(size.dotText).toBe(' · ')
+    // Dấu chấm không bị tách hẳn sang dòng 2
     expect(Math.abs(size.dotTop - size.timeTop)).toBeLessThan(1)
     expect(errors).toEqual([])
   })
