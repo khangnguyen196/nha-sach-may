@@ -54,7 +54,7 @@ const getReducedMotion = () => matchMedia(REDUCED_MOTION).matches
 const getServerReducedMotion = () => false
 
 // Một dòng ở cỡ chữ mặc định (e2e 320px canh). Mỗi cụm không ngắt, chỉ xuống dòng sau dấu " · " (khoảng trắng trước dấu
-// chấm là  : dấu chấm dính với giờ, dòng 2 không bắt đầu bằng "·"): chữ phóng to thì xuống dòng thay vì làm cả trang
+// chấm là \u00a0: dấu chấm dính với giờ, dòng 2 không bắt đầu bằng "·"): chữ phóng to thì xuống dòng thay vì làm cả trang
 // cuộn ngang (chấp nhận giật một dòng trong trường hợp đó). min-h giữ chỗ rỗng cao đúng 1 dòng.
 const lineClass = 'mt-3 min-h-[1lh] text-xs text-muted-foreground tabular-nums sm:text-sm'
 
@@ -149,7 +149,7 @@ export function StoreClock({
           <time dateTime={vnDateTimeAttr(now, !reduced)} className="whitespace-nowrap">
             {fillTemplate(timeTemplate, { time: formatVnTime(now, locale, !reduced) })}
           </time>
-          <span aria-hidden="true">{' · '}</span>
+          <span aria-hidden="true">{'\u00a0· '}</span>
           <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>
         </p>
       ) : (
