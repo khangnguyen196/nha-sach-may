@@ -1,4 +1,4 @@
-# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-21, ghi-tac-gia đã lên production)
+# Bàn giao cho phiên Claude Code mới (cập nhật 2026-10-22, ghi-tac-gia-2 đã lên production)
 
 Đọc file này khi bắt đầu phiên ở thư mục dự án, sau `CLAUDE.md` (được nạp tự động).
 
@@ -6,6 +6,7 @@
 
 - **Hiện tại**: `main` mới nhất là trạng thái đang chạy trên production (https://nha-sach-may.vercel.app). **Không còn migration nào chờ chạy.**
 - **Việc tiếp theo**: không có đợt đang mở. RSC 404 sau đăng xuất **đã đóng** (15/15 lượt e2e đầy đủ liên tiếp không tái diễn). ★9 / ★10 đã đo, ★7 đã có issue upstream (`docs/plans/no-js.md`). Việc để sau: `docs/progress.md`.
+- **Đợt ghi-tac-gia-2 (eslint bỏ qua `.claude/**`, LICENSE nêu nguồn ảnh bìa)**: **đã merge `main`** ff `20410b0..007fd78` (`git push origin ghi-tac-gia-2:main`, không force) 2026-10-22 12:24:28Z; CI check `main` run 39778080918 ✔; e2e `main` run 39778081067 ✔ 506 qua / 14 skip / 0 flaky; Vercel Production Ready 2026-10-22T12:27:07Z (deployment 7252142307). Nhánh: CI run 39776424712 ✔, e2e run 39776424137 ✔ 506 / 14 / 0. `npm run lint` ở thư mục chính sạch. package-lock.json **không đổi** (thêm trường license kéo theo 6 mục `inBundle` của Tailwind oxide wasm32 → hoàn lại, chờ quyết, `docs/progress.md`).
 - **Đợt ghi-tac-gia (LICENSE + README, stream-markers.spec, kiểm giá bất thường)**: **đã merge `main`** ff `b40e259..02df4f9` (`git push origin ghi-tac-gia:main`, không force) 2026-10-21 06:49:33Z; CI check `main` run 39557845235 ✔; e2e `main` run 39557844997 ✔ 506 qua / 14 skip / 0 flaky; Vercel Production Ready 2026-10-21T06:51:59Z (deployment 7219748479). Trước đợt: CI `b40e259` run 39545298917 ✔, Vercel Production `b40e259` Ready 04:42:34Z.
   - e2e nhánh: push `02df4f9` run 39555756937 506 / 14 / 0; chạy tay run 39556855039 506 / 14 / 0 (+1 qua desktop, +1 skip mobile của `stream-markers.spec.ts`). Vitest 908 (86 file) không đổi; không đo measure:js (không đổi code app).
   - Repo GitHub (public) hiện README và tab License (GitHub nhận dạng "Other"). P3 (giá bất thường, MCP chỉ đọc): chỉ `at-home` 699.999 / 999.999 ₫ → chủ dự án sửa trong admin.
