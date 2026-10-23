@@ -10,6 +10,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes, randomUUID } from 'node:crypto'
+import { z } from 'zod'
 import type { Database } from '../src/types/database'
 import { loadLocalSupabase } from './e2e-env'
 
@@ -49,9 +50,16 @@ export async function cleanupE2eUsers() {
   return stale.length
 }
 
-/** Đơn của user bị hủy + xóa trước (hoàn tồn kho), rồi mới xóa user */
+/**
+ * Dọn theo thứ tự khóa ngoại restrict của chợ sách cũ: khoản trả người bán (của user là người bán) → đơn của user (hủy
+ * để hoàn tồn kho, kèm khoản trả của đơn đó) → tin sách cũ của user → ảnh trong thư mục của user → user.
+ */
 export async function deleteE2eUsers(ids: string[]) {
+  if (ids.length === 0) return
+  await deleteSellerPayouts('seller_id', ids)
   await cancelAndDeleteOrders(ids)
+  await deleteUsedListings('seller_id', ids)
+  await removeUsedPhotoFolders(ids)
   const admin = adminClient()
   for (const id of ids) {
     const { error } = await admin.auth.admin.deleteUser(id)
@@ -239,6 +247,13 @@ export async function ordersOf(userId: string) {
 export async function cancelAndDeleteOrders(userIds: string[]) {
   if (userIds.length === 0) return
   const admin = adminClient()
+  // seller_payouts.order_id là on delete restrict: khoản trả người bán của đơn phải xóa trước đơn
+  const { data: orders, error: readError } = await admin.from('orders').select('id').in('user_id', userIds)
+  if (readError) throw new Error(`cancelAndDeleteOrders (read): ${readError.message}`)
+  await deleteSellerPayouts(
+    'order_id',
+    orders.map((order) => order.id),
+  )
   await deleteDeliveredOrders(admin, userIds)
   const { error: cancelError } = await admin
     .from('orders')
@@ -255,7 +270,7 @@ type AdminClient = ReturnType<typeof adminClient>
 /**
  * Đơn delivered: đọc dòng sách → xóa đơn → cộng lại stock, trừ sold_count (không âm), giảm used_count của voucher, như
  * trigger làm khi hủy. Thứ tự "đọc → xóa → hoàn kho": lỗi giữa chừng thì thiếu hoàn kho chứ không hoàn hai lần khi
- * chạy lại.
+ * chạy lại. Dòng sách cũ (used_listing_id) không trừ kho khi đặt → không hoàn (như trigger).
  */
 async function deleteDeliveredOrders(admin: AdminClient, userIds: string[]) {
   const { data: orders, error } = await admin
@@ -263,6 +278,8 @@ async function deleteDeliveredOrders(admin: AdminClient, userIds: string[]) {
     .select('id, voucher_id, order_items(book_id, quantity)')
     .in('user_id', userIds)
     .eq('status', 'delivered')
+    // Lọc dòng của bảng nhúng (không lọc đơn): chỉ lấy dòng sách mới
+    .is('order_items.used_listing_id', null)
   if (error) throw new Error(`deleteDeliveredOrders (read): ${error.message}`)
   if (orders.length === 0) return
 
@@ -328,7 +345,13 @@ export async function createHiddenBook(): Promise<E2eBook> {
 
 /** Xóa sách ẩn của e2e (cart_items xóa theo cascade); không truyền id → xóa mọi sách ẩn còn sót */
 export async function deleteHiddenBooks(id?: number) {
-  let query = adminClient().from('books').delete().like('slug', `${HIDDEN_BOOK_SLUG}%`).eq('is_active', false)
+  const admin = adminClient()
+  let read = admin.from('books').select('id').like('slug', `${HIDDEN_BOOK_SLUG}%`).eq('is_active', false)
+  if (id !== undefined) read = read.eq('id', id)
+  const { data: books, error: readError } = await read
+  if (readError) throw new Error(`deleteHiddenBooks (read): ${readError.message}`)
+  await deleteUsedListingsOfBooks(books.map((book) => book.id))
+  let query = admin.from('books').delete().like('slug', `${HIDDEN_BOOK_SLUG}%`).eq('is_active', false)
   if (id !== undefined) query = query.eq('id', id)
   const { error } = await query
   if (error) throw new Error(`deleteHiddenBooks: ${error.message}`)
@@ -463,6 +486,9 @@ export async function createShopBooks(label: string): Promise<ShopBooks> {
 /** Xóa mọi sách / danh mục e2e-shop (sau khi đơn của user e2e đã xóa): teardown và setup (phần sót của lần trước) */
 export async function deleteShopBooks() {
   const admin = adminClient()
+  const { data: books, error: readError } = await admin.from('books').select('id').like('slug', `${E2E_SHOP_SLUG}%`)
+  if (readError) throw new Error(`deleteShopBooks (read): ${readError.message}`)
+  await deleteUsedListingsOfBooks(books.map((book) => book.id))
   const { error } = await admin.from('books').delete().like('slug', `${E2E_SHOP_SLUG}%`)
   if (error) throw new Error(`deleteShopBooks (books): ${error.message}`)
   // Con trước gốc (parent_id không cascade)
@@ -517,12 +543,15 @@ export type E2eAdminBook = E2eBook & { category_id: number | null }
 export async function createE2eBook({
   categoryId,
   price = 80_000,
+  originalPrice = null,
   stock = 10,
   active = true,
 }: {
   /** null: sách không có danh mục (vẫn lên danh sách, docs/plans/sau-ux.md mục 6 ★6c) */
   categoryId: number | null
   price?: number
+  /** Giá gốc (≥ price): trần giá của tin sách cũ */
+  originalPrice?: number | null
   stock?: number
   active?: boolean
 }): Promise<E2eAdminBook> {
@@ -534,6 +563,7 @@ export async function createE2eBook({
       slug,
       category_id: categoryId,
       price,
+      original_price: originalPrice,
       stock,
       is_active: active,
       created_at: '2000-01-01T00:00:00Z',
@@ -676,8 +706,10 @@ export async function cleanupE2eAdminData(slugs?: string[]) {
   const admin = adminClient()
   // Bộ lọc slug dùng chung cho các bảng: đúng các slug được truyền, hoặc mọi slug có tiền tố e2e-admin-
   const [operator, value] = slugs ? ['in', `(${slugs.map((slug) => `"${slug}"`).join(',')})`] : ['like', `${E2E_ADMIN_SLUG}%`]
-  const { data: books, error } = await admin.from('books').select('cover_url').filter('slug', operator, value)
+  const { data: books, error } = await admin.from('books').select('id, cover_url').filter('slug', operator, value)
   if (error) throw new Error(`cleanupE2eAdminData (books): ${error.message}`)
+  // used_listings.book_id là on delete restrict: tin sách cũ (+ khoản trả, ảnh) của sách test xóa trước sách
+  await deleteUsedListingsOfBooks(books.map((book) => book.id))
 
   const base = coverPublicBase()
   const paths = books.flatMap(({ cover_url }) =>
@@ -732,4 +764,128 @@ export async function e2eLeftovers() {
       : count(admin.from('orders').select('id', { count: 'exact', head: true }).in('user_id', users), 'orders'),
   ])
   return { users: users.length, books, categories, authors, vouchers, orders }
+}
+
+// ---------- Chợ sách cũ (cho-sach-cu) ----------
+
+/**
+ * Client KHÔNG gắn kiểu Database cho bảng / RPC của chợ sách cũ: src/types/database.ts sinh từ DB local của CI, chưa có
+ * used_listings, seller_payouts, RPC mới tới khi tải artifact database-types. Dòng đọc về parse bằng zod. Khi types đã
+ * có thì đổi sang createClient<Database>.
+ */
+function usedMarketAdminClient() {
+  const { url, serviceRoleKey } = loadLocalSupabase()
+  return createClient(url, serviceRoleKey, clientOptions)
+}
+
+/** Client anon không kiểu (xem usedMarketAdminClient): đọc / ký ảnh như khách chưa đăng nhập */
+export function usedMarketAnonClient() {
+  const { url, publishableKey } = loadLocalSupabase()
+  return createClient(url, publishableKey, clientOptions)
+}
+
+/** Client không kiểu đã đăng nhập bằng user e2e: gọi RPC / bảng / Storage của chợ sách cũ như trình duyệt của user đó */
+export async function usedMarketClient(user: { email: string; password: string }) {
+  const client = usedMarketAnonClient()
+  const { error } = await client.auth.signInWithPassword({ email: user.email, password: user.password })
+  if (error) throw new Error(`signInWithPassword: ${error.message}`)
+  return client
+}
+
+export const USED_PHOTO_BUCKET = 'used-listing-photos'
+
+const listingStatusSchema = z.enum(['pending', 'approved', 'rejected', 'sold', 'withdrawn'])
+
+const usedListingRowSchema = z.object({
+  id: z.number(),
+  status: listingStatusSchema,
+  price: z.number(),
+  fee: z.number(),
+  seller_name: z.string().nullable(),
+  reject_reason: z.string().nullable(),
+  approved_at: z.string().nullable(),
+})
+
+/** Tin sách cũ đọc bằng service role (thấy mọi trạng thái); null nếu không có */
+export async function usedListingRow(id: number) {
+  const { data, error } = await usedMarketAdminClient()
+    .from('used_listings')
+    .select('id, status, price, fee, seller_name, reject_reason, approved_at')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`usedListingRow: ${error.message}`)
+  return usedListingRowSchema.nullable().parse(data)
+}
+
+const sellerPayoutRowsSchema = z.array(
+  z.object({
+    id: z.number(),
+    order_id: z.number(),
+    seller_id: z.string(),
+    price: z.number(),
+    fee: z.number(),
+    amount: z.number(),
+    status: z.enum(['pending', 'paid']),
+    paid_at: z.string().nullable(),
+  }),
+)
+
+/** Khoản trả người bán của một tin (service role) */
+export async function sellerPayoutsOf(listingId: number) {
+  const { data, error } = await usedMarketAdminClient()
+    .from('seller_payouts')
+    .select('id, order_id, seller_id, price, fee, amount, status, paid_at')
+    .eq('listing_id', listingId)
+    .order('id')
+  if (error) throw new Error(`sellerPayoutsOf: ${error.message}`)
+  return sellerPayoutRowsSchema.parse(data)
+}
+
+/** Khoản trả người bán (sổ tiền restrict: phải xóa trước đơn, tin, user) theo người bán / đơn / tin */
+async function deleteSellerPayouts(column: 'seller_id' | 'order_id' | 'listing_id', values: readonly (string | number)[]) {
+  if (values.length === 0) return
+  const { error } = await usedMarketAdminClient().from('seller_payouts').delete().in(column, values)
+  if (error) throw new Error(`deleteSellerPayouts: ${error.message}`)
+}
+
+const listingPhotosSchema = z.array(z.object({ id: z.number(), photos: z.array(z.string()) }))
+
+/**
+ * Tin sách cũ theo người bán / sách: khoản trả của tin → tin (dòng đơn trỏ tới tin thành null) → ảnh của tin trong bucket
+ * (Storage API, không xóa bằng SQL). Đơn của user phải xóa trước (deleteE2eUsers) nếu muốn hoàn kho đúng.
+ */
+async function deleteUsedListings(column: 'seller_id' | 'book_id', values: readonly (string | number)[]) {
+  if (values.length === 0) return
+  const used = usedMarketAdminClient()
+  const { data, error } = await used.from('used_listings').select('id, photos').in(column, values)
+  if (error) throw new Error(`deleteUsedListings (read): ${error.message}`)
+  const listings = listingPhotosSchema.parse(data)
+  if (listings.length === 0) return
+
+  const ids = listings.map((listing) => listing.id)
+  await deleteSellerPayouts('listing_id', ids)
+  const { error: deleteError } = await used.from('used_listings').delete().in('id', ids)
+  if (deleteError) throw new Error(`deleteUsedListings (delete): ${deleteError.message}`)
+
+  const photos = [...new Set(listings.flatMap((listing) => listing.photos))]
+  if (photos.length === 0) return
+  const { error: removeError } = await used.storage.from(USED_PHOTO_BUCKET).remove(photos)
+  if (removeError) throw new Error(`deleteUsedListings (photos): ${removeError.message}`)
+}
+
+/** used_listings.book_id là on delete restrict: gọi trước khi xóa sách test */
+function deleteUsedListingsOfBooks(bookIds: readonly number[]) {
+  return deleteUsedListings('book_id', bookIds)
+}
+
+/** Mọi ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (cả ảnh đã tải lên mà chưa gắn tin nào) */
+async function removeUsedPhotoFolders(userIds: readonly string[]) {
+  const storage = usedMarketAdminClient().storage.from(USED_PHOTO_BUCKET)
+  for (const id of userIds) {
+    const { data, error } = await storage.list(id, { limit: 1000 })
+    if (error) throw new Error(`removeUsedPhotoFolders (list): ${error.message}`)
+    if (data.length === 0) continue
+    const { error: removeError } = await storage.remove(data.map((file) => `${id}/${file.name}`))
+    if (removeError) throw new Error(`removeUsedPhotoFolders (remove): ${removeError.message}`)
+  }
 }
