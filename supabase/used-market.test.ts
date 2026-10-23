@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import en from '../messages/en.json'
+import vi from '../messages/vi.json'
 
 // Chợ sách cũ (docs/plans/cho-sach-cu.md, mục 15 của schema.sql). Phí sàn không có hàm TS (client không tự tính, số
 // lấy từ RPC used_listing_quote): Vitest giữ hằng trong schema.sql, bảng giá → phí kiểm bằng e2e qua RPC
@@ -62,6 +64,14 @@ describe('hằng số chợ sách cũ trong schema.sql', () => {
   it('tối đa 10 tin chờ duyệt, 30 ảnh mỗi người', () => {
     expect(functionStatement('private.used_pending_limit')).toContain('as $$ select 10 $$')
     expect(functionStatement('private.used_photo_limit')).toContain('as $$ select 30 $$')
+  })
+
+  it('câu LISTING_PENDING_LIMIT (vi / en) ghi đúng số tin chờ duyệt tối đa của schema.sql', () => {
+    const limit = /as \$\$ select (\d+) \$\$/.exec(functionStatement('private.used_pending_limit'))?.[1]
+    expect(limit).toBeDefined()
+    for (const message of [vi.errors.LISTING_PENDING_LIMIT, en.errors.LISTING_PENDING_LIMIT]) {
+      expect(message.match(/\d+/g)).toEqual([limit])
+    }
   })
 
   it('bucket used-listing-photos không công khai, chỉ nhận webp ≤ 1MB', () => {
@@ -152,23 +162,49 @@ describe('ảnh tin sách cũ không đổi được sau khi duyệt', () => {
     )
   })
 
-  it('tên ảnh đã gắn tin (mọi trạng thái) không tải lên lại được', () => {
-    expect(functionStatement('public.can_upload_used_photo')).toMatch(
-      /and not exists \( select 1 from public\.used_listings l where l\.photos @> array\[p_name\] \); \$\$$/,
+  it('lưu mọi tên ảnh đã từng gắn tin (private.used_photo_names, trigger sau khi đăng / đổi ảnh)', () => {
+    expect(createTableSql('private.used_photo_names')).toMatch(/^\s*name\s+text primary key,/)
+    expect(schema).toContain('alter table private.used_photo_names enable row level security;')
+    expect(schema).not.toMatch(/create policy [^;]* on private\.used_photo_names\b/)
+    expect(schema).not.toMatch(/grant [^;]* on (table )?private\.used_photo_names\b/)
+    expect(schema).toContain(
+      'create trigger used_listings_remember_photos after insert or update of photos on public.used_listings for each row execute function private.used_listings_remember_photos();',
+    )
+    const remember = functionStatement('private.used_listings_remember_photos')
+    expect(remember).toContain('security definer')
+    expect(remember).toContain(
+      'insert into private.used_photo_names (name) select x.name from unnest(new.photos) as x(name) on conflict (name) do nothing;',
     )
   })
 
-  it('duyệt tin kiểm lại ảnh còn đủ, dùng chung hàm kiểm storage.objects với lúc đăng / sửa', () => {
+  it('tên ảnh đã từng gắn tin (mọi trạng thái, kể cả đã bỏ khỏi tin khi sửa) không tải lên lại được', () => {
+    expect(functionStatement('public.can_upload_used_photo')).toMatch(
+      /and not exists \( select 1 from private\.used_photo_names n where n\.name = p_name \); \$\$$/,
+    )
+  })
+
+  it('duyệt tin kiểm lại ảnh còn đủ (mã riêng cho admin), dùng chung hàm kiểm storage.objects với lúc đăng / sửa', () => {
     const approve = functionStatement('public.review_used_listing')
     const approveBranch = approve.slice(approve.indexOf('if p_approve then'), approve.indexOf("set status = 'approved'"))
-    expect(approveBranch).toContain('perform private.used_check_photos_stored(v_listing.photos);')
-    expect(functionStatement('private.used_check_listing_input')).toContain(
-      'perform private.used_check_photos_stored(p_photos);',
+    expect(approveBranch).toContain(
+      "if not private.used_photos_stored(v_listing.photos) then raise exception 'listing_photos_missing'; end if;",
+    )
+    expect(functionStatement('private.used_check_listing_input')).toMatch(
+      /or not private\.used_photos_stored\(p_photos\) then raise exception 'listing_photos_invalid'/,
     )
     // Chỉ một chỗ đếm ảnh trong bucket để kiểm tin (không chép đôi)
     expect(schema.match(/and o\.name = any\(p_photos\)/g)).toHaveLength(1)
-    expect(functionStatement('private.used_check_photos_stored')).toContain('and o.name = any(p_photos)')
+    expect(functionStatement('private.used_photos_stored')).toContain('and o.name = any(p_photos)')
   })
+
+  it.each(['public.can_upload_used_photo', 'public.can_delete_used_photo'])(
+    '%s chỉ nhận tên trong thư mục của người gọi (gọi thẳng như RPC không dò được ảnh của người khác)',
+    (name) => {
+      expect(functionStatement(name)).toContain(
+        "select auth.uid() is not null and (storage.foldername(p_name))[1] = auth.uid()::text and ",
+      )
+    },
+  )
 })
 
 describe('giới hạn ảnh, khóa ngoại, sổ tiền', () => {
@@ -199,6 +235,15 @@ describe('giới hạn ảnh, khóa ngoại, sổ tiền', () => {
     expect(functionStatement('public.mark_payout_paid')).toContain(
       "where o.id = p.order_id and o.status = 'delivered' and o.payment_status = 'paid'",
     )
+  })
+
+  it('đánh dấu đã trả khóa dòng đơn (for share) trước khi kiểm và ghi', () => {
+    const body = functionStatement('public.mark_payout_paid')
+    const lock = body.indexOf(
+      'perform 1 from public.orders o join public.seller_payouts p on p.order_id = o.id where p.id = p_id for share of o;',
+    )
+    expect(lock).toBeGreaterThan(-1)
+    expect(body.indexOf('update public.seller_payouts')).toBeGreaterThan(lock)
   })
 
   it('đăng tin với sách không có → INVALID_INPUT (field book_id), sách ngừng bán → BOOK_UNAVAILABLE', () => {
