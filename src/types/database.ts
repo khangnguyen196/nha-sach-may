@@ -177,14 +177,14 @@ isOneToOne: false
                   ]
                 },"order_items": {
                   Row: {
-                    "book_id": number | null,"cover_url": string | null,"id": number,"line_total": number | null,"order_id": number,"quantity": number,"title": string,"unit_price": number
+                    "book_id": number | null,"cover_url": string | null,"id": number,"line_total": number | null,"order_id": number,"quantity": number,"title": string,"unit_price": number,"used_listing_id": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "book_id"?: number | null,"cover_url"?: string | null,"id"?: number,"line_total"?: never,"order_id": number,"quantity": number,"title": string,"unit_price": number
+                    "book_id"?: number | null,"cover_url"?: string | null,"id"?: number,"line_total"?: never,"order_id": number,"quantity": number,"title": string,"unit_price": number,"used_listing_id"?: number | null
                   }
                   Update: {
-                    "book_id"?: number | null,"cover_url"?: string | null,"id"?: number,"line_total"?: never,"order_id"?: number,"quantity"?: number,"title"?: string,"unit_price"?: number
+                    "book_id"?: number | null,"cover_url"?: string | null,"id"?: number,"line_total"?: never,"order_id"?: number,"quantity"?: number,"title"?: string,"unit_price"?: number,"used_listing_id"?: number | null
                   }
                   Relationships: [
                     {
@@ -198,6 +198,12 @@ isOneToOne: false
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_used_listing_id_fkey"
+      columns: ["used_listing_id"]
+isOneToOne: false
+      referencedRelation: "used_listings"
       referencedColumns: ["id"]
     }
                   ]
@@ -281,6 +287,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"seller_payouts": {
+                  Row: {
+                    "amount": number,"created_at": string,"fee": number,"id": number,"listing_id": number,"order_id": number,"paid_at": string | null,"price": number,"seller_id": string,"status": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"created_at"?: string,"fee": number,"id"?: number,"listing_id": number,"order_id": number,"paid_at"?: string | null,"price": number,"seller_id": string,"status"?: string,"title": string
+                  }
+                  Update: {
+                    "amount"?: number,"created_at"?: string,"fee"?: number,"id"?: number,"listing_id"?: number,"order_id"?: number,"paid_at"?: string | null,"price"?: number,"seller_id"?: string,"status"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "seller_payouts_listing_id_fkey"
+      columns: ["listing_id"]
+isOneToOne: false
+      referencedRelation: "used_listings"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "seller_payouts_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "seller_payouts_seller_id_fkey"
+      columns: ["seller_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"used_listings": {
+                  Row: {
+                    "approved_at": string | null,"book_id": number,"condition": Database["public"]['Enums']["used_condition"],"created_at": string,"description": string | null,"fee": number,"id": number,"photos": (string)[],"price": number,"reject_reason": string | null,"seller_id": string,"seller_name": string | null,"status": Database["public"]['Enums']["used_listing_status"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"book_id": number,"condition": Database["public"]['Enums']["used_condition"],"created_at"?: string,"description"?: string | null,"fee": number,"id"?: number,"photos": (string)[],"price": number,"reject_reason"?: string | null,"seller_id"?: string,"seller_name"?: string | null,"status"?: Database["public"]['Enums']["used_listing_status"],"updated_at"?: string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"book_id"?: number,"condition"?: Database["public"]['Enums']["used_condition"],"created_at"?: string,"description"?: string | null,"fee"?: number,"id"?: number,"photos"?: (string)[],"price"?: number,"reject_reason"?: string | null,"seller_id"?: string,"seller_name"?: string | null,"status"?: Database["public"]['Enums']["used_listing_status"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "used_listings_book_id_fkey"
+      columns: ["book_id"]
+isOneToOne: false
+      referencedRelation: "books"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "used_listings_seller_id_fkey"
+      columns: ["seller_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"vouchers": {
                   Row: {
                     "code": string,"created_at": string,"description": string | null,"description_en": string | null,"discount_type": Database["public"]['Enums']["discount_type"],"discount_value": number,"ends_at": string | null,"id": number,"is_active": boolean,"is_public": boolean,"max_discount": number | null,"min_order_value": number,"starts_at": string | null,"usage_limit": number | null,"used_count": number
@@ -301,7 +365,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "cancel_order":
+            "can_delete_used_photo":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
+"can_upload_used_photo":
+{ Args: { "p_name": string }; Returns: boolean
+                           },
+"cancel_order":
 { Args: { "p_order_id": number,"p_reason"?: string }; Returns: {
               "cancelled_reason": string | null,
 "created_at": string,
@@ -340,14 +410,25 @@ isOneToOne: false
 "consume_chat_quota":
 { Args: { "p_ip"?: string,"p_limits"?: Json,"p_token": string,"p_visitor"?: string }; Returns: Json
                            },
+"create_used_listing":
+{ Args: { "p_book_id": number,"p_condition": Database["public"]['Enums']["used_condition"],"p_description": string,"p_photos": (string)[],"p_price": number }; Returns: number
+                           },
 "generate_order_code":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"mark_payout_paid":
+{ Args: { "p_id": number }; Returns: undefined
+                           },
 "merge_cart":
 { Args: { "p_items": Json }; Returns: undefined
+                           },
+"my_used_sales":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "amount": number,"fee": number,"listing_id": number,"order_status": Database["public"]['Enums']["order_status"],"payment_status": Database["public"]['Enums']["payment_status"],"payout_status": string,"price": number,"sold_at": string,"title": string
+            }[]
                            },
 "normalize_vi":
 { Args: { "txt": string }; Returns: string
@@ -388,6 +469,37 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"place_used_order":
+{ Args: { "p_address_id": number,"p_expected_total"?: number,"p_idempotency_key"?: string,"p_listing_id": number,"p_note"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"] }; Returns: {
+              "cancelled_reason": string | null,
+"created_at": string,
+"discount": number,
+"id": number,
+"idempotency_key": string | null,
+"note": string | null,
+"order_code": string,
+"payment_method": Database["public"]['Enums']["payment_method"],
+"payment_status": Database["public"]['Enums']["payment_status"],
+"phone": string,
+"province": string,
+"recipient_name": string,
+"shipping_fee": number,
+"status": Database["public"]['Enums']["order_status"],
+"street": string,
+"subtotal": number,
+"total": number,
+"updated_at": string,
+"user_id": string | null,
+"voucher_code": string | null,
+"voucher_id": number | null,
+"ward": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "orders"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "quote_items":
 { Args: { "p_items": Json }; Returns: {
               "free_ship_from": number,"item_count": number,"shipping_fee": number,"subtotal": number,"total": number
@@ -397,6 +509,14 @@ isOneToOne: false
 { Args: { "p_voucher_code"?: string }; Returns: {
               "discount": number,"free_ship_from": number,"item_count": number,"shipping_fee": number,"subtotal": number,"total": number
             }[]
+                           },
+"quote_used_order":
+{ Args: { "p_listing_id": number }; Returns: {
+              "available": boolean,"price": number,"shipping_fee": number,"total": number
+            }[]
+                           },
+"review_used_listing":
+{ Args: { "p_approve": boolean,"p_expected_status": Database["public"]['Enums']["used_listing_status"],"p_id": number,"p_reason"?: string }; Returns: undefined
                            },
 "search_books":
 { Args: { "q": string }; Returns: {
@@ -440,10 +560,21 @@ isOneToOne: false
                            },
 "set_default_address":
 { Args: { "p_address_id": number }; Returns: undefined
+                           },
+"update_used_listing":
+{ Args: { "p_condition": Database["public"]['Enums']["used_condition"],"p_description": string,"p_id": number,"p_photos": (string)[],"p_price": number }; Returns: undefined
+                           },
+"used_listing_quote":
+{ Args: { "p_price": number }; Returns: {
+              "fee": number,"payout": number
+            }[]
+                           },
+"withdraw_used_listing":
+{ Args: { "p_id": number }; Returns: undefined
                            }
           }
           Enums: {
-            "book_format": "paperback"|"hardcover"|"boxset","discount_type": "percent"|"fixed","order_status": "pending"|"confirmed"|"shipping"|"delivered"|"cancelled","payment_method": "cod"|"bank_transfer","payment_status": "unpaid"|"paid"|"refunded","user_role": "customer"|"admin"
+            "book_format": "paperback"|"hardcover"|"boxset","discount_type": "percent"|"fixed","order_status": "pending"|"confirmed"|"shipping"|"delivered"|"cancelled","payment_method": "cod"|"bank_transfer","payment_status": "unpaid"|"paid"|"refunded","used_condition": "like_new"|"good"|"fair"|"worn","used_listing_status": "pending"|"approved"|"rejected"|"sold"|"withdrawn","user_role": "customer"|"admin"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -563,7 +694,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "book_format": ["paperback", "hardcover", "boxset"],"discount_type": ["percent", "fixed"],"order_status": ["pending", "confirmed", "shipping", "delivered", "cancelled"],"payment_method": ["cod", "bank_transfer"],"payment_status": ["unpaid", "paid", "refunded"],"user_role": ["customer", "admin"]
+            "book_format": ["paperback", "hardcover", "boxset"],"discount_type": ["percent", "fixed"],"order_status": ["pending", "confirmed", "shipping", "delivered", "cancelled"],"payment_method": ["cod", "bank_transfer"],"payment_status": ["unpaid", "paid", "refunded"],"used_condition": ["like_new", "good", "fair", "worn"],"used_listing_status": ["pending", "approved", "rejected", "sold", "withdrawn"],"user_role": ["customer", "admin"]
           }
         }
 } as const
