@@ -39,6 +39,28 @@ async function openPausedAt(page: Page, path: string, installUtc: string, pauseU
   await page.clock.pauseAt(new Date(pauseUtc))
 }
 
+/** Giả tab ẩn / hiện: đặt visibilityState rồi bắn visibilitychange (component đọc lại giờ ngay khi tab hiện) */
+async function setVisibility(page: Page, state: 'hidden' | 'visible') {
+  await page.evaluate((value) => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => value === 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }, state)
+}
+
+/** Giá trị dateTime (có giây) của mốc UTC theo giờ VN: "2026-10-22T02:00:05+07:00" */
+const vnDateTime = (utcMs: number) => `${new Date(utcMs + 7 * 3600_000).toISOString().slice(0, 19)}+07:00`
+
+/** left (px) của dấu chấm và trạng thái trong dòng đồng hồ */
+function dotAndStatusLeft(page: Page) {
+  return clock(page).evaluate((element) => {
+    const dot = element.children[1]
+    const status = element.lastElementChild
+    if (!dot || !status) throw new Error('Thiếu dấu chấm hoặc trạng thái trong đồng hồ')
+    return { dot: dot.getBoundingClientRect().left, status: status.getBoundingClientRect().left }
+  })
+}
+
 const OPEN_VI = 'Cửa hàng đang mở cửa'
 const CLOSED_VI = 'Cửa hàng đã đóng cửa'
 
@@ -99,16 +121,26 @@ test('vi: kim và dòng số theo giây, kim nhảy (không transition / animati
     .evaluateAll((hands) =>
       hands.map((hand) => {
         const style = getComputedStyle(hand)
-        return { transition: style.transitionDuration, animation: style.animationName }
+        return {
+          transition: style.transitionDuration,
+          animation: style.animationName,
+          running: hand.getAnimations().length,
+        }
       }),
     )
-  const jump = { transition: '0s', animation: 'none' }
+  const jump = { transition: '0s', animation: 'none', running: 0 }
   expect(motion).toEqual([jump, jump, jump])
 
-  // Chưa tới đầu giây kế: chữ và kim giữ nguyên (đọc một lần, không chờ: toHaveText thử lại tới khi khớp). Canh cách
-  // cài đổi chữ trước ranh giới giây (VD làm tròn lên, đếm +1 mỗi lần hẹn giờ bắn).
+  // Chưa tới đầu giây kế: chữ và kim giữ nguyên (đọc một lần, không chờ: toHaveText thử lại tới khi khớp). Đọc trước
+  // visibilitychange canh hẹn giờ bắn sớm / đếm +1 mỗi lần bắn. Hẹn giờ bắn đúng .000 nên mọi lần React tự đọc giờ đều ở
+  // số chẵn giây (làm tròn lên = làm tròn xuống): visibilitychange bắt React đọc lại giờ ở .999 → đọc sau đó canh làm
+  // tròn lên.
   await page.clock.runFor(999)
   expect(await time.textContent()).toBe('14:35:05 giờ Việt Nam')
+  expect((await handAngles(page)).second).toBeCloseTo(30, 1)
+  await setVisibility(page, 'visible')
+  expect(await time.textContent()).toBe('14:35:05 giờ Việt Nam')
+  expect(await time.getAttribute('datetime')).toBe('2026-10-22T14:35:05+07:00')
   expect((await handAngles(page)).second).toBeCloseTo(30, 1)
 
   await page.clock.runFor(1)
@@ -137,10 +169,16 @@ for (const { path, before, after, open, closed } of [
     const line = clock(page)
     await expect(line.locator('time')).toHaveText(before)
     await expect(line).toContainText(open)
-    // Đọc một lần ngay trước 22:00:00: chưa đổi giờ, chưa đóng cửa
+    // Đọc một lần ngay trước 22:00:00: chưa đổi giờ, chưa đóng cửa (trước visibilitychange: hẹn giờ bắn sớm; sau: làm
+    // tròn lên, xem test nhịp giây)
     await page.clock.runFor(999)
     expect(await line.locator('time').textContent()).toMatch(before)
     expect(await line.textContent()).toContain(open)
+    await setVisibility(page, 'visible')
+    const lineText = await line.textContent()
+    expect(lineText).toContain(open)
+    expect(lineText).not.toContain(closed)
+    expect(await line.locator('time').textContent()).toMatch(before)
     await page.clock.runFor(1)
     await expect(line.locator('time')).toHaveText(after)
     await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00:00+07:00')
@@ -176,14 +214,27 @@ test.describe('giảm chuyển động', () => {
     const line = clock(page)
     await expect(line.locator('time')).toHaveText('21:59 giờ Việt Nam')
     await expect(line).toContainText(OPEN_VI)
-    // Đọc một lần ngay trước 22:00: chưa đổi giờ, chưa đóng cửa
+    await page.evaluate(async () => {
+      await document.fonts.ready
+    })
+    const start = await dotAndStatusLeft(page)
+    // Đọc một lần ngay trước 22:00: chưa đổi giờ, chưa đóng cửa (trước visibilitychange: hẹn giờ bắn sớm; sau: làm
+    // tròn lên, xem test nhịp giây)
     await page.clock.runFor(29_999)
     expect(await line.locator('time').textContent()).toBe('21:59 giờ Việt Nam')
     expect(await line.textContent()).toContain(OPEN_VI)
+    await setVisibility(page, 'visible')
+    const lineText = await line.textContent()
+    expect(lineText).toContain(OPEN_VI)
+    expect(lineText).not.toContain(CLOSED_VI)
+    expect(await line.locator('time').textContent()).toBe('21:59 giờ Việt Nam')
     await page.clock.runFor(1)
     await expect(line.locator('time')).toHaveText('22:00 giờ Việt Nam')
     await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
     await expect(line).toContainText(CLOSED_VI)
+    // Ô giờ rộng cố định: "21:59" → "22:00" khác bề rộng nhưng dấu chấm đứng yên
+    const end = await dotAndStatusLeft(page)
+    expect(Math.abs(end.dot - start.dot)).toBeLessThan(0.01)
     expect(errors).toEqual([])
   })
 })
@@ -213,25 +264,118 @@ test('tab ẩn thì dừng hẹn giờ, hiện lại thì nhảy ngay tới gi�
   const time = clock(page).locator('time')
   await expect(time).toHaveText('14:35:05 giờ Việt Nam')
 
-  const setVisibility = (state: 'hidden' | 'visible') =>
-    page.evaluate((value) => {
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
-      Object.defineProperty(document, 'hidden', { configurable: true, get: () => value === 'hidden' })
-      document.dispatchEvent(new Event('visibilitychange'))
-    }, state)
-
-  await setVisibility('hidden')
+  await setVisibility(page, 'hidden')
   await page.clock.runFor(5000)
   // Đọc một lần, không chờ: toHaveText thử lại tới khi khớp nên không bắt được chữ đã đổi
   expect(await time.textContent()).toBe('14:35:05 giờ Việt Nam')
   expect((await handAngles(page)).second).toBeCloseTo(30, 1)
 
   // Không runFor: hiện lại là tính giờ ngay
-  await setVisibility('visible')
+  await setVisibility(page, 'visible')
   await expect(time).toHaveText('14:35:10 giờ Việt Nam')
   expect((await handAngles(page)).second).toBeCloseTo(60, 1)
   expect(errors).toEqual([])
 })
+
+for (const { path, installUtc, pauseUtc, firstText, lastText, lastStatus } of [
+  {
+    path: '/',
+    installUtc: '2026-10-21T18:56:00Z',
+    pauseUtc: '2026-10-21T18:59:55Z',
+    firstText: /^01:59:55 giờ Việt Nam$/,
+    lastText: /^02:00:05 giờ Việt Nam$/,
+    lastStatus: CLOSED_VI,
+  },
+  {
+    // 9:59:55 PM → 10:00:05 PM: giờ thêm một chữ số, trạng thái sang đóng cửa
+    path: '/en',
+    installUtc: '2026-10-22T14:56:00Z',
+    pauseUtc: '2026-10-22T14:59:55Z',
+    firstText: /^9:59:55\sPM in Vietnam$/,
+    lastText: /^10:00:05\sPM in Vietnam$/,
+    lastStatus: 'Store is closed',
+  },
+]) {
+  test(`dấu chấm và trạng thái đứng yên 10 giây liên tiếp: ${path}`, async ({ page }) => {
+    const errors = collectErrors(page)
+    await openPausedAt(page, path, installUtc, pauseUtc)
+    // Ô giờ đo theo font đã tải: trước đó (display: swap) đo theo font dự phòng
+    await page.evaluate(async () => {
+      await document.fonts.ready
+    })
+    const line = clock(page)
+    const time = line.locator('time')
+    await expect(time).toHaveText(firstText)
+    // Mẫu (chữ ở ::after) không vào textContent; mọi mẫu ẩn khỏi trình đọc màn hình; <p> vẫn 3 phần tử
+    expect(await time.textContent()).toMatch(firstText)
+    const samples = await line
+      .locator('[data-clock-sample]')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-hidden')))
+    expect(samples.length).toBeGreaterThan(0)
+    expect(samples.every((value) => value === 'true')).toBe(true)
+    expect(await line.evaluate((element) => element.children.length)).toBe(3)
+
+    const start = await dotAndStatusLeft(page)
+    for (let second = 1; second <= 10; second++) {
+      await page.clock.runFor(1000)
+      await expect(time).toHaveAttribute('datetime', vnDateTime(Date.parse(pauseUtc) + second * 1000))
+      const now = await dotAndStatusLeft(page)
+      expect(Math.abs(now.dot - start.dot), `giây ${second}`).toBeLessThan(0.01)
+      expect(Math.abs(now.status - start.status), `giây ${second}`).toBeLessThan(0.01)
+    }
+    await expect(time).toHaveText(lastText)
+    await expect(line).toContainText(lastStatus)
+    expect(errors).toEqual([])
+  })
+}
+
+for (const { path, locale, reduced } of [
+  { path: '/', locale: 'vi', reduced: false },
+  { path: '/', locale: 'vi', reduced: true },
+  { path: '/en', locale: 'en', reduced: false },
+  { path: '/en', locale: 'en', reduced: true },
+]) {
+  test(`ô giờ rộng ≥ mọi chuỗi giờ trong ngày: ${path}${reduced ? ', giảm chuyển động' : ''}`, async ({ page }) => {
+    const errors = collectErrors(page)
+    // Mốc ô giờ (WIDEST_TIME_UTC) đo bằng script ngoài repo; test này đo lại cả ngày bằng font của trang
+    await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' })
+    await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
+    await page.goto(path)
+    const time = clock(page).locator('time')
+    await expect(time).toHaveText(reduced ? /^\d{1,2}:\d{2}(\sPM)? / : /^\d{1,2}:\d{2}:\d{2}(\sPM)? /)
+    await waitForSettled(page)
+    const result = await time.evaluate(
+      async (element, { locale, withSeconds }) => {
+        await document.fonts.ready
+        const cell = element.querySelector('[data-clock-sample]')?.parentElement
+        const value = cell?.lastElementChild
+        if (!cell || !value) throw new Error('Thiếu ô giờ trong <time>')
+        const style = getComputedStyle(value)
+        const context = document.createElement('canvas').getContext('2d')
+        if (!context) throw new Error('Không có canvas 2d')
+        context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+        // Cùng định dạng với formatVnTime (src/features/store/hours.ts)
+        const format = new Intl.DateTimeFormat(locale, {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          timeStyle: withSeconds ? 'medium' : 'short',
+        })
+        const step = withSeconds ? 1000 : 60_000
+        const start = Date.UTC(2026, 0, 1) - 7 * 3600_000
+        let widest = { text: '', width: 0 }
+        for (let at = start; at < start + 86_400_000; at += step) {
+          const text = format.format(new Date(at))
+          const width = context.measureText(text).width
+          if (width > widest.width) widest = { text, width }
+        }
+        return { widest, cellWidth: cell.getBoundingClientRect().width }
+      },
+      { locale, withSeconds: !reduced },
+    )
+    // Canvas lệch DOM tối đa ~0.016px (đo 2026-10-23)
+    expect(result.widest.width, result.widest.text).toBeLessThanOrEqual(result.cellWidth + 0.05)
+    expect(errors).toEqual([])
+  })
+}
 
 test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng chỗ giữ', async ({ page, browser }) => {
   const viewport = { width: 320, height: 640 }
@@ -299,26 +443,35 @@ test('màn hình 320px: không tràn ngang, đồng hồ một dòng, cao bằng
   }
 })
 
-for (const path of ['/', '/en']) {
-  test(`màn hình 320px, chữ đồng hồ phóng to: xuống dòng sau dấu chấm, không tràn ngang: ${path}`, async ({ page }) => {
+for (const { path, utc, text } of [
+  { path: '/', utc: '2025-12-31T21:44:44Z', text: /^04:44:44 giờ Việt Nam$/ },
+  { path: '/en', utc: '2026-01-01T03:44:44Z', text: /^10:44:44\sAM in Vietnam$/ },
+  { path: '/en', utc: '2025-12-31T17:00:00Z', text: /^12:00:00\sAM in Vietnam$/ },
+]) {
+  test(`màn hình 320px, chữ đồng hồ phóng to, ${utc}: xuống dòng, không tràn ngang: ${path}`, async ({ page }) => {
     const errors = collectErrors(page)
     await page.setViewportSize({ width: 320, height: 640 })
-    await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
+    await page.clock.setFixedTime(new Date(utc))
     await page.goto(path)
     const line = clock(page)
-    await expect(line.locator('time')).toBeVisible()
+    await expect(line.locator('time')).toHaveText(text)
     await waitForSettled(page)
     // Chỉ phóng to đồng hồ, không phóng cả html: spacing Tailwind tính bằng rem, phóng cả trang thì phần khác có thể tràn.
-    // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu (vi ~545px, en ~430px) không
-    // vừa một dòng 288px, từng cụm vẫn vừa (đo 2026-10-23, Chromium, có giây: giờ + dấu chấm vi "22:00:00" ~278px;
-    // en "10:00:00 PM": riêng cụm giờ ~275px, cụm giờ + dấu chấm ~287px; trạng thái vi ~271px). Cỡ lớn hơn thì cụm
-    // giờ + dấu chấm en dài nhất không còn vừa 288px.
+    // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu không vừa một dòng 288px.
+    // Ô giờ luôn rộng bằng giờ rộng nhất trong ngày nên đo ở mốc nào cũng là bề rộng lớn nhất; vẫn đặt giờ rộng nhất
+    // (vi 04:44:44, en 10:44:44 AM) và thêm 12:00:00 AM (nửa đêm) cho en. Đo 2026-10-23, Chromium, Be Vietnam Pro: vi ô
+    // giờ + "giờ Việt Nam" + dấu chấm 283 / 288px → 2 dòng (ngắt sau dấu chấm); en 292 > 288px → thêm chỗ ngắt sau ô giờ,
+    // 3 dòng: giờ / "in Vietnam ·" / trạng thái. Trạng thái vi ~271px.
     await page.addStyleTag({ content: '[data-testid="store-clock"] { font-size: 1.5rem }' })
     const size = await line.evaluate((element) => {
       const time = element.querySelector('time')
+      const cell = time?.querySelector('[data-clock-sample]')?.parentElement
+      const words = time?.lastElementChild
       const dot = element.children[1]
       const status = element.lastElementChild
-      if (!time || !dot || !status) throw new Error('Thiếu <time>, dấu chấm hoặc trạng thái trong đồng hồ')
+      if (!time || !cell || !words || !dot || !status) {
+        throw new Error('Thiếu <time>, ô giờ, chữ sau giờ, dấu chấm hoặc trạng thái trong đồng hồ')
+      }
       return {
         scrollWidth: element.scrollWidth,
         clientWidth: element.clientWidth,
@@ -327,8 +480,11 @@ for (const path of ['/', '/en']) {
         dotRight: dot.getBoundingClientRect().right,
         viewportWidth: window.innerWidth,
         timeRects: time.getClientRects().length,
+        cellRects: cell.getClientRects().length,
+        wordsText: words.textContent,
+        wordsRects: words.getClientRects().length,
+        wordsTop: words.getBoundingClientRect().top,
         statusRects: status.getClientRects().length,
-        timeTop: time.getBoundingClientRect().top,
         dotText: dot.textContent,
         dotTop: dot.getBoundingClientRect().top,
         statusTop: status.getBoundingClientRect().top,
@@ -337,16 +493,20 @@ for (const path of ['/', '/en']) {
     expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth)
     expect(size.statusRight).toBeLessThanOrEqual(size.viewportWidth)
     expect(size.dotRight).toBeLessThanOrEqual(size.viewportWidth)
-    // Mỗi cụm nguyên một dòng, trạng thái xuống dòng dưới giờ
-    expect(size.timeRects).toBe(1)
+    // Ô giờ, chữ sau giờ và trạng thái mỗi thứ nguyên một dòng; trạng thái xuống dòng dưới dấu chấm
+    expect(size.cellRects).toBe(1)
+    expect(size.wordsText).toBe(path === '/' ? 'giờ Việt Nam' : 'in Vietnam')
+    expect(size.wordsRects).toBe(1)
     expect(size.statusRects).toBe(1)
-    expect(size.statusTop).toBeGreaterThan(size.timeTop + 1)
-    // Khoảng trắng trước dấu chấm là \u00a0 (dấu chấm dính với giờ khi dòng 1 gần đầy). Ở 1.5rem dòng 1 còn thừa chỗ nên
-    // trình duyệt không ngắt trước dấu chấm kể cả với khoảng trắng thường → câu so top không canh được \u00a0, phải so
-    // textContent (không dùng toHaveText: Playwright gộp khoảng trắng, coi \u00a0 như dấu cách).
+    expect(size.statusTop).toBeGreaterThan(size.dotTop + 1)
+    // vi vừa 283 / 288px: cả <time> một dòng (en không khẳng định: ngắt sau ô giờ)
+    if (path === '/') expect(size.timeRects).toBe(1)
+    // Khoảng trắng trước dấu chấm là \u00a0 (dấu chấm dính với chữ sau giờ khi dòng gần đầy). Ở 1.5rem dòng còn thừa
+    // chỗ nên trình duyệt không ngắt trước dấu chấm kể cả với khoảng trắng thường → câu so top không canh được \u00a0,
+    // phải so textContent (không dùng toHaveText: Playwright gộp khoảng trắng, coi \u00a0 như dấu cách).
     expect(size.dotText).toBe('\u00a0· ')
-    // Dấu chấm không bị tách hẳn sang dòng 2
-    expect(Math.abs(size.dotTop - size.timeTop)).toBeLessThan(1)
+    // Dấu chấm cùng dòng với "giờ Việt Nam" / "in Vietnam", không bị tách sang dòng riêng
+    expect(Math.abs(size.dotTop - size.wordsTop)).toBeLessThan(1)
     expect(errors).toEqual([])
   })
 }
