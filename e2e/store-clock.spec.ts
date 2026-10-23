@@ -146,6 +146,12 @@ test('vi: kim và dòng số theo giây, kim nhảy (không transition / animati
   await page.clock.runFor(1)
   await expect(time).toHaveText('14:35:06 giờ Việt Nam')
   await expect(time).toHaveAttribute('datetime', '2026-10-22T14:35:06+07:00')
+  // Transition / animation chỉ có trong getAnimations() khi đang chạy: câu đọc ở trên (kim chưa đổi) luôn ra 0, phải đọc
+  // ngay sau lần kim đổi
+  const runningAfterTick = await clockFace(page)
+    .locator('[data-hand]')
+    .evaluateAll((hands) => hands.map((hand) => hand.getAnimations().length))
+  expect(runningAfterTick).toEqual([0, 0, 0])
   angles = await handAngles(page)
   expect(angles.hour).toBeCloseTo(77.5, 1)
   expect(angles.minute).toBeCloseTo(210.6, 1)
@@ -232,9 +238,10 @@ test.describe('giảm chuyển động', () => {
     await expect(line.locator('time')).toHaveText('22:00 giờ Việt Nam')
     await expect(line.locator('time')).toHaveAttribute('datetime', '2026-10-22T22:00+07:00')
     await expect(line).toContainText(CLOSED_VI)
-    // Ô giờ rộng cố định: "21:59" → "22:00" khác bề rộng nhưng dấu chấm đứng yên
+    // Ô giờ rộng cố định: "21:59" → "22:00" khác bề rộng nhưng dấu chấm và trạng thái đứng yên
     const end = await dotAndStatusLeft(page)
     expect(Math.abs(end.dot - start.dot)).toBeLessThan(0.01)
+    expect(Math.abs(end.status - start.status)).toBeLessThan(0.01)
     expect(errors).toEqual([])
   })
 })
@@ -311,7 +318,7 @@ for (const { path, installUtc, pauseUtc, firstText, lastText, lastStatus } of [
     const samples = await line
       .locator('[data-clock-sample]')
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-hidden')))
-    expect(samples.length).toBeGreaterThan(0)
+    expect(samples.length).toBe(1)
     expect(samples.every((value) => value === 'true')).toBe(true)
     expect(await line.evaluate((element) => element.children.length)).toBe(3)
 
@@ -350,6 +357,8 @@ for (const { path, locale, reduced } of [
         const cell = element.querySelector('[data-clock-sample]')?.parentElement
         const value = cell?.lastElementChild
         if (!cell || !value) throw new Error('Thiếu ô giờ trong <time>')
+        const sample = cell.firstElementChild?.getAttribute('data-clock-sample')
+        if (!sample) throw new Error('Thiếu chữ mẫu data-clock-sample của ô giờ')
         const style = getComputedStyle(value)
         const context = document.createElement('canvas').getContext('2d')
         if (!context) throw new Error('Không có canvas 2d')
@@ -367,10 +376,17 @@ for (const { path, locale, reduced } of [
           const width = context.measureText(text).width
           if (width > widest.width) widest = { text, width }
         }
-        return { widest, cellWidth: cell.getBoundingClientRect().width }
+        return {
+          widest,
+          cellWidth: cell.getBoundingClientRect().width,
+          sampleWidth: context.measureText(sample).width,
+        }
       },
       { locale, withSeconds: !reduced },
     )
+    // Ô giờ rộng bằng chữ mẫu: canvas đo mẫu phải ra đúng bề rộng ô. Gán context.font sai cú pháp thì canvas lặng lẽ giữ
+    // 10px sans-serif, canvas chưa nhận webfont thì đo bằng font dự phòng: số nhỏ hơn thật làm câu dưới xanh giả.
+    expect(Math.abs(result.sampleWidth - result.cellWidth), 'canvas đo đúng font của ô').toBeLessThan(0.05)
     // Canvas lệch DOM tối đa ~0.016px (đo 2026-10-23)
     expect(result.widest.width, result.widest.text).toBeLessThanOrEqual(result.cellWidth + 0.05)
     expect(errors).toEqual([])
@@ -478,6 +494,7 @@ for (const { path, utc, text } of [
         // Đo mép phải của chữ, không của <p>: <p> là khối rộng cả dòng nên mép phải luôn trong màn hình dù chữ tràn
         statusRight: status.getBoundingClientRect().right,
         dotRight: dot.getBoundingClientRect().right,
+        cellRight: cell.getBoundingClientRect().right,
         viewportWidth: window.innerWidth,
         timeRects: time.getClientRects().length,
         cellRects: cell.getClientRects().length,
@@ -493,6 +510,8 @@ for (const { path, utc, text } of [
     expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth)
     expect(size.statusRight).toBeLessThanOrEqual(size.viewportWidth)
     expect(size.dotRight).toBeLessThanOrEqual(size.viewportWidth)
+    // Ô inline-grid không bao giờ tách dòng (cellRects luôn 1): phải đo mép phải để biết ô có tràn khỏi màn hình
+    expect(size.cellRight).toBeLessThanOrEqual(size.viewportWidth)
     // Ô giờ, chữ sau giờ và trạng thái mỗi thứ nguyên một dòng; trạng thái xuống dòng dưới dấu chấm
     expect(size.cellRects).toBe(1)
     expect(size.wordsText).toBe(path === '/' ? 'giờ Việt Nam' : 'in Vietnam')
