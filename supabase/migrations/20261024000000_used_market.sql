@@ -4,15 +4,17 @@
 --   2. Bảng used_listings (tin bán: 1 tin = 1 cuốn có sẵn trong catalog) + luồng trạng thái chặn ở trigger (mọi role).
 --      RLS: công khai chỉ tin approved / sold; người bán thấy tin của mình; admin thấy tất cả. Không ai ghi thẳng:
 --      mọi ghi qua RPC security definer. Quyền cột: anon không đọc seller_id, fee, reject_reason.
---   3. order_items.used_listing_id: đơn sách cũ là đơn thường (bảng orders) có một dòng trỏ tới tin.
+--   3. order_items.used_listing_id (on delete restrict): đơn sách cũ là đơn thường (bảng orders) có một dòng trỏ tới tin.
 --      handle_order_status_change: hủy đơn chỉ hoàn kho dòng sách mới (sách cũ không trừ kho khi đặt).
 --      Trigger AFTER mới trên orders: hủy → tin về approved; đã giao + đã thanh toán → khoản chờ trả người bán.
 --   4. seller_payouts: sổ tiền MÔ PHỎNG, chỉ số tiền + trạng thái. Không thu, không lưu tài khoản ngân hàng hay thông
 --      tin thanh toán của người bán; "paid" do admin đánh dấu, không có chuyển tiền thật.
 --   5. RPC: used_listing_quote, create_used_listing, update_used_listing, withdraw_used_listing, review_used_listing,
---      quote_used_order, place_used_order, my_used_sales, mark_payout_paid, can_upload_used_photo.
+--      quote_used_order, place_used_order, my_used_sales, mark_payout_paid; can_upload_used_photo,
+--      can_delete_used_photo (dùng trong policy ảnh).
 --   6. Bucket used-listing-photos KHÔNG công khai (webp ≤ 1MB), ảnh trong thư mục <seller_id>/<uuid>.webp; ảnh của tin
---      chưa duyệt chỉ người bán và admin đọc / ký link được.
+--      chưa duyệt chỉ người bán và admin đọc / ký link được. Ảnh gắn tin chờ duyệt / đã duyệt / đã bán không xóa được,
+--      tên đã gắn tin không tải lên lại được, duyệt tin kiểm lại ảnh còn đủ (không đổi được ảnh sau khi duyệt).
 -- Chỉ THÊM (bảng, hàm, bucket, policy) + đổi handle_order_status_change không đổi hành vi với đơn thường
 -- (đơn thường không có dòng used_listing_id) → an toàn với bản app đang chạy; chạy TRƯỚC khi code app phần 2.
 -- Không đổi place_order / quote_order / quote_items / checkout_vouchers / cancel_order / giỏ.
@@ -141,8 +143,11 @@ create trigger used_listings_status_change before update of status on public.use
 -- 3. Dòng đơn trỏ tới tin sách cũ (đơn sách cũ: một dòng, quantity 1, bìa catalog)
 alter table public.order_items add column if not exists used_listing_id bigint;
 
+-- restrict: tin nằm trong một đơn (kể cả đơn đã hủy) không xóa được → tài khoản người bán có tin trong đơn không xóa
+-- được (profiles xóa dây chuyền tin), như seller_payouts. set null từng biến dòng sách cũ thành dòng sách mới: hủy đơn
+-- sau đó hoàn kho nhầm cho sách catalog.
 alter table public.order_items add constraint order_items_used_listing_id_fkey
-  foreign key (used_listing_id) references public.used_listings(id) on delete set null;
+  foreign key (used_listing_id) references public.used_listings(id) on delete restrict;
 
 create index order_items_used_listing_idx on public.order_items (used_listing_id) where used_listing_id is not null;
 
@@ -267,8 +272,11 @@ create policy "seller_payouts_select_own_or_admin" on public.seller_payouts
   for select to authenticated
   using (seller_id = (select auth.uid()) or (select public.is_admin()));
 
+-- Quyền cột: không có order_id (người bán không lần ra đơn / người mua). Admin cũng là authenticated nên cũng không đọc
+-- được order_id qua bảng: trang khoản tiền admin (P-C) tìm đơn qua listing_id hoặc RPC có kiểm admin.
 revoke all on table public.seller_payouts from anon, authenticated;
-grant  select on table public.seller_payouts to authenticated;
+grant  select (id, listing_id, seller_id, title, price, fee, amount, status, paid_at, created_at)
+  on public.seller_payouts to authenticated;
 
 -- 6. RPC
 -- Kiểm tra dùng chung khi đăng / sửa / duyệt
@@ -296,7 +304,13 @@ begin
     from public.books b
    where b.id = p_book_id;
 
-  if not found or not v_active then
+  -- Sách không có = dữ liệu nhập sai (form chỉ cho chọn sách có thật); sách ngừng bán thì có tên để báo
+  if not found then
+    raise exception 'INVALID_INPUT'
+      using detail = json_build_object('field', 'book_id')::text;
+  end if;
+
+  if not v_active then
     raise exception 'BOOK_UNAVAILABLE'
       using detail = json_build_object('book_id', p_book_id, 'title', v_title)::text;
   end if;
@@ -308,8 +322,27 @@ begin
 end;
 $$;
 
--- Tình trạng, mô tả ≤ 500, ảnh: 1–3 đường dẫn khác nhau, đúng mẫu <seller_id>/<uuid>.webp, đã có trong bucket với
--- mimetype image/webp và ≤ 1MB (như file_size_limit của bucket). Chỉ ĐỌC storage.objects.
+-- Mọi ảnh của tin đã có trong bucket với mimetype image/webp và ≤ 1MB (như file_size_limit của bucket). Chỉ ĐỌC
+-- storage.objects. Dùng khi đăng / sửa và khi admin duyệt (ảnh có thể đã mất ngoài policy: service role, xóa tay).
+-- p_photos đã được kiểm không trùng (used_check_listing_input) hoặc lấy từ tin đã kiểm.
+create or replace function private.used_check_photos_stored(p_photos text[])
+returns void language plpgsql stable set search_path = '' as $$
+begin
+  if (
+    select count(*) from storage.objects o
+     where o.bucket_id = 'used-listing-photos'
+       and o.name = any(p_photos)
+       and o.metadata ->> 'mimetype' = 'image/webp'
+       and (o.metadata ->> 'size')::bigint <= 1048576
+  ) <> cardinality(p_photos) then
+    raise exception 'LISTING_PHOTOS_INVALID'
+      using detail = json_build_object('max', 3)::text;
+  end if;
+end;
+$$;
+
+-- Tình trạng, mô tả ≤ 500, ảnh: 1–3 đường dẫn khác nhau, đúng mẫu <seller_id>/<uuid>.webp, đã có trong bucket
+-- (used_check_photos_stored).
 create or replace function private.used_check_listing_input(
   p_user        uuid,
   p_condition   public.used_condition,
@@ -337,17 +370,12 @@ begin
        select 1 from unnest(p_photos) as x(path)
         where x.path !~ ('^' || p_user::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$')
      )
-     or (
-       select count(*) from storage.objects o
-        where o.bucket_id = 'used-listing-photos'
-          and o.name = any(p_photos)
-          and o.metadata ->> 'mimetype' = 'image/webp'
-          and (o.metadata ->> 'size')::bigint <= 1048576
-     ) <> cardinality(p_photos)
   then
     raise exception 'LISTING_PHOTOS_INVALID'
       using detail = json_build_object('max', 3)::text;
   end if;
+
+  perform private.used_check_photos_stored(p_photos);
 end;
 $$;
 
@@ -507,6 +535,9 @@ begin
     end if;
 
     perform private.used_check_book_price(v_listing.book_id, v_listing.price);
+    -- Chốt cuối: không công khai tin thiếu ảnh (người bán không xóa được ảnh của tin chờ duyệt, nhưng service role /
+    -- xóa tay trong Storage thì được)
+    perform private.used_check_photos_stored(v_listing.photos);
 
     update public.used_listings
        set status = 'approved', approved_at = now(), reject_reason = null
@@ -545,6 +576,8 @@ $$;
 
 -- Mua một tin (đơn riêng, không qua giỏ): idempotency như place_order (cùng key → trả đúng đơn đã tạo), khóa tin,
 -- client không gửi giá (p_expected_total chỉ để so). Không đụng books.stock / sold_count.
+-- Key dùng chung không gian với place_order (orders_user_idempotency_key: user_id + key): key của place_order gửi vào
+-- đây trả đơn sách mới đó. Không trùng trong thực tế vì key sinh mới mỗi lần mở trang thanh toán.
 create or replace function public.place_used_order(
   p_listing_id      bigint,
   p_address_id      bigint,
@@ -671,7 +704,8 @@ language sql stable security definer set search_path = '' as $$
    order by o.created_at desc, l.id;
 $$;
 
--- Admin đánh dấu đã trả người bán (mô phỏng, không chuyển tiền). Chỉ từ pending: 0 dòng → PAYOUT_STATUS_CHANGED.
+-- Admin đánh dấu đã trả người bán (mô phỏng, không chuyển tiền). Chỉ từ pending và khi đơn của khoản còn đã giao + đã
+-- thanh toán (VD vừa ghi hoàn tiền ở tab khác): 0 dòng → PAYOUT_STATUS_CHANGED.
 create or replace function public.mark_payout_paid(p_id bigint)
 returns void
 language plpgsql security definer set search_path = '' as $$
@@ -680,9 +714,13 @@ begin
     raise exception 'FORBIDDEN';
   end if;
 
-  update public.seller_payouts
+  update public.seller_payouts p
      set status = 'paid', paid_at = now()
-   where id = p_id and status = 'pending';
+   where p.id = p_id and p.status = 'pending'
+     and exists (
+       select 1 from public.orders o
+        where o.id = p.order_id and o.status = 'delivered' and o.payment_status = 'paid'
+     );
 
   if not found then
     raise exception 'PAYOUT_STATUS_CHANGED';
@@ -690,15 +728,39 @@ begin
 end;
 $$;
 
--- Policy upload ảnh: người gọi còn dưới used_photo_limit() ảnh trong thư mục của mình
-create or replace function public.can_upload_used_photo()
+-- Policy upload ảnh:
+-- (1) người gọi còn dưới used_photo_limit() ảnh trong thư mục của mình. Trần chống lạm dụng kho ảnh (quyết định 7),
+--     KHÔNG đếm ảnh của tin đã bán: đếm cả thì bán 10 tin (3 ảnh / tin) là khóa đăng tin vĩnh viễn. Đếm không khóa:
+--     tải song song có thể vượt trần một chút (chấp nhận).
+-- (2) tên chưa từng gắn vào tin nào (mọi trạng thái): xóa ảnh của tin đã rút / bị từ chối rồi tải lại đúng tên đó là
+--     đổi được ảnh của tin mà không qua duyệt.
+create or replace function public.can_upload_used_photo(p_name text)
 returns boolean
 language sql stable security definer set search_path = '' as $$
-  select auth.uid() is not null and (
-    select count(*) from storage.objects o
-     where o.bucket_id = 'used-listing-photos'
-       and (storage.foldername(o.name))[1] = auth.uid()::text
-  ) < private.used_photo_limit();
+  select auth.uid() is not null
+     and (
+       select count(*) from storage.objects o
+        where o.bucket_id = 'used-listing-photos'
+          and (storage.foldername(o.name))[1] = auth.uid()::text
+          and not exists (
+            select 1 from public.used_listings l
+             where l.status = 'sold' and l.photos @> array[o.name]
+          )
+     ) < private.used_photo_limit()
+     and not exists (
+       select 1 from public.used_listings l where l.photos @> array[p_name]
+     );
+$$;
+
+-- Policy xóa ảnh: ảnh gắn tin chờ duyệt / đã duyệt / đã bán không xóa được (xóa rồi tải lại cùng tên = đổi ảnh của tin
+-- đã duyệt). Ảnh chưa gắn tin, của tin bị từ chối / đã rút: xóa được (dọn ảnh tải lên bỏ dở).
+create or replace function public.can_delete_used_photo(p_name text)
+returns boolean
+language sql stable security definer set search_path = '' as $$
+  select not exists (
+    select 1 from public.used_listings l
+     where l.status in ('pending', 'approved', 'sold') and l.photos @> array[p_name]
+  );
 $$;
 
 revoke execute on function public.used_listing_quote(int) from public, anon;
@@ -728,8 +790,11 @@ grant  execute on function public.my_used_sales() to authenticated;
 revoke execute on function public.mark_payout_paid(bigint) from public, anon;
 grant  execute on function public.mark_payout_paid(bigint) to authenticated;
 
-revoke execute on function public.can_upload_used_photo() from public, anon;
-grant  execute on function public.can_upload_used_photo() to authenticated;
+revoke execute on function public.can_upload_used_photo(text) from public, anon;
+grant  execute on function public.can_upload_used_photo(text) to authenticated;
+
+revoke execute on function public.can_delete_used_photo(text) from public, anon;
+grant  execute on function public.can_delete_used_photo(text) to authenticated;
 
 -- 7. Storage: ảnh tin sách cũ, bucket KHÔNG công khai (app hiện bằng link ký có hạn). Server nén về WebP trước khi
 -- tải lên; bucket từ chối mọi thứ khác, kể cả khi gọi thẳng Storage API. Không có policy update (tên mới mỗi lần).
@@ -738,7 +803,8 @@ values ('used-listing-photos', 'used-listing-photos', false, array['image/webp']
 on conflict (id) do nothing;
 
 -- Đọc / ký link: chủ thư mục, admin, hoặc ảnh thuộc tin đang công khai (approved / sold). Storage API chỉ xóa object
--- mà phiên đọc được → chủ thư mục phải đọc được ảnh của mình.
+-- mà phiên đọc được → chủ thư mục phải đọc được ảnh của mình. Xóa bị policy chặn: Storage không báo lỗi, chỉ trả mảng
+-- rỗng.
 create policy "used_listing_photos_select" on storage.objects
   for select to anon, authenticated
   using (
@@ -759,11 +825,15 @@ create policy "used_listing_photos_insert_own" on storage.objects
     bucket_id = 'used-listing-photos'
     and (storage.foldername(name))[1] = (select auth.uid())::text
     and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.webp$'
-    and (select public.can_upload_used_photo())
+    and public.can_upload_used_photo(name)
   );
 
 create policy "used_listing_photos_delete_own" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'used-listing-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  using (
+    bucket_id = 'used-listing-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and public.can_delete_used_photo(name)
+  );
 
 commit;

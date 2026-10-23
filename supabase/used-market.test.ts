@@ -92,7 +92,8 @@ describe('RPC chợ sách cũ', () => {
     'place_used_order(bigint, bigint, public.payment_method, text, uuid, int)',
     'my_used_sales()',
     'mark_payout_paid(bigint)',
-    'can_upload_used_photo()',
+    'can_upload_used_photo(text)',
+    'can_delete_used_photo(text)',
   ]
 
   it.each(RPCS)('%s: security definer, search_path rỗng, chỉ authenticated gọi được', (signature) => {
@@ -129,5 +130,82 @@ describe('RPC chợ sách cũ', () => {
     expect(policies).toHaveLength(3)
     for (const policy of policies) expect(policy).toContain("bucket_id = 'used-listing-photos'")
     expect(schema).not.toMatch(/create policy "used_listing_photos_[a-z_]+" on storage\.objects for update/)
+  })
+})
+
+/** Câu `create policy "<name>" on storage.objects …` (đã chuẩn hóa) */
+function storagePolicy(name: string) {
+  const match = new RegExp(`create policy "${name}" on storage\\.objects [^;]*`).exec(schema)
+  if (!match) throw new Error(`schema.sql không có policy ${name}`)
+  return match[0]
+}
+
+describe('ảnh tin sách cũ không đổi được sau khi duyệt', () => {
+  it('policy xóa ảnh kiểm can_delete_used_photo(name); policy tải lên kiểm can_upload_used_photo(name)', () => {
+    expect(storagePolicy('used_listing_photos_delete_own')).toContain('and public.can_delete_used_photo(name)')
+    expect(storagePolicy('used_listing_photos_insert_own')).toContain('and public.can_upload_used_photo(name)')
+  })
+
+  it('ảnh gắn tin chờ duyệt / đã duyệt / đã bán không xóa được', () => {
+    expect(functionStatement('public.can_delete_used_photo')).toContain(
+      "where l.status in ('pending', 'approved', 'sold') and l.photos @> array[p_name]",
+    )
+  })
+
+  it('tên ảnh đã gắn tin (mọi trạng thái) không tải lên lại được', () => {
+    expect(functionStatement('public.can_upload_used_photo')).toMatch(
+      /and not exists \( select 1 from public\.used_listings l where l\.photos @> array\[p_name\] \); \$\$$/,
+    )
+  })
+
+  it('duyệt tin kiểm lại ảnh còn đủ, dùng chung hàm kiểm storage.objects với lúc đăng / sửa', () => {
+    const approve = functionStatement('public.review_used_listing')
+    const approveBranch = approve.slice(approve.indexOf('if p_approve then'), approve.indexOf("set status = 'approved'"))
+    expect(approveBranch).toContain('perform private.used_check_photos_stored(v_listing.photos);')
+    expect(functionStatement('private.used_check_listing_input')).toContain(
+      'perform private.used_check_photos_stored(p_photos);',
+    )
+    // Chỉ một chỗ đếm ảnh trong bucket để kiểm tin (không chép đôi)
+    expect(schema.match(/and o\.name = any\(p_photos\)/g)).toHaveLength(1)
+    expect(functionStatement('private.used_check_photos_stored')).toContain('and o.name = any(p_photos)')
+  })
+})
+
+describe('giới hạn ảnh, khóa ngoại, sổ tiền', () => {
+  it('trần 30 ảnh không đếm ảnh của tin đã bán', () => {
+    const count = functionStatement('public.can_upload_used_photo')
+    expect(count).toContain(
+      "and not exists ( select 1 from public.used_listings l where l.status = 'sold' and l.photos @> array[o.name] ) ) < private.used_photo_limit()",
+    )
+  })
+
+  it('order_items.used_listing_id on delete restrict (hủy đơn không hoàn kho nhầm cho sách catalog)', () => {
+    expect(schema).toContain(
+      'alter table public.order_items add constraint order_items_used_listing_id_fkey foreign key (used_listing_id) references public.used_listings(id) on delete restrict;',
+    )
+  })
+
+  it('authenticated đọc seller_payouts theo cột, không có order_id', () => {
+    const grants = [...schema.matchAll(/grant select ([^;]*?)on (?:table )?public\.seller_payouts to ([^;]*);/g)]
+    expect(grants).toHaveLength(1)
+    const [, columns = '', roles = ''] = grants[0] ?? []
+    expect(roles.trim()).toBe('authenticated')
+    expect(columns).toMatch(/^\(.*\) $/)
+    expect(columns).not.toMatch(/\border_id\b/)
+    expect(columns).toContain('seller_id')
+  })
+
+  it('đánh dấu đã trả chỉ khi đơn còn đã giao + đã thanh toán', () => {
+    expect(functionStatement('public.mark_payout_paid')).toContain(
+      "where o.id = p.order_id and o.status = 'delivered' and o.payment_status = 'paid'",
+    )
+  })
+
+  it('đăng tin với sách không có → INVALID_INPUT (field book_id), sách ngừng bán → BOOK_UNAVAILABLE', () => {
+    const check = functionStatement('private.used_check_book_price')
+    expect(check).toContain(
+      "if not found then raise exception 'invalid_input' using detail = json_build_object('field', 'book_id')::text; end if;",
+    )
+    expect(check).toContain("if not v_active then raise exception 'book_unavailable'")
   })
 })
