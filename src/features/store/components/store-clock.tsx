@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from 'react'
 import type { Locale } from 'next-intl'
-import { fillTemplate } from '@/lib/template'
+import { placeholder } from '@/lib/template'
 import { clockAngles, formatVnTime, isStoreOpen, msUntilNext, vnDateTimeAttr } from '../hours'
 
 const SECOND_MS = 1000
@@ -53,10 +53,39 @@ function subscribeReducedMotion(onChange: () => void) {
 const getReducedMotion = () => matchMedia(REDUCED_MOTION).matches
 const getServerReducedMotion = () => false
 
-// Một dòng ở cỡ chữ mặc định (e2e 320px canh). Mỗi cụm không ngắt, chỉ xuống dòng sau dấu " · " (khoảng trắng trước dấu
-// chấm là \u00a0: dấu chấm dính với giờ, dòng 2 không bắt đầu bằng "·"): chữ phóng to thì xuống dòng thay vì làm cả trang
-// cuộn ngang (chấp nhận giật một dòng trong trường hợp đó). min-h giữ chỗ rỗng cao đúng 1 dòng.
-const lineClass = 'mt-3 min-h-[1lh] text-xs text-muted-foreground tabular-nums sm:text-sm'
+// Một dòng ở cỡ chữ mặc định (e2e 320px canh). Chỉ ngắt được ở hai chỗ: sau dấu " · " (khoảng trắng trước dấu chấm là
+// \u00a0: dấu chấm dính với "giờ Việt Nam", dòng 2 không bắt đầu bằng "·"), và nếu cụm giờ + dấu chấm vẫn không vừa
+// thì thêm dấu cách ngay sau ô giờ (đo 2026-10-23, 1.5rem ở màn 320px: en "10:44:44 AM in Vietnam ·" 292 > 288px, vi
+// 283px vừa). Chữ phóng to thì xuống dòng thay vì làm cả trang cuộn ngang (chấp nhận giật một dòng trong trường hợp đó).
+// min-h giữ chỗ rỗng cao đúng 1 dòng.
+// Không dùng tabular-nums: Be Vietnam Pro tự host không có tnum (GSUB chỉ ccmp, dnom, frac, liga, locl, numr; đo
+// 2026-10-23) nên class không đổi gì. Dấu chấm và trạng thái giữ đứng yên bằng ô giờ rộng cố định (TimeCell).
+const lineClass = 'mt-3 min-h-[1lh] text-xs text-muted-foreground sm:text-sm'
+
+// Mốc (UTC, ms) có chuỗi giờ rộng nhất trong ngày: vi có giây 04:44:44, không giây 04:44; en 10:44:44 AM / 10:44 AM
+// (AM rộng hơn PM). Đo bằng script ngoài repo 2026-10-23, Be Vietnam Pro 400 (3 subset), cùng chuỗi ở 12 / 14 / 24px.
+// Đổi font hoặc định dạng giờ thì đo lại; e2e "ô giờ rộng ≥ mọi chuỗi giờ trong ngày" canh.
+const WIDEST_TIME_UTC: Record<Locale, { seconds: number; minutes: number }> = {
+  vi: { seconds: 1767217484000, minutes: 1767217440000 },
+  en: { seconds: 1767239084000, minutes: 1767239040000 },
+}
+
+// Ô giờ rộng bằng giờ rộng nhất: mẫu ẩn và giờ thật xếp chồng trong một ô grid, chữ số trong ô được nhích nhưng mọi thứ
+// sau ô đứng yên. Mẫu là phần tử rỗng, chữ ở ::after: không vào cây trợ năng, không bị chép, textContent của <time> chỉ
+// còn giờ thật. Trước khi font tải xong (display: swap) ô đo theo font dự phòng nên có thể nhích một lần khi font tải.
+function TimeCell({ now, locale, withSeconds }: { now: Date; locale: Locale; withSeconds: boolean }) {
+  const widest = WIDEST_TIME_UTC[locale][withSeconds ? 'seconds' : 'minutes']
+  return (
+    <span className="inline-grid whitespace-nowrap">
+      <span
+        aria-hidden="true"
+        data-clock-sample={formatVnTime(new Date(widest), locale, withSeconds)}
+        className="invisible col-start-1 row-start-1 after:content-[attr(data-clock-sample)]"
+      />
+      <span className="col-start-1 row-start-1">{formatVnTime(now, locale, withSeconds)}</span>
+    </span>
+  )
+}
 
 // Kim xoay bằng thuộc tính transform của SVG, không transition / animation: kim nhảy đúng lúc sang giây / phút mới
 // (không trượt, không quay ngược một vòng lúc 59 → 0).
@@ -133,6 +162,11 @@ export function StoreClock({
     getServerTick,
   )
   const now = tick === null ? null : new Date(tick)
+  // Tách câu quanh chỗ trống thay vì fillTemplate: fillTemplate chỉ trả chuỗi, không chèn được ô giờ. Dấu cách đầu phần
+  // sau là chỗ ngắt duy nhất trong <time>; phần chữ còn lại không ngắt.
+  const [before, after = ''] = timeTemplate.split(placeholder('time'))
+  const afterWords = after.trimStart()
+  const afterSpace = after.slice(0, after.length - afterWords.length)
 
   return (
     <div className={className}>
@@ -146,8 +180,11 @@ export function StoreClock({
       </div>
       {now ? (
         <p className={lineClass} data-testid="store-clock">
-          <time dateTime={vnDateTimeAttr(now, !reduced)} className="whitespace-nowrap">
-            {fillTemplate(timeTemplate, { time: formatVnTime(now, locale, !reduced) })}
+          <time dateTime={vnDateTimeAttr(now, !reduced)}>
+            {before}
+            <TimeCell now={now} locale={locale} withSeconds={!reduced} />
+            {afterSpace}
+            <span className="whitespace-nowrap">{afterWords}</span>
           </time>
           <span aria-hidden="true">{'\u00a0· '}</span>
           <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>
