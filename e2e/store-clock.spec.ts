@@ -318,7 +318,8 @@ for (const { path, installUtc, pauseUtc, firstText, lastText, lastStatus } of [
     const samples = await line
       .locator('[data-clock-sample]')
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-hidden')))
-    expect(samples.length).toBe(1)
+    // Mỗi chữ số một mẫu (clockCellSamples): vi 10, en 20 (AM + PM)
+    expect(samples.length).toBe(path === '/' ? 10 : 20)
     expect(samples.every((value) => value === 'true')).toBe(true)
     expect(await line.evaluate((element) => element.children.length)).toBe(3)
 
@@ -344,7 +345,7 @@ for (const { path, locale, reduced } of [
 ]) {
   test(`ô giờ rộng ≥ mọi chuỗi giờ trong ngày: ${path}${reduced ? ', giảm chuyển động' : ''}`, async ({ page }) => {
     const errors = collectErrors(page)
-    // Mốc ô giờ (WIDEST_TIME_UTC) đo bằng script ngoài repo; test này đo lại cả ngày bằng font của trang
+    // Ô giờ rộng bằng mẫu rộng nhất (mỗi chữ số một mẫu, tắt kerning); test này đo lại cả ngày bằng font của trang
     await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' })
     await page.clock.setFixedTime(new Date('2026-10-22T07:35:00Z'))
     await page.goto(path)
@@ -357,12 +358,17 @@ for (const { path, locale, reduced } of [
         const cell = element.querySelector('[data-clock-sample]')?.parentElement
         const value = cell?.lastElementChild
         if (!cell || !value) throw new Error('Thiếu ô giờ trong <time>')
-        const sample = cell.firstElementChild?.getAttribute('data-clock-sample')
-        if (!sample) throw new Error('Thiếu chữ mẫu data-clock-sample của ô giờ')
+        const samples = [...cell.querySelectorAll('[data-clock-sample]')].map((sample) => {
+          const text = sample.getAttribute('data-clock-sample')
+          if (!text) throw new Error('Thiếu chữ mẫu data-clock-sample của ô giờ')
+          return text
+        })
         const style = getComputedStyle(value)
         const context = document.createElement('canvas').getContext('2d')
         if (!context) throw new Error('Không có canvas 2d')
         context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+        // Ô giờ tắt kerning (cả mẫu lẫn giờ thật): canvas đo cùng cách
+        context.fontKerning = 'none'
         // Cùng định dạng với formatVnTime (src/features/store/hours.ts)
         const format = new Intl.DateTimeFormat(locale, {
           timeZone: 'Asia/Ho_Chi_Minh',
@@ -379,14 +385,20 @@ for (const { path, locale, reduced } of [
         return {
           widest,
           cellWidth: cell.getBoundingClientRect().width,
-          sampleWidth: context.measureText(sample).width,
+          sampleWidth: Math.max(...samples.map((sample) => context.measureText(sample).width)),
+          sampleDigits: [...new Set(samples.join('').match(/\d/g))].sort().join(''),
+          cellKerning: getComputedStyle(cell).fontKerning,
         }
       },
       { locale, withSeconds: !reduced },
     )
-    // Ô giờ rộng bằng chữ mẫu: canvas đo mẫu phải ra đúng bề rộng ô. Gán context.font sai cú pháp thì canvas lặng lẽ giữ
-    // 10px sans-serif, canvas chưa nhận webfont thì đo bằng font dự phòng: số nhỏ hơn thật làm câu dưới xanh giả.
-    expect(Math.abs(result.sampleWidth - result.cellWidth), 'canvas đo đúng font của ô').toBeLessThan(0.05)
+    // Ô giờ rộng bằng mẫu rộng nhất: canvas đo từng mẫu, số lớn nhất phải ra đúng bề rộng ô. Gán context.font sai cú pháp
+    // thì canvas lặng lẽ giữ 10px sans-serif, canvas chưa nhận webfont thì đo bằng font dự phòng: số nhỏ hơn thật làm câu
+    // dưới xanh giả.
+    expect(Math.abs(result.sampleWidth - result.cellWidth), 'mẫu rộng nhất (canvas) khớp bề rộng ô').toBeLessThan(0.05)
+    // Mẫu đủ 10 chữ số; ô tắt kerning (bỏ class [font-kerning:none] thì giờ thật có thể rộng hơn mẫu)
+    expect(result.sampleDigits).toBe('0123456789')
+    expect(result.cellKerning).toBe('none')
     // Canvas lệch DOM tối đa ~0.016px (đo 2026-10-23)
     expect(result.widest.width, result.widest.text).toBeLessThanOrEqual(result.cellWidth + 0.05)
     expect(errors).toEqual([])
@@ -474,8 +486,8 @@ for (const { path, utc, text } of [
     await waitForSettled(page)
     // Chỉ phóng to đồng hồ, không phóng cả html: spacing Tailwind tính bằng rem, phóng cả trang thì phần khác có thể tràn.
     // Style tiêm nằm ngoài @layer nên thắng class Tailwind. 1.5rem = 200% text-xs: cả câu không vừa một dòng 288px.
-    // Ô giờ luôn rộng bằng giờ rộng nhất trong ngày nên đo ở mốc nào cũng là bề rộng lớn nhất; vẫn đặt giờ rộng nhất
-    // (vi 04:44:44, en 10:44:44 AM) và thêm 12:00:00 AM (nửa đêm) cho en. Đo 2026-10-23, Chromium, Be Vietnam Pro: vi ô
+    // Ô giờ luôn rộng bằng mẫu rộng nhất nên đo ở mốc nào cũng là bề rộng lớn nhất; vẫn đặt các giờ rộng (vi 04:44:44,
+    // en 10:44:44 AM) và thêm 12:00:00 AM (nửa đêm) cho en. Đo 2026-10-23, Chromium, Be Vietnam Pro: vi ô
     // giờ + "giờ Việt Nam" + dấu chấm 283 / 288px → 2 dòng (ngắt sau dấu chấm); en 292 > 288px → thêm chỗ ngắt sau ô giờ,
     // 3 dòng: giờ / "in Vietnam ·" / trạng thái. Trạng thái vi ~271px.
     await page.addStyleTag({ content: '[data-testid="store-clock"] { font-size: 1.5rem }' })
