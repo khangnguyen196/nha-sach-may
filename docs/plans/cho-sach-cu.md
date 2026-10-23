@@ -72,12 +72,13 @@ Phần sau cần sửa SQL → migration mới, lại dừng chờ chủ dự á
   `my_used_sales` (không trả mã đơn / thông tin người mua), `mark_payout_paid` (admin; chỉ khi đơn còn delivered + paid),
   `can_upload_used_photo(name)`, `can_delete_used_photo(name)` (dùng trong policy ảnh).
 - Bucket `used-listing-photos`: không công khai, `image/webp` ≤ 1MB, đường dẫn `<seller_id>/<uuid>.webp`. Policy: đọc =
-  chủ thư mục / admin / ảnh của tin approved / sold; ghi = chủ thư mục, đúng mẫu tên, còn dưới 30 ảnh; xóa = chủ thư
-  mục + ảnh không gắn tin chờ duyệt / đã duyệt / đã bán; không có update. RPC đăng / sửa / duyệt kiểm ảnh có trong
-  `storage.objects` (mimetype webp, ≤ 1MB, hàm dùng chung `private.used_check_photos_stored`), chỉ đọc.
-- Mã lỗi mới: `LISTING_PENDING_LIMIT`, `LISTING_PRICE_INVALID`, `LISTING_PHOTOS_INVALID`, `LISTING_NOT_EDITABLE`,
-  `LISTING_STATUS_CHANGED`, `LISTING_UNAVAILABLE`, `LISTING_OWN`, `LISTING_CHANGED`, `LISTING_INVALID_TRANSITION`,
-  `PAYOUT_STATUS_CHANGED`.
+  chủ thư mục / admin / ảnh của tin approved / sold; ghi = chủ thư mục, đúng mẫu tên, ≤ 30 ảnh / người (không đếm ảnh
+  của tin đã bán), tên chưa từng gắn tin (`private.used_photo_names`); xóa = chủ thư mục + ảnh không gắn tin chờ duyệt /
+  đã duyệt / đã bán; không có update. RPC đăng / sửa / duyệt kiểm ảnh có trong `storage.objects` (mimetype webp,
+  ≤ 1MB, hàm dùng chung `private.used_photos_stored`), chỉ đọc.
+- Mã lỗi mới: `LISTING_PENDING_LIMIT`, `LISTING_PRICE_INVALID`, `LISTING_PHOTOS_INVALID`, `LISTING_PHOTOS_MISSING`,
+  `LISTING_NOT_EDITABLE`, `LISTING_STATUS_CHANGED`, `LISTING_UNAVAILABLE`, `LISTING_OWN`, `LISTING_CHANGED`,
+  `LISTING_INVALID_TRANSITION`, `PAYOUT_STATUS_CHANGED`.
 
 Rủi ro chấp nhận (câu 7): gọi thẳng Storage API vẫn tải được ảnh WebP chưa qua bước nén của server (bucket chỉ kiểm
 Content-Type + cỡ); admin xem ảnh trước khi duyệt là chốt cuối.
@@ -104,6 +105,20 @@ Content-Type + cỡ); admin xem ảnh trước khi duyệt là chốt cuối.
   chốt bảo mật, RLS mới là chốt); đếm ảnh không khóa nên tải song song có thể vượt 30 một chút; role `postgres`
   (chủ các hàm security definer) có BYPASSRLS (đã kiểm qua MCP chỉ đọc 23/10) nên hàm dùng trong policy đọc được
   `used_listings` / `storage.objects` không đệ quy RLS.
+
+### Sửa sau review vòng 2 (24/10)
+
+- Lịch sử tên ảnh: `private.used_photo_names` (RLS bật, không policy) + trigger AFTER insert / update of `photos` trên
+  `used_listings` lưu mọi tên ảnh đã từng gắn tin; `can_upload_used_photo` chặn tên trong bảng này. Trước đó chỉ xét
+  tên đang gắn tin: tin đã duyệt đổi ảnh X → Y, xóa X, tải lại tên X với ảnh khác → link ký cũ của X (hạn 7 ngày) hiện
+  ảnh chưa duyệt. Bảng chỉ thêm, không xóa (kể cả khi xóa tin).
+- `can_upload_used_photo` / `can_delete_used_photo` kiểm thư mục đầu của tên = `auth.uid()` (gọi thẳng như RPC không
+  dò được tên ảnh của người khác). `mark_payout_paid` khóa dòng đơn (`for share`) trước khi kiểm và ghi.
+- Admin duyệt tin mà ảnh không còn đủ → `LISTING_PHOTOS_MISSING` (người bán không làm gì sai: admin từ chối tin kèm lý
+  do); người bán đăng / sửa thiếu ảnh vẫn `LISTING_PHOTOS_INVALID`. Hàm dùng chung đổi thành
+  `private.used_photos_stored(photos) returns boolean`.
+- Gợi ý đã chấp nhận (không sửa): ảnh của tin `sold` không tính vào trần 30; đơn bị hủy → tin về `approved` → ảnh tính
+  lại vào trần, người bán có thể vượt 30 ảnh (hiếm; chỉ chặn tải thêm tới khi xuống dưới trần).
 
 ## App (P-B, P-C)
 
@@ -139,6 +154,7 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 - Ghi chú demo song ngữ ("Tính năng demo, không có giao dịch thật") ở trang danh sách chợ sách cũ + form đăng tin.
 - Link "Chợ sách cũ" ở footer + trang tài khoản.
 - e2e: đăng tin có ảnh, tin chưa duyệt không hiện công khai, sửa → về chờ duyệt, rút, admin duyệt / từ chối.
+- Admin duyệt tin: hiện `LISTING_PHOTOS_MISSING` (ảnh của tin không còn đủ) kèm gợi ý từ chối tin có lý do.
 - Sửa tin: ảnh cũ không còn dùng thì xóa sau khi lưu (DB chặn xóa ảnh đang gắn tin `pending` / `approved` / `sold`,
   nên chỉ xóa được khi tin đã bỏ ảnh đó hoặc tin bị từ chối / đã rút). Có cách dọn ảnh tải lên bỏ dở (ảnh không gắn
   tin nào, VD bỏ form giữa chừng) để người bán không chạm trần 30 ảnh: xóa ngay khi bỏ ảnh khỏi form, và / hoặc dọn
@@ -150,7 +166,9 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 - Đổi trạng thái đơn sách cũ (đặt, hủy, admin đổi) thì `updateTag` các tag của tin.
 - "Đã trả người bán" chỉ là admin đánh dấu (`mark_payout_paid`), không chuyển tiền, không lưu tài khoản ngân hàng.
 - Trang khoản tiền admin: `seller_payouts` không cho authenticated (kể cả admin) đọc `order_id` → tìm đơn qua
-  `listing_id` (`order_items.used_listing_id`) hoặc RPC có kiểm `is_admin()`.
+  `listing_id` (`order_items.used_listing_id`) hoặc RPC có kiểm `is_admin()`. Tìm qua `listing_id` phải lọc đơn
+  `status <> 'cancelled'`: một tin có thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin:
+  → `sold` chỉ khi có đơn chưa hủy, `sold` → `approved` chỉ khi không còn đơn nào như vậy).
 - e2e: mua COD, hủy → tin về công khai, người bán không mua được, giao + trả tiền → khoản chờ trả, admin đánh dấu đã trả.
 
 ## Test (P-A)
