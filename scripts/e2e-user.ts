@@ -10,7 +10,6 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { z } from 'zod'
 import type { Database } from '../src/types/database'
 import { loadLocalSupabase } from './e2e-env'
 
@@ -25,7 +24,8 @@ function adminClient() {
   return createClient<Database>(url, serviceRoleKey, clientOptions)
 }
 
-function anonClient() {
+/** Client anon chưa đăng nhập (RLS / policy Storage như khách); signedInClient đăng nhập trên client này */
+export function anonClient() {
   const { url, publishableKey } = loadLocalSupabase()
   return createClient<Database>(url, publishableKey, clientOptions)
 }
@@ -775,88 +775,36 @@ export async function e2eLeftovers() {
 
 // ---------- Chợ sách cũ (cho-sach-cu) ----------
 
-/**
- * Client KHÔNG gắn kiểu Database cho bảng / RPC của chợ sách cũ: src/types/database.ts sinh từ DB local của CI, chưa có
- * used_listings, seller_payouts, RPC mới tới khi tải artifact database-types. Dòng đọc về parse bằng zod. Khi types đã
- * có thì đổi sang createClient<Database>.
- */
-function usedMarketAdminClient() {
-  const { url, serviceRoleKey } = loadLocalSupabase()
-  return createClient(url, serviceRoleKey, clientOptions)
-}
-
-/** Client anon không kiểu (xem usedMarketAdminClient): đọc / ký ảnh như khách chưa đăng nhập */
-export function usedMarketAnonClient() {
-  const { url, publishableKey } = loadLocalSupabase()
-  return createClient(url, publishableKey, clientOptions)
-}
-
-/** Client không kiểu đã đăng nhập bằng user e2e: gọi RPC / bảng / Storage của chợ sách cũ như trình duyệt của user đó */
-export async function usedMarketClient(user: { email: string; password: string }) {
-  const client = usedMarketAnonClient()
-  const { error } = await client.auth.signInWithPassword({ email: user.email, password: user.password })
-  if (error) throw new Error(`signInWithPassword: ${error.message}`)
-  return client
-}
-
 export const USED_PHOTO_BUCKET = 'used-listing-photos'
-
-const listingStatusSchema = z.enum(['pending', 'approved', 'rejected', 'sold', 'withdrawn'])
-
-const usedListingRowSchema = z.object({
-  id: z.number(),
-  status: listingStatusSchema,
-  price: z.number(),
-  fee: z.number(),
-  seller_name: z.string().nullable(),
-  reject_reason: z.string().nullable(),
-  approved_at: z.string().nullable(),
-})
 
 /** Tin sách cũ đọc bằng service role (thấy mọi trạng thái); null nếu không có */
 export async function usedListingRow(id: number) {
-  const { data, error } = await usedMarketAdminClient()
+  const { data, error } = await adminClient()
     .from('used_listings')
     .select('id, status, price, fee, seller_name, reject_reason, approved_at')
     .eq('id', id)
     .maybeSingle()
   if (error) throw new Error(`usedListingRow: ${error.message}`)
-  return usedListingRowSchema.nullable().parse(data)
+  return data
 }
-
-const sellerPayoutRowsSchema = z.array(
-  z.object({
-    id: z.number(),
-    order_id: z.number(),
-    seller_id: z.string(),
-    price: z.number(),
-    fee: z.number(),
-    amount: z.number(),
-    status: z.enum(['pending', 'paid']),
-    paid_at: z.string().nullable(),
-  }),
-)
 
 /** Khoản trả người bán của một tin (service role) */
 export async function sellerPayoutsOf(listingId: number) {
-  const { data, error } = await usedMarketAdminClient()
+  const { data, error } = await adminClient()
     .from('seller_payouts')
     .select('id, order_id, seller_id, price, fee, amount, status, paid_at')
     .eq('listing_id', listingId)
     .order('id')
   if (error) throw new Error(`sellerPayoutsOf: ${error.message}`)
-  return sellerPayoutRowsSchema.parse(data)
+  return data
 }
 
 /** Khoản trả người bán (sổ tiền restrict: phải xóa trước đơn, tin, user) theo người bán / đơn / tin */
 async function deleteSellerPayouts(column: 'seller_id' | 'order_id' | 'listing_id', values: readonly (string | number)[]) {
   if (values.length === 0) return
-  const { error } = await usedMarketAdminClient().from('seller_payouts').delete().in(column, values)
+  const { error } = await adminClient().from('seller_payouts').delete().in(column, values)
   if (error) throw new Error(`deleteSellerPayouts: ${error.message}`)
 }
-
-const listingPhotosSchema = z.array(z.object({ id: z.number(), photos: z.array(z.string()) }))
-const listingOrderItemsSchema = z.array(z.object({ order_id: z.number() }))
 
 /**
  * Tin sách cũ theo người bán / sách: đơn chứa tin (+ khoản trả của đơn) → khoản trả của tin → tin → ảnh của tin trong
@@ -866,16 +814,15 @@ const listingOrderItemsSchema = z.array(z.object({ order_id: z.number() }))
  */
 async function deleteUsedListings(column: 'seller_id' | 'book_id', values: readonly (string | number)[]) {
   if (values.length === 0) return
-  const used = usedMarketAdminClient()
-  const { data, error } = await used.from('used_listings').select('id, photos').in(column, values)
+  const used = adminClient()
+  const { data: listings, error } = await used.from('used_listings').select('id, photos').in(column, values)
   if (error) throw new Error(`deleteUsedListings (read): ${error.message}`)
-  const listings = listingPhotosSchema.parse(data)
   if (listings.length === 0) return
 
   const ids = listings.map((listing) => listing.id)
   const { data: items, error: itemsError } = await used.from('order_items').select('order_id').in('used_listing_id', ids)
   if (itemsError) throw new Error(`deleteUsedListings (orders): ${itemsError.message}`)
-  await deleteOrders(adminClient(), [...new Set(listingOrderItemsSchema.parse(items).map((item) => item.order_id))])
+  await deleteOrders(used, [...new Set(items.map((item) => item.order_id))])
   await deleteSellerPayouts('listing_id', ids)
   const { error: deleteError } = await used.from('used_listings').delete().in('id', ids)
   if (deleteError) throw new Error(`deleteUsedListings (delete): ${deleteError.message}`)
@@ -895,7 +842,7 @@ function deleteUsedListingsOfBooks(bookIds: readonly number[]) {
 export async function usedPhotoExists(path: string) {
   const slash = path.lastIndexOf('/')
   const name = path.slice(slash + 1)
-  const { data, error } = await usedMarketAdminClient()
+  const { data, error } = await adminClient()
     .storage.from(USED_PHOTO_BUCKET)
     .list(path.slice(0, slash), { search: name })
   if (error) throw new Error(`usedPhotoExists: ${error.message}`)
@@ -904,14 +851,14 @@ export async function usedPhotoExists(path: string) {
 
 /** Xóa một ảnh bằng service role (giả lập ảnh mất ngoài policy: xóa tay trong Storage) */
 export async function removeUsedPhotoAsService(path: string) {
-  const { data, error } = await usedMarketAdminClient().storage.from(USED_PHOTO_BUCKET).remove([path])
+  const { data, error } = await adminClient().storage.from(USED_PHOTO_BUCKET).remove([path])
   if (error) throw new Error(`removeUsedPhotoAsService: ${error.message}`)
   if (data.length !== 1) throw new Error(`removeUsedPhotoAsService: không có ảnh ${path}`)
 }
 
 /** Mọi ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (cả ảnh đã tải lên mà chưa gắn tin nào) */
 async function removeUsedPhotoFolders(userIds: readonly string[]) {
-  const storage = usedMarketAdminClient().storage.from(USED_PHOTO_BUCKET)
+  const storage = adminClient().storage.from(USED_PHOTO_BUCKET)
   for (const id of userIds) {
     const { data, error } = await storage.list(id, { limit: 1000 })
     if (error) throw new Error(`removeUsedPhotoFolders (list): ${error.message}`)
