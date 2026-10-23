@@ -11,10 +11,13 @@ import {
   deleteE2eUsers,
   deliverOrder,
   makeAdmin,
+  removeUsedPhotoAsService,
   seedAddress,
   sellerPayoutsOf,
+  setPaymentStatus,
   USED_PHOTO_BUCKET,
   usedListingRow,
+  usedPhotoExists,
   usedMarketAnonClient,
   usedMarketClient,
   type E2eAdminBook,
@@ -76,7 +79,8 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  // Thứ tự trong deleteE2eUsers: khoản trả người bán → đơn → tin → ảnh → user; sách test sau cùng (book_id restrict)
+  // Thứ tự trong deleteE2eUsers: khoản trả người bán → đơn → tin (kèm mọi đơn chứa tin) → ảnh → user; sách test sau
+  // cùng (book_id restrict)
   const users = [seller, seller2, buyer, stranger, admin].filter((user) => user !== undefined)
   await deleteE2eUsers(users.map((user) => user.id))
   await cleanupE2eAdminData(slugs)
@@ -240,6 +244,15 @@ test('đăng tin: giá trần, ảnh của người khác; tin + ảnh chờ duy
   expect((await create(50_000, [`${seller.id}/${randomUUID()}.webp`])).error?.message).toBe('LISTING_PHOTOS_INVALID')
   expect((await create(50_000, [path, path])).error?.message).toBe('LISTING_PHOTOS_INVALID')
   expect((await create(50_000, [])).error?.message).toBe('LISTING_PHOTOS_INVALID')
+  const noBook = await sellerClient.rpc('create_used_listing', {
+    p_book_id: -1,
+    p_condition: 'good',
+    p_price: 50_000,
+    p_description: null,
+    p_photos: [path],
+  })
+  expect(noBook.error?.message).toBe('INVALID_INPUT')
+  expect(JSON.parse(noBook.error?.details ?? '{}')).toEqual({ field: 'book_id' })
 
   const atCap = await create(ORIGINAL_PRICE, [path])
   expect(atCap.error).toBeNull()
@@ -312,8 +325,53 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
   expect((await usedListingRow(id))?.status).toBe('withdrawn')
 })
 
-test('tối đa 10 tin chờ duyệt mỗi người', async () => {
+test('ảnh gắn tin chờ duyệt / đã duyệt không xóa được, tên đã gắn tin không tải lại được; duyệt kiểm lại ảnh còn đủ', async () => {
+  test.setTimeout(60_000)
+  // Storage không báo lỗi khi policy chặn xóa (chỉ trả mảng rỗng) → kiểm ảnh còn / mất bằng service role
+  const remove = (client: Client, path: string) => client.storage.from(USED_PHOTO_BUCKET).remove([path])
+
+  const approvedPhoto = await uploadPhoto(sellerClient, seller)
+  const approvedId = await createListing(sellerClient, [approvedPhoto])
+  await approve(approvedId)
+  await remove(sellerClient, approvedPhoto)
+  await remove(strangerClient, approvedPhoto)
+  expect(await usedPhotoExists(approvedPhoto)).toBe(true)
+  expect((await anon.storage.from(USED_PHOTO_BUCKET).createSignedUrl(approvedPhoto, 60)).error).toBeNull()
+
+  const pendingPhoto = await uploadPhoto(sellerClient, seller)
+  await createListing(sellerClient, [pendingPhoto])
+  await remove(sellerClient, pendingPhoto)
+  expect(await usedPhotoExists(pendingPhoto)).toBe(true)
+
+  // Ảnh chưa gắn tin: người bán xóa được (dọn ảnh tải lên bỏ dở)
+  const loosePhoto = await uploadPhoto(sellerClient, seller)
+  await remove(sellerClient, loosePhoto)
+  expect(await usedPhotoExists(loosePhoto)).toBe(false)
+
+  // Tin đã rút: xóa được ảnh, nhưng tải lại đúng tên đó bị chặn (không đổi được ảnh của tin)
+  const withdrawnPhoto = await uploadPhoto(sellerClient, seller)
+  const withdrawnId = await createListing(sellerClient, [withdrawnPhoto])
+  expect((await sellerClient.rpc('withdraw_used_listing', { p_id: withdrawnId })).error).toBeNull()
+  await remove(sellerClient, withdrawnPhoto)
+  expect(await usedPhotoExists(withdrawnPhoto)).toBe(false)
+  const reupload = await sellerClient.storage
+    .from(USED_PHOTO_BUCKET)
+    .upload(withdrawnPhoto, await photo().webp().toBuffer(), { contentType: 'image/webp' })
+  expect(reupload.error).not.toBeNull()
+  expect(await usedPhotoExists(withdrawnPhoto)).toBe(false)
+
+  // Ảnh của tin chờ duyệt mất ngoài policy (xóa tay trong Storage) → không duyệt được, tin vẫn chờ duyệt
+  const lostPhoto = await uploadPhoto(sellerClient, seller)
+  const lostId = await createListing(sellerClient, [lostPhoto])
+  await removeUsedPhotoAsService(lostPhoto)
+  expect((await review(adminClient, lostId, 'pending', true)).error?.message).toBe('LISTING_PHOTOS_INVALID')
+  expect((await usedListingRow(lostId))?.status).toBe('pending')
+})
+
+test('tối đa 10 tin chờ duyệt mỗi người, kể cả khi sửa tin đã duyệt', async () => {
   const path = await uploadPhoto(seller2Client, seller2)
+  const approvedId = await createListing(seller2Client, [path], 9_000)
+  await approve(approvedId)
   for (let i = 0; i < 10; i++) await createListing(seller2Client, [path], 10_000 + i * 1_000)
   const eleventh = await seller2Client.rpc('create_used_listing', {
     p_book_id: book.id,
@@ -323,6 +381,34 @@ test('tối đa 10 tin chờ duyệt mỗi người', async () => {
     p_photos: [path],
   })
   expect(eleventh.error?.message).toBe('LISTING_PENDING_LIMIT')
+
+  // Sửa tin đã duyệt = thêm một tin chờ duyệt → cũng bị chặn, tin vẫn đang bán
+  const edit = await seller2Client.rpc('update_used_listing', {
+    p_id: approvedId,
+    p_condition: 'worn',
+    p_price: 8_000,
+    p_description: null,
+    p_photos: [path],
+  })
+  expect(edit.error?.message).toBe('LISTING_PENDING_LIMIT')
+  expect(await usedListingRow(approvedId)).toMatchObject({ status: 'approved', price: 9_000 })
+})
+
+test('tối đa 30 ảnh mỗi người: ảnh thứ 31 bị chặn', async () => {
+  test.setTimeout(60_000)
+  // User riêng: số ảnh của người bán chung phụ thuộc các test khác
+  const uploader = await createE2eUser('used-photos')
+  try {
+    const client = await usedMarketClient(uploader)
+    // Tuần tự: đếm ảnh không khóa, tải song song có thể vượt trần
+    for (let i = 0; i < 30; i++) await uploadPhoto(client, uploader)
+    const extra = await client.storage
+      .from(USED_PHOTO_BUCKET)
+      .upload(`${uploader.id}/${randomUUID()}.webp`, await photo().webp().toBuffer(), { contentType: 'image/webp' })
+    expect(extra.error).not.toBeNull()
+  } finally {
+    await deleteE2eUsers([uploader.id])
+  }
 })
 
 test('mua: không mua tin của mình, tổng lệch, cùng key cùng đơn, người thứ hai không mua được; hủy → tin về đang bán; giao + đã thanh toán → một khoản chờ trả', async () => {
@@ -342,6 +428,7 @@ test('mua: không mua tin của mình, tổng lệch, cùng key cùng đơn, ng�
   const quote = await buyerClient.rpc('quote_used_order', { p_listing_id: id })
   expect(quote.error).toBeNull()
   expect(quote.data).toEqual([{ price, shipping_fee: SHIPPING_FEE, total, available: true }])
+  expect((await anon.rpc('quote_used_order', { p_listing_id: id })).error).not.toBeNull()
 
   expect((await placeUsedOrder(sellerClient, id, sellerAddress, randomUUID(), total)).error?.message).toBe('LISTING_OWN')
   const changed = await placeUsedOrder(buyerClient, id, buyerAddress, randomUUID(), total - 1)
@@ -409,10 +496,48 @@ test('mua: không mua tin của mình, tổng lệch, cùng key cùng đơn, ng�
   const payoutId = payouts[0]?.id ?? 0
   expect(await visibleRows(sellerClient, payoutId)).toEqual([payoutId])
   expect(await visibleRows(buyerClient, payoutId)).toEqual([])
+  // Người bán không đọc được order_id (không lần ra đơn / người mua); cột khác vẫn đọc được
+  const orderId = await sellerClient.from('seller_payouts').select('order_id').eq('id', payoutId)
+  expect(orderId.error?.message).toMatch(/permission denied/)
+  const own = await sellerClient.from('seller_payouts').select('listing_id, amount, status').eq('id', payoutId)
+  expect(own.error).toBeNull()
+  expect(own.data).toEqual([{ listing_id: id, amount: price - 10_000, status: 'pending' }])
   expect((await sellerClient.rpc('mark_payout_paid', { p_id: payoutId })).error?.message).toBe('FORBIDDEN')
   expect((await adminClient.rpc('mark_payout_paid', { p_id: payoutId })).error).toBeNull()
   expect((await sellerPayoutsOf(id))[0]).toMatchObject({ status: 'paid', paid_at: expect.any(String) })
   expect((await adminClient.rpc('mark_payout_paid', { p_id: payoutId })).error?.message).toBe('PAYOUT_STATUS_CHANGED')
+})
+
+test('chuyển khoản: thanh toán trước rồi giao → đúng một khoản; đơn hết "đã thanh toán" thì không đánh dấu đã trả được', async () => {
+  test.setTimeout(60_000)
+  const path = await uploadPhoto(sellerClient, seller)
+  const price = 50_000
+  const id = await createListing(sellerClient, [path], price)
+  await approve(id)
+  const address = await seedAddress(buyer.id, { isDefault: false })
+  const placed = await buyerClient.rpc('place_used_order', {
+    p_listing_id: id,
+    p_address_id: address,
+    p_payment_method: 'bank_transfer',
+    p_idempotency_key: randomUUID(),
+    p_expected_total: price + SHIPPING_FEE,
+  })
+  expect(placed.error).toBeNull()
+  const order = orderSchema.parse(placed.data)
+
+  // Cửa hàng đối soát chuyển khoản trước khi giao: chưa giao thì chưa có khoản
+  await setPaymentStatus(order.id, 'paid')
+  expect(await sellerPayoutsOf(id)).toEqual([])
+  await deliverOrder(order.id)
+  const payouts = await sellerPayoutsOf(id)
+  expect(payouts).toHaveLength(1)
+  expect(payouts[0]).toMatchObject({ order_id: order.id, price, fee: 5_000, amount: price - 5_000, status: 'pending' })
+
+  // Đơn ghi hoàn tiền (VD ở tab khác) → không còn "đã giao + đã thanh toán": không đánh dấu đã trả được
+  await setPaymentStatus(order.id, 'refunded')
+  const payoutId = payouts[0]?.id ?? 0
+  expect((await adminClient.rpc('mark_payout_paid', { p_id: payoutId })).error?.message).toBe('PAYOUT_STATUS_CHANGED')
+  expect((await sellerPayoutsOf(id))[0]).toMatchObject({ status: 'pending', paid_at: null })
 })
 
 async function visibleRows(client: Client, payoutId: number) {

@@ -52,7 +52,8 @@ export async function cleanupE2eUsers() {
 
 /**
  * Dọn theo thứ tự khóa ngoại restrict của chợ sách cũ: khoản trả người bán (của user là người bán) → đơn của user (hủy
- * để hoàn tồn kho, kèm khoản trả của đơn đó) → tin sách cũ của user → ảnh trong thư mục của user → user.
+ * để hoàn tồn kho, kèm khoản trả của đơn đó) → tin sách cũ của user (kèm mọi đơn của người khác chứa tin: khóa
+ * restrict) → ảnh trong thư mục của user (service role) → user.
  */
 export async function deleteE2eUsers(ids: string[]) {
   if (ids.length === 0) return
@@ -247,36 +248,42 @@ export async function ordersOf(userId: string) {
 export async function cancelAndDeleteOrders(userIds: string[]) {
   if (userIds.length === 0) return
   const admin = adminClient()
-  // seller_payouts.order_id là on delete restrict: khoản trả người bán của đơn phải xóa trước đơn
-  const { data: orders, error: readError } = await admin.from('orders').select('id').in('user_id', userIds)
-  if (readError) throw new Error(`cancelAndDeleteOrders (read): ${readError.message}`)
-  await deleteSellerPayouts(
-    'order_id',
+  const { data: orders, error } = await admin.from('orders').select('id').in('user_id', userIds)
+  if (error) throw new Error(`cancelAndDeleteOrders (read): ${error.message}`)
+  await deleteOrders(
+    admin,
     orders.map((order) => order.id),
   )
-  await deleteDeliveredOrders(admin, userIds)
-  const { error: cancelError } = await admin
-    .from('orders')
-    .update({ status: 'cancelled', cancelled_reason: 'e2e cleanup' })
-    .in('user_id', userIds)
-    .in('status', ['pending', 'confirmed', 'shipping'])
-  if (cancelError) throw new Error(`cancelAndDeleteOrders (cancel): ${cancelError.message}`)
-  const { error } = await admin.from('orders').delete().in('user_id', userIds)
-  if (error) throw new Error(`cancelAndDeleteOrders (delete): ${error.message}`)
 }
 
 type AdminClient = ReturnType<typeof adminClient>
+
+/** Xóa đúng các đơn theo id, hoàn kho như cancelAndDeleteOrders (dùng chung cho đơn của user và đơn chứa tin sách cũ) */
+async function deleteOrders(admin: AdminClient, orderIds: readonly number[]) {
+  if (orderIds.length === 0) return
+  // seller_payouts.order_id là on delete restrict: khoản trả người bán của đơn phải xóa trước đơn
+  await deleteSellerPayouts('order_id', orderIds)
+  await deleteDeliveredOrders(admin, orderIds)
+  const { error: cancelError } = await admin
+    .from('orders')
+    .update({ status: 'cancelled', cancelled_reason: 'e2e cleanup' })
+    .in('id', orderIds)
+    .in('status', ['pending', 'confirmed', 'shipping'])
+  if (cancelError) throw new Error(`deleteOrders (cancel): ${cancelError.message}`)
+  const { error } = await admin.from('orders').delete().in('id', orderIds)
+  if (error) throw new Error(`deleteOrders (delete): ${error.message}`)
+}
 
 /**
  * Đơn delivered: đọc dòng sách → xóa đơn → cộng lại stock, trừ sold_count (không âm), giảm used_count của voucher, như
  * trigger làm khi hủy. Thứ tự "đọc → xóa → hoàn kho": lỗi giữa chừng thì thiếu hoàn kho chứ không hoàn hai lần khi
  * chạy lại. Dòng sách cũ (used_listing_id) không trừ kho khi đặt → không hoàn (như trigger).
  */
-async function deleteDeliveredOrders(admin: AdminClient, userIds: string[]) {
+async function deleteDeliveredOrders(admin: AdminClient, orderIds: readonly number[]) {
   const { data: orders, error } = await admin
     .from('orders')
     .select('id, voucher_id, order_items(book_id, quantity)')
-    .in('user_id', userIds)
+    .in('id', orderIds)
     .eq('status', 'delivered')
     // Lọc dòng của bảng nhúng (không lọc đơn): chỉ lấy dòng sách mới
     .is('order_items.used_listing_id', null)
@@ -849,10 +856,13 @@ async function deleteSellerPayouts(column: 'seller_id' | 'order_id' | 'listing_i
 }
 
 const listingPhotosSchema = z.array(z.object({ id: z.number(), photos: z.array(z.string()) }))
+const listingOrderItemsSchema = z.array(z.object({ order_id: z.number() }))
 
 /**
- * Tin sách cũ theo người bán / sách: khoản trả của tin → tin (dòng đơn trỏ tới tin thành null) → ảnh của tin trong bucket
- * (Storage API, không xóa bằng SQL). Đơn của user phải xóa trước (deleteE2eUsers) nếu muốn hoàn kho đúng.
+ * Tin sách cũ theo người bán / sách: đơn chứa tin (+ khoản trả của đơn) → khoản trả của tin → tin → ảnh của tin trong
+ * bucket. order_items.used_listing_id là on delete restrict và orders.user_id là on delete set null (đơn còn khi người
+ * mua đã bị xóa) → tìm đơn theo tin, không theo user; mọi đơn (kể cả đã hủy, của người mua bất kỳ) xóa trước tin.
+ * Ảnh xóa bằng client service role: policy xóa chặn client người dùng với ảnh của tin chờ duyệt / đã duyệt / đã bán.
  */
 async function deleteUsedListings(column: 'seller_id' | 'book_id', values: readonly (string | number)[]) {
   if (values.length === 0) return
@@ -863,6 +873,9 @@ async function deleteUsedListings(column: 'seller_id' | 'book_id', values: reado
   if (listings.length === 0) return
 
   const ids = listings.map((listing) => listing.id)
+  const { data: items, error: itemsError } = await used.from('order_items').select('order_id').in('used_listing_id', ids)
+  if (itemsError) throw new Error(`deleteUsedListings (orders): ${itemsError.message}`)
+  await deleteOrders(adminClient(), [...new Set(listingOrderItemsSchema.parse(items).map((item) => item.order_id))])
   await deleteSellerPayouts('listing_id', ids)
   const { error: deleteError } = await used.from('used_listings').delete().in('id', ids)
   if (deleteError) throw new Error(`deleteUsedListings (delete): ${deleteError.message}`)
@@ -876,6 +889,24 @@ async function deleteUsedListings(column: 'seller_id' | 'book_id', values: reado
 /** used_listings.book_id là on delete restrict: gọi trước khi xóa sách test */
 function deleteUsedListingsOfBooks(bookIds: readonly number[]) {
   return deleteUsedListings('book_id', bookIds)
+}
+
+/** Ảnh còn trong bucket không (service role, bỏ qua policy đọc) */
+export async function usedPhotoExists(path: string) {
+  const slash = path.lastIndexOf('/')
+  const name = path.slice(slash + 1)
+  const { data, error } = await usedMarketAdminClient()
+    .storage.from(USED_PHOTO_BUCKET)
+    .list(path.slice(0, slash), { search: name })
+  if (error) throw new Error(`usedPhotoExists: ${error.message}`)
+  return data.some((file) => file.name === name)
+}
+
+/** Xóa một ảnh bằng service role (giả lập ảnh mất ngoài policy: xóa tay trong Storage) */
+export async function removeUsedPhotoAsService(path: string) {
+  const { data, error } = await usedMarketAdminClient().storage.from(USED_PHOTO_BUCKET).remove([path])
+  if (error) throw new Error(`removeUsedPhotoAsService: ${error.message}`)
+  if (data.length !== 1) throw new Error(`removeUsedPhotoAsService: không có ảnh ${path}`)
 }
 
 /** Mọi ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (cả ảnh đã tải lên mà chưa gắn tin nào) */
