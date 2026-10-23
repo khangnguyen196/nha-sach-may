@@ -944,7 +944,17 @@
     "ACCOUNT_LOCKED": "Tài khoản này đang bị khóa. Bạn gửi email tới {email} để được hỗ trợ nhé.",
     "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Bạn đăng nhập lại rồi thử lại nhé.",
     "ITEM_DELETED": "Mục này vừa bị xóa ở nơi khác. Bạn tải lại danh sách để xem dữ liệu mới nhất.",
-    "BOOK_AUTHORS_NOT_SAVED": "Đã lưu thông tin sách nhưng chưa lưu được tác giả. Bạn bấm Lưu lại một lần nữa nhé."
+    "BOOK_AUTHORS_NOT_SAVED": "Đã lưu thông tin sách nhưng chưa lưu được tác giả. Bạn bấm Lưu lại một lần nữa nhé.",
+    "LISTING_PENDING_LIMIT": "Bạn đang có nhiều tin chờ duyệt nhất có thể. Chờ tin được duyệt hoặc rút bớt một tin chờ duyệt rồi đăng lại nhé.",
+    "LISTING_PRICE_INVALID": "Giá bán phải lớn hơn 0 và không cao hơn giá gốc của sách. Bạn sửa lại giá nhé.",
+    "LISTING_PHOTOS_INVALID": "Ảnh chưa được tải lên đúng (cần 1 đến 3 ảnh). Bạn chọn lại ảnh rồi thử lại nhé.",
+    "LISTING_NOT_EDITABLE": "Tin này không còn sửa hoặc rút được (đã bán hoặc đã rút). Bạn tải lại trang để xem trạng thái mới nhất.",
+    "LISTING_STATUS_CHANGED": "Tin vừa đổi trạng thái ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
+    "LISTING_UNAVAILABLE": "Cuốn sách cũ này vừa có người mua hoặc không còn bán. Bạn xem các bản cũ khác trong Chợ sách cũ nhé.",
+    "LISTING_OWN": "Đây là tin bạn đăng nên bạn không mua được.",
+    "LISTING_CHANGED": "Giá của tin vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt mua.",
+    "LISTING_INVALID_TRANSITION": "Không thể chuyển tin sang trạng thái này. Bạn tải lại trang để xem trạng thái mới nhất.",
+    "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất."
   },
   "allBooks": {
     "title": "Tất cả sách",

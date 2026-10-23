@@ -50,6 +50,19 @@ export const ERROR_CODES = [
   'BOOK_AUTHORS_NOT_SAVED',
   // Phase 9: viết đánh giá khi chưa nhận sách (RLS reviews_insert_if_purchased)
   'REVIEW_NOT_ALLOWED',
+  // Chợ sách cũ (cho-sach-cu): giới hạn tin chờ duyệt, giá ngoài (0, giá gốc], ảnh chưa tải lên đúng, tin không sửa / rút
+  // được, trạng thái tin vừa đổi (admin), tin không còn bán / của chính mình / vừa đổi giá (mua), luồng trạng thái tin,
+  // khoản trả người bán vừa đổi trạng thái (admin)
+  'LISTING_PENDING_LIMIT',
+  'LISTING_PRICE_INVALID',
+  'LISTING_PHOTOS_INVALID',
+  'LISTING_NOT_EDITABLE',
+  'LISTING_STATUS_CHANGED',
+  'LISTING_UNAVAILABLE',
+  'LISTING_OWN',
+  'LISTING_CHANGED',
+  'LISTING_INVALID_TRANSITION',
+  'PAYOUT_STATUS_CHANGED',
   // Phase 11, chatbot Mây: hết lượt của khách (consume_chat_quota), hết lượt miễn phí của Gemini (trần chung / 429),
   // không dùng được (chưa cấu hình, lỗi AI / mạng), khu vực không được phục vụ (EEA / Anh / Thụy Sĩ)
   'CHAT_QUOTA_EXCEEDED',

@@ -528,7 +528,17 @@
     "ACCOUNT_LOCKED": "This account is locked. Email {email} for help.",
     "SESSION_EXPIRED": "Your session has expired. Please sign in again and retry.",
     "ITEM_DELETED": "This item was just deleted elsewhere. Reload the list to see the latest data.",
-    "BOOK_AUTHORS_NOT_SAVED": "The book was saved, but its authors weren’t. Please press Save again."
+    "BOOK_AUTHORS_NOT_SAVED": "The book was saved, but its authors weren’t. Please press Save again.",
+    "LISTING_PENDING_LIMIT": "You already have the maximum number of listings waiting for review. Wait for them to be reviewed or withdraw one, then try again.",
+    "LISTING_PRICE_INVALID": "The price must be above 0 and no higher than the book’s original price. Please adjust it.",
+    "LISTING_PHOTOS_INVALID": "The photos weren’t uploaded correctly (1 to 3 photos are needed). Please choose them again and retry.",
+    "LISTING_NOT_EDITABLE": "This listing can no longer be edited or withdrawn (sold or withdrawn). Reload the page to see its latest status.",
+    "LISTING_STATUS_CHANGED": "This listing’s status just changed elsewhere. Reload the page to see its latest status.",
+    "LISTING_UNAVAILABLE": "This used copy was just bought or is no longer for sale. Please check other used copies in the Used Books market.",
+    "LISTING_OWN": "This is your own listing, so you can’t buy it.",
+    "LISTING_CHANGED": "This listing’s price just changed. Check the new total, then place your order.",
+    "LISTING_INVALID_TRANSITION": "This listing cannot be moved to that status. Reload the page to see its latest status.",
+    "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status."
   },
   "allBooks": {
     "title": "All books",
