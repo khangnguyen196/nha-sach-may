@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
 import type { Locale } from 'next-intl'
 import { placeholder } from '@/lib/template'
-import { clockAngles, formatVnTime, isStoreOpen, msUntilNext, vnDateTimeAttr } from '../hours'
+import { clockAngles, clockCellSamples, formatVnTime, isStoreOpen, msUntilNext, vnDateTimeAttr } from '../hours'
 
 const SECOND_MS = 1000
 const MINUTE_MS = 60_000
@@ -62,26 +62,24 @@ const getServerReducedMotion = () => false
 // 2026-10-23) nên class không đổi gì. Dấu chấm và trạng thái giữ đứng yên bằng ô giờ rộng cố định (TimeCell).
 const lineClass = 'mt-3 min-h-[1lh] text-xs text-muted-foreground sm:text-sm'
 
-// Mốc (UTC, ms) có chuỗi giờ rộng nhất trong ngày: vi có giây 04:44:44, không giây 04:44; en 10:44:44 AM / 10:44 AM
-// (AM rộng hơn PM). Đo bằng script ngoài repo 2026-10-23, Be Vietnam Pro 400 (3 subset), cùng chuỗi ở 12 / 14 / 24px.
-// Đổi font hoặc định dạng giờ thì đo lại; e2e "ô giờ rộng ≥ mọi chuỗi giờ trong ngày" canh.
-const WIDEST_TIME_UTC: Record<Locale, { seconds: number; minutes: number }> = {
-  vi: { seconds: 1767217484000, minutes: 1767217440000 },
-  en: { seconds: 1767239084000, minutes: 1767239040000 },
-}
-
-// Ô giờ rộng bằng giờ rộng nhất: mẫu ẩn và giờ thật xếp chồng trong một ô grid, chữ số trong ô được nhích nhưng mọi thứ
-// sau ô đứng yên. Mẫu là phần tử rỗng, chữ ở ::after: không vào cây trợ năng, không bị chép, textContent của <time> chỉ
-// còn giờ thật. Trước khi font tải xong (display: swap) ô đo theo font dự phòng nên có thể nhích một lần khi font tải.
+// Ô giờ rộng bằng mẫu rộng nhất (clockCellSamples: mỗi chữ số một mẫu, vi 10, en 20 cả AM / PM): mẫu ẩn và giờ thật
+// xếp chồng trong một ô grid, chữ số trong ô được nhích nhưng mọi thứ sau ô đứng yên. Mẫu là phần tử rỗng, chữ ở
+// ::after: không vào cây trợ năng, không bị chép, textContent của <time> chỉ còn giờ thật. Trước khi font tải xong
+// (display: swap) ô đo theo font dự phòng nên có thể nhích một lần khi font tải.
+// font-kerning: none chỉ trong ô (cả mẫu lẫn giờ thật; phần chữ ngoài ô giữ kerning): Be Vietnam Pro kern giữa chữ số
+// (GPOS, VD cặp "48" +0.02 em, đo 2026-10-23) nên có kerning thì giờ thật có thể rộng hơn mẫu toàn một chữ số. Chủ dự
+// án chọn cách này (hướng 1) ngày 2026-10-23.
 function TimeCell({ now, locale, withSeconds }: { now: Date; locale: Locale; withSeconds: boolean }) {
-  const widest = WIDEST_TIME_UTC[locale][withSeconds ? 'seconds' : 'minutes']
   return (
-    <span className="inline-grid whitespace-nowrap">
-      <span
-        aria-hidden="true"
-        data-clock-sample={formatVnTime(new Date(widest), locale, withSeconds)}
-        className="invisible col-start-1 row-start-1 after:content-[attr(data-clock-sample)]"
-      />
+    <span className="inline-grid whitespace-nowrap [font-kerning:none]">
+      {clockCellSamples(locale, withSeconds).map((sample) => (
+        <span
+          key={sample}
+          aria-hidden="true"
+          data-clock-sample={sample}
+          className="invisible col-start-1 row-start-1 after:content-[attr(data-clock-sample)]"
+        />
+      ))}
       <span className="col-start-1 row-start-1">{formatVnTime(now, locale, withSeconds)}</span>
     </span>
   )

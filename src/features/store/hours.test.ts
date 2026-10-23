@@ -73,6 +73,60 @@ function defineCases(load: () => Hours) {
     expect(angles.second).toBeCloseTo(second, 6)
   })
 
+  it.each([
+    ['vi', true, 10],
+    ['vi', false, 10],
+    ['en', true, 20],
+    ['en', false, 20],
+  ] as const)('mẫu ô giờ %s (có giây: %s): đủ %i mẫu, đủ 10 chữ số', (locale, withSeconds, count) => {
+    const samples = load().clockCellSamples(locale, withSeconds)
+    expect(samples).toHaveLength(count)
+    expect(new Set(samples).size).toBe(count)
+    // en: mỗi chữ số có ở cả mẫu AM lẫn PM
+    const groups = locale === 'en' ? [/AM$/, /PM$/] : [/^/]
+    for (const group of groups) {
+      const digits = new Set(samples.filter((sample) => group.test(sample)).flatMap((sample) => sample.match(/\d/g) ?? []))
+      expect([...digits].sort().join(''), String(group)).toBe('0123456789')
+    }
+  })
+
+  it.each([
+    ['vi', true],
+    ['vi', false],
+    ['en', true],
+    ['en', false],
+  ] as const)('mọi giờ trong ngày (%s, có giây: %s) khớp vị trí một mẫu ô giờ', (locale, withSeconds) => {
+    const { clockCellSamples, formatVnTime } = load()
+    const samples = clockCellSamples(locale, withSeconds)
+    const isDigit = (char: string | undefined) => char !== undefined && char >= '0' && char <= '9'
+    // Vị trí (căn lề phải) mà các mẫu cùng độ dài không cùng một ký tự: chữ số đổi theo mẫu. Vị trí cố định (en "1"
+    // đầu) thì giờ thật cũng phải đúng ký tự đó.
+    const varying = new Map(
+      samples.map((sample) => {
+        const sameLength = samples.filter((other) => other.length === sample.length)
+        return [sample, [...sample].map((_, index) => new Set(sameLength.map((other) => other[index])).size > 1)]
+      }),
+    )
+    const varies = (sample: string, index: number) => varying.get(sample)?.[index] === true
+    const fits = (text: string, sample: string) => {
+      if (text.length > sample.length) return false
+      const offset = sample.length - text.length
+      return [...text].every((char, index) => {
+        const sampleChar = sample[offset + index]
+        if (!isDigit(char)) return char === sampleChar
+        return isDigit(sampleChar) && (char === sampleChar || varies(sample, offset + index))
+      })
+    }
+    const step = withSeconds ? 1000 : 60_000
+    const start = Date.UTC(2026, 0, 1, 17)
+    const misfits: string[] = []
+    for (let at = start; at < start + 86_400_000; at += step) {
+      const text = formatVnTime(new Date(at), locale, withSeconds)
+      if (!samples.some((sample) => fits(text, sample))) misfits.push(text)
+    }
+    expect(misfits.slice(0, 5)).toEqual([])
+  })
+
   it('msUntilNext theo giây và theo phút', () => {
     const { msUntilNext } = load()
     expect(msUntilNext(at('2026-10-22T07:35:00.000Z'), 60_000)).toBe(60_000)

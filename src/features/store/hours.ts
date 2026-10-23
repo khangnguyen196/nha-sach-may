@@ -65,6 +65,38 @@ export function formatVnTime(date: Date, locale: Locale, withSeconds: boolean) {
   return format.format(date)
 }
 
+// Chuỗi tham chiếu của mẫu ô giờ (UTC): 00:00 giờ VN; en thêm 10:00 AM và 10:00 PM (giờ en 2 chữ số luôn 10–12)
+const CELL_REFERENCE_UTC: Record<Locale, readonly number[]> = {
+  vi: [Date.UTC(2026, 0, 1, 17)],
+  en: [Date.UTC(2026, 0, 1, 3), Date.UTC(2026, 0, 1, 15)],
+}
+const cellSamples = new Map<string, string[]>()
+
+/**
+ * Mẫu xếp chồng trong ô giờ (store-clock.tsx): mỗi chữ số d = 0..9 một mẫu, mọi chữ số của chuỗi tham chiếu thay bằng
+ * d (en giữ chữ số đầu là "1"): vi 10 mẫu ("00:00:00" … "99:99:99"), en 20 ("10:00:00 AM" … "19:99:99 PM"). Ô rộng
+ * bằng mẫu rộng nhất. Không chọn sẵn một giờ "rộng nhất": mẫu đo trên một máy không đúng trên máy khác (CI Linux 12px
+ * '0' rộng hơn '4', Windows ngược lại; CI 2026-10-23). Ô giờ tắt kerning (font-kerning: none) nên bề rộng chuỗi là tổng
+ * bề rộng từng chữ, và mẫu toàn chữ số rộng nhất luôn ≥ mọi giờ thật cùng dạng: Be Vietnam Pro không có GSUB / GPOS nào
+ * khác chạm chuỗi giờ (chuỗi ghép liga có ':' đều cần chữ thường; kiểm 2026-10-23).
+ * Chuỗi tham chiếu lấy từ formatVnTime: giữ đúng ':' / khoảng trắng / AM-PM mà Intl của máy sinh cho giờ thật.
+ */
+export function clockCellSamples(locale: Locale, withSeconds: boolean) {
+  const key = `${locale}:${withSeconds ? 'medium' : 'short'}`
+  const cached = cellSamples.get(key)
+  if (cached) return cached
+  const samples: string[] = []
+  for (const utc of CELL_REFERENCE_UTC[locale]) {
+    const reference = formatVnTime(new Date(utc), locale, withSeconds)
+    for (let digit = 0; digit <= 9; digit++) {
+      let index = 0
+      samples.push(reference.replace(/\d/g, () => (locale === 'en' && index++ === 0 ? '1' : String(digit))))
+    }
+  }
+  cellSamples.set(key, samples)
+  return samples
+}
+
 const pad = (value: number, length = 2) => String(value).padStart(length, '0')
 
 /**
