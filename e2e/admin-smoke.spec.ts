@@ -34,7 +34,7 @@ test('tổng quan → danh sách sách (lọc sách ẩn) → sửa sách, lưu 
   await expect(main(page).getByText('Sách đang ẩn', { exact: true })).toBeVisible()
   await expectNoHorizontalScroll(page)
 
-  await page.getByRole('navigation', { name: 'Khu quản trị' }).getByRole('link', { name: 'Sách' }).click()
+  await page.getByRole('navigation', { name: 'Khu quản trị' }).getByRole('link', { name: 'Sách', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/sach$/)
   await expect(main(page).getByRole('table')).toBeVisible()
   await expectNoHorizontalScroll(page)
