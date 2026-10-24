@@ -233,7 +233,7 @@ khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10). **P-B đã lên `main` `88196
 
 Chia vòng trên nhánh `cho-sach-cu-3` (điều phối 24/10): 14 = SQL + types + e2e RLS; 15 = trang mua
 `/cho-sach-cu/[id]/mua` + đơn sách cũ + e2e mua; 16 = tiền người bán + `/admin/tra-nguoi-ban` + GỢI Ý vòng 12; sau đó
-cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14, 15, 16).
+cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14, 15, 16, 17).
 
 - [x] Migration `20261024120000_used_market_purchase.sql` (vòng 14, gom mọi SQL của P-C để production chạy một lần;
   chép vào `schema.sql` cùng commit):
@@ -288,10 +288,15 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
 - [x] GỢI Ý review vòng 12 (vòng 16): (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số
   ít "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (Button ghost, 44px).
 
-Còn lại cho vòng 17: sửa review vòng 16 → cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại
-commit đã duyệt) ra file ngoài repo, kiểm trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test
-điện thoại luồng mua; câu hỏi dồn: sửa CLAUDE.md (pathnames trang mua, RPC mới / chữ ký mới, chat ẩn trang mua,
-`/admin/tra-nguoi-ban`), giữ `seller_id` đọc được với authenticated, duyệt `place_used_order` + `p_expected_updated_at`.
+- [x] Sửa review vòng 16 (vòng 17): regex (m8) trong template literal (`\\?`, `\\d+`) + bật `no-useless-escape` cho
+  `e2e/**` (thử đỏ đúng 2 dòng); (m8) chỉ xét dòng địa chỉ đang hiển thị (Activity); ngày trả chỉ khi trạng thái là "Đã
+  trả" (`saleStatusWithPaidAt`, Vitest); `pickAddressId` (`features/checkout/address-selection.ts`, Vitest) dùng chung
+  /thanh-toan + trang mua; comment `AddressOptions`; aria-label nút "Đã trả: “<tên sách>”" ở `/admin/tra-nguoi-ban`.
+
+Còn lại: cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại commit đã duyệt) ra file ngoài
+repo + kiểm trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test điện thoại luồng mua; câu hỏi
+dồn: sửa CLAUDE.md (đoạn đề xuất ở báo cáo vòng 17), giữ `seller_id` đọc được với authenticated, duyệt
+`place_used_order` + `p_expected_updated_at`.
 
 ## Test (P-A)
 
