@@ -13,9 +13,12 @@ import { Link } from '@/i18n/navigation'
 
 type Props = PageProps<'/[locale]/used-books/[id]'>
 
-// id không biết trước lúc build (không có generateStaticParams: tin tạo / gỡ liên tục, link ảnh có hạn) nên header
-// (LocaleSwitcher đọc useParams) không prerender được shell cho route này → render theo request như trang sửa tin; dữ
-// liệu của tin vẫn lấy từ cache ('use cache', cacheLife('hours')). Proxy đã trả 404 thật cho tin không công khai.
+// instant = false chỉ tắt kiểm tra "instant navigation" của Next (dev) và kiểm static shell không rỗng; KHÔNG đổi cách
+// render (docs Next: guides/building.md, route-segment-config/instant.md). Không có generateStaticParams (tin tạo / gỡ
+// liên tục, link ảnh có hạn); tin vẫn đọc từ cache ('use cache', cacheLife('hours')). Đã kiểm 2026-10-24 (vòng 10) với
+// bản 350f2ad bỏ dòng này: next build xanh (route vẫn ◐, 30d / 1y), next dev không báo insight khi mở thẳng
+// /cho-sach-cu/<id> lẫn khi bấm thẻ từ /cho-sach-cu → lý do cũ ("LocaleSwitcher đọc useParams nên không prerender được
+// shell") không đúng; giữ dòng này tới khi quyết bỏ ở vòng sau. Proxy đã trả 404 thật cho tin không công khai.
 export const instant = false
 
 // Tin tạm thời (bán / rút / gỡ bất cứ lúc nào) và link ảnh có hạn → không cho index, không vào sitemap

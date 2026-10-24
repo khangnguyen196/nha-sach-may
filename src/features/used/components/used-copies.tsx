@@ -2,8 +2,12 @@ import { getFormatter, getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getUsedCopies } from '../public-queries'
 
-/** Dòng giữ chỗ cố định một dòng chữ nhỏ (có tin hay không, đang tải hay xong): khối mô tả bên dưới không nhảy (CLS) */
-const LINE = 'mt-4 min-h-5 text-sm'
+/**
+ * Dòng giữ chỗ cao đúng một dòng chữ (có tin hay không, đang tải hay xong): khối mô tả bên dưới không nhảy (CLS).
+ * min-h-[1lh] theo line-height thật của dòng: globals.css bỏ line-height đi kèm text-sm (`--text-*: initial`) nên dòng
+ * thừa kế 1.6 của body (14px → 22.4px), min-h-5 (20px) thấp hơn dòng có link.
+ */
+const LINE = 'mt-4 min-h-[1lh] text-sm'
 
 /**
  * "Có N bản cũ từ X ₫" dưới khối giá của trang sách, chỉ khi có ít nhất một tin đang bán. Link LUÔN tới danh sách chợ

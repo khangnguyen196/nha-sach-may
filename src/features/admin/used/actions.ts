@@ -15,6 +15,7 @@ import { rejectReasonSchema, reviewTargetSchema } from './schemas'
 // action ID).
 
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
+const ITEM_DELETED: Failure = { ok: false, code: 'ITEM_DELETED' }
 const REASON_ERROR: FieldErrors = { reason: 'listingRejectReason' }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
@@ -39,14 +40,17 @@ async function listingChanged(): Promise<Failure> {
 
 /**
  * book_id của tin (tag "Có N bản cũ" của trang sách) nếu tin vẫn đúng bản admin đang xem (`updated_at` khớp nguyên
- * chuỗi); tin không còn / vừa đổi → LISTING_STATUS_CHANGED. Người bán sửa tin đã duyệt thì tin về pending với nội dung
- * mới: không so updated_at thì admin có thể duyệt nội dung chưa xem. Còn khe vài ms giữa câu select này và RPC; bản chặt
- * cần tham số p_expected_updated_at trong RPC review_used_listing (đổi SQL, chờ chủ dự án quyết).
+ * chuỗi); tin vừa đổi → LISTING_STATUS_CHANGED. Người bán sửa tin đã duyệt thì tin về pending với nội dung mới: không so
+ * updated_at thì admin có thể duyệt nội dung chưa xem. Còn khe vài ms giữa câu select này và RPC; bản chặt cần tham số
+ * p_expected_updated_at trong RPC review_used_listing (đổi SQL, chờ chủ dự án quyết).
+ * Tin không còn (bị xóa ở nơi khác; admin đọc được mọi tin nên 0 dòng = đã xóa) → ITEM_DELETED, không báo "người bán vừa
+ * sửa". Không refresh(): trang render lại sẽ là 404 (notFound) thay cả khối duyệt, admin không kịp thấy câu báo.
  */
 async function reviewableBookId(supabase: Supabase, id: number, expectedUpdatedAt: string) {
   const { data, error } = await supabase.from('used_listings').select('book_id, updated_at').eq('id', id).maybeSingle()
   if (error) return toFailure(error)
-  if (!data || data.updated_at !== expectedUpdatedAt) return listingChanged()
+  if (!data) return ITEM_DELETED
+  if (data.updated_at !== expectedUpdatedAt) return listingChanged()
   return data.book_id
 }
 

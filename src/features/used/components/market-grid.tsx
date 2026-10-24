@@ -23,8 +23,11 @@ export async function MarketGrid({ listings }: { listings: MarketListing[] }) {
     <ul className={GRID_CLASS} data-testid="market-listings">
       {listings.map((listing, index) => (
         <li key={listing.id} data-testid="market-listing" data-listing-id={listing.id}>
+          {/* Không prefetch: mỗi prefetch trang tin đi qua proxy, proxy đếm used_listings theo id để trả 404 thật → tới
+              24 câu DB mỗi lần xem lưới */}
           <Link
             href={{ pathname: '/used-books/[id]', params: { id: String(listing.id) } }}
+            prefetch={false}
             className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <div className="relative aspect-[3/4] overflow-hidden rounded-cover border bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">

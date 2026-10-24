@@ -86,15 +86,18 @@ async function getMarketListingCached(id: number) {
   cacheLife('hours')
 
   const supabase = createPublicClient()
+  // Nhúng sách KHÔNG `!inner`: tin của sách ngừng bán vẫn ra dòng (books null do RLS của books) để biết book_id
   const { data, error } = await supabase
     .from('used_listings')
-    .select('id, condition, price, description, photos, status, seller_name, approved_at, books!inner(id, slug, title)')
+    .select('id, book_id, condition, price, description, photos, status, seller_name, approved_at, books(id, slug, title)')
     .eq('id', id)
     .in('status', ['approved', 'sold'])
     .maybeSingle()
   if (error) throw new Error(`getMarketListing: ${error.message}`)
   if (!data) return null
-  tagBooks([data.books.id])
+  // Gắn tag sách cả khi sách ngừng bán (trả null bên dưới): admin bật lại sách (updateTag book:{id}) → trang tin hiện lại
+  tagBooks([data.book_id])
+  if (!data.books) return null
 
   const urls = await signUsedPhotoUrls(supabase, data.photos)
   return {
