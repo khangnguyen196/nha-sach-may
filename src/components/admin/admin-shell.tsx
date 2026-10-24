@@ -1,4 +1,5 @@
 import {
+  BookCopyIcon,
   BookOpenIcon,
   FolderTreeIcon,
   LayoutDashboardIcon,
@@ -34,6 +35,7 @@ export async function AdminShell({ children }: { children: ReactNode }) {
     { href: '/admin/don-hang', label: t('nav.orders'), icon: <PackageIcon aria-hidden /> },
     { href: '/admin/voucher', label: t('nav.vouchers'), icon: <TicketPercentIcon aria-hidden /> },
     { href: '/admin/danh-gia', label: t('nav.reviews'), icon: <MessageSquareTextIcon aria-hidden /> },
+    { href: '/admin/sach-cu', label: t('nav.usedListings'), icon: <BookCopyIcon aria-hidden /> },
   ]
   const themeToggle = (
     <ThemeToggle

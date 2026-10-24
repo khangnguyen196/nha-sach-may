@@ -153,7 +153,13 @@ describe('link ký ảnh sách cũ: cache ngắn hơn hạn link (quyết địn
     const files = importClosure([SIGNED_URLS, USED_QUERIES])
     // Kiểm được thật: có file dùng link ký, kể cả file chỉ dùng qua file khác (trang → actions → signed-urls)
     expect(files.map(rel)).toEqual(
-      expect.arrayContaining(['features/used/queries.ts', 'features/used/actions.ts', 'app/[locale]/(shop)/account/my-listings/page.tsx']),
+      expect.arrayContaining([
+        'features/used/queries.ts',
+        'features/used/actions.ts',
+        'app/[locale]/(shop)/account/my-listings/page.tsx',
+        'features/admin/used/queries.ts',
+        'app/admin/sach-cu/[id]/page.tsx',
+      ]),
     )
     expect(files.flatMap((file) => cacheProblems(parse(file)))).toEqual([])
   })

@@ -139,6 +139,8 @@ export const ADMIN_VALIDATION_KEYS = [
   'coverTooLarge',
   'coverInvalid',
   'cancelReason',
+  // Chợ sách cũ: lý do từ chối / gỡ tin (features/admin/used/schemas.ts)
+  'listingRejectReason',
   'voucherCode',
   'voucherCodeTaken',
   'voucherDescription',
