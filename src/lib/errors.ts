@@ -64,6 +64,8 @@ export const ERROR_CODES = [
   'LISTING_CHANGED',
   'LISTING_INVALID_TRANSITION',
   'PAYOUT_STATUS_CHANGED',
+  // Tải ảnh tin bị policy của bucket chặn: đủ 30 ảnh / người (mã của app, không phải của DB)
+  'LISTING_PHOTO_LIMIT',
   // Phase 11, chatbot Mây: hết lượt của khách (consume_chat_quota), hết lượt miễn phí của Gemini (trần chung / 429),
   // không dùng được (chưa cấu hình, lỗi AI / mạng), khu vực không được phục vụ (EEA / Anh / Thụy Sĩ)
   'CHAT_QUOTA_EXCEEDED',
@@ -97,6 +99,14 @@ export const VALIDATION_KEYS = [
   'reason',
   'rating',
   'reviewContent',
+  // Chợ sách cũ: form đăng / sửa tin (features/used/schemas.ts); listingPriceMax: giá vượt giá gốc (RPC báo
+  // LISTING_PRICE_INVALID)
+  'listingBook',
+  'listingCondition',
+  'listingPrice',
+  'listingPriceMax',
+  'listingDescription',
+  'listingPhotos',
   // Supabase Auth từ chối (ux-messages): mật khẩu dễ đoán / đã lộ, trùng mật khẩu cũ
   'passwordWeak',
   'passwordSame',

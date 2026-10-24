@@ -39,7 +39,9 @@
     "myOrders": "Đơn hàng của tôi",
     "addressBook": "Sổ địa chỉ",
     "account": "Tài khoản",
-    "firstPage": "Về trang đầu"
+    "firstPage": "Về trang đầu",
+    "usedListing": "Không tìm thấy tin này. Có thể tin không có hoặc thuộc một tài khoản khác. Bạn xem lại trong Sách tôi bán nhé.",
+    "myListings": "Sách tôi bán"
   },
   "errorPage": {
     "title": "Có lỗi phía Nhà Sách Mây",
@@ -776,7 +778,13 @@
     "rating": "Vui lòng chọn số sao (1–5).",
     "reviewContent": "Nhận xét tối đa 2.000 ký tự.",
     "passwordWeak": "Mật khẩu này dễ đoán hoặc đã từng bị lộ. Bạn chọn mật khẩu khác, dài hơn nhé.",
-    "passwordSame": "Mật khẩu mới phải khác mật khẩu đang dùng."
+    "passwordSame": "Mật khẩu mới phải khác mật khẩu đang dùng.",
+    "listingBook": "Vui lòng chọn một cuốn sách có trong cửa hàng.",
+    "listingCondition": "Vui lòng chọn tình trạng sách.",
+    "listingPrice": "Nhập giá bằng số nguyên lớn hơn 0, VD 25000.",
+    "listingPriceMax": "Giá bán phải lớn hơn 0 và không cao hơn giá gốc của sách.",
+    "listingDescription": "Mô tả tối đa 500 ký tự.",
+    "listingPhotos": "Cần 1 đến 3 ảnh đã tải lên xong."
   },
   "auth": {
     "email": "Email",
@@ -866,7 +874,9 @@
     "orders": "Đơn hàng của tôi",
     "ordersDescription": "Theo dõi và hủy đơn hàng.",
     "admin": "Quản trị cửa hàng",
-    "adminDescription": "Sách, đơn hàng, voucher (chỉ có tiếng Việt)."
+    "adminDescription": "Sách, đơn hàng, voucher (chỉ có tiếng Việt).",
+    "myListings": "Sách tôi bán",
+    "myListingsDescription": "Đăng bán sách cũ, theo dõi tin chờ duyệt và đang bán."
   },
   "address": {
     "title": "Sổ địa chỉ",
@@ -895,6 +905,93 @@
     "wardsError": "Không tải được danh sách phường/xã. Vui lòng thử lại.",
     "save": "Lưu địa chỉ",
     "cancel": "Hủy"
+  },
+  "used": {
+    "myListings": {
+      "title": "Sách tôi bán",
+      "lead": "Đăng bán sách cũ của bạn trên Chợ sách cũ. Tin mới đăng hoặc vừa sửa chờ cửa hàng duyệt rồi mới hiện công khai.",
+      "newListing": "Đăng tin",
+      "listLabel": "Tin của bạn",
+      "emptyTitle": "Bạn chưa đăng bán cuốn sách nào",
+      "emptyDescription": "Có cuốn sách đã đọc xong? Đăng tin kèm ảnh thật của cuốn sách, cửa hàng duyệt xong tin sẽ lên Chợ sách cũ.",
+      "pendingLimitTitle": "Đang có 10 tin chờ duyệt",
+      "payout": "Bạn nhận {amount}",
+      "listedAt": "Đăng ngày {date}",
+      "rejectReason": "Lý do từ chối: {reason}",
+      "bookUnavailable": "Sách đã ngừng bán",
+      "edit": "Sửa",
+      "editLabel": "Sửa tin “{title}”"
+    },
+    "status": {
+      "pending": "Chờ duyệt",
+      "approved": "Đang bán",
+      "rejected": "Bị từ chối",
+      "sold": "Đã bán",
+      "withdrawn": "Đã rút"
+    },
+    "condition": {
+      "like_new": "Như mới",
+      "good": "Tốt",
+      "fair": "Khá",
+      "worn": "Cũ nhiều"
+    },
+    "conditionHint": {
+      "like_new": "Gần như chưa đọc: không nếp gấp, không vết bẩn.",
+      "good": "Đã đọc, gáy và trang còn chắc, có thể có vết nhỏ.",
+      "fair": "Có dấu vết dùng rõ: sờn gáy, ố nhẹ, nếp gấp.",
+      "worn": "Cũ nhiều nhưng đủ trang, vẫn đọc được."
+    },
+    "withdraw": {
+      "button": "Rút tin",
+      "question": "Rút tin này? Tin đã rút không mở lại được và ảnh của tin sẽ bị xóa.",
+      "confirm": "Rút tin",
+      "cancel": "Không rút",
+      "pending": "Đang rút…"
+    },
+    "form": {
+      "newTitle": "Đăng bán sách cũ",
+      "editTitle": "Sửa tin",
+      "demoNote": "Tính năng demo, không có giao dịch thật.",
+      "book": "Sách",
+      "bookSearch": "Tìm sách trong cửa hàng",
+      "bookSearchPlaceholder": "Tên sách hoặc tác giả",
+      "bookSearchHint": "Chỉ đăng bán được sách đang có trong cửa hàng. Gõ ít nhất 2 ký tự.",
+      "searching": "Đang tìm…",
+      "noResults": "Không có sách đang bán nào khớp. Bạn thử từ khóa khác nhé.",
+      "resultsCount": "Tìm thấy {count} sách",
+      "searchError": "Chưa tìm được lúc này. Bạn thử lại nhé.",
+      "chooseBook": "Chọn",
+      "chooseBookLabel": "Chọn sách “{title}”",
+      "changeBook": "Đổi sách",
+      "originalPrice": "Giá gốc {price}",
+      "condition": "Tình trạng",
+      "price": "Giá bán (₫)",
+      "priceHint": "Tối đa {max}: không cao hơn giá gốc của sách.",
+      "priceHintNoBook": "Không cao hơn giá gốc của sách.",
+      "payout": "Bạn nhận được {payout} (phí sàn {fee}).",
+      "quoting": "Đang tính số tiền bạn nhận…",
+      "quoteError": "Chưa tính được số tiền bạn nhận. Bạn vẫn đăng tin được.",
+      "description": "Mô tả (không bắt buộc)",
+      "descriptionHint": "Tình trạng cụ thể, ghi chú thêm.",
+      "counter": "{count}/500",
+      "photos": "Ảnh (1 đến 3 ảnh)",
+      "photosHint": "Chụp rõ bìa trước, gáy và chỗ có vết (nếu có). Ảnh được thu nhỏ và xóa thông tin vị trí trước khi lưu.",
+      "addPhoto": "Thêm ảnh",
+      "uploading": "Đang tải ảnh…",
+      "photoUnreadable": "Không đọc được ảnh này (VD ảnh HEIC trên một số trình duyệt). Bạn chọn ảnh JPEG hoặc PNG, hoặc chụp lại bằng camera nhé.",
+      "photoAlt": "Ảnh {number} của tin",
+      "photoMissing": "Ảnh không còn",
+      "removePhoto": "Bỏ ảnh {number}",
+      "submitCreate": "Đăng tin",
+      "submitEdit": "Lưu và gửi duyệt",
+      "pending": "Đang lưu…",
+      "cancel": "Hủy",
+      "approvedNote": "Tin đang bán: sau khi lưu, tin về Chờ duyệt và tạm ẩn khỏi Chợ sách cũ tới khi được duyệt lại.",
+      "rejectedNote": "Tin bị từ chối. Lý do: {reason}. Sửa theo lý do rồi lưu để gửi duyệt lại.",
+      "notEditable": "Tin này đã bán hoặc đã rút nên không sửa được.",
+      "bookUnavailable": "Sách của tin này đã ngừng bán nên chưa sửa tin được. Bạn vẫn rút tin được ở Sách tôi bán.",
+      "backToList": "Về Sách tôi bán"
+    }
   },
   "errors": {
     "AUTH_REQUIRED": "Phiên đăng nhập đã hết. Bạn đăng nhập lại để tiếp tục nhé.",
@@ -955,7 +1052,8 @@
     "LISTING_OWN": "Đây là tin bạn đăng nên bạn không mua được.",
     "LISTING_CHANGED": "Giá của tin vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt mua.",
     "LISTING_INVALID_TRANSITION": "Không thể chuyển tin sang trạng thái này. Bạn tải lại trang để xem trạng thái mới nhất.",
-    "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất."
+    "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
+    "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ (tính cả ảnh của tin chờ duyệt, đang bán và bị từ chối) nên chưa tải thêm được. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé."
   },
   "allBooks": {
     "title": "Tất cả sách",

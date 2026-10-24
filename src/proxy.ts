@@ -83,6 +83,44 @@ async function missingAddress(pathname: string, supabase: SupabaseClient<Databas
 }
 
 /**
+ * Trang sửa một tin sách cũ (/tai-khoan/sach-toi-ban/<id>, /en/account/my-listings/<id>) → id (chưa kiểm định dạng),
+ * locale. Trang đăng tin (/tai-khoan/sach-toi-ban/dang-tin, /en/account/my-listings/new) cùng tiền tố nhưng không phải
+ * trang này. id hợp lệ chỉ có chữ số nên không cần giải mã %.
+ */
+function matchMyListingPath(pathname: string): { id: string; locale: Locale } | null {
+  for (const locale of routing.locales) {
+    const prefix = `${localizedPath('/account/my-listings', locale)}/`
+    if (!pathname.startsWith(prefix)) continue
+    const id = pathname.slice(prefix.length)
+    if (!id || id.includes('/') || pathname === localizedPath('/account/my-listings/new', locale)) return null
+    return { id, locale }
+  }
+  return null
+}
+
+/**
+ * Trang sửa tin sách cũ mà tin không có hoặc của người khác: như trang sửa địa chỉ, cùng một trang 404 (không lộ tin nào
+ * tồn tại). Lọc seller_id: RLS cho admin đọc mọi tin, và tin đã duyệt / đã bán ai cũng đọc được. Lỗi → cho qua: trang
+ * tự hiện UI 404.
+ */
+async function missingListing(pathname: string, supabase: SupabaseClient<Database>, userId: string): Promise<Missing | null> {
+  const match = matchMyListingPath(pathname)
+  if (!match) return null
+  const missing = { locale: match.locale, kind: 'used-listing' } as const
+  if (!/^[1-9]\d{0,17}$/.test(match.id)) return missing
+  const { count, error } = await supabase
+    .from('used_listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', Number(match.id))
+    .eq('seller_id', userId)
+  if (error) {
+    console.error('listing-guard:', error.message)
+    return null
+  }
+  return count === 0 ? missing : null
+}
+
+/**
  * Slug không tồn tại, đơn không thuộc người đang đăng nhập → rewrite sang một đường dẫn không khớp
  * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
  * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
@@ -93,7 +131,11 @@ async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Da
   const { pathname } = request.nextUrl
   const missing =
     (await missingSlug(pathname)) ??
-    (userId ? ((await missingOrder(pathname, supabase, userId)) ?? (await missingAddress(pathname, supabase, userId))) : null)
+    (userId
+      ? ((await missingOrder(pathname, supabase, userId)) ??
+        (await missingAddress(pathname, supabase, userId)) ??
+        (await missingListing(pathname, supabase, userId)))
+      : null)
   if (!missing) return null
   const headers = new Headers(request.headers)
   headers.set(NOT_FOUND_HEADER, missing.kind)

@@ -39,7 +39,9 @@
     "myOrders": "My orders",
     "addressBook": "Address book",
     "account": "Account",
-    "firstPage": "Go to first page"
+    "firstPage": "Go to first page",
+    "usedListing": "We couldn’t find this listing. It may not exist or may belong to another account. Please check My listings.",
+    "myListings": "My listings"
   },
   "errorPage": {
     "title": "Something went wrong on our side",
@@ -360,7 +362,13 @@
     "rating": "Please choose a rating (1–5 stars).",
     "reviewContent": "Your review can be up to 2,000 characters.",
     "passwordWeak": "This password is easy to guess or has appeared in a data leak. Please choose a different, longer one.",
-    "passwordSame": "Your new password must be different from the current one."
+    "passwordSame": "Your new password must be different from the current one.",
+    "listingBook": "Please choose a book from the store.",
+    "listingCondition": "Please choose the book’s condition.",
+    "listingPrice": "Enter the price as a whole number above 0, e.g. 25000.",
+    "listingPriceMax": "The price must be above 0 and no higher than the book’s original price.",
+    "listingDescription": "The description can be up to 500 characters.",
+    "listingPhotos": "Add 1 to 3 photos and wait for them to finish uploading."
   },
   "auth": {
     "email": "Email",
@@ -450,7 +458,9 @@
     "orders": "My orders",
     "ordersDescription": "Track and cancel your orders.",
     "admin": "Store admin",
-    "adminDescription": "Books, orders and vouchers (Vietnamese only)."
+    "adminDescription": "Books, orders and vouchers (Vietnamese only).",
+    "myListings": "My listings",
+    "myListingsDescription": "Sell your used books and track your pending and live listings."
   },
   "address": {
     "title": "Address book",
@@ -479,6 +489,93 @@
     "wardsError": "Couldn't load the list of wards. Please try again.",
     "save": "Save address",
     "cancel": "Cancel"
+  },
+  "used": {
+    "myListings": {
+      "title": "My listings",
+      "lead": "Sell your used books in the Used Books market. New or edited listings are reviewed by the store before they go public.",
+      "newListing": "New listing",
+      "listLabel": "Your listings",
+      "emptyTitle": "You haven’t listed any books yet",
+      "emptyDescription": "Finished a book? List it with real photos of your copy; once the store approves it, it appears in the Used Books market.",
+      "pendingLimitTitle": "10 listings are waiting for review",
+      "payout": "You receive {amount}",
+      "listedAt": "Listed {date}",
+      "rejectReason": "Rejection reason: {reason}",
+      "bookUnavailable": "Book no longer available",
+      "edit": "Edit",
+      "editLabel": "Edit listing “{title}”"
+    },
+    "status": {
+      "pending": "Pending review",
+      "approved": "For sale",
+      "rejected": "Rejected",
+      "sold": "Sold",
+      "withdrawn": "Withdrawn"
+    },
+    "condition": {
+      "like_new": "Like new",
+      "good": "Good",
+      "fair": "Fair",
+      "worn": "Well worn"
+    },
+    "conditionHint": {
+      "like_new": "Barely read: no creases, no marks.",
+      "good": "Read, with a firm spine and pages; may have small marks.",
+      "fair": "Visible wear: worn spine, light stains, creases.",
+      "worn": "Heavily used but complete and readable."
+    },
+    "withdraw": {
+      "button": "Withdraw",
+      "question": "Withdraw this listing? It can’t be reopened and its photos will be deleted.",
+      "confirm": "Withdraw",
+      "cancel": "Keep listing",
+      "pending": "Withdrawing…"
+    },
+    "form": {
+      "newTitle": "Sell a used book",
+      "editTitle": "Edit listing",
+      "demoNote": "Demo feature, no real transactions.",
+      "book": "Book",
+      "bookSearch": "Search the store",
+      "bookSearchPlaceholder": "Title or author",
+      "bookSearchHint": "You can only list books the store carries. Type at least 2 characters.",
+      "searching": "Searching…",
+      "noResults": "No books for sale match. Try another keyword.",
+      "resultsCount": "Books found: {count}",
+      "searchError": "Search isn’t available right now. Please try again.",
+      "chooseBook": "Choose",
+      "chooseBookLabel": "Choose “{title}”",
+      "changeBook": "Change book",
+      "originalPrice": "Original price {price}",
+      "condition": "Condition",
+      "price": "Price (₫)",
+      "priceHint": "Up to {max}: no higher than the book’s original price.",
+      "priceHintNoBook": "No higher than the book’s original price.",
+      "payout": "You receive {payout} (platform fee {fee}).",
+      "quoting": "Calculating what you receive…",
+      "quoteError": "Couldn’t calculate what you receive. You can still post the listing.",
+      "description": "Description (optional)",
+      "descriptionHint": "Details about the condition, any extra notes.",
+      "counter": "{count}/500",
+      "photos": "Photos (1 to 3)",
+      "photosHint": "Show the front cover, spine and any damage clearly. Photos are resized and their location data removed before saving.",
+      "addPhoto": "Add photo",
+      "uploading": "Uploading photo…",
+      "photoUnreadable": "This photo can’t be read (e.g. HEIC photos in some browsers). Please choose a JPEG or PNG photo, or take a new one with the camera.",
+      "photoAlt": "Listing photo {number}",
+      "photoMissing": "Photo unavailable",
+      "removePhoto": "Remove photo {number}",
+      "submitCreate": "Post listing",
+      "submitEdit": "Save and resubmit",
+      "pending": "Saving…",
+      "cancel": "Cancel",
+      "approvedNote": "This listing is live: after you save, it goes back to Pending review and is hidden from the Used Books market until approved again.",
+      "rejectedNote": "This listing was rejected. Reason: {reason}. Update it, then save to resubmit.",
+      "notEditable": "This listing has been sold or withdrawn, so it can’t be edited.",
+      "bookUnavailable": "The book in this listing is no longer sold by the store, so the listing can’t be edited. You can still withdraw it from My listings.",
+      "backToList": "Back to My listings"
+    }
   },
   "errors": {
     "AUTH_REQUIRED": "You’ve been signed out. Please sign in again to continue.",
@@ -539,7 +636,8 @@
     "LISTING_OWN": "This is your own listing, so you can’t buy it.",
     "LISTING_CHANGED": "This listing’s price just changed. Check the new total, then place your order.",
     "LISTING_INVALID_TRANSITION": "This listing cannot be moved to that status. Reload the page to see its latest status.",
-    "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status."
+    "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status.",
+    "LISTING_PHOTO_LIMIT": "You already have 30 used-book photos (including photos of listings that are pending, for sale or rejected), so you can’t upload more yet. Remove photos from a rejected listing or withdraw a listing you no longer want to sell, then try again."
   },
   "allBooks": {
     "title": "All books",

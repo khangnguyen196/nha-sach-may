@@ -5,13 +5,14 @@ import { Link } from '@/i18n/navigation'
 import type { NotFoundKind } from '@/lib/not-found-kind'
 
 type Href = ComponentProps<typeof Link>['href']
+type NotFoundLink = { href: Href; label: string }
 
 type Props = {
   kind: NotFoundKind
   /** h1 khi là nội dung chính của trang (not-found.tsx, trang chưa có h1 ở shell); h2 khi nằm dưới tiêu đề có sẵn */
   heading?: 'h1' | 'h2'
   /** Link chính thay cho mặc định của loại trang (VD "Về trang đầu" của danh sách vượt quá số trang) */
-  primary?: { href: Href; label: string }
+  primary?: NotFoundLink
 }
 
 /**
@@ -28,29 +29,36 @@ export async function NotFoundView({ kind, heading = 'h1', primary }: Props) {
     author: t('author'),
     order: t('order'),
     address: t('address'),
+    'used-listing': t('usedListing'),
   }[kind]
-  const links: { href: Href; label: string }[] =
-    kind === 'order'
-      ? [
-          { href: '/account/orders', label: t('myOrders') },
-          { href: '/', label: t('backHome') },
-        ]
-      : kind === 'address'
-        ? [
-            { href: '/account/addresses', label: t('addressBook') },
-            { href: '/account', label: t('account') },
-          ]
-        : kind === 'page'
-          ? [
-              { href: '/search', label: t('search') },
-              { href: '/', label: t('backHome') },
-            ]
-          : [
-              { href: '/search', label: t('search') },
-              // Lưới danh mục ở cuối trang chủ
-              { href: { pathname: '/', hash: 'categories-title' }, label: t('browse') },
-            ]
-  const [first, second] = primary ? [primary, links[0]] : links
+  // Sách / danh mục / tác giả: tìm sách hoặc xem danh mục
+  const catalogLinks: NotFoundLink[] = [
+    { href: '/search', label: t('search') },
+    // Lưới danh mục ở cuối trang chủ
+    { href: { pathname: '/', hash: 'categories-title' }, label: t('browse') },
+  ]
+  const links: Record<NotFoundKind, NotFoundLink[]> = {
+    page: [
+      { href: '/search', label: t('search') },
+      { href: '/', label: t('backHome') },
+    ],
+    book: catalogLinks,
+    category: catalogLinks,
+    author: catalogLinks,
+    order: [
+      { href: '/account/orders', label: t('myOrders') },
+      { href: '/', label: t('backHome') },
+    ],
+    address: [
+      { href: '/account/addresses', label: t('addressBook') },
+      { href: '/account', label: t('account') },
+    ],
+    'used-listing': [
+      { href: '/account/my-listings', label: t('myListings') },
+      { href: '/account', label: t('account') },
+    ],
+  }
+  const [first, second] = primary ? [primary, links[kind][0]] : links[kind]
 
   return (
     <div className="flex flex-col items-start" data-testid="not-found" data-kind={kind}>
