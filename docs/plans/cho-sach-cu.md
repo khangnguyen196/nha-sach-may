@@ -143,7 +143,7 @@ Content-Type + cỡ); admin xem ảnh trước khi duyệt là chốt cuối.
   thì build lại main, hoặc ghi rõ trong báo cáo `.next` đang là bản nào.
 - Nguồn gốc types: `src/types/database.ts` chép từ artifact `database-types` của run 39990438048 (`06a055a`); bước
   'Check src/types/database.ts' xanh trên `2285889` (e2e 39995297803) và `9fe026f` (e2e 40053340070) → khớp `schema.sql`
-  đã chạy production.
+  tại 2285889 (cùng nội dung file migration đã chạy production 2026-10-24 9:03).
 
 ## App (P-B, P-C)
 
@@ -170,6 +170,8 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 
 ### Việc phải làm ở P-B
 
+- P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
+  để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
 - Một file duy nhất ký link ảnh (hằng TTL 604800 giây = 7 ngày).
 - Query công khai `'use cache'` + `cacheLife('hours')`; trang người bán / admin ký theo request (không cache).
 - Vitest kiểm tĩnh điều kiện (a): chỉ một file gọi `createSignedUrl(s)`, mọi `'use cache'` trong `features/used` gọi
