@@ -37,8 +37,6 @@ function createTableBody(table: string) {
 
 // Câu lệnh chỉ có nghĩa khi nâng cấp DB cũ, schema.sql thể hiện kết quả theo cách khác (đã kiểm tay)
 const UPGRADE_ONLY = new Set([
-  // place_order bản 4 tham số (trước idempotency): schema.sql chỉ có bản 6 tham số
-  'drop function if exists public.place_order(bigint, public.payment_method, text, text)',
   // đi cặp với create policy ngay sau (đã kiểm ở nhánh create policy)
   'drop policy if exists "book_covers_admin_select" on storage.objects',
   // schema.sql tạo bucket với đúng giá trị này: insert … ('book-covers', …, array['image/webp'], 1048576)
@@ -70,12 +68,39 @@ for (const { file, statements: list } of migrationStatements) {
   }
 }
 
+/** `drop function [if exists] <tên>(<kiểu tham số>)` → chữ ký hàm bị bỏ (đổi tham số) */
+const DROP_FUNCTION = /^drop function (?:if exists )?([\w.]+\([^)]*\))$/
+
+// Chữ ký → vị trí migration drop nó. Câu nhắc tới đúng chữ ký đó ở migration trước (revoke / grant execute) không còn
+// trong schema.sql: hàm đã đổi tham số, schema.sql chỉ có bản mới.
+const droppedAt = new Map<string, number>()
+migrationStatements.forEach(({ statements: list }, index) => {
+  for (const statement of list) {
+    const signature = DROP_FUNCTION.exec(statement)?.[1]
+    if (signature) droppedAt.set(signature, index)
+  }
+})
+
+function droppedLater(statement: string, index: number) {
+  for (const [signature, at] of droppedAt) {
+    if (at > index && statement.includes(`function ${signature}`)) return true
+  }
+  return false
+}
+
 describe('schema.sql chứa mọi migration', () => {
   it('có migration để kiểm', () => expect(migrations.length).toBeGreaterThan(0))
 
-  it.each(migrationStatements)('$file', ({ file, statements: list }) => {
+  it.each(migrationStatements.map((migration, index) => ({ ...migration, index })))('$file', ({ file, statements: list, index }) => {
     for (const statement of list) {
       if (UPGRADE_ONLY.has(statement)) continue
+      // Drop chữ ký cũ chỉ có nghĩa khi nâng cấp DB cũ; schema.sql không còn nhắc tới chữ ký đó (không 2 overload)
+      const dropped = DROP_FUNCTION.exec(statement)?.[1]
+      if (dropped) {
+        expect(schemaText, statement).not.toContain(`function ${dropped}`)
+        continue
+      }
+      if (droppedLater(statement, index)) continue
       const key = supersedeKey(statement)
       if (key && lastFile.get(key) !== file) continue
       const addColumn = /^alter table ([\w.]+) add column if not exists (.+)$/.exec(statement)

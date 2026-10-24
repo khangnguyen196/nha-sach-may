@@ -1861,12 +1861,15 @@ end;
 $$;
 
 -- Admin duyệt (pending → approved, kiểm lại sách đang bán + giá trần) hoặc từ chối / gỡ (pending | approved →
--- rejected, bắt buộc lý do). p_expected_status = trạng thái admin đang thấy: khác → LISTING_STATUS_CHANGED.
+-- rejected, bắt buộc lý do). p_expected_status + p_expected_updated_at = trạng thái + updated_at của bản admin đang
+-- thấy: khác → LISTING_STATUS_CHANGED (người bán sửa tin đã duyệt thì tin về pending với nội dung mới; chỉ so trạng
+-- thái thì admin duyệt nội dung chưa xem). So sau khi khóa dòng: không còn khe giữa lúc đọc và lúc ghi.
 create or replace function public.review_used_listing(
-  p_id              bigint,
-  p_expected_status public.used_listing_status,
-  p_approve         boolean,
-  p_reason          text default null
+  p_id                  bigint,
+  p_expected_status     public.used_listing_status,
+  p_expected_updated_at timestamptz,
+  p_approve             boolean,
+  p_reason              text default null
 )
 returns void
 language plpgsql security definer set search_path = '' as $$
@@ -1883,9 +1886,16 @@ begin
       using detail = json_build_object('field', 'approve')::text;
   end if;
 
+  if p_expected_updated_at is null then
+    raise exception 'INVALID_INPUT'
+      using detail = json_build_object('field', 'expected_updated_at')::text;
+  end if;
+
   select * into v_listing from public.used_listings where id = p_id for update;
 
-  if not found or v_listing.status is distinct from p_expected_status then
+  if not found
+     or v_listing.status is distinct from p_expected_status
+     or v_listing.updated_at is distinct from p_expected_updated_at then
     raise exception 'LISTING_STATUS_CHANGED';
   end if;
 
@@ -1941,13 +1951,16 @@ $$;
 -- client không gửi giá (p_expected_total chỉ để so). Không đụng books.stock / sold_count.
 -- Key dùng chung không gian với place_order (orders_user_idempotency_key: user_id + key): key của place_order gửi vào
 -- đây trả đơn sách mới đó. Không trùng trong thực tế vì key sinh mới mỗi lần mở trang thanh toán.
+-- p_expected_updated_at = updated_at của bản tin người mua đang xem (bắt buộc): tin bị sửa (tình trạng / mô tả / ảnh)
+-- rồi được duyệt lại với cùng giá thì tổng không đổi → so thêm updated_at để người mua không mua nhầm bản đã đổi.
 create or replace function public.place_used_order(
-  p_listing_id      bigint,
-  p_address_id      bigint,
-  p_payment_method  public.payment_method default 'cod',
-  p_note            text default null,
-  p_idempotency_key uuid default null,
-  p_expected_total  int default null
+  p_listing_id          bigint,
+  p_address_id          bigint,
+  p_expected_updated_at timestamptz,
+  p_payment_method      public.payment_method default 'cod',
+  p_note                text default null,
+  p_idempotency_key     uuid default null,
+  p_expected_total      int default null
 )
 returns public.orders
 language plpgsql security definer set search_path = '' as $$
@@ -1975,9 +1988,15 @@ begin
       using detail = json_build_object('field', 'expected_total')::text;
   end if;
 
+  if p_expected_updated_at is null then
+    raise exception 'INVALID_INPUT'
+      using detail = json_build_object('field', 'expected_updated_at')::text;
+  end if;
+
   -- Cùng khóa với place_order: request song song cùng key chờ ở đây rồi thấy đơn của request đầu
   perform pg_advisory_xact_lock(hashtextextended(v_user::text || ':' || p_idempotency_key::text, 0));
 
+  -- Trước mọi kiểm tin: gửi lại cùng key sau khi đặt xong (tin đã sold, updated_at đã đổi) vẫn trả đúng đơn đã tạo
   select * into v_order from public.orders
    where user_id = v_user and idempotency_key = p_idempotency_key;
   if found then
@@ -2017,7 +2036,7 @@ begin
 
   v_total := v_listing.price + v_shipping;
 
-  if p_expected_total <> v_total then
+  if p_expected_total <> v_total or v_listing.updated_at is distinct from p_expected_updated_at then
     raise exception 'LISTING_CHANGED'
       using detail = json_build_object('total', v_total)::text;
   end if;
@@ -2098,6 +2117,44 @@ begin
 end;
 $$;
 
+-- Khoản trả người bán cho trang admin (/admin/tra-nguoi-ban): kèm mã + trạng thái đơn (authenticated, kể cả admin,
+-- không đọc được seller_payouts.order_id theo cột) và tên hiển thị người bán. Không trả gì của người mua (tên, email,
+-- điện thoại, địa chỉ, user_id). Mỗi khoản gắn đúng một đơn (đơn đạt đã giao + đã thanh toán), không lẫn đơn đã hủy
+-- của cùng tin.
+create or replace function public.admin_seller_payouts()
+returns table (
+  id             bigint,
+  order_id       bigint,
+  order_code     text,
+  order_status   public.order_status,
+  payment_status public.payment_status,
+  listing_id     bigint,
+  seller_id      uuid,
+  seller_name    text,
+  title          text,
+  price          int,
+  fee            int,
+  amount         int,
+  status         text,
+  paid_at        timestamptz,
+  created_at     timestamptz
+)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if not public.is_admin() then
+    raise exception 'FORBIDDEN';
+  end if;
+
+  return query
+  select p.id, p.order_id, o.order_code, o.status, o.payment_status, p.listing_id, p.seller_id, l.seller_name,
+         p.title, p.price, p.fee, p.amount, p.status, p.paid_at, p.created_at
+    from public.seller_payouts p
+    join public.orders o on o.id = p.order_id
+    join public.used_listings l on l.id = p.listing_id
+   order by p.created_at desc, p.id desc;
+end;
+$$;
+
 -- Policy upload ảnh:
 -- (1) người gọi còn dưới used_photo_limit() ảnh trong thư mục của mình. Trần chống lạm dụng kho ảnh (quyết định 7),
 --     KHÔNG đếm ảnh của tin đã bán: đếm cả thì bán 10 tin (3 ảnh / tin) là khóa đăng tin vĩnh viễn. Đếm không khóa:
@@ -2152,20 +2209,23 @@ grant  execute on function public.update_used_listing(bigint, public.used_condit
 revoke execute on function public.withdraw_used_listing(bigint) from public, anon;
 grant  execute on function public.withdraw_used_listing(bigint) to authenticated;
 
-revoke execute on function public.review_used_listing(bigint, public.used_listing_status, boolean, text) from public, anon;
-grant  execute on function public.review_used_listing(bigint, public.used_listing_status, boolean, text) to authenticated;
+revoke execute on function public.review_used_listing(bigint, public.used_listing_status, timestamptz, boolean, text) from public, anon;
+grant  execute on function public.review_used_listing(bigint, public.used_listing_status, timestamptz, boolean, text) to authenticated;
 
 revoke execute on function public.quote_used_order(bigint) from public, anon;
 grant  execute on function public.quote_used_order(bigint) to authenticated;
 
-revoke execute on function public.place_used_order(bigint, bigint, public.payment_method, text, uuid, int) from public, anon;
-grant  execute on function public.place_used_order(bigint, bigint, public.payment_method, text, uuid, int) to authenticated;
+revoke execute on function public.place_used_order(bigint, bigint, timestamptz, public.payment_method, text, uuid, int) from public, anon;
+grant  execute on function public.place_used_order(bigint, bigint, timestamptz, public.payment_method, text, uuid, int) to authenticated;
 
 revoke execute on function public.my_used_sales() from public, anon;
 grant  execute on function public.my_used_sales() to authenticated;
 
 revoke execute on function public.mark_payout_paid(bigint) from public, anon;
 grant  execute on function public.mark_payout_paid(bigint) to authenticated;
+
+revoke execute on function public.admin_seller_payouts() from public, anon;
+grant  execute on function public.admin_seller_payouts() to authenticated;
 
 revoke execute on function public.can_upload_used_photo(text) from public, anon;
 grant  execute on function public.can_upload_used_photo(text) to authenticated;
@@ -2234,12 +2294,16 @@ create policy "used_listing_photos_delete_own" on storage.objects
 --   create_used_listing(p_book_id, p_condition, p_price, p_description, p_photos) — đăng tin (chờ duyệt), trả id
 --   update_used_listing(p_id, p_condition, p_price, p_description, p_photos)      — sửa tin → về chờ duyệt
 --   withdraw_used_listing(p_id)             — người bán rút tin chưa bán
---   review_used_listing(p_id, p_expected_status, p_approve, p_reason)              — admin duyệt / từ chối / gỡ
+--   review_used_listing(p_id, p_expected_status, p_expected_updated_at, p_approve, p_reason)
+--                                           — admin duyệt / từ chối / gỡ (trạng thái / updated_at lệch:
+--                                           LISTING_STATUS_CHANGED)
 --   quote_used_order(p_listing_id)          — giá + ship cố định + tổng của đơn sách cũ
---   place_used_order(p_listing_id, p_address_id, p_payment_method, p_note,
---                    p_idempotency_key, p_expected_total)                          — mua một tin
+--   place_used_order(p_listing_id, p_address_id, p_expected_updated_at, p_payment_method, p_note,
+--                    p_idempotency_key, p_expected_total)  — mua một tin (tổng / updated_at lệch: LISTING_CHANGED)
 --   my_used_sales()                         — đơn đã bán + tiền sẽ nhận của người gọi (không có thông tin người mua)
 --   mark_payout_paid(p_id)                  — admin đánh dấu đã trả người bán (mô phỏng)
+--   admin_seller_payouts()                  — admin: mọi khoản trả người bán kèm mã + trạng thái đơn (không có
+--                                           thông tin người mua)
 --   can_upload_used_photo(p_name)           — dùng trong policy upload ảnh (≤ used_photo_limit() = 30 ảnh / người,
 --                                           không đếm ảnh của tin đã bán; tên chưa từng gắn tin, tên ảnh đã từng
 --                                           gắn tin lưu ở private.used_photo_names; thư mục của người gọi)
@@ -2261,7 +2325,8 @@ create policy "used_listing_photos_delete_own" on storage.objects
 --   Chợ sách cũ: LISTING_PENDING_LIMIT (detail: {"max": ...}), LISTING_PRICE_INVALID (detail: {"max": ...} khi có sách),
 --   LISTING_PHOTOS_INVALID (đăng / sửa), LISTING_PHOTOS_MISSING (admin duyệt: ảnh của tin không còn đủ),
 --   LISTING_NOT_EDITABLE (tin không có / của người khác / đã bán / đã rút),
---   LISTING_STATUS_CHANGED, LISTING_UNAVAILABLE, LISTING_OWN, LISTING_CHANGED (detail: {"total": ...}),
+--   LISTING_STATUS_CHANGED (admin duyệt / từ chối: trạng thái hoặc updated_at của tin đã đổi), LISTING_UNAVAILABLE,
+--   LISTING_OWN, LISTING_CHANGED (mua: tổng hoặc updated_at của tin đã đổi; detail: {"total": ...}),
 --   LISTING_INVALID_TRANSITION (trigger trạng thái tin; detail: {"from": ..., "to": ...}), PAYOUT_STATUS_CHANGED
 --
 -- SAU KHI CHẠY XONG:

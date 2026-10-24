@@ -97,11 +97,12 @@ describe('RPC chợ sách cũ', () => {
     'create_used_listing(bigint, public.used_condition, int, text, text[])',
     'update_used_listing(bigint, public.used_condition, int, text, text[])',
     'withdraw_used_listing(bigint)',
-    'review_used_listing(bigint, public.used_listing_status, boolean, text)',
+    'review_used_listing(bigint, public.used_listing_status, timestamptz, boolean, text)',
     'quote_used_order(bigint)',
-    'place_used_order(bigint, bigint, public.payment_method, text, uuid, int)',
+    'place_used_order(bigint, bigint, timestamptz, public.payment_method, text, uuid, int)',
     'my_used_sales()',
     'mark_payout_paid(bigint)',
+    'admin_seller_payouts()',
     'can_upload_used_photo(text)',
     'can_delete_used_photo(text)',
   ]
@@ -117,11 +118,30 @@ describe('RPC chợ sách cũ', () => {
   })
 
   it('RPC của admin kiểm is_admin() trước mọi việc khác', () => {
-    for (const name of ['public.review_used_listing', 'public.mark_payout_paid']) {
+    for (const [name, work] of [
+      ['public.review_used_listing', 'update public.'],
+      ['public.mark_payout_paid', 'update public.'],
+      ['public.admin_seller_payouts', 'return query'],
+    ] as const) {
       const body = functionStatement(name)
       const check = body.indexOf("if not public.is_admin() then raise exception 'forbidden'")
       expect(check, name).toBeGreaterThan(-1)
-      expect(body.indexOf('update public.'), name).toBeGreaterThan(check)
+      expect(body.indexOf(work), name).toBeGreaterThan(check)
+    }
+  })
+
+  it('admin_seller_payouts không trả cột của người mua (tên, điện thoại, địa chỉ, email, user_id)', () => {
+    const statement = functionStatement('public.admin_seller_payouts')
+    const returns = /returns table \(([^)]*)\) language /.exec(statement)?.[1] ?? ''
+    expect(returns.trim()).not.toBe('')
+    expect(returns).toContain('order_code text')
+    for (const column of ['recipient_name', 'phone', 'province', 'ward', 'street', 'email', 'user_id', 'note']) {
+      expect(returns).not.toMatch(new RegExp(`\\b${column}\\b`))
+    }
+    // Thân hàm cũng không đọc cột nào của người mua (không chỉ đổi tên cột trả về)
+    const body = statement.slice(statement.indexOf('$$'))
+    for (const column of ['recipient_name', 'phone', 'province', 'ward', 'street', 'email', 'user_id']) {
+      expect(body).not.toMatch(new RegExp(`\\.${column}\\b`))
     }
   })
 
@@ -252,5 +272,104 @@ describe('giới hạn ảnh, khóa ngoại, sổ tiền', () => {
       "if not found then raise exception 'invalid_input' using detail = json_build_object('field', 'book_id')::text; end if;",
     )
     expect(check).toContain("if not v_active then raise exception 'book_unavailable'")
+  })
+})
+
+/** Tham số `tên kiểu` của một hàm (đã chuẩn hóa), bỏ phần `default …` */
+function parameters(name: string) {
+  const statement = functionStatement(name)
+  const list = statement.slice(statement.indexOf('(') + 1, statement.indexOf(') returns '))
+  return list.split(',').map((parameter) => parameter.trim().split(' ').slice(0, 2).join(' '))
+}
+
+describe('P-C: so updated_at của tin khi duyệt / mua (một định nghĩa, chữ ký mới)', () => {
+  const migration = readFileSync(join(import.meta.dirname, 'migrations', '20261024120000_used_market_purchase.sql'), 'utf8')
+    .replace(/--[^\n]*/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+
+  it.each([
+    [
+      'public.review_used_listing',
+      [
+        'p_id bigint',
+        'p_expected_status public.used_listing_status',
+        'p_expected_updated_at timestamptz',
+        'p_approve boolean',
+        'p_reason text',
+      ],
+    ],
+    [
+      'public.place_used_order',
+      [
+        'p_listing_id bigint',
+        'p_address_id bigint',
+        'p_expected_updated_at timestamptz',
+        'p_payment_method public.payment_method',
+        'p_note text',
+        'p_idempotency_key uuid',
+        'p_expected_total int',
+      ],
+    ],
+  ])('%s: một định nghĩa trong schema.sql, đúng chữ ký mới', (name, expected) => {
+    expect(schema.split(`create or replace function ${name}(`)).toHaveLength(2)
+    expect(parameters(name)).toEqual(expected)
+    // p_expected_updated_at không có default (bắt buộc)
+    expect(functionStatement(name)).toContain('p_expected_updated_at timestamptz, ')
+  })
+
+  it('migration drop đúng chữ ký cũ, không kèm if exists (lệch chữ ký thì cả file rollback)', () => {
+    for (const signature of [
+      'public.review_used_listing(bigint, public.used_listing_status, boolean, text)',
+      'public.place_used_order(bigint, bigint, public.payment_method, text, uuid, int)',
+    ]) {
+      expect(migration).toContain(`drop function ${signature};`)
+      expect(schema).not.toContain(`function ${signature}`)
+    }
+    expect(migration).not.toContain('drop function if exists')
+  })
+
+  it('review_used_listing: null → INVALID_INPUT; trạng thái hoặc updated_at lệch (sau khi khóa dòng) → LISTING_STATUS_CHANGED', () => {
+    const body = functionStatement('public.review_used_listing')
+    expect(body).toContain(
+      "if p_expected_updated_at is null then raise exception 'invalid_input' using detail = json_build_object('field', 'expected_updated_at')::text; end if;",
+    )
+    const lock = body.indexOf('select * into v_listing from public.used_listings where id = p_id for update;')
+    const check = body.indexOf(
+      "if not found or v_listing.status is distinct from p_expected_status or v_listing.updated_at is distinct from p_expected_updated_at then raise exception 'listing_status_changed';",
+    )
+    expect(lock).toBeGreaterThan(-1)
+    expect(check).toBeGreaterThan(lock)
+  })
+
+  it('place_used_order: null → INVALID_INPUT; idempotency trước mọi kiểm tin; tổng hoặc updated_at lệch → LISTING_CHANGED', () => {
+    const body = functionStatement('public.place_used_order')
+    const nullCheck = body.indexOf(
+      "if p_expected_updated_at is null then raise exception 'invalid_input' using detail = json_build_object('field', 'expected_updated_at')::text; end if;",
+    )
+    const idempotent = body.indexOf('if found then return v_order; end if;')
+    const lock = body.indexOf('select * into v_listing from public.used_listings where id = p_listing_id for update;')
+    const changed = body.indexOf(
+      "if p_expected_total <> v_total or v_listing.updated_at is distinct from p_expected_updated_at then raise exception 'listing_changed' using detail = json_build_object('total', v_total)::text;",
+    )
+    expect(nullCheck).toBeGreaterThan(body.indexOf("json_build_object('field', 'expected_total')"))
+    expect(idempotent).toBeGreaterThan(nullCheck)
+    expect(lock).toBeGreaterThan(idempotent)
+    for (const code of ['listing_unavailable', 'listing_own', 'book_unavailable']) {
+      const raise = body.indexOf(`raise exception '${code}'`)
+      expect(raise, code).toBeGreaterThan(lock)
+      expect(changed, code).toBeGreaterThan(raise)
+    }
+  })
+
+  it('migration có đúng revoke / grant của chữ ký mới (cả 3 hàm)', () => {
+    for (const signature of [
+      'public.review_used_listing(bigint, public.used_listing_status, timestamptz, boolean, text)',
+      'public.place_used_order(bigint, bigint, timestamptz, public.payment_method, text, uuid, int)',
+      'public.admin_seller_payouts()',
+    ]) {
+      expect(migration).toContain(`revoke execute on function ${signature} from public, anon;`)
+      expect(migration).toContain(`grant execute on function ${signature} to authenticated;`)
+    }
   })
 })
