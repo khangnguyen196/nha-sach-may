@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createListingSchema,
+  expectedUpdatedAtSchema,
   LISTING_DESCRIPTION_MAX,
   listingFormValues,
   listingIdSchema,
@@ -108,5 +109,19 @@ describe('listingIdSchema', () => {
     expect(listingIdSchema.parse('42')).toBe(42)
     expect(listingIdSchema.safeParse('0').success).toBe(false)
     expect(listingIdSchema.safeParse('abc').success).toBe(false)
+  })
+})
+
+describe('expectedUpdatedAtSchema (updated_at của bản tin đang hiển thị, dùng chung admin + trang mua)', () => {
+  it('chuỗi PostgREST: có micro giây, hoặc không phần lẻ (Postgres bỏ phần lẻ = 0) → giữ nguyên chuỗi', () => {
+    for (const value of ['2026-10-24T05:05:00.123456+00:00', '2026-10-24T05:05:00+00:00']) {
+      expect(expectedUpdatedAtSchema.safeParse(value).data, value).toBe(value)
+    }
+  })
+
+  it('không phải thời điểm, thiếu múi giờ, trống / thiếu → lỗi', () => {
+    for (const value of ['abc', '2026-10-24T05:05:00.123456', '2026-10-24T05:05:00', '', null, undefined]) {
+      expect(expectedUpdatedAtSchema.safeParse(value).success, String(value)).toBe(false)
+    }
   })
 })

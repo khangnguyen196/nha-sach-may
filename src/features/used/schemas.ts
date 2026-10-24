@@ -75,6 +75,14 @@ export function listingFormValues(formData: FormData) {
 /** id tin (tham số bind / URL) */
 export const listingIdSchema = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 
+/**
+ * `updated_at` của bản tin đang hiển thị (ô ẩn `expected_updated_at` ở trang admin duyệt tin và trang mua): nguyên chuỗi
+ * PostgREST trả về, không qua Date (mất micro giây → luôn lệch). VD `2026-10-24T05:05:00.123456+00:00`; phần lẻ của giây
+ * bằng 0 thì Postgres bỏ hẳn (`2026-10-24T05:05:00+00:00`). Bắt buộc có múi giờ: RPC so với giá trị thật sau khi khóa
+ * dòng, chuỗi không múi giờ sẽ được đọc theo múi giờ của phiên DB.
+ */
+export const expectedUpdatedAtSchema = z.iso.datetime({ offset: true })
+
 /** Giá gửi từ ô giá để xem phí (quoteListing) */
 export const quotePriceSchema = z.number().int().min(1).max(2_147_483_647)
 

@@ -6,7 +6,7 @@ import type { createClient } from '@/lib/supabase/server'
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
 /**
- * Các sách trong đơn vừa đổi (đặt / hủy / admin đổi trạng thái) → làm mới trang sách và các danh sách đang chứa chúng.
+ * Các sách trong đơn vừa đổi (đặt / hủy / admin hủy) → làm mới trang sách và các danh sách đang chứa chúng.
  * Dòng sách mới: tồn kho / sold_count đổi → tag `book:{id}` (gắn theo từng sách). Dòng sách cũ (`used_listing_id`):
  * tồn kho không đổi nhưng tin đổi trạng thái công khai (đặt → đã bán, hủy → đang bán lại) → tag chợ, trang tin, "Có N
  * bản cũ" của sách (`usedListingTags`). Chỉ gọi trong Server Action (updateTag).

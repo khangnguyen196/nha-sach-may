@@ -657,7 +657,7 @@ test('(r3) admin_seller_payouts: chỉ admin; một tin có đơn hủy + đơn 
   expect((await sellerClient.rpc('admin_seller_payouts')).error?.message).toBe('FORBIDDEN')
   // anon không có quyền execute (revoke public, anon)
   const anonCall = await anon.rpc('admin_seller_payouts')
-  expect(anonCall.error).not.toBeNull()
+  expect(anonCall.error?.message).toMatch(/permission denied/)
   expect(anonCall.data).toBeNull()
 
   const path = await uploadPhoto(sellerClient, seller)

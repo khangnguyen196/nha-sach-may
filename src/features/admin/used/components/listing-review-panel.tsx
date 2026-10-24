@@ -38,7 +38,8 @@ type Props = {
   status: ListingStatus
   /**
    * `updated_at` của bản tin đang hiển thị, nguyên chuỗi PostgREST trả về (không qua Date): gửi theo ô ẩn
-   * `expected_updated_at`, action so với giá trị thật → người bán vừa sửa tin thì không duyệt nội dung admin chưa xem
+   * `expected_updated_at`, RPC review_used_listing so với giá trị thật sau khi khóa dòng → người bán vừa sửa tin thì
+   * không duyệt nội dung admin chưa xem
    */
   updatedAt: string
   /** approveListing / rejectListing đã bind id tin */

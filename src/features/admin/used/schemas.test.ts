@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { invalidInput } from '@/lib/errors'
-import { EXPECTED_UPDATED_AT_MAX, rejectReasonSchema, REJECT_REASON_MAX, reviewTargetSchema } from './schemas'
+import { rejectReasonSchema, REJECT_REASON_MAX, reviewTargetSchema } from './schemas'
 
 describe('rejectReasonSchema (lý do từ chối / gỡ tin)', () => {
   const reason = (value: unknown) => rejectReasonSchema.safeParse({ reason: value })
@@ -66,19 +66,22 @@ describe('reviewTargetSchema (tin + trạng thái + updated_at đang hiển th�
     }
   })
 
-  it('updated_at trống / thiếu / quá dài → lỗi', () => {
-    for (const value of ['', null, undefined, 'x'.repeat(EXPECTED_UPDATED_AT_MAX + 1)]) {
+  it('updated_at dạng PostgREST: có micro giây, hoặc không phần lẻ (Postgres bỏ phần lẻ = 0)', () => {
+    for (const value of ['2026-10-24T05:05:00.123456+00:00', '2026-10-24T05:05:00+00:00']) {
+      expect(
+        reviewTargetSchema.safeParse({ id: 1, expected_status: 'pending', expected_updated_at: value }).data
+          ?.expected_updated_at,
+        value,
+      ).toBe(value)
+    }
+  })
+
+  it('updated_at trống / thiếu / không phải thời điểm / thiếu múi giờ → lỗi', () => {
+    for (const value of ['', null, undefined, 'abc', '2026-10-24T05:05:00.123456', '2026-10-24 05:05:00+00']) {
       expect(
         reviewTargetSchema.safeParse({ id: 1, expected_status: 'pending', expected_updated_at: value }).success,
         String(value),
       ).toBe(false)
     }
-    expect(
-      reviewTargetSchema.safeParse({
-        id: 1,
-        expected_status: 'pending',
-        expected_updated_at: 'x'.repeat(EXPECTED_UPDATED_AT_MAX),
-      }).success,
-    ).toBe(true)
   })
 })
