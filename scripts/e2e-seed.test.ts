@@ -131,14 +131,28 @@ const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf
 type SeedCategory = { parent: string | null; active: boolean }
 
 /**
+ * Mặc định is_active của RIÊNG bảng categories (schema.sql còn bảng khác có cùng dòng cột): tìm trong khối `create table
+ * public.categories (…);`, không thấy khối thì coi là tắt (test đỏ), và không có câu alter đổi default về sau.
+ */
+function categoriesDefaultActive() {
+  const schema = read('../supabase/schema.sql')
+  const table = /create table public\.categories \(([\s\S]*?)\r?\n\);/.exec(schema)?.[1]
+  if (table === undefined || !/is_active\s+boolean not null default true/.test(table)) return false
+  return !/alter\s+table\s+(only\s+)?(public\.)?categories\s+alter\s+column\s+is_active\s+set\s+default/i.test(schema)
+}
+
+/** Seed nào (seed.sql + seed-foreign-books.sql, DB local nạp cả hai) có câu update danh mục, có hay không tiền tố schema */
+const seedUpdatesCategories = (sql: string) =>
+  [sql, read('../supabase/seed-foreign-books.sql')].some((seed) => /update\s+(public\.)?categories/i.test(seed))
+
+/**
  * Danh mục của seed.sql theo slug: khối danh mục cha `(tên, tên en, slug, thứ tự)` và khối danh mục con `(cha, tên, tên
  * en, slug, thứ tự)`; khối nào thêm cột (VD is_active) thì regex không khớp → không có danh mục nào (test đỏ). Không ghi
  * is_active → lấy mặc định của schema.sql; seed có câu update danh mục thì coi mọi danh mục là tắt (không tự đoán câu
  * update đổi danh mục nào).
  */
 function seedCategories(sql: string) {
-  const defaultActive = /is_active\s+boolean not null default true/.test(read('../supabase/schema.sql'))
-  const active = defaultActive && !/update\s+public\.categories/i.test(sql)
+  const active = categoriesDefaultActive() && !seedUpdatesCategories(sql)
   const quoted = (line: string) => [...line.matchAll(/'([^']*)'/g)].map((match) => match[1] ?? '')
   const rows = (block: string | undefined) => (block ?? '').split('\n').filter((line) => line.trim().startsWith('('))
 
