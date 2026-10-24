@@ -173,14 +173,16 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 ### Việc phải làm ở P-B
 
 Chia 3 vòng con trên nhánh `cho-sach-cu-2` (điều phối 24/10): 7 = người bán, 8 = admin duyệt / từ chối / gỡ, 9 = trang
-công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm (vòng 7, 8, 9).
+công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer; 10 = sửa e2e CI vòng 9 + review vòng 9. Lên main một lần
+khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10).
 
 - [x] P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
   để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
 - [x] Một file duy nhất ký link ảnh (`features/used/signed-urls.ts`, hằng `USED_PHOTO_URL_TTL` = 604800 giây = 7 ngày).
 - [x] Query công khai `'use cache'` + `cacheLife('hours')` (vòng 9, `features/used/public-queries.ts`: client anon,
-  `books!inner` bỏ tin của sách ngừng bán; danh sách tag `used-listings` + `book:{id}`, một tin `used-listing:{id}`,
-  "Có N bản cũ" `used-book:{bookId}` không ký link); [x] trang người bán ký theo request (không cache);
+  danh sách `books!inner` bỏ tin của sách ngừng bán, tag `used-listings` + `book:{id}`; một tin `used-listing:{id}` +
+  `book:{id}` (vòng 10: nhúng sách không `!inner`, gắn tag sách trước khi trả null cho sách ngừng bán); "Có N bản cũ"
+  `used-book:{bookId}` không ký link); [x] trang người bán ký theo request (không cache);
   [x] admin ký theo request (`features/admin/used/queries.ts`, không cache; vòng 8).
 - [x] Vitest kiểm tĩnh điều kiện (a) (`features/used/cache-life.test.ts`): chỉ một file gọi `createSignedUrl(s)`, mọi
   `'use cache'` trong file import signed-urls / features/used/queries (trực tiếp hay bắc cầu: bao đóng import trong src,
@@ -218,6 +220,13 @@ công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main m
 - [x] Schema zod form đăng / sửa tin `.trim()` mô tả trước khi gọi RPC (`btrim` của DB chỉ cắt dấu cách; mô tả chỉ có
   xuống dòng / tab sẽ lưu nguyên).
 - [x] Trần 30 ảnh: policy bucket chặn tải lên → mã app `LISTING_PHOTO_LIMIT` (không đổi SQL).
+- [x] Vòng 10 (sửa e2e CI 1c6e7ef + review vòng 9): e2e sau điều hướng client chỉ xét phần tử đang hiển thị (Next giữ
+  trang vừa rời trong `<main>` ở dạng ẩn, Activity): (p1) người bán ở trang tin, (p5) thứ tự lưới sau chip sắp xếp; ca
+  (10) một init script theo chế độ trong sessionStorage; dọn cuối ca không che lỗi gốc; bất biến sách chợ trong
+  `scripts/e2e-seed.test.ts` (danh mục lá đang bật kể cả cha, giá gốc > mọi giá tin, giá tin viết thẳng). Dòng "Có N bản
+  cũ" `min-h-[1lh]`; thẻ lưới `prefetch={false}`; trang tin gắn tag sách trước khi trả null; admin duyệt / từ chối tin đã
+  bị xóa → `ITEM_DELETED` (không `refresh()`: trang render lại là 404) + e2e admin (i); comment `instant = false` của
+  trang tin theo kết quả kiểm (bỏ dòng vẫn build được, dev không báo; giữ tới khi quyết).
 
 ### Việc phải làm ở P-C
 
