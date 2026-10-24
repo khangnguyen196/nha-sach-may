@@ -20,7 +20,7 @@ import { login, NO_SESSION } from './auth'
 import { vnd } from './cart'
 import { collectErrors, waitForHydration } from './helpers'
 
-// Admin duyệt / từ chối / gỡ tin sách cũ (docs/plans/cho-sach-cu.md, P-B vòng 8). Người bán + người dùng thường + sách
+// Admin duyệt / từ chối / gỡ tin sách cũ (docs/plans/cho-sach-cu.md, P-B vòng 8, 9). Người bán + người dùng thường + sách
 // test tạo riêng mỗi lần chạy; tin tạo bằng RPC create_used_listing theo phiên người bán, ảnh thật trong bucket (tải bằng
 // phiên người bán). Dọn ở afterAll (chạy cả khi test đỏ): deleteE2eUsers (tin → ảnh trong thư mục người bán → user), rồi
 // cleanupE2eAdminData đúng slug của spec (sách sau tin: book_id restrict).
@@ -32,6 +32,9 @@ type Client = Awaited<ReturnType<typeof signedInClient>>
 const BOOK_PRICE = 80_000
 const ORIGINAL_PRICE = 100_000
 const LISTING_PRICE = 70_000
+/** Câu riêng của admin cho LISTING_STATUS_CHANGED (admin.usedListings.listingChanged) */
+const LISTING_CHANGED =
+  'Người bán vừa sửa tin hoặc tin vừa đổi trạng thái. Trang đã hiện nội dung mới nhất, bạn xem lại trước khi duyệt.'
 
 let seller: E2eUser
 let customer: E2eUser
@@ -104,6 +107,8 @@ test('(a) tin chờ duyệt hiện ở /admin/sach-cu (mặc định), ảnh t�
   const errors = collectErrors(page)
   const { id } = await createPendingListing()
 
+  // Giả định: lúc chạy có < 25 tin chờ duyệt (một trang admin; chờ duyệt xếp cũ nhất trước nên tin mới nằm cuối). Tin
+  // của mọi spec song song đều được dọn sau khi chạy; đủ 25 thì mở thẳng /admin/sach-cu/<id> thay cho bấm từ bảng.
   await page.goto('/admin/sach-cu')
   await expect(main(page).getByRole('link', { name: 'Chờ duyệt' })).toHaveAttribute('aria-current', 'true')
   const row = listRow(page, id)
@@ -212,13 +217,44 @@ test('(d) người bán rút tin khi admin đang mở trang → Duyệt: LISTING
   const withdrawn = await sellerClient.rpc('withdraw_used_listing', { p_id: id })
   expect(withdrawn.error).toBeNull()
   await review(page).getByRole('button', { name: 'Duyệt tin' }).click()
-  await expect(feedback(page)).toContainText(
-    'Tin vừa đổi trạng thái ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.',
-    { timeout: 15_000 },
-  )
+  await expect(feedback(page)).toContainText(LISTING_CHANGED, { timeout: 15_000 })
   await expect(status(page)).toHaveText('Đã rút')
   await expect(main(page).getByTestId('listing-review-readonly')).toHaveText('Người bán đã rút tin: chỉ xem.')
   expect(await usedListingRow(id)).toMatchObject({ status: 'withdrawn', approved_at: null })
+})
+
+test('(h) người bán sửa giá tin chờ duyệt khi admin đang mở trang → Duyệt: câu riêng, vẫn chờ duyệt, trang hiện giá mới', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  const { id, photos } = await createPendingListing()
+  await openListing(page, id)
+  await expect(status(page)).toHaveText('Chờ duyệt')
+  await expect(main(page).getByTestId('used-listing-price')).toHaveText(vnd(LISTING_PRICE))
+
+  // Tin vẫn chờ duyệt (expected_status khớp) nhưng nội dung đã khác bản admin đang xem: chỉ updated_at bắt được
+  const newPrice = 65_000
+  const edited = await sellerClient.rpc('update_used_listing', {
+    p_id: id,
+    p_condition: 'good',
+    p_price: newPrice,
+    p_description: 'Sách e2e admin',
+    p_photos: photos,
+  })
+  expect(edited.error).toBeNull()
+  await review(page).getByRole('button', { name: 'Duyệt tin' }).click()
+  await expect(feedback(page)).toContainText(LISTING_CHANGED, { timeout: 15_000 })
+  await expect(status(page)).toHaveText('Chờ duyệt')
+  await expect(main(page).getByTestId('used-listing-price')).toHaveText(vnd(newPrice))
+  expect(await usedListingRow(id)).toMatchObject({ status: 'pending', price: newPrice, approved_at: null })
+
+  // Bản mới đã hiện (ô ẩn updated_at mới) → duyệt được
+  await review(page).getByRole('button', { name: 'Duyệt tin' }).click()
+  await expect(feedback(page)).toContainText('Đã duyệt tin', { timeout: 15_000 })
+  await expect(status(page)).toHaveText('Đang bán')
+  expect(await usedListingRow(id)).toMatchObject({ status: 'approved', price: newPrice })
+  expect(errors).toEqual([])
 })
 
 test('(e) ảnh của tin bị xóa ngoài policy → ô "Ảnh không còn"; Duyệt: LISTING_PHOTOS_MISSING, vẫn chờ duyệt', async ({
@@ -263,19 +299,25 @@ test('(g) khách và user thường mở /admin/sach-cu → về trang chủ', a
   test.setTimeout(60_000)
   const { id } = await createPendingListing()
   const guest = await browser.newContext({ baseURL, storageState: NO_SESSION })
-  const guestPage = await guest.newPage()
-  for (const path of ['/admin/sach-cu', `/admin/sach-cu/${id}`]) {
-    await guestPage.goto(path)
-    await expect(guestPage, path).toHaveURL(`${baseURL}/`)
+  try {
+    const guestPage = await guest.newPage()
+    for (const path of ['/admin/sach-cu', `/admin/sach-cu/${id}`]) {
+      await guestPage.goto(path)
+      await expect(guestPage, path).toHaveURL(`${baseURL}/`)
+    }
+  } finally {
+    await guest.close()
   }
-  await guest.close()
 
   const context = await browser.newContext({ baseURL, storageState: NO_SESSION })
-  const page = await context.newPage()
-  await login(page, customer)
-  for (const path of ['/admin/sach-cu', `/admin/sach-cu/${id}`]) {
-    await page.goto(path)
-    await expect(page, path).toHaveURL(`${baseURL}/`)
+  try {
+    const page = await context.newPage()
+    await login(page, customer)
+    for (const path of ['/admin/sach-cu', `/admin/sach-cu/${id}`]) {
+      await page.goto(path)
+      await expect(page, path).toHaveURL(`${baseURL}/`)
+    }
+  } finally {
+    await context.close()
   }
-  await context.close()
 })

@@ -36,6 +36,11 @@ export type ListingReviewLabels = {
 type Props = {
   /** Trạng thái đang hiển thị: gửi theo ô ẩn `expected_status` (RPC so với trạng thái thật) */
   status: ListingStatus
+  /**
+   * `updated_at` của bản tin đang hiển thị, nguyên chuỗi PostgREST trả về (không qua Date): gửi theo ô ẩn
+   * `expected_updated_at`, action so với giá trị thật → người bán vừa sửa tin thì không duyệt nội dung admin chưa xem
+   */
+  updatedAt: string
   /** approveListing / rejectListing đã bind id tin */
   approveAction: FormAction
   rejectAction: FormAction
@@ -53,13 +58,17 @@ type Kind = 'approve' | 'reject' | 'takedown'
  * Focus (WCAG 2.4.3): mở câu hỏi gỡ tin → "Không gỡ"; "Không gỡ" → lại "Gỡ tin"; trạng thái đổi sau khi gửi (form vừa
  * gửi bị gỡ) → khối kết quả.
  */
-export function ListingReviewPanel({ status, approveAction, rejectAction, messages, labels, reasonMax }: Props) {
+export function ListingReviewPanel({ status, updatedAt, approveAction, rejectAction, messages, labels, reasonMax }: Props) {
   const approveForm = useFormAction(approveAction, messages)
   const rejectForm = useFormAction(rejectAction, messages)
   const takedownForm = useFormAction(rejectAction, messages)
   const [last, setLast] = useState<Kind | null>(null)
   const [confirming, setConfirming] = useState(false)
-  const [reasonLength, setReasonLength] = useState(0)
+  // Bộ đếm theo ô lý do (Từ chối / Gỡ) và trạng thái lúc gõ: trạng thái đổi → ô lý do mới (trống) hiện 0, không mang số
+  // của ô cũ
+  const [typed, setTyped] = useState<{ kind: 'reject' | 'takedown'; status: ListingStatus; length: number } | null>(
+    null,
+  )
   const feedback = useRef<HTMLDivElement>(null)
   const openTakedown = useRef<HTMLButtonElement>(null)
   const cancelTakedown = useRef<HTMLButtonElement>(null)
@@ -95,10 +104,16 @@ export function ListingReviewPanel({ status, approveAction, rejectAction, messag
     setConfirming(next)
   }
 
-  const reasonCounter = (
-    <span className="text-xs text-subtle tabular-nums">{fillTemplate(labels.reasonCount, { count: reasonLength })}</span>
+  function reasonCounter(kind: 'reject' | 'takedown') {
+    const count = typed?.kind === kind && typed.status === status ? typed.length : 0
+    return <span className="text-xs text-subtle tabular-nums">{fillTemplate(labels.reasonCount, { count })}</span>
+  }
+  const expected = (
+    <>
+      <input type="hidden" name="expected_status" value={status} />
+      <input type="hidden" name="expected_updated_at" value={updatedAt} />
+    </>
   )
-  const expected = <input type="hidden" name="expected_status" value={status} />
 
   return (
     <div className="grid gap-5" data-testid="listing-review">
@@ -132,10 +147,10 @@ export function ListingReviewPanel({ status, approveAction, rejectAction, messag
               idPrefix="reject"
               label={labels.reasonLabel}
               hint={labels.reasonHint}
-              labelAside={reasonCounter}
+              labelAside={reasonCounter('reject')}
               maxLength={reasonMax}
               rows={3}
-              onChange={(event) => setReasonLength(event.target.value.length)}
+              onChange={(event) => setTyped({ kind: 'reject', status, length: event.target.value.length })}
               error={rejectForm.fieldError('reason')}
             />
             <SubmitButton
@@ -161,10 +176,10 @@ export function ListingReviewPanel({ status, approveAction, rejectAction, messag
             idPrefix="takedown"
             label={labels.reasonLabel}
             hint={labels.reasonHint}
-            labelAside={reasonCounter}
+            labelAside={reasonCounter('takedown')}
             maxLength={reasonMax}
             rows={3}
-            onChange={(event) => setReasonLength(event.target.value.length)}
+            onChange={(event) => setTyped({ kind: 'takedown', status, length: event.target.value.length })}
             error={takedownForm.fieldError('reason')}
           />
           {confirming ? (

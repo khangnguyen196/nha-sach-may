@@ -10,24 +10,44 @@ import { assertAdmin } from '../auth'
 import { rejectReasonSchema, reviewTargetSchema } from './schemas'
 
 // Admin duyệt / từ chối / gỡ tin sách cũ qua RPC review_used_listing (kiểm is_admin, khóa dòng, so trạng thái đang
-// hiển thị, kiểm lại sách + giá trần + ảnh khi duyệt). id do page bind; trạng thái đang hiển thị gửi qua ô ẩn
-// `expected_status`. Câu đầu mọi action là assertAdmin (Server Action gọi thẳng được bằng action ID).
+// hiển thị, kiểm lại sách + giá trần + ảnh khi duyệt). id do page bind; trạng thái + updated_at đang hiển thị gửi qua ô
+// ẩn `expected_status`, `expected_updated_at`. Câu đầu mọi action là assertAdmin (Server Action gọi thẳng được bằng
+// action ID).
 
 const UNKNOWN: Failure = { ok: false, code: 'UNKNOWN' }
-const STATUS_CHANGED: Failure = { ok: false, code: 'LISTING_STATUS_CHANGED' }
 const REASON_ERROR: FieldErrors = { reason: 'listingRejectReason' }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
 function parseTarget(id: number, formData: FormData) {
-  return reviewTargetSchema.safeParse({ id, expected_status: formData.get('expected_status') })
+  return reviewTargetSchema.safeParse({
+    id,
+    expected_status: formData.get('expected_status'),
+    expected_updated_at: formData.get('expected_updated_at'),
+  })
 }
 
-/** book_id của tin (tag "Có N bản cũ" của trang sách); tin không còn → null */
-async function listingBookId(supabase: Supabase, id: number) {
-  const { data, error } = await supabase.from('used_listings').select('book_id').eq('id', id).maybeSingle()
+/**
+ * Tin vừa đổi (người bán sửa, đổi trạng thái ở tab khác…): trang render lại nội dung mới (refresh()), câu riêng của
+ * admin không bảo "tải lại trang".
+ */
+async function listingChanged(): Promise<Failure> {
+  refresh()
+  const t = await getTranslations({ locale: 'vi', namespace: 'admin.usedListings' })
+  return { ok: false, code: 'LISTING_STATUS_CHANGED', message: t('listingChanged') }
+}
+
+/**
+ * book_id của tin (tag "Có N bản cũ" của trang sách) nếu tin vẫn đúng bản admin đang xem (`updated_at` khớp nguyên
+ * chuỗi); tin không còn / vừa đổi → LISTING_STATUS_CHANGED. Người bán sửa tin đã duyệt thì tin về pending với nội dung
+ * mới: không so updated_at thì admin có thể duyệt nội dung chưa xem. Còn khe vài ms giữa câu select này và RPC; bản chặt
+ * cần tham số p_expected_updated_at trong RPC review_used_listing (đổi SQL, chờ chủ dự án quyết).
+ */
+async function reviewableBookId(supabase: Supabase, id: number, expectedUpdatedAt: string) {
+  const { data, error } = await supabase.from('used_listings').select('book_id, updated_at').eq('id', id).maybeSingle()
   if (error) return toFailure(error)
-  return data?.book_id ?? null
+  if (!data || data.updated_at !== expectedUpdatedAt) return listingChanged()
+  return data.book_id
 }
 
 /**
@@ -38,6 +58,7 @@ async function reviewFailure(error: { message: string; details?: string | null; 
   const failure = toFailure(error)
   switch (failure.code) {
     case 'LISTING_STATUS_CHANGED':
+      return listingChanged()
     case 'LISTING_INVALID_TRANSITION':
       refresh()
       return failure
@@ -73,11 +94,7 @@ export async function approveListing(id: number, _prev: Result<null> | null, for
   if (!target.success) return UNKNOWN
 
   const supabase = await createClient()
-  const bookId = await listingBookId(supabase, target.data.id)
-  if (bookId === null) {
-    refresh()
-    return STATUS_CHANGED
-  }
+  const bookId = await reviewableBookId(supabase, target.data.id, target.data.expected_updated_at)
   if (typeof bookId !== 'number') return bookId
 
   const { error } = await supabase.rpc('review_used_listing', {
@@ -103,11 +120,7 @@ export async function rejectListing(id: number, _prev: Result<null> | null, form
   if (!parsed.success) return invalidInput(parsed.error)
 
   const supabase = await createClient()
-  const bookId = await listingBookId(supabase, target.data.id)
-  if (bookId === null) {
-    refresh()
-    return STATUS_CHANGED
-  }
+  const bookId = await reviewableBookId(supabase, target.data.id, target.data.expected_updated_at)
   if (typeof bookId !== 'number') return bookId
 
   const { error } = await supabase.rpc('review_used_listing', {

@@ -76,21 +76,24 @@ async function decodePhoto(file: File): Promise<Decoded | null> {
   }
 }
 
-/** Thu nhỏ ảnh ở trình duyệt (canvas) → JPEG. Canvas không chép EXIF / GPS sang ảnh ra. Không giải mã được → null */
+/**
+ * Thu nhỏ ảnh ở trình duyệt (canvas) → JPEG. Canvas không chép EXIF / GPS sang ảnh ra. Không giải mã được → null.
+ * drawImage / toBlob ném (VD canvas quá lớn, hết bộ nhớ) → promise lỗi, ảnh giải mã vẫn được giải phóng (finally)
+ */
 async function shrinkPhoto(file: File): Promise<Blob | null> {
   const decoded = await decodePhoto(file)
   if (!decoded) return null
-  const scale = Math.min(1, CLIENT_MAX_SIDE / Math.max(decoded.width, decoded.height))
   const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(decoded.width * scale))
-  canvas.height = Math.max(1, Math.round(decoded.height * scale))
-  const context = canvas.getContext('2d')
-  if (!context) {
+  try {
+    const scale = Math.min(1, CLIENT_MAX_SIDE / Math.max(decoded.width, decoded.height))
+    canvas.width = Math.max(1, Math.round(decoded.width * scale))
+    canvas.height = Math.max(1, Math.round(decoded.height * scale))
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height)
+  } finally {
     decoded.release()
-    return null
   }
-  context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height)
-  decoded.release()
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', CLIENT_JPEG_QUALITY))
 }
 
@@ -106,6 +109,7 @@ const placeholder = (key: number): PhotoItem => ({ key, path: null, url: null, u
  */
 export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels, messages, error, disabled }: Props) {
   const input = useRef<HTMLInputElement>(null)
+  const list = useRef<HTMLUListElement>(null)
   /** Ảnh bị bỏ khi đang chờ / đang tải: chưa tới lượt thì không tải, tải xong thì xóa luôn, lỗi thì không báo */
   const dropped = useRef(new Set<number>())
   /**
@@ -170,17 +174,26 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
     // Số chỗ còn tính trong updater theo state hiện tại (gồm ô đang tải của lượt chọn trước), giữ chỗ cả lô ngay.
     // flushSync: updater chạy xong (biết ảnh nào được nhận) trước khi xếp hàng tải
     let accepted: typeof batch = []
+    const filled = { full: false }
     flushSync(() =>
       onChange((current) => {
         accepted = batch.slice(0, Math.max(0, MAX_PHOTOS - current.length))
+        filled.full = current.length + accepted.length >= MAX_PHOTOS
         return [...current, ...accepted.map(({ key }) => placeholder(key))]
       }),
     )
+    // Đủ ảnh → ô chọn ảnh (đang giữ focus) bị gỡ khỏi trang: đưa focus tới nút "Bỏ ảnh" cuối, không rơi về body
+    // (WCAG 2.4.3). flushSync đã cập nhật DOM nên focus được ngay (effect của lần render đồng bộ này đã chạy xong)
+    if (filled.full) list.current?.querySelector<HTMLButtonElement>('li:last-child button')?.focus()
     for (const { key, file } of accepted) {
       queue.current = queue.current
         .then(() => upload(key, file))
-        // Lỗi ngoài dự kiến của một ảnh: bỏ ô đó, hàng đợi vẫn chạy tiếp các ảnh sau
-        .catch(() => onChange((current) => current.filter((photo) => photo.key !== key)))
+        // Lỗi ngoài dự kiến của một ảnh (VD canvas ném khi thu nhỏ): bỏ ô đó + báo không đọc được ảnh (ảnh đã bị bỏ thì
+        // không báo), hàng đợi vẫn chạy tiếp các ảnh sau
+        .catch(() => {
+          onChange((current) => current.filter((photo) => photo.key !== key))
+          if (!dropped.current.has(key)) setPhotoError(labels.photoUnreadable)
+        })
     }
   }
 
@@ -202,7 +215,7 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
       <p id="listing-photos-hint" className="text-xs text-muted-foreground">
         {labels.photosHint}
       </p>
-      <ul className="mt-1 grid grid-cols-3 gap-3" data-testid="listing-photos">
+      <ul ref={list} className="mt-1 grid grid-cols-3 gap-3" data-testid="listing-photos">
         {photos.map((photo, index) => (
           <li key={photo.key} className="relative">
             <div className="relative aspect-[3/4] overflow-hidden rounded-cover border bg-surface-raised">

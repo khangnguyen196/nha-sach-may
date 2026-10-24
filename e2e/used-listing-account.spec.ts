@@ -10,6 +10,7 @@ import {
   deleteE2eUsers,
   downloadUsedPhoto,
   makeAdmin,
+  removeUsedPhotosAsService,
   removeUsedPhotosOf,
   seedUsedPhotosAsService,
   signedInClient,
@@ -204,26 +205,33 @@ test('(2) tin chờ duyệt không công khai: anon đọc REST 0 dòng, ký lin
 
 test('(4) giá vượt giá gốc → lỗi dưới ô giá, chữ đã gõ còn nguyên', async ({ page }) => {
   test.setTimeout(90_000)
-  await login(page, seller)
-  await openNewListing(page)
-  await chooseBook(page)
-  await main(page).getByRole('radio', { name: /^Khá/ }).check()
-  await priceInput(page).fill('150000')
-  await main(page).getByLabel('Mô tả (không bắt buộc)').fill('Còn tốt')
-  await addPhoto(page, 1)
-  await main(page).getByRole('button', { name: 'Đăng tin' }).click()
+  // Ảnh tải lên ở ca này không gắn tin nào → xóa đúng ảnh đó ở finally (ca (8) kiểm thư mục người bán rỗng để bắt ảnh
+  // mồ côi, nên không được để lại)
+  const uploaded: string[] = []
+  try {
+    await login(page, seller)
+    await openNewListing(page)
+    await chooseBook(page)
+    await main(page).getByRole('radio', { name: /^Khá/ }).check()
+    await priceInput(page).fill('150000')
+    await main(page).getByLabel('Mô tả (không bắt buộc)').fill('Còn tốt')
+    uploaded.push(await addPhoto(page, 1))
+    await main(page).getByRole('button', { name: 'Đăng tin' }).click()
 
-  await expect(main(page).locator('#field-price-error')).toHaveText(
-    'Giá bán phải lớn hơn 0 và không cao hơn giá gốc của sách.',
-  )
-  await expect(page).toHaveURL(/\/tai-khoan\/sach-toi-ban\/dang-tin$/)
-  await expect(priceInput(page)).toHaveValue('150000')
-  await expect(priceInput(page)).toHaveAttribute('aria-invalid', 'true')
-  await expect(main(page).getByLabel('Mô tả (không bắt buộc)')).toHaveValue('Còn tốt')
-  await expect(main(page).getByRole('radio', { name: /^Khá/ })).toBeChecked()
-  await expect(main(page).locator('input[type="hidden"][name="photos"]')).toHaveCount(1)
-  // Không tạo thêm tin
-  expect(await usedListingsOf(seller.id)).toHaveLength(1)
+    await expect(main(page).locator('#field-price-error')).toHaveText(
+      'Giá bán phải lớn hơn 0 và không cao hơn giá gốc của sách.',
+    )
+    await expect(page).toHaveURL(/\/tai-khoan\/sach-toi-ban\/dang-tin$/)
+    await expect(priceInput(page)).toHaveValue('150000')
+    await expect(priceInput(page)).toHaveAttribute('aria-invalid', 'true')
+    await expect(main(page).getByLabel('Mô tả (không bắt buộc)')).toHaveValue('Còn tốt')
+    await expect(main(page).getByRole('radio', { name: /^Khá/ })).toBeChecked()
+    await expect(main(page).locator('input[type="hidden"][name="photos"]')).toHaveCount(1)
+    // Không tạo thêm tin
+    expect(await usedListingsOf(seller.id)).toHaveLength(1)
+  } finally {
+    await removeUsedPhotosAsService(uploaded)
+  }
 })
 
 test('(5) tin đã duyệt sửa giá qua UI → về Chờ duyệt', async ({ page }) => {
@@ -340,9 +348,12 @@ test('(8) chọn 2 ảnh, lúc ảnh đầu đang tải chọn thêm 2 → đún
     await fileInput(page).setInputFiles(photoFiles('c.jpg', 'd.jpg'))
     await expect(slots).toHaveCount(3)
     await expect(fileInput(page)).toHaveCount(0)
+    // Ô chọn ảnh bị gỡ khi đủ 3 ô → focus về nút "Bỏ ảnh" cuối, không rơi về body
+    await expect(main(page).getByRole('button', { name: 'Bỏ ảnh 3' })).toBeFocused()
     await expect(main(page).getByRole('status').filter({ hasText: 'Đang tải ảnh…' })).toHaveCount(3)
-    // Hàng đợi dùng chung: ảnh sau chỉ tải khi ảnh trước xong → lúc ảnh đầu còn bị giữ chưa có request thứ hai (chặn
-    // dưới: kiểm ngay sau khi lượt hai đã giữ chỗ, không chờ thêm)
+    // Lúc ảnh đầu còn bị giữ chưa có request thứ hai. Kiểm này KHÔNG tự đỏ khi bỏ hàng đợi tải của client: Next gửi
+    // Server Action tuần tự (action sau chờ action trước xong) nên request thứ hai cũng chưa đi. Thứ bắt lỗi hàng đợi /
+    // giữ chỗ là đúng 3 ô + 3 ảnh trong kho khớp 3 ô ở dưới.
     expect(held).toBe(1)
 
     release()
@@ -368,7 +379,7 @@ test('(9) đã có 30 ảnh trong kho → chọn ảnh: câu LISTING_PHOTO_LIMIT
     await openNewListing(page)
     await fileInput(page).setInputFiles(PHOTO)
     await expect(main(page).getByTestId('listing-photos-error')).toHaveText(
-      'Bạn đã có 30 ảnh sách cũ (tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh vừa tải chưa đăng (tự dọn sau 24 giờ)) nên chưa tải thêm được. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.',
+      'Bạn đã có 30 ảnh sách cũ nên chưa tải thêm được. Số này tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh đã tải mà chưa đăng; ảnh đã tải quá 24 giờ mà chưa đăng được dọn khi bạn mở trang đăng hoặc sửa tin. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.',
       { timeout: 20_000 },
     )
     await expect(main(page).getByTestId('listing-photos').getByRole('listitem')).toHaveCount(0)
@@ -379,21 +390,44 @@ test('(9) đã có 30 ảnh trong kho → chọn ảnh: câu LISTING_PHOTO_LIMIT
   }
 })
 
-test('(10) createImageBitmap ném TypeError (trình duyệt cũ) → dự phòng <img>: ảnh EXIF vẫn tải được, đã xoay dọc', async ({
+/** Số lần trang gọi createImageBitmap giả (đếm trên <html data-e2e-bitmap>): chắc chắn bản giả được dùng */
+const fakeBitmapCalls = (page: Page) => page.evaluate(() => Number(document.documentElement.dataset.e2eBitmap ?? 0))
+
+test('(10) createImageBitmap lỗi (trình duyệt cũ) → dự phòng <img>: ảnh EXIF vẫn tải được, đã xoay dọc', async ({
   page,
 }) => {
-  test.setTimeout(90_000)
-  await page.addInitScript(() => {
-    window.createImageBitmap = () => {
-      throw new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation.")
-    }
-  })
+  test.setTimeout(120_000)
   try {
+    // Lượt 1: ném TypeError ngay khi gọi
+    await page.addInitScript(() => {
+      window.createImageBitmap = () => {
+        const html = document.documentElement
+        html.dataset.e2eBitmap = String(Number(html.dataset.e2eBitmap ?? 0) + 1)
+        throw new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation.")
+      }
+    })
     await login(page, seller)
     await openNewListing(page)
-    const photo = await addPhoto(page, 1)
+    const thrown = await addPhoto(page, 1)
     await expect(main(page).getByTestId('listing-photos-error')).toHaveCount(0)
-    await expectStoredPortrait(photo)
+    expect(await fakeBitmapCalls(page)).toBe(1)
+    await expectStoredPortrait(thrown)
+
+    // Lượt 2: như trình duyệt thật, trả Promise bị từ chối với TypeError (script khởi tạo sau chạy sau, ghi đè lượt 1)
+    await page.addInitScript(() => {
+      window.createImageBitmap = () => {
+        const html = document.documentElement
+        html.dataset.e2eBitmap = String(Number(html.dataset.e2eBitmap ?? 0) + 1)
+        return Promise.reject(
+          new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation."),
+        )
+      }
+    })
+    await openNewListing(page)
+    const rejected = await addPhoto(page, 1)
+    await expect(main(page).getByTestId('listing-photos-error')).toHaveCount(0)
+    expect(await fakeBitmapCalls(page)).toBe(1)
+    await expectStoredPortrait(rejected)
   } finally {
     await removeUsedPhotosOf(seller.id)
   }

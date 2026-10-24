@@ -196,6 +196,7 @@ async function UsedListing({ params }: { params: Props['params'] }) {
           </h2>
           <ListingReviewPanel
             status={listing.status}
+            updatedAt={listing.updatedAt}
             approveAction={approveListing.bind(null, listing.id)}
             rejectAction={rejectListing.bind(null, listing.id)}
             messages={messages}

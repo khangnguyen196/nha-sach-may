@@ -1,5 +1,6 @@
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
+import { after } from 'next/server'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { buttonVariants } from '@/components/ui/button'
@@ -10,10 +11,12 @@ import { UsedDemoNote } from '@/features/used/components/demo-note'
 import { ListingForm } from '@/features/used/components/listing-form'
 import { ListingFormSkeleton } from '@/features/used/components/listing-form-skeleton'
 import { getListingFormProps } from '@/features/used/form-props'
+import { removeMyOrphanPhotos } from '@/features/used/photo-storage'
 import { getMyListing } from '@/features/used/queries'
 import { listingIdSchema } from '@/features/used/schemas'
 import { getPathname, Link } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 
 type Props = PageProps<'/[locale]/account/my-listings/[id]'>
 
@@ -65,6 +68,10 @@ async function EditListingForm({ locale, params }: { locale: Locale; params: Pro
 
   const href = { pathname: '/account/my-listings/[id]', params: { id: String(id.data) } } as const
   const user = await requireUser(locale, href)
+  // Như trang đăng tin: dọn ảnh tải lên bỏ dở (cũ hơn 24 giờ) của chính người bán sau khi trả trang; câu
+  // LISTING_PHOTO_LIMIT hứa dọn khi mở trang đăng / sửa tin
+  const supabase = await createClient()
+  after(() => removeMyOrphanPhotos(supabase, user.id))
   const [props, listing, t] = await Promise.all([
     getListingFormProps(locale, getPathname({ href, locale })),
     getMyListing(id.data, user.id),

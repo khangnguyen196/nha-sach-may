@@ -874,6 +874,16 @@ export async function removeUsedPhotoAsService(path: string) {
   if (data.length !== 1) throw new Error(`removeUsedPhotoAsService: không có ảnh ${path}`)
 }
 
+/**
+ * Xóa đúng các ảnh theo đường dẫn (service role): dọn ảnh một ca tải lên mà không đăng tin. Ảnh không còn thì bỏ qua
+ * (không như removeUsedPhotoAsService) để gọi được trong finally.
+ */
+export async function removeUsedPhotosAsService(paths: readonly string[]) {
+  if (paths.length === 0) return
+  const { error } = await adminClient().storage.from(USED_PHOTO_BUCKET).remove([...paths])
+  if (error) throw new Error(`removeUsedPhotosAsService: ${error.message}`)
+}
+
 /** Tên các ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (service role, thấy cả ảnh chưa gắn tin) */
 export async function usedPhotosIn(userId: string) {
   const { data, error } = await adminClient().storage.from(USED_PHOTO_BUCKET).list(userId, { limit: 1000 })

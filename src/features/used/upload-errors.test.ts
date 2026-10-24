@@ -36,6 +36,15 @@ describe('uploadFailure: lỗi tải ảnh tin → mã của form', () => {
     )
   })
 
+  it('mã InvalidJWT của Storage (code trong body) → SESSION_EXPIRED dù message không nói "jwt"', () => {
+    expect(code({ message: 'Invalid Compact JWS', status: 400, statusCode: '400', code: 'InvalidJWT' })).toBe(
+      'SESSION_EXPIRED',
+    )
+    expect(code({ message: 'Invalid Compact JWS', status: 401, statusCode: '401', code: 'InvalidJWT' })).toBe(
+      'SESSION_EXPIRED',
+    )
+  })
+
   it('không tới được máy chủ (không có status, statusCode) → NETWORK_ERROR', () => {
     expect(code({ message: 'fetch failed' })).toBe('NETWORK_ERROR')
     expect(code({ message: 'TypeError: Failed to fetch', status: undefined, statusCode: undefined })).toBe(

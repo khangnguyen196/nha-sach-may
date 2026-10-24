@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { invalidInput } from '@/lib/errors'
-import { rejectReasonSchema, REJECT_REASON_MAX, reviewTargetSchema } from './schemas'
+import { EXPECTED_UPDATED_AT_MAX, rejectReasonSchema, REJECT_REASON_MAX, reviewTargetSchema } from './schemas'
 
 describe('rejectReasonSchema (lý do từ chối / gỡ tin)', () => {
   const reason = (value: unknown) => rejectReasonSchema.safeParse({ reason: value })
@@ -32,23 +32,53 @@ describe('rejectReasonSchema (lý do từ chối / gỡ tin)', () => {
   })
 })
 
-describe('reviewTargetSchema (tin + trạng thái đang hiển thị)', () => {
-  it('nhận id dương + trạng thái của enum used_listing_status', () => {
+describe('reviewTargetSchema (tin + trạng thái + updated_at đang hiển thị)', () => {
+  const updatedAt = '2026-10-24T05:05:00.123456+00:00'
+
+  it('nhận id dương + trạng thái của enum used_listing_status + updated_at giữ nguyên chuỗi', () => {
     for (const status of ['pending', 'approved', 'rejected', 'sold', 'withdrawn']) {
-      expect(reviewTargetSchema.safeParse({ id: 12, expected_status: status }).success, status).toBe(true)
+      expect(
+        reviewTargetSchema.safeParse({ id: 12, expected_status: status, expected_updated_at: updatedAt }).success,
+        status,
+      ).toBe(true)
     }
-    expect(reviewTargetSchema.safeParse({ id: '12', expected_status: 'pending' }).data).toEqual({
+    expect(
+      reviewTargetSchema.safeParse({ id: '12', expected_status: 'pending', expected_updated_at: updatedAt }).data,
+    ).toEqual({
       id: 12,
       expected_status: 'pending',
+      expected_updated_at: updatedAt,
     })
   })
 
   it('trạng thái lạ / thiếu, id không dương → lỗi', () => {
     for (const expected of ['PENDING', 'cancelled', '', null, undefined]) {
-      expect(reviewTargetSchema.safeParse({ id: 1, expected_status: expected }).success, String(expected)).toBe(false)
+      expect(
+        reviewTargetSchema.safeParse({ id: 1, expected_status: expected, expected_updated_at: updatedAt }).success,
+        String(expected),
+      ).toBe(false)
     }
     for (const id of [0, -1, 1.5, 'abc', Number.MAX_SAFE_INTEGER + 2]) {
-      expect(reviewTargetSchema.safeParse({ id, expected_status: 'pending' }).success, String(id)).toBe(false)
+      expect(
+        reviewTargetSchema.safeParse({ id, expected_status: 'pending', expected_updated_at: updatedAt }).success,
+        String(id),
+      ).toBe(false)
     }
+  })
+
+  it('updated_at trống / thiếu / quá dài → lỗi', () => {
+    for (const value of ['', null, undefined, 'x'.repeat(EXPECTED_UPDATED_AT_MAX + 1)]) {
+      expect(
+        reviewTargetSchema.safeParse({ id: 1, expected_status: 'pending', expected_updated_at: value }).success,
+        String(value),
+      ).toBe(false)
+    }
+    expect(
+      reviewTargetSchema.safeParse({
+        id: 1,
+        expected_status: 'pending',
+        expected_updated_at: 'x'.repeat(EXPECTED_UPDATED_AT_MAX),
+      }).success,
+    ).toBe(true)
   })
 })
