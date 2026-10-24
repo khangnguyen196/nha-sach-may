@@ -94,6 +94,18 @@ const main = (page: Page) => page.getByRole('main')
 const card = (page: Page, id: number) => main(page).locator(`[data-testid="market-listing"][data-listing-id="${id}"]`)
 const marketOf = (slug: string, query = '') => `/cho-sach-cu?book=${slug}${query}`
 
+/**
+ * Thứ tự các tin `ids` trong lưới đang hiển thị. Next giữ lưới trước khi bấm chip trong DOM ở dạng ẩn (Activity) → lọc
+ * visible; evaluateAll không tự chờ mà boundary Suspense hiện trễ sau load (lúc đầu <main> chỉ có skeleton) → gọi qua expect.poll.
+ */
+async function visibleOrder(page: Page, ids: readonly number[]) {
+  const order = await main(page)
+    .getByTestId('market-listing')
+    .filter({ visible: true })
+    .evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-listing-id'))))
+  return order.filter((id) => ids.includes(id))
+}
+
 /** Tin chờ duyệt của người bán (RPC theo phiên người bán, như form đăng tin), ảnh WebP thật trong thư mục của họ */
 async function createPendingListing(price: number, bookId = book.id) {
   const path = `${seller.id}/${randomUUID()}.webp`
@@ -161,15 +173,20 @@ const withdrawSteps = (ids: readonly number[]): CleanupStep[] =>
  */
 async function cleanUp(bodyPassed: boolean, steps: readonly CleanupStep[]) {
   const errors: unknown[] = []
+  let first = ''
   for (const [label, run] of steps) {
     try {
       await run()
     } catch (error) {
       console.error(`Dọn cuối ca: ${label} lỗi`, error)
       errors.push(error)
+      // Báo cáo Playwright chỉ in message của AggregateError: ghép bước + lỗi đầu để biết ngay bước nào hỏng
+      if (!first) first = `${label}: ${error instanceof Error ? error.message : String(error)}`
     }
   }
-  if (bodyPassed && errors.length > 0) throw new AggregateError(errors, `Dọn cuối ca lỗi ${errors.length} bước`)
+  if (bodyPassed && errors.length > 0) {
+    throw new AggregateError(errors, `Dọn cuối ca lỗi ${errors.length} bước: ${first}${errors.length > 1 ? ' …' : ''}`)
+  }
 }
 
 test('(p1) khách thấy tin đã duyệt ở /cho-sach-cu (lọc ?book=): ảnh, người bán, giá; trang tin vi / en 200 + hreflang', async ({
@@ -365,18 +382,9 @@ test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= 
     await expect(
       main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name: 'Giá tăng dần' }),
     ).toHaveAttribute('aria-current', 'true')
-    // Next giữ lưới trước khi bấm chip trong DOM ở dạng ẩn (Activity) → chỉ đọc thứ tự của lưới đang hiển thị
-    const order = await main(page)
-      .getByTestId('market-listing')
-      .filter({ visible: true })
-      .evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-listing-id'))))
-    expect(order.filter((id) => id === cheap || id === dear)).toEqual([cheap, dear])
+    await expect.poll(() => visibleOrder(page, [cheap, dear])).toEqual([cheap, dear])
     await page.goto(marketOf(book.slug, '&sort=price-desc'))
-    const desc = await main(page)
-      .getByTestId('market-listing')
-      .filter({ visible: true })
-      .evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-listing-id'))))
-    expect(desc.filter((id) => id === cheap || id === dear)).toEqual([dear, cheap])
+    await expect.poll(() => visibleOrder(page, [cheap, dear])).toEqual([dear, cheap])
 
     // Admin gỡ tin rẻ qua giao diện → updateTag used-book: trang sách đếm lại
     await takeDownViaUi(cheap)

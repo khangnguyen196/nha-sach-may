@@ -13,7 +13,11 @@ export const adminTest = base.extend<{ admin: E2eUser }>({
   storageState: async ({}, provide, testInfo) => provide(adminStatePath(testInfo.project.name)),
 })
 
-/** Trang admin stream nội dung sau cổng kiểm tra quyền → locator đặt trong <main> */
+/**
+ * Trang admin stream nội dung sau cổng kiểm tra quyền → locator đặt trong <main>. Mỗi trang admin tự có <main>
+ * (AdminPage): trang vừa rời bị Activity ẩn nằm trong <main> khác mà getByRole bỏ qua → locator admin không cần
+ * filter({ visible: true }) (khác route (shop): <main> chung ở layout, giữ cả lưới ẩn bên trong).
+ */
 export const main = (page: Page) => page.getByRole('main')
 
 /** Mở trang sửa sách, chờ form hydrate (lỗi hiện tại chỗ thay vì POST cả trang) */

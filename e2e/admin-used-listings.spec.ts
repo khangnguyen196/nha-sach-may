@@ -268,6 +268,18 @@ test('(i) tin bị xóa ở nơi khác khi admin đang mở trang → Duyệt: I
   const { id } = await createPendingListing()
   await openListing(page, id)
   await expect(status(page)).toHaveText('Chờ duyệt')
+  // next/image tải lười: ảnh chưa tải mà tin + ảnh đã bị xóa thì Storage trả 400 → "Failed to load resource" trong errors
+  const photos = main(page).getByTestId('used-listing-photos').locator('img')
+  await expect(photos).toHaveCount(1)
+  await expect
+    .poll(
+      () =>
+        photos.evaluateAll((images: HTMLImageElement[]) =>
+          images.every((image) => image.complete && image.naturalWidth > 0),
+        ),
+      { timeout: 15_000 },
+    )
+    .toBe(true)
 
   // Service role xóa tin + ảnh (như xóa tay trong database): admin đọc được mọi tin nên 0 dòng = tin đã bị xóa
   await deleteUsedListingAsService(id)
