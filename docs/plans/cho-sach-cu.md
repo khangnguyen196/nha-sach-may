@@ -233,7 +233,7 @@ khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10). **P-B đã lên `main` `88196
 
 Chia vòng trên nhánh `cho-sach-cu-3` (điều phối 24/10): 14 = SQL + types + e2e RLS; 15 = trang mua
 `/cho-sach-cu/[id]/mua` + đơn sách cũ + e2e mua; 16 = tiền người bán + `/admin/tra-nguoi-ban` + GỢI Ý vòng 12; sau đó
-cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14).
+cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14, 15).
 
 - [x] Migration `20261024120000_used_market_purchase.sql` (vòng 14, gom mọi SQL của P-C để production chạy một lần;
   chép vào `schema.sql` cùng commit):
@@ -251,18 +251,28 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
   - Types: `src/types/database.ts` vòng 14 sửa tay đúng 3 mục theo định dạng CLI (không có Docker); bước "Check
     src/types/database.ts" trên CI phân xử, lệch thì chép artifact `database-types`.
 - [x] Admin duyệt / từ chối gửi `expected_updated_at` nguyên chuỗi vào RPC (vòng 14), bỏ phép so trong app.
-- [x] Đổi trạng thái đơn sách cũ (đặt, hủy, admin đổi) thì `updateTag` các tag của tin (vòng 14: `expireOrderBooks`
-  đọc `used_listing_id`, dòng sách cũ → `usedListingTags`, dòng sách mới → `book:{id}`; Vitest).
+- [x] Đổi trạng thái đơn sách cũ thì `updateTag` các tag của tin: `expireOrderBooks` đọc `used_listing_id`, dòng sách
+  cũ → `usedListingTags`, dòng sách mới → `book:{id}` (Vitest); [x] đặt (vòng 15: `placeUsedOrder`), hủy / admin hủy
+  (vòng 14).
 - [x] e2e RLS (vòng 14, `used-market-rls-account.spec.ts`): (r1) duyệt / từ chối với `updated_at` cũ, (r2) mua với
   `updated_at` cũ sau khi tin được sửa rồi duyệt lại cùng giá, (r3) `admin_seller_payouts` chỉ admin, đơn hủy + đơn đã
   giao của cùng tin → đúng một khoản kèm mã đơn đã giao.
-- Ghi chú demo song ngữ ở trang thanh toán sách cũ; ẩn bong bóng chat ở trang mua.
+- [x] Trang mua `/cho-sach-cu/[id]/mua` (vòng 15): cần đăng nhập (proxy chuyển sang đăng nhập cho GET / HEAD), tin không
+  công khai / id sai dạng → 404 `used-market`; tin đọc theo phiên không cache (lọc approved / sold), `updated_at` cùng
+  lần đọc với nội dung đang hiện, tiền từ `quote_used_order`; đã bán / ngừng bán / tin của mình → không có form; COD /
+  VietQR demo, không voucher; idempotency key sinh ở phần động. `placeUsedOrder`: lỗi tin / sách / địa chỉ → updateTag
+  tag của tin (book_id đọc lại ở server) + `refresh()`; UNKNOWN / mạng giữ key. Nút "Mua ngay" ở trang tin đang bán.
+- [x] Ghi chú demo song ngữ ở trang thanh toán sách cũ; [x] ẩn bong bóng chat ở trang mua (vòng 15).
+- [x] Đơn sách cũ ở tài khoản / admin (vòng 15): nhãn "Sách cũ · <tình trạng>" (tin đã rút sau khi hủy → "Sách cũ"),
+  admin thêm "Người bán: <tên hiển thị>"; người mua không đọc seller_id.
 - "Đã trả người bán" chỉ là admin đánh dấu (`mark_payout_paid`), không chuyển tiền, không lưu tài khoản ngân hàng.
 - Trang khoản tiền admin: `seller_payouts` không cho authenticated (kể cả admin) đọc `order_id` → dùng RPC
   `admin_seller_payouts()` (vòng 14). Tìm qua `listing_id` (nếu cần) phải lọc đơn `status <> 'cancelled'`: một tin có
   thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin: → `sold` chỉ khi có đơn chưa hủy,
   `sold` → `approved` chỉ khi không còn đơn nào như vậy).
-- e2e: mua COD, hủy → tin về công khai, người bán không mua được, giao + trả tiền → khoản chờ trả, admin đánh dấu đã trả.
+- [x] e2e mua (vòng 15, `e2e/used-purchase-account.spec.ts` (m1)–(m7)): đăng nhập từ nút Mua ngay, mua COD, hủy → tin
+  về công khai, người bán không mua được, LISTING_CHANGED, tin đã bán / chờ duyệt / id sai, mất mạng. [ ] Giao + trả tiền
+  → khoản chờ trả, admin đánh dấu đã trả (vòng 16).
 - GỢI Ý review vòng 12: (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số ít
   "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (nền khi rê chuột, bo góc).
 
