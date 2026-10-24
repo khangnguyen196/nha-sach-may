@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
-import { saleStatus } from './sales'
+import { saleStatusWithPaidAt } from './sales'
 import { signUsedPhotoUrls } from './signed-urls'
 
 // Phần người bán: theo phiên (client đọc cookies), KHÔNG 'use cache' → chỉ gọi trong <Suspense>. Link ảnh ký theo từng
@@ -133,7 +133,8 @@ export type PurchaseListing = NonNullable<Awaited<ReturnType<typeof getListingFo
  * Tin đã bán của người bán (đơn chưa hủy, mới nhất trước) + tiền sẽ nhận: RPC my_used_sales (không trả mã đơn, không
  * gì của người mua) + ngày trả của khoản đã trả (seller_payouts: quyền cột không có order_id). Lọc seller_id dù RLS đã
  * lọc: policy cho admin đọc mọi khoản. Một tin có tối đa một khoản (khoản chỉ ghi cho đơn đã giao, đơn đã giao không
- * hủy được) → ghép theo listing_id. Theo phiên, không cache.
+ * hủy được) → ghép theo listing_id; ngày trả chỉ giữ khi trạng thái là "Đã trả" (saleStatusWithPaidAt). Theo phiên, không
+ * cache.
  */
 export async function getMySales(userId: string) {
   const supabase = await createClient()
@@ -152,12 +153,12 @@ export async function getMySales(userId: string) {
     fee: sale.fee,
     amount: sale.amount,
     soldAt: sale.sold_at,
-    status: saleStatus({
+    ...saleStatusWithPaidAt({
       orderStatus: sale.order_status,
       paymentStatus: sale.payment_status,
       payoutStatus: sale.payout_status,
+      paidAt: paidAt.get(sale.listing_id) ?? null,
     }),
-    paidAt: paidAt.get(sale.listing_id) ?? null,
   }))
 }
 

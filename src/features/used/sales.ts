@@ -27,6 +27,16 @@ export function saleStatus({ orderStatus, paymentStatus, payoutStatus }: SaleSta
   return paymentStatus === 'paid' ? 'payoutPending' : 'awaitingPayment'
 }
 
+/**
+ * Trạng thái + ngày trả của một tin đã bán. Ngày trả đọc ở lần đọc riêng (seller_payouts) với trạng thái (my_used_sales):
+ * admin đánh dấu "Đã trả" xen giữa hai lần đọc thì có ngày trả mà trạng thái còn "Chờ trả" → chỉ giữ ngày khi trạng
+ * thái tính ra là "Đã trả" (chiều ngược lại: "Đã trả" chưa có ngày, lần tải sau có).
+ */
+export function saleStatusWithPaidAt({ paidAt, ...state }: SaleState & { paidAt: string | null }) {
+  const status = saleStatus(state)
+  return { status, paidAt: status === 'payoutPaid' ? paidAt : null }
+}
+
 /** Tổng "Chờ trả" / "Đã trả" (đơn đang giao, chờ người mua thanh toán chưa tính) */
 export function saleTotals(sales: readonly { status: SaleStatus; amount: number }[]) {
   let pending = 0
