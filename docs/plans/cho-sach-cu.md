@@ -41,7 +41,7 @@ giao dịch thật" (song ngữ vi / en), giống cảnh báo VietQR demo.
 |---|---|---|---|
 | P-A | `cho-sach-cu-1` | Toàn bộ SQL (một migration) + `schema.sql` + mã lỗi + Vitest + e2e RLS / RPC bằng supabase-js, không UI | CI xanh + chủ dự án báo "ĐÃ CHẠY SQL" + kiểm MCP chỉ đọc thấy bảng / hàm / policy / bucket |
 | P-B | `cho-sach-cu-2` | Đăng / sửa / rút tin có ảnh, "Sách tôi bán", admin duyệt / từ chối / gỡ, trang danh sách + chi tiết tin, "Có N bản cũ từ X ₫" ở trang sách | CI xanh |
-| P-C | `cho-sach-cu-3` | Trang thanh toán một tin, `place_used_order`, đơn sách cũ ở tài khoản / admin, tiền sẽ nhận, admin khoản chờ trả + đánh dấu đã trả | CI xanh |
+| P-C | `cho-sach-cu-3` | Trang thanh toán một tin, `place_used_order`, đơn sách cũ ở tài khoản / admin, tiền sẽ nhận, admin khoản chờ trả + đánh dấu đã trả | CI xanh. **XONG**: main `b9d7348` (ff `40d27e6..b9d7348`, 2026-10-24 16:46:16Z) |
 
 Phần sau cần sửa SQL → migration mới, lại dừng chờ chủ dự án chạy SQL.
 
@@ -305,8 +305,12 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
   sau S0–S5 bằng MCP chỉ đọc đúng hết (3 hàm chữ ký mới, quyền, md5 thân hàm, kiểu trả về `admin_seller_payouts`);
   test điện thoại luồng mua trên Preview `0afa5c4`: đạt cả 7 bước (đơn thử đã hủy, tin thử đã rút).
 
-Còn lại: lên main (fast-forward) → kiểm production chỉ đọc. Giữa lúc chạy SQL và lúc lên main, admin trên web thật
-không duyệt / từ chối tin được.
+Xong: lên main ff `40d27e6..b9d7348` 2026-10-24 16:46:16Z (`git push origin cho-sach-cu-3:main`, không force; CI main
+run 40113095708 ✔, e2e main run 40113095694 ✔ 650 qua / 14 skip / 0 fail / 0 flaky, Vercel Production success
+16:48:42Z), kiểm production chỉ đọc (~16:50Z, không đăng nhập) ĐẠT: trang công khai + `/cho-sach-cu`, `/en/used-books`
+200; `/cho-sach-cu/999999` và slug sách sai 404; trang mua chưa đăng nhập → `/dang-nhap?next=…` (không 500);
+`/admin/tra-nguoi-ban` chưa đăng nhập → `/`; trang chủ console 0 lỗi, 0 request ≥ 400, 0 ảnh lỗi. Khoảng admin
+không duyệt / từ chối tin được (từ lúc chạy SQL tới lúc lên main) đã đóng. Đợt cho-sach-cu (mua bán) xong cả 3 phần.
 
 ## Test (P-A)
 
