@@ -235,13 +235,13 @@ test('ảnh: chỉ ghi vào thư mục của mình, đúng mẫu tên, chỉ Web
 
 test('đăng tin: giá trần, ảnh của người khác; tin + ảnh chờ duyệt chỉ người bán và admin thấy', async () => {
   const path = await uploadPhoto(sellerClient, seller)
-  // Mô tả rỗng: RPC lưu null (nullif(btrim(…), ''))
+  // Mô tả chỉ có dấu cách: RPC lưu null (nullif(btrim(…), ''); btrim mặc định chỉ cắt dấu cách)
   const create = (price: number, photos: string[]) =>
     sellerClient.rpc('create_used_listing', {
       p_book_id: book.id,
       p_condition: 'like_new',
       p_price: price,
-      p_description: '',
+      p_description: '   ',
       p_photos: photos,
     })
 
@@ -319,8 +319,23 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
     p_photos: [path],
   })
   expect(edit.error).toBeNull()
-  expect(await usedListingRow(id)).toMatchObject({ status: 'pending', price: 25_000, fee: 3_000 })
+  expect(await usedListingRow(id)).toMatchObject({
+    status: 'pending',
+    price: 25_000,
+    fee: 3_000,
+    description: 'Giảm giá',
+  })
   expect(await visibleIds(anon, id)).toEqual([])
+  // Sửa tiếp tin đang chờ duyệt với mô tả rỗng → lưu null
+  const clearDescription = await sellerClient.rpc('update_used_listing', {
+    p_id: id,
+    p_condition: 'fair',
+    p_price: 25_000,
+    p_description: '',
+    p_photos: [path],
+  })
+  expect(clearDescription.error).toBeNull()
+  expect(await usedListingRow(id)).toMatchObject({ status: 'pending', description: null })
   const editOther = await strangerClient.rpc('update_used_listing', {
     p_id: id,
     p_condition: 'fair',
