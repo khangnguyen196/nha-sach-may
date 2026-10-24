@@ -161,6 +161,20 @@ async function openBuyPage(page: Page, id: number) {
   await expect(placeButton(page)).toBeEnabled()
 }
 
+/**
+ * Chờ form trang mua nhận tương tác thật: `waitForHydration` chỉ thấy React đã gắn props vào nút, `ready`
+ * (useHydrated) có thể còn false thêm một lần render → nút khóa vì chưa hydrate chứ không vì lý do của ca.
+ * Bộ đếm ghi chú đổi theo chữ gõ = handler đã chạy và React đã render lại sau hydrate (effect của useHydrated
+ * chạy trước lần render đó), nên `ready` đã true. Trả ô về rỗng như lúc đầu.
+ */
+async function waitForBuyFormReady(page: Page) {
+  const note = main(page).getByLabel('Ghi chú cho đơn hàng')
+  await note.fill('x')
+  await expect(main(page).getByText('1/500 ký tự', { exact: true })).toBeVisible()
+  await note.fill('')
+  await expect(main(page).getByText('0/500 ký tự', { exact: true })).toBeVisible()
+}
+
 const ordersCount = async () => (await ordersOf(buyer.id)).length
 
 test('(m1) chưa đăng nhập bấm "Mua ngay" ở trang tin → đăng nhập → về đúng trang mua', async ({ page }) => {
@@ -407,8 +421,9 @@ test('(m8) người mua chưa có địa chỉ: "Thêm địa chỉ" → lưu �
 
   await page.goto(buyPath(first.id))
   await expect(main(page).getByText('Bạn chưa có địa chỉ giao hàng nào.', { exact: false })).toBeVisible()
-  // Trước hydrate nút nào cũng khóa (SubmitButton ready): chờ hydrate để kiểm đúng lý do của ca (chưa có địa chỉ)
+  // Trước hydrate nút nào cũng khóa (SubmitButton ready): chờ ready thật để kiểm đúng lý do của ca (chưa có địa chỉ)
   await waitForHydration(page, 'main [data-testid="used-order-summary"] button[type="submit"]')
+  await waitForBuyFormReady(page)
   await expect(placeButton(page)).toBeDisabled()
   await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
   await addAddressFromBuyPage(page, first.id, { name: 'Người Mua Mới', street: '1 Tràng Tiền' })
