@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
     // Upload bìa ở admin: file ≤ 4MB (COVER_MAX_BYTES) + các ô khác của form; body request của Vercel tối đa 4.5MB.
     // Next chưa cho đặt theo từng action nên áp cho mọi Server Action.
     serverActions: { bodySizeLimit: '4.5mb' },
+    // Next 16.4.1 bật mặc định. Hint gộp segment ghi theo page (`/[locale]/cart`), không tách locale, bản `en` thắng
+    // → `/vi/...` dựng lại lúc chạy (tag hết hạn) dùng hint của `en`, mất segment `(shop)` riêng mà client đã thấy ở
+    // `/_tree` của bản build → prefetch segment đó trả 404. Tắt thì mỗi segment có response riêng cả lúc build lẫn lúc
+    // dựng lại. Kiểm lại mỗi lần nâng Next (docs/progress.md, vòng 18–19 của chợ sách cũ P-C).
+    prefetchInlining: false,
   },
   images: {
     // Ảnh bìa đã tải về Supabase Storage (scripts/import-books.ts), không hotlink Google Books
