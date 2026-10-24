@@ -231,18 +231,38 @@ khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10). **P-B đã lên `main` `88196
 
 ### Việc phải làm ở P-C
 
+Chia vòng trên nhánh `cho-sach-cu-3` (điều phối 24/10): 14 = SQL + types + e2e RLS; 15 = trang mua
+`/cho-sach-cu/[id]/mua` + đơn sách cũ + e2e mua; 16 = tiền người bán + `/admin/tra-nguoi-ban` + GỢI Ý vòng 12; sau đó
+cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14).
+
+- [x] Migration `20261024120000_used_market_purchase.sql` (vòng 14, gom mọi SQL của P-C để production chạy một lần;
+  chép vào `schema.sql` cùng commit):
+  - `review_used_listing` thêm `p_expected_updated_at` (bắt buộc; null → `INVALID_INPUT` field `expected_updated_at`;
+    so sau `for update`, trạng thái hoặc `updated_at` lệch → `LISTING_STATUS_CHANGED`). Quyết định của chủ dự án
+    2026-10-24.
+  - `place_used_order` thêm `p_expected_updated_at` (bắt buộc, sau `p_address_id`): tin bị sửa (tình trạng / mô tả /
+    ảnh) rồi duyệt lại cùng giá → `LISTING_CHANGED` (detail `total` như cũ); idempotency vẫn trước mọi kiểm tin. Đề
+    xuất của điều phối, chủ dự án duyệt lúc chạy SQL.
+  - `admin_seller_payouts()` (admin, `is_admin()` → `FORBIDDEN`): khoản trả kèm mã + trạng thái đơn, tên hiển thị
+    người bán; không trả thông tin người mua.
+  - `drop function` chữ ký cũ KHÔNG kèm `if exists` (lệch chữ ký thì cả file rollback); revoke `public, anon` / grant
+    `authenticated` đúng chữ ký mới. Thứ tự: SQL chạy trên production **trước** khi app mới lên `main` (app mới gửi
+    tham số mới); trong khoảng giữa, app P-B trên production không duyệt tin được → giữ khoảng này ngắn.
+  - Types: `src/types/database.ts` vòng 14 sửa tay đúng 3 mục theo định dạng CLI (không có Docker); bước "Check
+    src/types/database.ts" trên CI phân xử, lệch thì chép artifact `database-types`.
+- [x] Admin duyệt / từ chối gửi `expected_updated_at` nguyên chuỗi vào RPC (vòng 14), bỏ phép so trong app.
+- [x] Đổi trạng thái đơn sách cũ (đặt, hủy, admin đổi) thì `updateTag` các tag của tin (vòng 14: `expireOrderBooks`
+  đọc `used_listing_id`, dòng sách cũ → `usedListingTags`, dòng sách mới → `book:{id}`; Vitest).
+- [x] e2e RLS (vòng 14, `used-market-rls-account.spec.ts`): (r1) duyệt / từ chối với `updated_at` cũ, (r2) mua với
+  `updated_at` cũ sau khi tin được sửa rồi duyệt lại cùng giá, (r3) `admin_seller_payouts` chỉ admin, đơn hủy + đơn đã
+  giao của cùng tin → đúng một khoản kèm mã đơn đã giao.
 - Ghi chú demo song ngữ ở trang thanh toán sách cũ; ẩn bong bóng chat ở trang mua.
-- Đổi trạng thái đơn sách cũ (đặt, hủy, admin đổi) thì `updateTag` các tag của tin.
 - "Đã trả người bán" chỉ là admin đánh dấu (`mark_payout_paid`), không chuyển tiền, không lưu tài khoản ngân hàng.
-- Trang khoản tiền admin: `seller_payouts` không cho authenticated (kể cả admin) đọc `order_id` → tìm đơn qua
-  `listing_id` (`order_items.used_listing_id`) hoặc RPC có kiểm `is_admin()`. Tìm qua `listing_id` phải lọc đơn
-  `status <> 'cancelled'`: một tin có thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin:
-  → `sold` chỉ khi có đơn chưa hủy, `sold` → `approved` chỉ khi không còn đơn nào như vậy).
+- Trang khoản tiền admin: `seller_payouts` không cho authenticated (kể cả admin) đọc `order_id` → dùng RPC
+  `admin_seller_payouts()` (vòng 14). Tìm qua `listing_id` (nếu cần) phải lọc đơn `status <> 'cancelled'`: một tin có
+  thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin: → `sold` chỉ khi có đơn chưa hủy,
+  `sold` → `approved` chỉ khi không còn đơn nào như vậy).
 - e2e: mua COD, hủy → tin về công khai, người bán không mua được, giao + trả tiền → khoản chờ trả, admin đánh dấu đã trả.
-- Migration: `review_used_listing` thêm `p_expected_updated_at` (so trong RPC, lệch → mã lỗi hiện có của trường hợp đổi
-  trạng thái). Drop hàm cũ rồi create bản mới (không để 2 overload); grant lại như cũ; chép vào `schema.sql` cùng commit;
-  types sinh lại từ artifact CI. Thứ tự: SQL chạy trên production **trước** khi app mới lên `main` (app mới gửi tham số
-  mới). Quyết định của chủ dự án 2026-10-24.
 - GỢI Ý review vòng 12: (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số ít
   "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (nền khi rê chuột, bo góc).
 
