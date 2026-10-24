@@ -260,8 +260,9 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
 - [x] Trang mua `/cho-sach-cu/[id]/mua` (vòng 15): cần đăng nhập (proxy chuyển sang đăng nhập cho GET / HEAD), tin không
   công khai / id sai dạng → 404 `used-market`; tin đọc theo phiên không cache (lọc approved / sold), `updated_at` cùng
   lần đọc với nội dung đang hiện, tiền từ `quote_used_order`; đã bán / ngừng bán / tin của mình → không có form; COD /
-  VietQR demo, không voucher; idempotency key sinh ở phần động. `placeUsedOrder`: lỗi tin / sách / địa chỉ → updateTag
-  tag của tin (book_id đọc lại ở server) + `refresh()`; UNKNOWN / mạng giữ key. Nút "Mua ngay" ở trang tin đang bán.
+  VietQR như đơn thường (`getBankAccount`: đủ 4 biến `VIETQR_*` thì tài khoản thật, thiếu → demo), không voucher;
+  idempotency key sinh ở phần động. `placeUsedOrder`: lỗi tin / sách / địa chỉ → updateTag tag của tin (book_id đọc lại
+  ở server) + `refresh()`; UNKNOWN / mạng giữ key. Nút "Mua ngay" ở trang tin đang bán.
 - [x] Ghi chú demo song ngữ ở trang thanh toán sách cũ; [x] ẩn bong bóng chat ở trang mua (vòng 15).
 - [x] Đơn sách cũ ở tài khoản / admin (vòng 15): nhãn "Sách cũ · <tình trạng>" (tin đã rút sau khi hủy → "Sách cũ"),
   admin thêm "Người bán: <tên hiển thị>"; người mua không đọc seller_id. Vòng 16: đơn của khách chỉ nhúng
@@ -295,8 +296,8 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
 
 Còn lại: cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại commit đã duyệt) ra file ngoài
 repo + kiểm trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test điện thoại luồng mua; câu hỏi
-dồn: sửa CLAUDE.md (đoạn đề xuất ở báo cáo vòng 17), giữ `seller_id` đọc được với authenticated, duyệt
-`place_used_order` + `p_expected_updated_at`.
+dồn: sửa CLAUDE.md (đoạn đề xuất ở báo cáo vòng 18, bản sửa của vòng 17), giữ `seller_id` đọc được với
+authenticated, duyệt `place_used_order` + `p_expected_updated_at`.
 
 ## Test (P-A)
 
