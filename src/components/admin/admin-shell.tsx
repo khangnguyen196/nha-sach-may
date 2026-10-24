@@ -10,10 +10,13 @@ import {
   MoonIcon,
   SunIcon,
   TicketPercentIcon,
+  WalletIcon,
 } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import type { ReactNode } from 'react'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { AdminLink } from './admin-link'
 import { AdminNav, type AdminNavItem } from './admin-nav'
 import { SHOP_HOME_PATH } from './shop-link'
@@ -36,6 +39,7 @@ export async function AdminShell({ children }: { children: ReactNode }) {
     { href: '/admin/voucher', label: t('nav.vouchers'), icon: <TicketPercentIcon aria-hidden /> },
     { href: '/admin/danh-gia', label: t('nav.reviews'), icon: <MessageSquareTextIcon aria-hidden /> },
     { href: '/admin/sach-cu', label: t('nav.usedListings'), icon: <BookCopyIcon aria-hidden /> },
+    { href: '/admin/tra-nguoi-ban', label: t('nav.payouts'), icon: <WalletIcon aria-hidden /> },
   ]
   const themeToggle = (
     <ThemeToggle
@@ -58,7 +62,8 @@ export async function AdminShell({ children }: { children: ReactNode }) {
               // Cửa hàng là root layout khác: link thường, tải lại cả trang
               // eslint-disable-next-line no-restricted-syntax
               href={SHOP_HOME_PATH}
-              className={`inline-flex size-11 items-center justify-center text-muted-foreground hover:text-foreground ${focusRing}`}
+              // Cùng kiểu nút giao diện bên cạnh (Button ghost: nền khi rê chuột, bo góc, focus ring), vùng bấm 44px
+              className={cn(buttonVariants({ variant: 'ghost', size: 'icon-lg' }), 'size-11 text-muted-foreground')}
             >
               <StoreIcon aria-hidden className="size-4" />
               <span className="sr-only">{t('nav.backToShop')}</span>

@@ -561,13 +561,13 @@
         "orderStatus": "Đơn hàng",
         "createdAt": "Ngày ghi",
         "status": "Trạng thái",
+        "paidAt": "Ngày trả",
         "action": "Thao tác"
       },
       "status": {
         "pending": "Chờ trả",
         "paid": "Đã trả"
       },
-      "paidAt": "Trả ngày {date}",
       "markPaid": "Đã trả",
       "markPaidLabel": "Đánh dấu đã trả khoản của “{title}”",
       "markPaidPending": "Đang lưu…",
