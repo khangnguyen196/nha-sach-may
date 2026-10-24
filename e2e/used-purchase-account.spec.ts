@@ -407,6 +407,8 @@ test('(m8) người mua chưa có địa chỉ: "Thêm địa chỉ" → lưu �
 
   await page.goto(buyPath(first.id))
   await expect(main(page).getByText('Bạn chưa có địa chỉ giao hàng nào.', { exact: false })).toBeVisible()
+  // Trước hydrate nút nào cũng khóa (SubmitButton ready): chờ hydrate để kiểm đúng lý do của ca (chưa có địa chỉ)
+  await waitForHydration(page, 'main [data-testid="used-order-summary"] button[type="submit"]')
   await expect(placeButton(page)).toBeDisabled()
   await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
   await addAddressFromBuyPage(page, first.id, { name: 'Người Mua Mới', street: '1 Tràng Tiền' })

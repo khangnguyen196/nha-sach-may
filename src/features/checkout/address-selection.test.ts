@@ -10,6 +10,10 @@ describe('pickAddressId (?address= ở /thanh-toan và trang mua sách cũ)', ()
     expect(pickAddressId(addresses, '30')).toBe(30)
   })
 
+  it('?address= dạng mảng một phần tử (["12"]) → Number đọc như "12" → chọn id 12', () => {
+    expect(pickAddressId(addresses, ['12'])).toBe(12)
+  })
+
   it('id không thuộc sổ địa chỉ (của người khác, đã xóa) → địa chỉ đầu danh sách', () => {
     expect(pickAddressId(addresses, '999')).toBe(7)
   })
