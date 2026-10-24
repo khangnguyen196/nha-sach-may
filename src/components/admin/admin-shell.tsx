@@ -52,7 +52,19 @@ export async function AdminShell({ children }: { children: ReactNode }) {
             {tCommon('siteName')}{' '}
             <span className="font-sans text-sm font-normal text-muted-foreground">· {t('title')}</span>
           </AdminLink>
-          <div className="ml-auto md:hidden">{themeToggle}</div>
+          <div className="ml-auto flex items-center gap-1 md:hidden">
+            {/* Chỉ icon: ở 360px tên trang + chữ + nút giao diện tràn ngang */}
+            <a
+              // Cửa hàng là root layout khác: link thường, tải lại cả trang
+              // eslint-disable-next-line no-restricted-syntax
+              href={SHOP_HOME_PATH}
+              className={`inline-flex size-11 items-center justify-center text-muted-foreground hover:text-foreground ${focusRing}`}
+            >
+              <StoreIcon aria-hidden className="size-4" />
+              <span className="sr-only">{t('nav.backToShop')}</span>
+            </a>
+            {themeToggle}
+          </div>
         </div>
         <AdminNav label={t('nav.label')} items={items} />
         <div className="mt-auto hidden items-center justify-between gap-2 border-t px-6 py-3 md:flex">

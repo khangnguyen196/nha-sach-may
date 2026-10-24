@@ -74,3 +74,30 @@ test('link "Quản trị" chỉ admin thấy: trang tài khoản, cạnh icon t�
   await expect(page).toHaveURL(`${baseURL}/admin`)
   expect(errors).toEqual([])
 })
+
+test('link "Về cửa hàng" ở header admin: mỗi cỡ màn hình đúng một link, bấm về trang chủ cửa hàng', async ({ page, baseURL }) => {
+  const errors = collectErrors(page)
+  // Strict mode: link desktop (hidden md:flex) và link mobile (md:hidden) cùng hiện → locator khớp 2 phần tử, ca đỏ
+  const backToShop = page.getByRole('banner').getByRole('link', { name: 'Về cửa hàng', exact: true })
+  await page.goto('/admin')
+  await expect(main(page).getByRole('heading', { name: 'Tổng quan', level: 1 })).toBeVisible()
+
+  // Dưới md (768px) link desktop nằm trong khối ẩn: chỉ link icon ở header mobile, vùng bấm ≥ 44px, không tràn ngang
+  const isMobile = (page.viewportSize()?.width ?? 0) < 768
+  if (isMobile) {
+    for (const width of [360, 375, 412]) {
+      await page.setViewportSize({ width, height: 800 })
+      await expect(backToShop).toBeVisible()
+      const box = await backToShop.boundingBox()
+      expect(box?.width ?? 0, `width @${width}`).toBeGreaterThanOrEqual(44)
+      expect(box?.height ?? 0, `height @${width}`).toBeGreaterThanOrEqual(44)
+      await expectNoHorizontalScroll(page)
+    }
+  }
+
+  await expect(backToShop).toBeVisible()
+  await backToShop.click()
+  await expect(page).toHaveURL(`${baseURL}/`)
+  await expect(main(page).getByRole('heading', { name: 'Mới về', level: 2 })).toBeVisible()
+  expect(errors).toEqual([])
+})
