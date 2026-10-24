@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { localizeDivisionNames } from '@/features/account/divisions'
 import { Link } from '@/i18n/navigation'
 import type { OrderDetail } from '../queries'
+import { UsedItemLabel } from './used-item-label'
 
 type DetailItem = OrderDetail['order_items'][number]
 /** Dòng sách; `books` (slug để dẫn tới trang sách) chỉ có ở query phía khách, admin không có provider của next-intl
@@ -20,10 +21,12 @@ type Props = {
   highlight?: ReactNode
   /** Phần thêm dưới từng dòng sách: khối đánh giá ở trang chi tiết đơn đã giao */
   renderItemExtra?: (item: OrderItem) => ReactNode
+  /** Admin: dòng sách cũ hiện thêm tên hiển thị người bán */
+  showSeller?: boolean
 }
 
 /** Thông tin đơn dùng chung trang đặt hàng thành công và trang chi tiết: mã, ngày, địa chỉ, sách, tiền */
-export async function OrderDetails({ order, locale, highlight, renderItemExtra }: Props) {
+export async function OrderDetails({ order, locale, highlight, renderItemExtra, showSeller = false }: Props) {
   const [t, tCart, format] = await Promise.all([getTranslations('order'), getTranslations('cart'), getFormatter()])
   const price = (value: number) => format.number(value, 'price')
   const { province, ward } = localizeDivisionNames(order, locale)
@@ -105,6 +108,7 @@ export async function OrderDetails({ order, locale, highlight, renderItemExtra }
                     ) : (
                       <p className="line-clamp-2 font-medium">{item.title}</p>
                     )}
+                    <UsedItemLabel item={item} showSeller={showSeller} className="mt-0.5 block text-muted-foreground" />
                     <p className="mt-0.5 text-muted-foreground">{t('quantity', { quantity: item.quantity })}</p>
                   </div>
                   <p className="shrink-0 text-sm tabular-nums">

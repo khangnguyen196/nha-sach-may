@@ -61,3 +61,24 @@ describe('query đơn phía khách lọc theo user_id', () => {
     expect(calls.some(([method]) => method === 'in')).toBe(true)
   })
 })
+
+describe('dòng sách cũ trong đơn phía khách', () => {
+  /** Chuỗi select đã bỏ khoảng trắng / xuống dòng */
+  const selected = () =>
+    calls
+      .filter(([method]) => method === 'select')
+      .map(([, columns]) => String(columns).replace(/\s+/g, ''))
+      .join('|')
+
+  it('chi tiết + danh sách nhúng tình trạng + tên hiển thị người bán, không seller_id', async () => {
+    result = { data: { id: 1 }, error: null }
+    await getOrderByCode('NS26101600001', USER)
+    result = { data: [], count: 0, error: null }
+    await listOrders({ page: 1 }, USER)
+    const [detail, list] = selected().split('|')
+    for (const columns of [detail, list]) {
+      expect(columns).toContain('used_listing_id,used_listings(condition,seller_name)')
+      expect(columns).not.toContain('seller_id')
+    }
+  })
+})

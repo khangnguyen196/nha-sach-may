@@ -42,10 +42,14 @@ export async function listAdminOrders(params: OrderListParams) {
   return { orders: data, total: count ?? data.length }
 }
 
-/** Cùng cột với trang chi tiết của khách (OrderDetails dùng chung) + người đặt, voucher, thời điểm cập nhật */
+/**
+ * Cùng cột với trang chi tiết của khách (OrderDetails dùng chung) + người đặt, voucher, thời điểm cập nhật. Dòng sách
+ * cũ: tình trạng + tên hiển thị người bán (admin chỉ thấy tên hiển thị, như trang duyệt tin)
+ */
 const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
   street, note, subtotal, shipping_fee, discount, total, voucher_code, cancelled_reason, created_at, updated_at,
-  profiles(full_name), order_items(id, book_id, title, cover_url, unit_price, quantity, line_total)`
+  profiles(full_name), order_items(id, book_id, title, cover_url, unit_price, quantity, line_total, used_listing_id,
+  used_listings(condition, seller_name))`
 
 export async function getAdminOrder(code: string) {
   if (!ORDER_CODE.test(code)) return null

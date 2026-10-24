@@ -5,10 +5,13 @@ import { FILTER_STATUSES, ORDER_CODE, ORDERS_PAGE_SIZE, type OrderListParams } f
 // Dữ liệu theo user: client theo phiên (cookies), không cache chung. Chỉ gọi trong <Suspense>.
 // Luôn lọc user_id của người đang đăng nhập, không chỉ dựa vào RLS: policy orders_select_own_or_admin cho admin đọc
 // mọi đơn (cần cho /admin), nên trang tài khoản / đặt hàng thành công của admin sẽ lộ đơn của khách khác.
+// Dòng sách cũ (used_listing_id): nhúng tình trạng + tên hiển thị người bán, KHÔNG seller_id (người mua không cần biết
+// tài khoản người bán; RLS cho người mua đọc tin đã duyệt / đã bán). Tin đã rút sau khi đơn bị hủy → nhúng null.
 
 const ORDER_COLUMNS = `id, order_code, status, payment_method, payment_status, recipient_name, phone, province, ward,
   street, note, subtotal, shipping_fee, discount, voucher_code, total, cancelled_reason, created_at,
-  order_items(id, book_id, title, cover_url, unit_price, quantity, line_total, books(slug, is_active))`
+  order_items(id, book_id, title, cover_url, unit_price, quantity, line_total, used_listing_id,
+    used_listings(condition, seller_name), books(slug, is_active))`
 
 export async function getOrderByCode(code: string, userId: string) {
   if (!ORDER_CODE.test(code)) return null
@@ -37,7 +40,10 @@ export async function listOrders({ status, page }: OrderListParams, userId: stri
   const supabase = await createClient()
   let query = supabase
     .from('orders')
-    .select('id, order_code, status, total, created_at, order_items(id, title, cover_url, quantity)', { count: 'exact' })
+    .select(
+      'id, order_code, status, total, created_at, order_items(id, title, cover_url, quantity, used_listing_id, used_listings(condition, seller_name))',
+      { count: 'exact' },
+    )
     .eq('user_id', userId)
   if (status) query = query.in('status', FILTER_STATUSES[status])
 

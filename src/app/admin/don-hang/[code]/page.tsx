@@ -62,7 +62,7 @@ async function Order({ params }: { params: Props['params'] }) {
             {order.cancelled_reason}
           </p>
         )}
-        <OrderDetails order={order} locale="vi" />
+        <OrderDetails order={order} locale="vi" showSeller />
       </div>
 
       <aside className="grid gap-6">

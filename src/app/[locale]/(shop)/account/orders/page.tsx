@@ -10,6 +10,7 @@ import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { EmptyState } from '@/features/books/components/empty-state'
 import { Pagination } from '@/features/books/components/pagination'
 import { OrderStatusBadge } from '@/features/orders/components/order-status-badge'
+import { UsedItemLabel } from '@/features/orders/components/used-item-label'
 import {
   ORDER_FILTERS,
   ORDERS_PAGE_SIZE,
@@ -181,6 +182,8 @@ async function OrderRow({ order }: { order: OrderListItem }) {
               {rest.length > 0 && <span className="text-muted-foreground"> {t('moreBooks', { count: rest.length })}</span>}
             </p>
           )}
+          {/* Đơn sách cũ luôn một dòng (place_used_order) → nhãn của dòng đầu */}
+          {first && <UsedItemLabel item={first} className="mt-0.5 block text-sm text-muted-foreground" />}
           <p className="mt-0.5 text-sm text-muted-foreground">{format.dateTime(new Date(order.created_at), 'short')}</p>
         </div>
         <p className="col-start-2 font-semibold text-primary tabular-nums sm:col-start-3 sm:row-start-1" data-testid="order-row-total">
