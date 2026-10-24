@@ -170,24 +170,30 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 
 ### Việc phải làm ở P-B
 
-- P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
+Chia 3 vòng con trên nhánh `cho-sach-cu-2` (điều phối 24/10): 7 = người bán, 8 = admin duyệt / từ chối / gỡ, 9 = trang
+công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm ở vòng 7.
+
+- [x] P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
   để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
-- Một file duy nhất ký link ảnh (hằng TTL 604800 giây = 7 ngày).
-- Query công khai `'use cache'` + `cacheLife('hours')`; trang người bán / admin ký theo request (không cache).
-- Vitest kiểm tĩnh điều kiện (a): chỉ một file gọi `createSignedUrl(s)`, mọi `'use cache'` trong `features/used` gọi
-  `cacheLife('hours'|'minutes'|'seconds')`, expire của `'hours'` (86400) < TTL.
-- `next/image` `unoptimized` cho ảnh sách cũ; giữ `coverImagesConfig` (chỉ thêm pattern
-  `/storage/v1/object/sign/used-listing-photos/**` nếu thật cần).
-- Ghi chú demo song ngữ ("Tính năng demo, không có giao dịch thật") ở trang danh sách chợ sách cũ + form đăng tin.
-- Link "Chợ sách cũ" ở footer + trang tài khoản.
-- e2e: đăng tin có ảnh, tin chưa duyệt không hiện công khai, sửa → về chờ duyệt, rút, admin duyệt / từ chối.
-- Admin duyệt tin: hiện `LISTING_PHOTOS_MISSING` (ảnh của tin không còn đủ) kèm gợi ý từ chối tin có lý do.
-- Sửa tin: ảnh cũ không còn dùng thì xóa sau khi lưu (DB chặn xóa ảnh đang gắn tin `pending` / `approved` / `sold`,
-  nên chỉ xóa được khi tin đã bỏ ảnh đó hoặc tin bị từ chối / đã rút). Có cách dọn ảnh tải lên bỏ dở (ảnh không gắn
-  tin nào, VD bỏ form giữa chừng) để người bán không chạm trần 30 ảnh: xóa ngay khi bỏ ảnh khỏi form, và / hoặc dọn
-  ảnh mồ côi của chính người bán khi mở form đăng tin.
-- Schema zod form đăng / sửa tin `.trim()` mô tả trước khi gọi RPC (`btrim` của DB chỉ cắt dấu cách; mô tả chỉ có
+- [x] Một file duy nhất ký link ảnh (`features/used/signed-urls.ts`, hằng `USED_PHOTO_URL_TTL` = 604800 giây = 7 ngày).
+- [ ] Query công khai `'use cache'` + `cacheLife('hours')` (vòng 9); [x] trang người bán ký theo request (không cache);
+  admin (vòng 8).
+- [x] Vitest kiểm tĩnh điều kiện (a) (`features/used/cache-life.test.ts`): chỉ một file gọi `createSignedUrl(s)`, mọi
+  `'use cache'` trong file import signed-urls / features/used/queries gọi `cacheLife('hours'|'minutes'|'seconds')`,
+  expire của các profile đó (đọc `defaultConfig` của Next; next.config.ts không khai báo cacheLife) < TTL.
+- [x] `next/image` `unoptimized` cho ảnh sách cũ; giữ `coverImagesConfig` (build không đòi thêm pattern).
+- [x] Ghi chú demo song ngữ ở form đăng / sửa tin; [ ] trang danh sách chợ sách cũ (vòng 9).
+- [x] Link "Sách tôi bán" ở trang tài khoản; [ ] link "Chợ sách cũ" ở footer + trang tài khoản (vòng 9).
+- [x] e2e người bán (`e2e/used-listing-account.spec.ts`): đăng tin có ảnh, tin chưa duyệt không công khai, sửa → về chờ
+  duyệt, rút, bỏ ảnh khỏi form, giá vượt trần, 404 trang sửa tin; [ ] admin duyệt / từ chối qua UI (vòng 8).
+- [ ] Admin duyệt tin: hiện `LISTING_PHOTOS_MISSING` (ảnh của tin không còn đủ) kèm gợi ý từ chối tin có lý do (vòng 8).
+- [x] Sửa tin: ảnh cũ không còn dùng thì xóa sau khi lưu (DB chặn xóa ảnh đang gắn tin `pending` / `approved` / `sold`,
+  nên chỉ xóa được khi tin đã bỏ ảnh đó hoặc tin bị từ chối / đã rút). Dọn ảnh tải lên bỏ dở: xóa ngay khi bỏ ảnh khỏi
+  form, và dọn ảnh mồ côi (> 24 giờ) của chính người bán khi mở form đăng tin; rút tin thì xóa ảnh của tin. Ảnh chỉ bị
+  xóa khi không nằm trong tin chưa rút nào của người bán (`features/used/photo-storage.ts`).
+- [x] Schema zod form đăng / sửa tin `.trim()` mô tả trước khi gọi RPC (`btrim` của DB chỉ cắt dấu cách; mô tả chỉ có
   xuống dòng / tab sẽ lưu nguyên).
+- [x] Trần 30 ảnh: policy bucket chặn tải lên → mã app `LISTING_PHOTO_LIMIT` (không đổi SQL).
 
 ### Việc phải làm ở P-C
 
