@@ -365,7 +365,12 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "can_delete_used_photo":
+            "admin_seller_payouts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "amount": number,"created_at": string,"fee": number,"id": number,"listing_id": number,"order_code": string,"order_id": number,"order_status": Database["public"]['Enums']["order_status"],"paid_at": string,"payment_status": Database["public"]['Enums']["payment_status"],"price": number,"seller_id": string,"seller_name": string,"status": string,"title": string
+            }[]
+                           },
+"can_delete_used_photo":
 { Args: { "p_name": string }; Returns: boolean
                            },
 "can_upload_used_photo":
@@ -470,7 +475,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "place_used_order":
-{ Args: { "p_address_id": number,"p_expected_total"?: number,"p_idempotency_key"?: string,"p_listing_id": number,"p_note"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"] }; Returns: {
+{ Args: { "p_address_id": number,"p_expected_total"?: number,"p_expected_updated_at": string,"p_idempotency_key"?: string,"p_listing_id": number,"p_note"?: string,"p_payment_method"?: Database["public"]['Enums']["payment_method"] }; Returns: {
               "cancelled_reason": string | null,
 "created_at": string,
 "discount": number,
@@ -516,7 +521,7 @@ isOneToOne: false
             }[]
                            },
 "review_used_listing":
-{ Args: { "p_approve": boolean,"p_expected_status": Database["public"]['Enums']["used_listing_status"],"p_id": number,"p_reason"?: string }; Returns: undefined
+{ Args: { "p_approve": boolean,"p_expected_status": Database["public"]['Enums']["used_listing_status"],"p_expected_updated_at": string,"p_id": number,"p_reason"?: string }; Returns: undefined
                            },
 "search_books":
 { Args: { "q": string }; Returns: {

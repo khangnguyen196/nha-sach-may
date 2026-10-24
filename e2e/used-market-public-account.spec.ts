@@ -14,6 +14,7 @@ import {
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
+  usedListingUpdatedAt,
   type E2eUser,
 } from '../scripts/e2e-user'
 import { login, NO_SESSION } from './auth'
@@ -290,6 +291,7 @@ test('(p3) tin đã bán: trang tin hiện "Đã bán", không lên danh sách',
     const { error } = await buyerClient.rpc('place_used_order', {
       p_listing_id: id,
       p_address_id: address,
+      p_expected_updated_at: await usedListingUpdatedAt(id),
       p_payment_method: 'cod',
       p_idempotency_key: randomUUID(),
       p_expected_total: 45_000 + SHIPPING_FEE,

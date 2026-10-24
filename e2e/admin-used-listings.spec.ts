@@ -13,6 +13,7 @@ import {
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
+  usedListingUpdatedAt,
   type E2eAdminBook,
   type E2eUser,
 } from '../scripts/e2e-user'
@@ -181,7 +182,12 @@ test('(c) Gỡ tin đang bán (hỏi lại tại chỗ, focus bàn phím) kèm l
   const errors = collectErrors(page)
   const { id } = await createPendingListing()
   const adminClient = await signedInClient(admin)
-  const approved = await adminClient.rpc('review_used_listing', { p_id: id, p_expected_status: 'pending', p_approve: true })
+  const approved = await adminClient.rpc('review_used_listing', {
+    p_id: id,
+    p_expected_status: 'pending',
+    p_expected_updated_at: await usedListingUpdatedAt(id),
+    p_approve: true,
+  })
   expect(approved.error).toBeNull()
 
   await openListing(page, id)

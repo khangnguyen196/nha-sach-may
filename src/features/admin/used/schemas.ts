@@ -10,9 +10,8 @@ export const EXPECTED_UPDATED_AT_MAX = 64
 
 /**
  * Tin admin đang xem: id do page bind, trạng thái + `updated_at` đang hiển thị gửi qua ô ẩn `expected_status`,
- * `expected_updated_at` (đều đi qua client nên parse lại). RPC review_used_listing so `expected_status` với trạng thái
- * thật; action so `expected_updated_at` với `updated_at` thật (chuỗi PostgREST trả về, so nguyên chuỗi). Khác →
- * LISTING_STATUS_CHANGED.
+ * `expected_updated_at` (đều đi qua client nên parse lại). RPC review_used_listing so cả hai với giá trị thật sau khi
+ * khóa dòng (`updated_at` gửi nguyên chuỗi PostgREST trả về, DB đọc thành timestamptz). Khác → LISTING_STATUS_CHANGED.
  */
 export const reviewTargetSchema = z.object({
   id: rowIdSchema,

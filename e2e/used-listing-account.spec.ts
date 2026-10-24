@@ -16,6 +16,7 @@ import {
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
+  usedListingUpdatedAt,
   usedListingsOf,
   usedPhotoExists,
   usedPhotosIn,
@@ -241,6 +242,7 @@ test('(5) tin đã duyệt sửa giá qua UI → về Chờ duyệt', async ({ p
   const review = await adminClient.rpc('review_used_listing', {
     p_id: id,
     p_expected_status: 'pending',
+    p_expected_updated_at: await usedListingUpdatedAt(id),
     p_approve: true,
   })
   expect(review.error).toBeNull()

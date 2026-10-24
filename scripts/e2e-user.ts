@@ -800,6 +800,17 @@ export async function usedListingRow(id: number) {
   return data
 }
 
+/**
+ * `updated_at` của tin (service role), nguyên chuỗi PostgREST trả về: gửi lại vào `p_expected_updated_at` của
+ * review_used_listing / place_used_order như trang admin / trang mua (không qua Date: mất micro giây → luôn lệch)
+ */
+export async function usedListingUpdatedAt(id: number) {
+  const { data, error } = await adminClient().from('used_listings').select('updated_at').eq('id', id).maybeSingle()
+  if (error) throw new Error(`usedListingUpdatedAt: ${error.message}`)
+  if (!data) throw new Error(`usedListingUpdatedAt: không có tin ${id}`)
+  return data.updated_at
+}
+
 /** Mọi tin sách cũ của một người bán, mới nhất trước (service role, thấy mọi trạng thái) */
 export async function usedListingsOf(sellerId: string) {
   const { data, error } = await adminClient()

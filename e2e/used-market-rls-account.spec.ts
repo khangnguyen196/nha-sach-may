@@ -18,6 +18,7 @@ import {
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
+  usedListingUpdatedAt,
   usedPhotoExists,
   type E2eAdminBook,
   type E2eUser,
@@ -111,10 +112,21 @@ async function createListing(client: Client, photos: string[], price = 80_000) {
   return data
 }
 
-async function review(client: Client, id: number, expected: ListingStatus, approve: boolean, reason?: string) {
+/**
+ * review_used_listing như trang admin: trạng thái + updated_at của bản đang xem (mặc định: updated_at hiện tại của tin,
+ * đọc bằng service role; `updatedAt` = bản cũ để thử tin vừa đổi)
+ */
+async function review(
+  client: Client,
+  id: number,
+  expected: ListingStatus,
+  approve: boolean,
+  { reason, updatedAt }: { reason?: string; updatedAt?: string } = {},
+) {
   return client.rpc('review_used_listing', {
     p_id: id,
     p_expected_status: expected,
+    p_expected_updated_at: updatedAt ?? (await usedListingUpdatedAt(id)),
     p_approve: approve,
     p_reason: reason,
   })
@@ -131,17 +143,20 @@ async function visibleIds(client: Client, id: number) {
   return data.map((row) => row.id)
 }
 
-function placeUsedOrder(
+/** place_used_order như trang mua: `updatedAt` = bản tin đang xem (mặc định: updated_at hiện tại của tin) */
+async function placeUsedOrder(
   client: Client,
   listingId: number,
   addressId: number,
   key: string,
   expectedTotal: number,
   paymentMethod: PaymentMethod = 'cod',
+  updatedAt?: string,
 ) {
   return client.rpc('place_used_order', {
     p_listing_id: listingId,
     p_address_id: addressId,
+    p_expected_updated_at: updatedAt ?? (await usedListingUpdatedAt(listingId)),
     p_payment_method: paymentMethod,
     p_idempotency_key: key,
     p_expected_total: expectedTotal,
@@ -297,7 +312,7 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
 
   expect((await review(sellerClient, id, 'pending', true)).error?.message).toBe('FORBIDDEN')
   expect((await review(adminClient, id, 'pending', false)).error?.message).toBe('INVALID_INPUT')
-  expect((await review(adminClient, id, 'pending', false, '   ')).error?.message).toBe('INVALID_INPUT')
+  expect((await review(adminClient, id, 'pending', false, { reason: '   ' })).error?.message).toBe('INVALID_INPUT')
   expect((await review(adminClient, id, 'approved', true)).error?.message).toBe('LISTING_STATUS_CHANGED')
 
   await approve(id)
@@ -347,7 +362,7 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
 
   // Admin duyệt lại rồi gỡ (approved → rejected, kèm lý do)
   await approve(id)
-  const takeDown = await review(adminClient, id, 'approved', false, 'Ảnh không đúng sách')
+  const takeDown = await review(adminClient, id, 'approved', false, { reason: 'Ảnh không đúng sách' })
   expect(takeDown.error).toBeNull()
   expect(await usedListingRow(id)).toMatchObject({ status: 'rejected', reject_reason: 'Ảnh không đúng sách' })
   expect(await visibleIds(anon, id)).toEqual([])
@@ -356,6 +371,36 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
   expect((await sellerClient.rpc('withdraw_used_listing', { p_id: id })).error).toBeNull()
   expect((await sellerClient.rpc('withdraw_used_listing', { p_id: id })).error?.message).toBe('LISTING_NOT_EDITABLE')
   expect((await usedListingRow(id))?.status).toBe('withdrawn')
+})
+
+test('(r1) duyệt / từ chối với updated_at cũ (người bán vừa sửa tin) → LISTING_STATUS_CHANGED, tin không đổi', async () => {
+  const path = await uploadPhoto(sellerClient, seller)
+  const id = await createListing(sellerClient, [path])
+  const stale = await usedListingUpdatedAt(id)
+  // Người bán sửa tin đang chờ duyệt: trạng thái vẫn pending, chỉ nội dung + updated_at đổi
+  const edit = await sellerClient.rpc('update_used_listing', {
+    p_id: id,
+    p_condition: 'worn',
+    p_price: 80_000,
+    p_description: 'Sửa sau khi admin mở tin',
+    p_photos: [path],
+  })
+  expect(edit.error).toBeNull()
+  const before = await usedListingRow(id)
+  const current = await usedListingUpdatedAt(id)
+  expect(before?.status).toBe('pending')
+  expect(current).not.toBe(stale)
+
+  for (const approve of [true, false]) {
+    const result = await review(adminClient, id, 'pending', approve, { reason: 'Ảnh mờ', updatedAt: stale })
+    expect(result.error?.message, String(approve)).toBe('LISTING_STATUS_CHANGED')
+  }
+  expect(await usedListingRow(id)).toEqual(before)
+  expect(await usedListingUpdatedAt(id)).toBe(current)
+
+  // Bản đang có (updated_at mới, nguyên chuỗi PostgREST) → duyệt được
+  expect((await review(adminClient, id, 'pending', true, { updatedAt: current })).error).toBeNull()
+  expect((await usedListingRow(id))?.status).toBe('approved')
 })
 
 test('ảnh gắn tin chờ duyệt / đã duyệt không xóa được, tên đã gắn tin không tải lại được; duyệt kiểm lại ảnh còn đủ', async () => {
@@ -494,14 +539,18 @@ test('mua: không mua tin của mình, tổng lệch, cùng key cùng đơn, ng�
   const noKey = await buyerClient.rpc('place_used_order', {
     p_listing_id: id,
     p_address_id: buyerAddress,
+    p_expected_updated_at: await usedListingUpdatedAt(id),
     p_expected_total: total,
   })
   expect(noKey.error?.message).toBe('INVALID_INPUT')
 
   const key = randomUUID()
-  const order = await placedOrder(placeUsedOrder(buyerClient, id, buyerAddress, key, total))
+  const viewed = await usedListingUpdatedAt(id)
+  const order = await placedOrder(placeUsedOrder(buyerClient, id, buyerAddress, key, total, 'cod', viewed))
   expect(order).toMatchObject({ status: 'pending', subtotal: price, shipping_fee: SHIPPING_FEE, total })
-  const again = await placedOrder(placeUsedOrder(buyerClient, id, buyerAddress, key, total))
+  // Gửi lại cùng key với đúng bản đã xem (tin giờ đã bán, updated_at đã đổi): idempotency chạy trước mọi kiểm tin
+  expect(await usedListingUpdatedAt(id)).not.toBe(viewed)
+  const again = await placedOrder(placeUsedOrder(buyerClient, id, buyerAddress, key, total, 'cod', viewed))
   expect(again.id).toBe(order.id)
   expect((await usedListingRow(id))?.status).toBe('sold')
   expect((await placeUsedOrder(strangerClient, id, strangerAddress, randomUUID(), total)).error?.message).toBe(
@@ -564,6 +613,103 @@ test('mua: không mua tin của mình, tổng lệch, cùng key cùng đơn, ng�
   expect((await adminClient.rpc('mark_payout_paid', { p_id: payoutId })).error).toBeNull()
   expect((await sellerPayoutsOf(id))[0]).toMatchObject({ status: 'paid', paid_at: expect.any(String) })
   expect((await adminClient.rpc('mark_payout_paid', { p_id: payoutId })).error?.message).toBe('PAYOUT_STATUS_CHANGED')
+})
+
+test('(r2) mua với updated_at cũ (tin đã sửa rồi duyệt lại, cùng giá) → LISTING_CHANGED, không tạo đơn, tin vẫn đang bán', async () => {
+  test.setTimeout(60_000)
+  const path = await uploadPhoto(sellerClient, seller)
+  const price = 60_000
+  const total = price + SHIPPING_FEE
+  const id = await createListing(sellerClient, [path], price)
+  await approve(id)
+  const stale = await usedListingUpdatedAt(id)
+  // Người bán đổi tình trạng + mô tả, giữ giá → về chờ duyệt → admin duyệt lại: tổng tiền như cũ
+  const edit = await sellerClient.rpc('update_used_listing', {
+    p_id: id,
+    p_condition: 'worn',
+    p_price: price,
+    p_description: 'Gáy đã rách',
+    p_photos: [path],
+  })
+  expect(edit.error).toBeNull()
+  await approve(id)
+  expect(await usedListingRow(id)).toMatchObject({ status: 'approved', price })
+
+  const address = await seedAddress(buyer.id, { isDefault: false })
+  const key = randomUUID()
+  const changed = await placeUsedOrder(buyerClient, id, address, key, total, 'cod', stale)
+  expect(changed.error?.message).toBe('LISTING_CHANGED')
+  expect(JSON.parse(changed.error?.details ?? '{}')).toEqual({ total })
+  const orders = await buyerClient.from('orders').select('id').eq('idempotency_key', key)
+  expect(orders.error).toBeNull()
+  expect(orders.data).toEqual([])
+  expect((await usedListingRow(id))?.status).toBe('approved')
+
+  // Xem lại tin (updated_at mới) → mua được, cùng key
+  const order = await placedOrder(placeUsedOrder(buyerClient, id, address, key, total))
+  expect(order).toMatchObject({ status: 'pending', total })
+  expect((await usedListingRow(id))?.status).toBe('sold')
+})
+
+test('(r3) admin_seller_payouts: chỉ admin; một tin có đơn hủy + đơn đã giao → đúng một khoản kèm mã đơn đã giao', async () => {
+  test.setTimeout(60_000)
+  expect((await buyerClient.rpc('admin_seller_payouts')).error?.message).toBe('FORBIDDEN')
+  expect((await sellerClient.rpc('admin_seller_payouts')).error?.message).toBe('FORBIDDEN')
+  // anon không có quyền execute (revoke public, anon)
+  const anonCall = await anon.rpc('admin_seller_payouts')
+  expect(anonCall.error).not.toBeNull()
+  expect(anonCall.data).toBeNull()
+
+  const path = await uploadPhoto(sellerClient, seller)
+  const price = 70_000
+  const fee = 7_000
+  const total = price + SHIPPING_FEE
+  const id = await createListing(sellerClient, [path], price)
+  await approve(id)
+  const address = await seedAddress(buyer.id, { isDefault: false })
+  const first = await placedOrder(placeUsedOrder(buyerClient, id, address, randomUUID(), total))
+  expect((await buyerClient.rpc('cancel_order', { p_order_id: first.id })).error).toBeNull()
+  const second = await placedOrder(placeUsedOrder(buyerClient, id, address, randomUUID(), total))
+  await deliverOrder(second.id)
+
+  const result = await adminClient.rpc('admin_seller_payouts')
+  if (result.error) throw new Error(`admin_seller_payouts: ${result.error.message}`)
+  // Khoản của project khác (chạy song song) cũng nằm trong kết quả → chỉ xét khoản của tin này
+  const rows = result.data.filter((row) => row.listing_id === id)
+  expect(rows).toHaveLength(1)
+  expect(rows[0]).toMatchObject({
+    order_id: second.id,
+    order_code: second.order_code,
+    order_status: 'delivered',
+    payment_status: 'paid',
+    seller_id: seller.id,
+    seller_name: seller.fullName,
+    price,
+    fee,
+    amount: price - fee,
+    status: 'pending',
+    paid_at: null,
+  })
+  // Không có cột nào của người mua (tên, điện thoại, địa chỉ, email, user_id)
+  expect(Object.keys(rows[0] ?? {}).sort()).toEqual(
+    [
+      'id',
+      'order_id',
+      'order_code',
+      'order_status',
+      'payment_status',
+      'listing_id',
+      'seller_id',
+      'seller_name',
+      'title',
+      'price',
+      'fee',
+      'amount',
+      'status',
+      'paid_at',
+      'created_at',
+    ].sort(),
+  )
 })
 
 test('chuyển khoản: thanh toán trước rồi giao → đúng một khoản; đơn hết "đã thanh toán" thì không đánh dấu đã trả được', async () => {
