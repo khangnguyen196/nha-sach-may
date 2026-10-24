@@ -8,12 +8,13 @@ import { getPathname, Link, type Href } from '@/i18n/navigation'
 
 type Props = {
   addresses: Address[]
-  /** Địa chỉ chọn sẵn: ?address= (vừa thêm từ checkout) hoặc địa chỉ mặc định */
+  /** Địa chỉ chọn sẵn (pickAddressId): ?address= vừa thêm từ trang thêm địa chỉ, hoặc địa chỉ mặc định */
   selectedId: number | undefined
   locale: Locale
   /**
-   * Link "Thêm địa chỉ". Mặc định: về lại /thanh-toan sau khi lưu (?next=, trang thêm địa chỉ chỉ nhận đúng URL đó).
-   * Trang mua sách cũ truyền trang thêm địa chỉ không kèm next (lưu xong về sổ địa chỉ).
+   * Link "Thêm địa chỉ". Mặc định: về lại /thanh-toan sau khi lưu (?next=). Trang mua sách cũ truyền trang thêm địa chỉ
+   * kèm ?next= về chính trang mua (parseAddressNext chỉ nhận hai loại URL này): lưu xong quay lại trang mua và địa chỉ
+   * mới được chọn sẵn (?address=).
    */
   addHref?: Href
 }
