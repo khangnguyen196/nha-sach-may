@@ -124,7 +124,9 @@ const filter = (page: Page, name: string) =>
   main(page).getByRole('navigation', { name: 'Lọc khoản trả' }).getByRole('link', { name, exact: true })
 /** Dòng đếm của danh sách: nội dung đã stream xong (kiểm "không có dòng" sau đó mới có nghĩa) */
 const listCount = (page: Page) => main(page).getByRole('status').filter({ hasText: /^\d+ khoản$/ })
-const markButton = (page: Page, id: number) => row(page, id).getByRole('button', { name: /Đánh dấu đã trả/ })
+// Tên truy cập bắt đầu bằng chữ hiển thị trên nút ("Đã trả") rồi tới tên sách của khoản
+const markButton = (page: Page, id: number) =>
+  row(page, id).getByRole('button', { name: `Đã trả: “${book.title}”`, exact: true })
 
 /** Mở danh sách (tất cả), chờ nút "Đã trả" của khoản `id` hydrate (nút gửi khóa tới khi hydrate) */
 async function openPayouts(page: Page, id: number) {

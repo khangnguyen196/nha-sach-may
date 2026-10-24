@@ -569,7 +569,7 @@
         "paid": "Đã trả"
       },
       "markPaid": "Đã trả",
-      "markPaidLabel": "Đánh dấu đã trả khoản của “{title}”",
+      "markPaidLabel": "Đã trả: “{title}”",
       "markPaidPending": "Đang lưu…",
       "markPaidDone": "Đã đánh dấu đã trả.",
       "payoutChanged": "Khoản này vừa được cập nhật ở nơi khác (đã trả, hoặc đơn đổi trạng thái thanh toán). Trang đã hiện trạng thái mới."
