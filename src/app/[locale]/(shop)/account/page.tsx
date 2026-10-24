@@ -1,4 +1,4 @@
-import { ChevronRightIcon, LayoutDashboardIcon, MapPinIcon, PackageIcon, type LucideIcon } from 'lucide-react'
+import { ChevronRightIcon, LayoutDashboardIcon, MapPinIcon, PackageIcon, TagIcon, type LucideIcon } from 'lucide-react'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
@@ -60,6 +60,12 @@ async function AccountContent({ locale }: { locale: Locale }) {
         title={t('addresses')}
         description={t('addressesDescription')}
       />
+      <AccountCard
+        href="/account/my-listings"
+        icon={TagIcon}
+        title={t('myListings')}
+        description={t('myListingsDescription')}
+      />
       {admin && (
         // Khu quản trị không có [locale] → AdminLink (sang root layout khác: Next tải lại cả trang). Chỉ render khi
         // server xác nhận role admin; không prefetch trang admin mỗi lần mở trang tài khoản.
@@ -95,7 +101,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
 }
 
 type AccountCardProps = {
-  href: '/account/orders' | '/account/addresses'
+  href: '/account/orders' | '/account/addresses' | '/account/my-listings'
   icon: LucideIcon
   title: string
   description: string
@@ -104,7 +110,7 @@ type AccountCardProps = {
 const cardClass =
   'group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50'
 
-// Không prefetch: lúc bấm "Đăng xuất" ở trang này, prefetch của các thẻ có thể chạy sau khi cookie đã bị xóa → proxy 307
+// Không prefetch (cả thẻ "Sách tôi bán"): lúc bấm "Đăng xuất" ở trang này, prefetch của các thẻ có thể chạy sau khi cookie đã bị xóa → proxy 307
 // sang /dang-nhap → Next 404 cho segment của trang tài khoản (e2e từng bắt `next=%2Ftai-khoan%2Fdon-hang`,
 // docs/plans/sau-ux.md mục 4)
 function AccountCard({ href, ...content }: AccountCardProps) {
@@ -133,6 +139,7 @@ function AccountSkeleton() {
     <div aria-hidden className="animate-pulse">
       <div className="mt-3 h-5 w-48 rounded-sm bg-surface-raised" />
       <div className="mt-8 h-[78px] rounded-lg bg-surface-raised" />
+      <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[170px] rounded-lg bg-surface-raised" />
