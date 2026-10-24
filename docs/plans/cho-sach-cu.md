@@ -171,22 +171,32 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 ### Việc phải làm ở P-B
 
 Chia 3 vòng con trên nhánh `cho-sach-cu-2` (điều phối 24/10): 7 = người bán, 8 = admin duyệt / từ chối / gỡ, 9 = trang
-công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm ở vòng 7.
+công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm (vòng 7, 8).
 
 - [x] P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
   để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
 - [x] Một file duy nhất ký link ảnh (`features/used/signed-urls.ts`, hằng `USED_PHOTO_URL_TTL` = 604800 giây = 7 ngày).
 - [ ] Query công khai `'use cache'` + `cacheLife('hours')` (vòng 9); [x] trang người bán ký theo request (không cache);
-  admin (vòng 8).
+  [x] admin ký theo request (`features/admin/used/queries.ts`, không cache; vòng 8).
 - [x] Vitest kiểm tĩnh điều kiện (a) (`features/used/cache-life.test.ts`): chỉ một file gọi `createSignedUrl(s)`, mọi
-  `'use cache'` trong file import signed-urls / features/used/queries gọi `cacheLife('hours'|'minutes'|'seconds')`,
-  expire của các profile đó (đọc `defaultConfig` của Next; next.config.ts không khai báo cacheLife) < TTL.
+  `'use cache'` trong file import signed-urls / features/used/queries (trực tiếp hay bắc cầu: bao đóng import trong src,
+  kể cả `export … from`, `import()`, `import type`; vòng 8) gọi `cacheLife('hours'|'minutes'|'seconds')`, không có
+  `'use cache'` đầu file, expire của các profile đó (đọc `defaultConfig` của Next; next.config.ts không khai báo
+  cacheLife) < TTL.
 - [x] `next/image` `unoptimized` cho ảnh sách cũ; giữ `coverImagesConfig` (build không đòi thêm pattern).
 - [x] Ghi chú demo song ngữ ở form đăng / sửa tin; [ ] trang danh sách chợ sách cũ (vòng 9).
 - [x] Link "Sách tôi bán" ở trang tài khoản; [ ] link "Chợ sách cũ" ở footer + trang tài khoản (vòng 9).
 - [x] e2e người bán (`e2e/used-listing-account.spec.ts`): đăng tin có ảnh, tin chưa duyệt không công khai, sửa → về chờ
-  duyệt, rút, bỏ ảnh khỏi form, giá vượt trần, 404 trang sửa tin; [ ] admin duyệt / từ chối qua UI (vòng 8).
-- [ ] Admin duyệt tin: hiện `LISTING_PHOTOS_MISSING` (ảnh của tin không còn đủ) kèm gợi ý từ chối tin có lý do (vòng 8).
+  duyệt, rút, bỏ ảnh khỏi form, giá vượt trần, 404 trang sửa tin; vòng 8 thêm: focus bàn phím khi rút tin / chọn sách /
+  bỏ ảnh, hai lượt chọn ảnh liên tiếp (tối đa 3 ô, tải lần lượt), trần 30 ảnh (LISTING_PHOTO_LIMIT), dự phòng `<img>` khi
+  createImageBitmap lỗi; [x] admin duyệt / từ chối / gỡ qua UI (`e2e/admin-used-listings.spec.ts`, vòng 8).
+- [x] Admin duyệt tin (vòng 8): `/admin/sach-cu` (lọc trạng thái qua URL, mặc định chờ duyệt cũ nhất trước, trạng thái
+  khác mới nhất trước), `/admin/sach-cu/[id]` (mọi ảnh ký theo request, ảnh mất → "Ảnh không còn"; sách + trần giá hiện
+  tại; Duyệt / Từ chối kèm lý do / Gỡ tin hỏi lại tại chỗ; rejected / sold / withdrawn chỉ xem). Action
+  `features/admin/used/actions.ts` (assertAdmin hai câu đầu, `expected_status` ô ẩn, updateTag theo `usedListingTags` +
+  refresh()). Hiện `LISTING_PHOTOS_MISSING` (ảnh của tin không còn đủ) kèm gợi ý từ chối tin có lý do,
+  `LISTING_STATUS_CHANGED` (trang render lại trạng thái mới), giá vượt trần lúc duyệt: câu riêng của admin (tối đa {max}).
+  Admin chỉ thấy tên hiển thị người bán (`seller_name`, null → "Thành viên").
 - [x] Sửa tin: ảnh cũ không còn dùng thì xóa sau khi lưu (DB chặn xóa ảnh đang gắn tin `pending` / `approved` / `sold`,
   nên chỉ xóa được khi tin đã bỏ ảnh đó hoặc tin bị từ chối / đã rút). Dọn ảnh tải lên bỏ dở: xóa ngay khi bỏ ảnh khỏi
   form, và dọn ảnh mồ côi (> 24 giờ) của chính người bán khi mở form đăng tin; rút tin thì xóa ảnh của tin. Ảnh chỉ bị
