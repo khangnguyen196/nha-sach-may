@@ -2,14 +2,38 @@ import { expect, type Locator, type Page, type Route } from '@playwright/test'
 
 export function collectErrors(page: Page) {
   const errors: string[] = []
+  // Request RSC lỗi (`_rsc`): header prefetch của request + chuỗi chuyển hướng, kèm vào dòng "Failed to load resource" cùng
+  // URL (chẩn đoán 404 segment prefetch, vòng 18 chợ sách cũ). Response và dòng console đến theo thứ tự bất kỳ: bên nào
+  // tới sau thì ghép. Chỉ làm dài dòng đã có, không thêm / bớt dòng; không ghi cookie / authorization.
+  const rscDiagnosis = new Map<string, string>()
+  const resourceLines = new Map<string, number>()
+  page.on('response', (response) => {
+    const url = response.url()
+    if (response.status() < 400 || !url.includes('_rsc=')) return
+    const headers = response.request().headers()
+    const parts = ['next-router-prefetch', 'next-router-segment-prefetch'].map((name) => `${name}=${headers[name] ?? '-'}`)
+    parts.push(`state-tree=${'next-router-state-tree' in headers ? 'có' : 'không'}`)
+    for (let from = response.request().redirectedFrom(); from; from = from.redirectedFrom()) parts.push(`từ ${from.url()}`)
+    const diagnosis = ` {${parts.join(', ')}}`
+    const line = resourceLines.get(url)
+    if (line === undefined) {
+      rscDiagnosis.set(url, diagnosis)
+      return
+    }
+    errors[line] += diagnosis
+    resourceLines.delete(url)
+  })
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
     if (message.type() !== 'error') return
     // "Failed to load resource" của Chromium không ghi URL trong chữ: kèm URL của request lỗi để biết request nào
     // (chẩn đoán mục 15 ux-messages). Không bỏ / lọc dòng nào: mọi lỗi console vẫn làm test fail như cũ.
     const { url } = message.location()
-    const resource = message.text().startsWith('Failed to load resource') && url ? ` [${url}]` : ''
-    errors.push(`${message.text()}${resource}`)
+    const isResource = message.text().startsWith('Failed to load resource') && Boolean(url)
+    const diagnosis = isResource ? rscDiagnosis.get(url) : undefined
+    if (diagnosis !== undefined) rscDiagnosis.delete(url)
+    else if (isResource && url.includes('_rsc=')) resourceLines.set(url, errors.length)
+    errors.push(`${message.text()}${isResource ? ` [${url}]${diagnosis ?? ''}` : ''}`)
   })
   return errors
 }
