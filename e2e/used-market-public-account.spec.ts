@@ -353,7 +353,7 @@ test('(p4) tin đã duyệt của sách thuộc danh mục ẩn: không lên dan
   }
 })
 
-test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= mới duyệt / giá tăng / giá giảm; gỡ một tin → "Có 2 bản cũ"; câu en', async ({
+test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= mới duyệt / giá tăng / giá giảm; gỡ dần → "Có 2 bản cũ", "Có 1 bản cũ"; câu en số nhiều / số ít', async ({
   page,
 }) => {
   test.setTimeout(180_000)
@@ -366,10 +366,11 @@ test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= 
     ids.push(dear)
     const mid = await createPendingListing(32_000)
     ids.push(mid)
-    // Duyệt theo thứ tự cheap → dear → mid: ba cách xếp ra ba thứ tự khác nhau (mới duyệt khác giá giảm dần)
+    // Duyệt theo thứ tự mid → cheap → dear (khác thứ tự tạo cheap → dear → mid): "mới duyệt" xếp theo approved_at, không
+    // trùng thứ tự id / created_at, cũng không trùng giá tăng / giá giảm → ba cách xếp ra ba thứ tự khác nhau
+    await approveViaUi(mid)
     await approveViaUi(cheap)
     await approveViaUi(dear)
-    await approveViaUi(mid)
     const listed = [cheap, mid, dear]
 
     const errors = collectErrors(page)
@@ -382,7 +383,7 @@ test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= 
     await link.click()
     await expect(page).toHaveURL(new RegExp(`/cho-sach-cu\\?book=${book.slug}$`))
     // Mặc định: mới duyệt trước (approved_at giảm dần)
-    await expect.poll(() => visibleOrder(page, listed)).toEqual([mid, dear, cheap])
+    await expect.poll(() => visibleOrder(page, listed)).toEqual([dear, cheap, mid])
 
     const sortChip = (name: string) => main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name })
     // Sắp xếp giá tăng (tham số thật của chip)
@@ -404,6 +405,13 @@ test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= 
       'href',
       `/en/used-books?book=${book.slug}`,
     )
+
+    // Gỡ thêm tin giá giữa → còn một tin: câu số ít của en (plural one), vi không đổi dạng câu
+    await takeDownViaUi(mid)
+    await page.goto(`/en/books/${book.slug}`)
+    await expect(main(page).getByTestId('used-copies')).toHaveText(`1 used copy from ${vnd(40_000, 'en')}`)
+    await page.goto(`/sach/${book.slug}`)
+    await expect(main(page).getByTestId('used-copies')).toHaveText(`Có 1 bản cũ từ ${vnd(40_000)}`)
     expect(errors).toEqual([])
     passed = true
   } finally {

@@ -10,6 +10,7 @@ import {
   makeAdmin,
   ordersOf,
   seedAddress,
+  sellerPayoutsOf,
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
@@ -19,11 +20,18 @@ import {
 } from '../scripts/e2e-user'
 import { fillLogin, login, NO_SESSION } from './auth'
 import { vnd } from './cart'
-import { collectErrors, collectErrorsAllow404, failServerActions, waitForHydration, waitForSettled } from './helpers'
+import {
+  collectErrors,
+  collectErrorsAllow404,
+  failServerActions,
+  fillAddress,
+  waitForHydration,
+  waitForSettled,
+} from './helpers'
 
 // Chợ sách cũ P-C (docs/plans/cho-sach-cu.md): trang mua /cho-sach-cu/<id>/mua, placeUsedOrder, nhãn đơn sách cũ, hủy đơn
-// → tin về đang bán. Người bán + người mua + admin + sách test tạo riêng mỗi lần chạy (desktop-account / mobile-account
-// song song không giẫm nhau), xóa ở afterAll.
+// → tin về đang bán, "Thêm địa chỉ" quay về trang mua, tiền người bán (khối "Đã bán"). Người bán + người mua + admin +
+// sách test tạo riêng mỗi lần chạy (desktop-account / mobile-account song song không giẫm nhau), xóa ở afterAll.
 //
 // Quy tắc dữ liệu:
 // - Sách test (createE2eBook) nằm trong danh mục con của gốc ẩn → tin không lên danh sách chợ (không giẫm (p5) của
@@ -56,6 +64,8 @@ let adminClient: Client
 let book: E2eAdminBook
 let addressId: number
 const slugs: string[] = []
+/** User tạo trong từng ca (VD người mua chưa có địa chỉ), xóa cùng các user chung ở afterAll */
+const caseUsers: E2eUser[] = []
 
 test.beforeAll(async () => {
   test.setTimeout(60_000)
@@ -80,7 +90,7 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  const users = [seller, buyer, admin].filter((user) => user !== undefined)
+  const users = [seller, buyer, admin, ...caseUsers].filter((user) => user !== undefined)
   // deleteE2eUsers đã dọn khoản trả → đơn (cancelAndDeleteOrders) → tin → ảnh → user. Sách / danh mục test dọn cả khi
   // bước đó lỗi; lỗi dọn sách khi đó chỉ ghi console để Playwright báo lỗi gốc
   let usersDeleted = false
@@ -365,4 +375,122 @@ test('(m7) mất mạng lúc đặt → NETWORK_ERROR, ghi chú còn nguyên, kh
   }
   expect(await ordersCount()).toBe(before)
   expect(await usedListingRow(id)).toMatchObject({ status: 'approved' })
+})
+
+/** Thêm địa chỉ từ link "Thêm địa chỉ" của trang mua tin `id` → lưu → về lại đúng trang mua kèm ?address=<id mới> */
+async function addAddressFromBuyPage(page: Page, id: number, address: { name: string; street: string }) {
+  await expect(page).toHaveURL(new RegExp(`/tai-khoan/dia-chi/moi\?next=%2Fcho-sach-cu%2F${id}%2Fmua$`))
+  // Hủy cũng về trang mua (không về sổ địa chỉ)
+  await expect(main(page).getByRole('link', { name: 'Hủy', exact: true })).toHaveAttribute('href', buyPath(id))
+  await fillAddress(page, {
+    name: address.name,
+    phone: '0912345678',
+    province: 'Thành phố Hà Nội',
+    ward: 'Phường Ba Đình',
+    street: address.street,
+  })
+  await main(page).getByRole('button', { name: 'Lưu địa chỉ' }).click()
+  await expect(page).toHaveURL(new RegExp(`/cho-sach-cu/${id}/mua\?address=\d+$`), { timeout: 20_000 })
+  return Number(new URL(page.url()).searchParams.get('address'))
+}
+
+test('(m8) người mua chưa có địa chỉ: "Thêm địa chỉ" → lưu → về đúng trang mua, địa chỉ mới đã chọn → đặt được; thêm địa chỉ thứ hai → chọn địa chỉ mới (không phải mặc định)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  const first = await createApprovedListing(47_000)
+  const second = await createApprovedListing(52_000)
+  const newBuyer = await createE2eUser('purchase-noaddr')
+  caseUsers.push(newBuyer)
+  await login(page, newBuyer)
+  const errors = collectErrors(page)
+
+  await page.goto(buyPath(first.id))
+  await expect(main(page).getByText('Bạn chưa có địa chỉ giao hàng nào.', { exact: false })).toBeVisible()
+  await expect(placeButton(page)).toBeDisabled()
+  await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
+  await addAddressFromBuyPage(page, first.id, { name: 'Người Mua Mới', street: '1 Tràng Tiền' })
+  const option = main(page).getByTestId('checkout-address-option')
+  await expect(option).toHaveCount(1)
+  await expect(option).toContainText('Người Mua Mới')
+  await expect(option.getByRole('radio')).toBeChecked()
+  await waitForHydration(page, 'main [data-testid="used-order-summary"] button[type="submit"]')
+  await expect(placeButton(page)).toBeEnabled()
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+  await expect(main(page).getByTestId('order-address')).toContainText('1 Tràng Tiền')
+  expect(await usedListingRow(first.id)).toMatchObject({ status: 'sold' })
+
+  // Đã có địa chỉ mặc định: thêm địa chỉ thứ hai từ trang mua → địa chỉ vừa thêm được chọn (không phải mặc định)
+  await openBuyPage(page, second.id)
+  await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
+  const added = await addAddressFromBuyPage(page, second.id, { name: 'Người Nhận Thứ Hai', street: '9 Hàng Bài' })
+  const options = main(page).getByTestId('checkout-address-option')
+  await expect(options).toHaveCount(2)
+  const addedRadio = options.filter({ hasText: 'Người Nhận Thứ Hai' }).getByRole('radio')
+  await expect(addedRadio).toBeChecked()
+  await expect(addedRadio).toHaveAttribute('value', String(added))
+  await expect(options.filter({ hasText: 'Người Mua Mới' }).getByRole('radio')).not.toBeChecked()
+  await waitForHydration(page, 'main [data-testid="used-order-summary"] button[type="submit"]')
+  await placeButton(page).click()
+  await expect(page).toHaveURL(/\/thanh-toan\/thanh-cong\/NS\d+$/, { timeout: 20_000 })
+  await expect(main(page).getByTestId('order-address')).toContainText('9 Hàng Bài')
+  expect(await ordersOf(newBuyer.id)).toHaveLength(2)
+  expect(errors).toEqual([])
+})
+
+/** Admin (phiên admin, RLS orders_admin_update) giao đơn theo đúng luồng trigger; COD tự thành đã thanh toán */
+async function deliverAsAdmin(orderId: number) {
+  for (const status of ['confirmed', 'shipping', 'delivered'] as const) {
+    const { error } = await adminClient.from('orders').update({ status }).eq('id', orderId)
+    if (error) throw new Error(`orders.update(${status}): ${error.message}`)
+  }
+}
+
+test('(m9) người bán xem tiền: đơn COD đang giao → đã giao "Chờ trả" (giá − phí của RPC) → admin đánh dấu → "Đã trả"', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  const price = 61_000
+  const { id } = await createApprovedListing(price)
+  // Phí sàn + số tiền người bán nhận do DB tính (used_listing_quote), test không tự tính
+  const { data: quote, error: quoteError } = await sellerClient
+    .rpc('used_listing_quote', { p_price: price })
+    .single()
+  if (quoteError) throw new Error(`used_listing_quote: ${quoteError.message}`)
+  expect(quote.payout).toBe(price - quote.fee)
+  const order = await placeAsBuyer(id, price)
+  await login(page, seller)
+  const errors = collectErrors(page)
+
+  const row = main(page).locator(`[data-testid="sale-row"][data-listing-id="${id}"]`)
+  await page.goto('/tai-khoan/sach-toi-ban')
+  await expect(main(page).getByRole('heading', { name: 'Đã bán', level: 2 })).toBeVisible()
+  await expect(row.getByTestId('sale-status')).toHaveText('Đang giao')
+  await expect(row.getByTestId('sale-price')).toHaveText(vnd(price))
+  await expect(row.getByTestId('sale-fee')).toHaveText(vnd(quote.fee))
+  await expect(row.getByTestId('sale-amount')).toHaveText(vnd(quote.payout))
+  // Đơn chưa giao chưa vào tổng; ghi chú demo
+  await expect(main(page).getByTestId('my-sales-total-pending')).toHaveText(vnd(0))
+  await expect(main(page).getByTestId('used-demo-note')).toHaveText('Tính năng demo, không có giao dịch thật.')
+
+  await deliverAsAdmin(order.id)
+  const [payout] = await sellerPayoutsOf(id)
+  expect(payout).toMatchObject({ status: 'pending', fee: quote.fee, amount: quote.payout })
+
+  await page.reload()
+  await expect(row.getByTestId('sale-status')).toHaveText('Chờ trả')
+  await expect(row.getByTestId('sale-amount')).toHaveText(vnd(quote.payout))
+  await expect(row.getByTestId('sale-paid-at')).toHaveCount(0)
+  await expect(main(page).getByTestId('my-sales-total-pending')).toHaveText(vnd(quote.payout))
+  await expect(main(page).getByTestId('my-sales-total-paid')).toHaveText(vnd(0))
+
+  const { error } = await adminClient.rpc('mark_payout_paid', { p_id: payout?.id ?? 0 })
+  expect(error).toBeNull()
+  await page.reload()
+  await expect(row.getByTestId('sale-status')).toHaveText('Đã trả')
+  await expect(row.getByTestId('sale-paid-at')).toContainText('Trả ngày')
+  await expect(main(page).getByTestId('my-sales-total-pending')).toHaveText(vnd(0))
+  await expect(main(page).getByTestId('my-sales-total-paid')).toHaveText(vnd(quote.payout))
+  expect(errors).toEqual([])
 })
