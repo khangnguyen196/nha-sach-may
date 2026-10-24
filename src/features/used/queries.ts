@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { saleStatus } from './sales'
 import { signUsedPhotoUrls } from './signed-urls'
 
 // Phần người bán: theo phiên (client đọc cookies), KHÔNG 'use cache' → chỉ gọi trong <Suspense>. Link ảnh ký theo từng
@@ -127,6 +128,40 @@ export async function getListingForPurchase(id: number) {
 }
 
 export type PurchaseListing = NonNullable<Awaited<ReturnType<typeof getListingForPurchase>>>
+
+/**
+ * Tin đã bán của người bán (đơn chưa hủy, mới nhất trước) + tiền sẽ nhận: RPC my_used_sales (không trả mã đơn, không
+ * gì của người mua) + ngày trả của khoản đã trả (seller_payouts: quyền cột không có order_id). Lọc seller_id dù RLS đã
+ * lọc: policy cho admin đọc mọi khoản. Một tin có tối đa một khoản (khoản chỉ ghi cho đơn đã giao, đơn đã giao không
+ * hủy được) → ghép theo listing_id. Theo phiên, không cache.
+ */
+export async function getMySales(userId: string) {
+  const supabase = await createClient()
+  const [sales, payouts] = await Promise.all([
+    supabase.rpc('my_used_sales'),
+    supabase.from('seller_payouts').select('listing_id, paid_at').eq('seller_id', userId).eq('status', 'paid'),
+  ])
+  if (sales.error) throw new Error(`getMySales: ${sales.error.message}`)
+  if (payouts.error) throw new Error(`getMySales (payouts): ${payouts.error.message}`)
+  const paidAt = new Map(payouts.data.map((payout) => [payout.listing_id, payout.paid_at]))
+
+  return sales.data.map((sale) => ({
+    listingId: sale.listing_id,
+    title: sale.title,
+    price: sale.price,
+    fee: sale.fee,
+    amount: sale.amount,
+    soldAt: sale.sold_at,
+    status: saleStatus({
+      orderStatus: sale.order_status,
+      paymentStatus: sale.payment_status,
+      payoutStatus: sale.payout_status,
+    }),
+    paidAt: paidAt.get(sale.listing_id) ?? null,
+  }))
+}
+
+export type MySale = Awaited<ReturnType<typeof getMySales>>[number]
 
 /**
  * Tiền của đơn sách cũ (quote_used_order: giá tin + ship cố định, không voucher / freeship) + `available` (tin đang bán

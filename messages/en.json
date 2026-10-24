@@ -645,6 +645,26 @@
       "usedLabel": "Used · {condition}",
       "usedLabelPlain": "Used",
       "seller": "Seller: {name}"
+    },
+    "sales": {
+      "title": "Sold",
+      "lead": "Your books that have been bought. You receive the sale price minus the platform fee, paid out after the buyer has received the book and paid.",
+      "listLabel": "Sold books",
+      "empty": "Nothing sold yet. When someone buys one of your books, the order shows up here with the amount you receive.",
+      "totalsLabel": "Totals",
+      "totalPending": "Awaiting payout",
+      "totalPaid": "Paid out",
+      "soldAt": "Ordered on {date}",
+      "price": "Sale price",
+      "fee": "Platform fee",
+      "amount": "You receive",
+      "paidAt": "Paid out on {date}",
+      "status": {
+        "shipping": "In delivery",
+        "awaitingPayment": "Waiting for buyer’s payment",
+        "payoutPending": "Awaiting payout",
+        "payoutPaid": "Paid out"
+      }
     }
   },
   "errors": {

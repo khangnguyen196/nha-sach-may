@@ -65,6 +65,7 @@
       "vouchers": "Voucher",
       "reviews": "Đánh giá",
       "usedListings": "Sách cũ",
+      "payouts": "Trả người bán",
       "backToShop": "Về cửa hàng"
     },
     "notFound": {
@@ -534,6 +535,44 @@
       },
       "priceTooHigh": "Giá tin cao hơn giá gốc hiện tại của sách (tối đa {max}). Hãy từ chối tin kèm lý do.",
       "listingChanged": "Người bán vừa sửa tin hoặc tin vừa đổi trạng thái. Trang đã hiện nội dung mới nhất, bạn xem lại trước khi duyệt."
+    },
+    "payouts": {
+      "title": "Trả người bán",
+      "demoNote": "Tiền là mô phỏng: \"Đã trả\" chỉ ghi nhận trong sổ, không chuyển tiền thật và không lưu tài khoản ngân hàng của người bán.",
+      "filterLabel": "Lọc khoản trả",
+      "filter": {
+        "all": "Tất cả",
+        "pending": "Chờ trả",
+        "paid": "Đã trả"
+      },
+      "count": "{count, plural, other {# khoản}}",
+      "empty": "Chưa có khoản trả người bán nào. Khoản được ghi khi đơn sách cũ đã giao và đã thanh toán.",
+      "emptyPending": "Không còn khoản nào chờ trả.",
+      "emptyPaid": "Chưa có khoản nào đã trả.",
+      "member": "Thành viên",
+      "table": {
+        "caption": "Khoản trả người bán",
+        "order": "Mã đơn",
+        "book": "Sách",
+        "seller": "Người bán",
+        "price": "Giá bán",
+        "fee": "Phí sàn",
+        "amount": "Số tiền trả",
+        "orderStatus": "Đơn hàng",
+        "createdAt": "Ngày ghi",
+        "status": "Trạng thái",
+        "action": "Thao tác"
+      },
+      "status": {
+        "pending": "Chờ trả",
+        "paid": "Đã trả"
+      },
+      "paidAt": "Trả ngày {date}",
+      "markPaid": "Đã trả",
+      "markPaidLabel": "Đánh dấu đã trả khoản của “{title}”",
+      "markPaidPending": "Đang lưu…",
+      "markPaidDone": "Đã đánh dấu đã trả.",
+      "payoutChanged": "Khoản này vừa được cập nhật ở nơi khác (đã trả, hoặc đơn đổi trạng thái thanh toán). Trang đã hiện trạng thái mới."
     }
   },
   "layout": {
@@ -1128,6 +1167,26 @@
       "usedLabel": "Sách cũ · {condition}",
       "usedLabelPlain": "Sách cũ",
       "seller": "Người bán: {name}"
+    },
+    "sales": {
+      "title": "Đã bán",
+      "lead": "Cuốn sách của bạn đã có người mua. Bạn nhận được giá bán trừ phí sàn; cửa hàng trả sau khi người mua đã nhận sách và đã thanh toán.",
+      "listLabel": "Sách đã bán",
+      "empty": "Chưa có cuốn nào được bán. Khi có người mua, đơn hiện ở đây kèm số tiền bạn nhận được.",
+      "totalsLabel": "Tổng tiền",
+      "totalPending": "Chờ trả",
+      "totalPaid": "Đã trả",
+      "soldAt": "Đặt mua ngày {date}",
+      "price": "Giá bán",
+      "fee": "Phí sàn",
+      "amount": "Bạn nhận được",
+      "paidAt": "Trả ngày {date}",
+      "status": {
+        "shipping": "Đang giao",
+        "awaitingPayment": "Chờ người mua thanh toán",
+        "payoutPending": "Chờ trả",
+        "payoutPaid": "Đã trả"
+      }
     }
   },
   "errors": {

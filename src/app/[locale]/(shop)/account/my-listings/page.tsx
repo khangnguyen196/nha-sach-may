@@ -9,6 +9,7 @@ import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { EmptyState } from '@/features/books/components/empty-state'
 import { withdrawListing } from '@/features/used/actions'
 import { ListingStatusBadge } from '@/features/used/components/listing-status-badge'
+import { MySales, MySalesSkeleton } from '@/features/used/components/my-sales'
 import { PendingLimitNotice } from '@/features/used/components/pending-limit-notice'
 import { WithdrawButton } from '@/features/used/components/withdraw-button'
 import { USED_PENDING_LIMIT } from '@/features/used/limits'
@@ -23,9 +24,10 @@ export async function generateMetadata() {
 }
 
 export default async function MyListingsPage() {
-  const [t, tAccount, locale] = await Promise.all([
+  const [t, tAccount, tSales, locale] = await Promise.all([
     getTranslations('used.myListings'),
     getTranslations('account'),
+    getTranslations('used.sales'),
     getLocale(),
   ])
 
@@ -38,8 +40,23 @@ export default async function MyListingsPage() {
       <Suspense fallback={<MyListingsSkeleton />}>
         <MyListings locale={locale} />
       </Suspense>
+      <section aria-labelledby="my-sales-title" className="mt-12 md:mt-16">
+        <h2 id="my-sales-title" className="font-serif text-2xl font-medium">
+          {tSales('title')}
+        </h2>
+        <p className="mt-2 max-w-reading text-muted-foreground">{tSales('lead')}</p>
+        <Suspense fallback={<MySalesSkeleton />}>
+          <MySalesSection locale={locale} />
+        </Suspense>
+      </section>
     </div>
   )
+}
+
+/** Đơn đã bán + tiền sẽ nhận (đọc phiên, Suspense riêng: danh sách tin hiện trước khi RPC xong) */
+async function MySalesSection({ locale }: { locale: Locale }) {
+  const user = await requireUser(locale, '/account/my-listings')
+  return <MySales userId={user.id} />
 }
 
 /** Sửa / rút được khi tin chưa bán, chưa rút (update_used_listing / withdraw_used_listing) */
