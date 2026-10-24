@@ -7,6 +7,7 @@ import {
   createE2eCategory,
   createE2eUser,
   deleteE2eUsers,
+  deleteUsedListingAsService,
   removeUsedPhotoAsService,
   setBookPrices,
   signedInClient,
@@ -20,9 +21,9 @@ import { login, NO_SESSION } from './auth'
 import { vnd } from './cart'
 import { collectErrors, waitForHydration } from './helpers'
 
-// Admin duyệt / từ chối / gỡ tin sách cũ (docs/plans/cho-sach-cu.md, P-B vòng 8, 9). Người bán + người dùng thường + sách
-// test tạo riêng mỗi lần chạy; tin tạo bằng RPC create_used_listing theo phiên người bán, ảnh thật trong bucket (tải bằng
-// phiên người bán). Dọn ở afterAll (chạy cả khi test đỏ): deleteE2eUsers (tin → ảnh trong thư mục người bán → user), rồi
+// Admin duyệt / từ chối / gỡ tin sách cũ (docs/plans/cho-sach-cu.md, P-B vòng 8, 9, 10). Người bán + người dùng thường +
+// sách test tạo riêng mỗi lần chạy; tin tạo bằng RPC create_used_listing theo phiên người bán, ảnh thật trong bucket (tải
+// bằng phiên người bán). Dọn ở afterAll (chạy cả khi test đỏ): deleteE2eUsers (tin → ảnh trong thư mục người bán → user), rồi
 // cleanupE2eAdminData đúng slug của spec (sách sau tin: book_id restrict).
 
 test.describe.configure({ mode: 'serial' })
@@ -35,6 +36,8 @@ const LISTING_PRICE = 70_000
 /** Câu riêng của admin cho LISTING_STATUS_CHANGED (admin.usedListings.listingChanged) */
 const LISTING_CHANGED =
   'Người bán vừa sửa tin hoặc tin vừa đổi trạng thái. Trang đã hiện nội dung mới nhất, bạn xem lại trước khi duyệt.'
+/** errors.ITEM_DELETED (mục vừa bị xóa ở nơi khác) */
+const ITEM_DELETED = 'Mục này vừa bị xóa ở nơi khác. Bạn tải lại danh sách để xem dữ liệu mới nhất.'
 
 let seller: E2eUser
 let customer: E2eUser
@@ -254,6 +257,24 @@ test('(h) người bán sửa giá tin chờ duyệt khi admin đang mở trang 
   await expect(feedback(page)).toContainText('Đã duyệt tin', { timeout: 15_000 })
   await expect(status(page)).toHaveText('Đang bán')
   expect(await usedListingRow(id)).toMatchObject({ status: 'approved', price: newPrice })
+  expect(errors).toEqual([])
+})
+
+test('(i) tin bị xóa ở nơi khác khi admin đang mở trang → Duyệt: ITEM_DELETED, không báo "người bán vừa sửa"', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  const errors = collectErrors(page)
+  const { id } = await createPendingListing()
+  await openListing(page, id)
+  await expect(status(page)).toHaveText('Chờ duyệt')
+
+  // Service role xóa tin + ảnh (như xóa tay trong database): admin đọc được mọi tin nên 0 dòng = tin đã bị xóa
+  await deleteUsedListingAsService(id)
+  expect(await usedListingRow(id)).toBeNull()
+  await review(page).getByRole('button', { name: 'Duyệt tin' }).click()
+  await expect(feedback(page)).toContainText(ITEM_DELETED, { timeout: 15_000 })
+  await expect(feedback(page)).not.toContainText(LISTING_CHANGED)
   expect(errors).toEqual([])
 })
 

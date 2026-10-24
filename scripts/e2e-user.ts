@@ -842,7 +842,7 @@ async function deleteSellerPayouts(column: 'seller_id' | 'order_id' | 'listing_i
  * mua đã bị xóa) → tìm đơn theo tin, không theo user; mọi đơn (kể cả đã hủy, của người mua bất kỳ) xóa trước tin.
  * Ảnh xóa bằng client service role: policy xóa chặn client người dùng với ảnh của tin chờ duyệt / đã duyệt / đã bán.
  */
-async function deleteUsedListings(column: 'seller_id' | 'book_id', values: readonly (string | number)[]) {
+async function deleteUsedListings(column: 'id' | 'seller_id' | 'book_id', values: readonly (string | number)[]) {
   if (values.length === 0) return
   const used = adminClient()
   const { data: listings, error } = await used.from('used_listings').select('id, photos').in(column, values)
@@ -866,6 +866,11 @@ async function deleteUsedListings(column: 'seller_id' | 'book_id', values: reado
 /** used_listings.book_id là on delete restrict: gọi trước khi xóa sách test */
 function deleteUsedListingsOfBooks(bookIds: readonly number[]) {
   return deleteUsedListings('book_id', bookIds)
+}
+
+/** Xóa một tin (+ đơn, khoản trả, ảnh) bằng service role: giả lập tin bị xóa ở nơi khác khi admin đang mở trang */
+export function deleteUsedListingAsService(id: number) {
+  return deleteUsedListings('id', [id])
 }
 
 /** Ảnh còn trong bucket không (service role, bỏ qua policy đọc) */
