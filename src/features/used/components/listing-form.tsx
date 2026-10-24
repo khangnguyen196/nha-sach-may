@@ -131,7 +131,8 @@ export function ListingForm({
         labels={labels}
         formatPrice={formatPrice}
         error={fieldError('book_id')}
-        disabled={pending}
+        // Tìm sách / tải ảnh chỉ chạy bằng JS: khóa tới khi hydrate (chọn file trước đó thì không tải lên)
+        disabled={pending || !ready}
       />
 
       <fieldset className="grid gap-2" aria-describedby={fieldError('condition') ? 'listing-condition-error' : undefined}>
@@ -208,7 +209,7 @@ export function ListingForm({
         labels={labels}
         messages={messages}
         error={fieldError('photos')}
-        disabled={pending}
+        disabled={pending || !ready}
       />
 
       <div className="flex flex-wrap gap-3 pt-2">

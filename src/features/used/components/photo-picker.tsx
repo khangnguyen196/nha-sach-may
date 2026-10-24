@@ -202,7 +202,9 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
             ref={input}
             // Không có `name`: file gốc không đi theo form đăng tin (chỉ đường dẫn ảnh đã tải, ô ẩn `photos`)
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            // image/*: điện thoại cho chọn camera hoặc thư viện; iOS tự đổi ảnh HEIC sang JPEG khi trang không khai
+            // nhận HEIC. Ảnh trình duyệt không giải mã được → câu lỗi photoUnreadable
+            accept="image/*"
             multiple
             disabled={disabled}
             onChange={choose}
