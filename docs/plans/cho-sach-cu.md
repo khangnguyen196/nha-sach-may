@@ -233,7 +233,7 @@ khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10). **P-B đã lên `main` `88196
 
 Chia vòng trên nhánh `cho-sach-cu-3` (điều phối 24/10): 14 = SQL + types + e2e RLS; 15 = trang mua
 `/cho-sach-cu/[id]/mua` + đơn sách cũ + e2e mua; 16 = tiền người bán + `/admin/tra-nguoi-ban` + GỢI Ý vòng 12; sau đó
-cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14, 15).
+cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 14, 15, 16).
 
 - [x] Migration `20261024120000_used_market_purchase.sql` (vòng 14, gom mọi SQL của P-C để production chạy một lần;
   chép vào `schema.sql` cùng commit):
@@ -264,17 +264,34 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
   tag của tin (book_id đọc lại ở server) + `refresh()`; UNKNOWN / mạng giữ key. Nút "Mua ngay" ở trang tin đang bán.
 - [x] Ghi chú demo song ngữ ở trang thanh toán sách cũ; [x] ẩn bong bóng chat ở trang mua (vòng 15).
 - [x] Đơn sách cũ ở tài khoản / admin (vòng 15): nhãn "Sách cũ · <tình trạng>" (tin đã rút sau khi hủy → "Sách cũ"),
-  admin thêm "Người bán: <tên hiển thị>"; người mua không đọc seller_id.
+  admin thêm "Người bán: <tên hiển thị>"; người mua không đọc seller_id. Vòng 16: đơn của khách chỉ nhúng
+  `used_listings(condition)` (không tên người bán), query admin giữ `seller_name`.
+- [x] "Thêm địa chỉ" ở trang mua quay lại đúng trang mua (vòng 16): `parseAddressNext` (`features/account/address-return.ts`)
+  chỉ nhận `?next=` là /thanh-toan hoặc trang mua cùng locale (id chỉ chữ số, nguyên dương an toàn); `createAddress`
+  nhận `'checkout' | { usedListingId }` (parse lại), dựng URL từ mẫu route; trang mua chọn sẵn `?address=` như
+  /thanh-toan. Ghi chú đơn đã gõ mất khi rời trang (chấp nhận). Trang mua kiểm theo thứ tự `place_used_order`.
+- [x] Tiền người bán ở "Sách tôi bán" (vòng 16): khối "Đã bán" (`getMySales`: `my_used_sales` + ngày trả từ
+  `seller_payouts` của chính người bán), trạng thái Đang giao / Chờ người mua thanh toán / Chờ trả / Đã trả + ngày
+  (`saleStatus`, Vitest), tổng chờ trả / đã trả, ghi chú demo.
+- [x] `/admin/tra-nguoi-ban` (vòng 16): RPC `admin_seller_payouts()`, lọc `?trang-thai=cho-tra | da-tra` (không có =
+  tất cả), phân trang `.range()` + count exact, `markPayoutPaid` (assertAdmin, `payoutIdSchema`,
+  `PAYOUT_STATUS_CHANGED` → `refresh()` + câu tại dòng), nút chỉ khi chờ trả + đơn đã giao + đã thanh toán; mục nav.
 - "Đã trả người bán" chỉ là admin đánh dấu (`mark_payout_paid`), không chuyển tiền, không lưu tài khoản ngân hàng.
 - Trang khoản tiền admin: `seller_payouts` không cho authenticated (kể cả admin) đọc `order_id` → dùng RPC
   `admin_seller_payouts()` (vòng 14). Tìm qua `listing_id` (nếu cần) phải lọc đơn `status <> 'cancelled'`: một tin có
   thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin: → `sold` chỉ khi có đơn chưa hủy,
   `sold` → `approved` chỉ khi không còn đơn nào như vậy).
 - [x] e2e mua (vòng 15, `e2e/used-purchase-account.spec.ts` (m1)–(m7)): đăng nhập từ nút Mua ngay, mua COD, hủy → tin
-  về công khai, người bán không mua được, LISTING_CHANGED, tin đã bán / chờ duyệt / id sai, mất mạng. [ ] Giao + trả tiền
-  → khoản chờ trả, admin đánh dấu đã trả (vòng 16).
-- GỢI Ý review vòng 12: (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số ít
-  "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (nền khi rê chuột, bo góc).
+  về công khai, người bán không mua được, LISTING_CHANGED, tin đã bán / chờ duyệt / id sai, mất mạng. [x] (m8) "Thêm
+  địa chỉ" từ trang mua, (m9) giao + trả tiền → "Chờ trả" → admin đánh dấu → "Đã trả" (vòng 16);
+  [x] `e2e/admin-used-payouts.spec.ts` (vòng 16): lọc, bấm "Đã trả", hai tab PAYOUT_STATUS_CHANGED, trang đơn admin.
+- [x] GỢI Ý review vòng 12 (vòng 16): (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số
+  ít "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (Button ghost, 44px).
+
+Còn lại cho vòng 17: sửa review vòng 16 → cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại
+commit đã duyệt) ra file ngoài repo, kiểm trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test
+điện thoại luồng mua; câu hỏi dồn: sửa CLAUDE.md (pathnames trang mua, RPC mới / chữ ký mới, chat ẩn trang mua,
+`/admin/tra-nguoi-ban`), giữ `seller_id` đọc được với authenticated, duyệt `place_used_order` + `p_expected_updated_at`.
 
 ## Test (P-A)
 
