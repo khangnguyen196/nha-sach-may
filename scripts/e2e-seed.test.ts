@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
 import { readFixture } from './e2e-seed'
@@ -8,6 +8,8 @@ import { readFixture } from './e2e-seed'
 const books = readFixture()
 const FREE_SHIP_FROM = 300_000
 const SHELF_SIZE = 12
+/** Sách thật của used-market-public-account.spec: desktop-account, mobile-account */
+const USED_MARKET_BOOKS = ['cha-me-5-0', 'nang-cao-von-tu-vung-tieng-nhat-theo-chu-de-bang-hinh-anh']
 
 describe('e2e/fixtures/books.json', () => {
   it('ISBN, slug không trùng', () => {
@@ -75,6 +77,30 @@ describe('e2e/fixtures/books.json', () => {
 
   it('có giá 100.000 – 200.000 ₫ (lọc giá)', () => {
     expect(books.some((b) => b.price >= 100_000 && b.price <= 200_000)).toBe(true)
+  })
+
+  it('used-market-public-account.spec: mỗi project một sách thật cho chợ sách cũ (danh mục đang hiện, trần giá ≥ 40.000)', () => {
+    // Sách riêng của spec (desktop / mobile chạy song song, đếm "Có N bản cũ" trên đúng cuốn của mình): danh mục lá của
+    // seed (cha seed, đều đang bật), giá gốc / giá ≥ 40.000 (tin 25.000 và 40.000 không vượt trần), còn hàng, không
+    // nằm trong 20 cuốn đầu findBooksByStock(10, …) của cart spec, không spec nào khác nhắc tới slug
+    const roomy = books.filter((b) => b.stock >= 10).slice(0, 20)
+    const seed = read('../supabase/seed.sql')
+    const others = readdirSync(new URL('../e2e/', import.meta.url))
+      .filter((file) => file.endsWith('.ts') && file !== 'used-market-public-account.spec.ts')
+      .map((file) => read(`../e2e/${file}`))
+      .join(' ')
+    for (const slug of USED_MARKET_BOOKS) {
+      const book = books.find((b) => b.slug === slug)
+      expect(book, slug).toBeDefined()
+      if (!book) continue
+      expect(book.original_price ?? book.price, slug).toBeGreaterThanOrEqual(40_000)
+      expect(book.stock, slug).toBeGreaterThan(5)
+      expect(roomy.map((b) => b.slug), slug).not.toContain(slug)
+      // Danh mục lá của seed.sql (dòng danh mục con: `('<cha>', '<tên>', '<tên en>', '<slug>', <thứ tự>)`)
+      expect(seed, slug).toContain(`'${book.category_slug}',`)
+      expect(others, slug).not.toContain(slug)
+    }
+    expect(read('../e2e/used-market-public-account.spec.ts')).toContain(`'${USED_MARKET_BOOKS[0]}'`)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

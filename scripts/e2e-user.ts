@@ -672,6 +672,18 @@ export async function bookRow(id: number) {
   return data
 }
 
+/** Sách theo slug (service role, thấy cả sách ẩn); không có → throw (thiếu dữ liệu là lỗi, không skip) */
+export async function bookBySlug(slug: string) {
+  const { data, error } = await adminClient()
+    .from('books')
+    .select('id, slug, title, price, original_price, is_active, category_id')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`bookBySlug: ${error.message}`)
+  if (!data) throw new Error(`bookBySlug: không có sách ${slug}`)
+  return data
+}
+
 /** Public URL của bucket bìa (kết thúc bằng /), để suy ra đường dẫn object từ cover_url */
 export function coverPublicBase() {
   return adminClient().storage.from(COVER_BUCKET).getPublicUrl('').data.publicUrl
