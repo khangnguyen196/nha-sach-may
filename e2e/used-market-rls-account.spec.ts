@@ -269,7 +269,13 @@ test('đăng tin: giá trần, ảnh của người khác; tin + ảnh chờ duy
   const atCap = await create(ORIGINAL_PRICE, [path])
   if (atCap.error) throw new Error(`create_used_listing: ${atCap.error.message}`)
   const id = atCap.data
-  expect(await usedListingRow(id)).toMatchObject({ status: 'pending', price: ORIGINAL_PRICE, fee: 12_000, seller_name: seller.fullName })
+  expect(await usedListingRow(id)).toMatchObject({
+    status: 'pending',
+    price: ORIGINAL_PRICE,
+    fee: 12_000,
+    seller_name: seller.fullName,
+    description: null,
+  })
 
   expect(await visibleIds(anon, id)).toEqual([])
   expect(await visibleIds(strangerClient, id)).toEqual([])

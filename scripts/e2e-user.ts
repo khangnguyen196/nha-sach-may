@@ -781,7 +781,7 @@ export const USED_PHOTO_BUCKET = 'used-listing-photos'
 export async function usedListingRow(id: number) {
   const { data, error } = await adminClient()
     .from('used_listings')
-    .select('id, status, price, fee, seller_name, reject_reason, approved_at')
+    .select('id, status, price, fee, seller_name, description, reject_reason, approved_at')
     .eq('id', id)
     .maybeSingle()
   if (error) throw new Error(`usedListingRow: ${error.message}`)
