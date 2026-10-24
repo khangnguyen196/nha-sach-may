@@ -331,7 +331,7 @@ test('duyệt / sửa / gỡ: chỉ admin, từ chối phải có lý do; tin đ
     p_id: id,
     p_condition: 'fair',
     p_price: 25_000,
-    p_description: '',
+    p_description: '   ',
     p_photos: [path],
   })
   expect(clearDescription.error).toBeNull()
