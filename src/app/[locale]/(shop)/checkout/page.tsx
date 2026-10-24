@@ -8,6 +8,7 @@ import { getAddresses } from '@/features/account/queries'
 import { EmptyState } from '@/features/books/components/empty-state'
 import { getCart } from '@/features/cart/queries'
 import { placeOrder } from '@/features/checkout/actions'
+import { pickAddressId } from '@/features/checkout/address-selection'
 import { AddressOptions } from '@/features/checkout/components/address-options'
 import { CheckoutForm } from '@/features/checkout/components/checkout-form'
 import { CheckoutSkeleton } from '@/features/checkout/components/checkout-skeleton'
@@ -80,9 +81,7 @@ async function CheckoutContent({ locale, searchParams }: { locale: Locale; searc
     )
   }
 
-  // ?address= từ trang thêm địa chỉ; không thuộc sổ địa chỉ thì về địa chỉ mặc định (getAddresses xếp đầu)
-  const wanted = Number(query.address)
-  const selectedId = addresses.find((address) => address.id === wanted)?.id ?? addresses[0]?.id
+  const selectedId = pickAddressId(addresses, query.address)
   const hasProblems = lines.some(isProblemLine)
   const voucherCode = voucher && !voucher.failure ? voucher.code : null
 

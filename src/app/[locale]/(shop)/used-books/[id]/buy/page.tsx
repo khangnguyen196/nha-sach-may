@@ -7,6 +7,7 @@ import { InlineNotFound } from '@/components/layout/inline-not-found'
 import { buttonVariants } from '@/components/ui/button'
 import { getAddresses } from '@/features/account/queries'
 import { EmptyState } from '@/features/books/components/empty-state'
+import { pickAddressId } from '@/features/checkout/address-selection'
 import { AddressOptions } from '@/features/checkout/components/address-options'
 import { CheckoutSkeleton } from '@/features/checkout/components/checkout-skeleton'
 import { PaymentMethod } from '@/features/checkout/components/payment-method'
@@ -88,9 +89,7 @@ async function BuyContent({ locale, params, searchParams }: ContentProps) {
   if (!book?.active || !quote?.available) {
     return <Unavailable listing={listing} reason={book && !book.active ? 'BOOK_UNAVAILABLE' : 'LISTING_UNAVAILABLE'} />
   }
-  // ?address= từ trang thêm địa chỉ; không thuộc sổ địa chỉ thì về địa chỉ mặc định (getAddresses xếp đầu), như /thanh-toan
-  const wanted = Number(query.address)
-  const selectedId = addresses.find((address) => address.id === wanted)?.id ?? addresses[0]?.id
+  const selectedId = pickAddressId(addresses, query.address)
 
   return (
     <UsedOrderForm
