@@ -174,7 +174,8 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 
 Chia 3 vòng con trên nhánh `cho-sach-cu-2` (điều phối 24/10): 7 = người bán, 8 = admin duyệt / từ chối / gỡ, 9 = trang
 công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer; 10 = sửa e2e CI vòng 9 + review vòng 9. Lên main một lần
-khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10).
+khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10). **P-B đã lên `main` `881969a`** (ff `18499fa..881969a` 2026-10-24
+10:18:34Z, vòng 11–12 sửa e2e / review + link "Về cửa hàng" trên điện thoại ở admin; không SQL mới).
 
 - [x] P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
   để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
@@ -238,6 +239,12 @@ khi xong P-B. [x] = đã làm (vòng 7, 8, 9, 10).
   `status <> 'cancelled'`: một tin có thể nằm trong nhiều đơn đã hủy, nhưng chỉ một đơn chưa hủy (trigger trạng thái tin:
   → `sold` chỉ khi có đơn chưa hủy, `sold` → `approved` chỉ khi không còn đơn nào như vậy).
 - e2e: mua COD, hủy → tin về công khai, người bán không mua được, giao + trả tiền → khoản chờ trả, admin đánh dấu đã trả.
+- Migration: `review_used_listing` thêm `p_expected_updated_at` (so trong RPC, lệch → mã lỗi hiện có của trường hợp đổi
+  trạng thái). Drop hàm cũ rồi create bản mới (không để 2 overload); grant lại như cũ; chép vào `schema.sql` cùng commit;
+  types sinh lại từ artifact CI. Thứ tự: SQL chạy trên production **trước** khi app mới lên `main` (app mới gửi tham số
+  mới). Quyết định của chủ dự án 2026-10-24.
+- GỢI Ý review vòng 12: (p5) duyệt mid → cheap → dear để "mới duyệt" khác id / created_at; kiểm câu en số ít
+  "1 used copy from ₫40,000"; link "Về cửa hàng" mobile admin cùng kiểu nút giao diện (nền khi rê chuột, bo góc).
 
 ## Test (P-A)
 
