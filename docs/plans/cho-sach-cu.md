@@ -159,8 +159,10 @@ Routing (`i18n/routing.ts`):
 | `/tai-khoan/sach-toi-ban/[id]` | `/en/account/my-listings/[id]` | P-B |
 
 Đặt xong dùng lại `/thanh-toan/thanh-cong/[code]`. Admin: `/admin/sach-cu`, `/admin/sach-cu/[id]` (P-B),
-`/admin/tra-nguoi-ban` (P-C). Proxy: 404 thật cho `/cho-sach-cu/<id>` không công khai (`x-not-found: used-listing`); trang
-sửa tin như trang sửa địa chỉ.
+`/admin/tra-nguoi-ban` (P-C). Proxy: 404 thật cho `/cho-sach-cu/<id>` không công khai (`x-not-found: used-market`,
+vòng 9; đếm tin theo id + status approved / sold); trang sửa tin như trang sửa địa chỉ (`x-not-found: used-listing`).
+Danh sách chợ nhận `?cat=`, `?sort=` (`newest` mặc định / `price-asc` / `price-desc`), `?page=` như `/sach`, cộng
+`?book=<slug>` (dòng "Có N bản cũ" ở trang sách luôn trỏ tới đây).
 
 File dự kiến (`src/features/used/`): `schemas.ts` (zod, chỉ server), `status.ts` (đã có), `queries.ts` (công khai
 `'use cache'` + tag `used-listings`, `used-listing:{id}`, `used-book:{bookId}`, lọc danh mục đang hiện), `actions.ts`,
@@ -171,12 +173,14 @@ Admin: `features/admin/used/actions.ts` (`assertAdmin` hai câu đầu).
 ### Việc phải làm ở P-B
 
 Chia 3 vòng con trên nhánh `cho-sach-cu-2` (điều phối 24/10): 7 = người bán, 8 = admin duyệt / từ chối / gỡ, 9 = trang
-công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm (vòng 7, 8).
+công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main một lần khi xong P-B. [x] = đã làm (vòng 7, 8, 9).
 
 - [x] P-B việc đầu: e2e/used-market-rls-account.spec.ts bước sửa tin với mô tả rỗng đổi `p_description: ''` thành `'   '`
   để kiểm cả btrim của update_used_listing (GỢI Ý 1 review vòng 5; giữ assert description: null).
 - [x] Một file duy nhất ký link ảnh (`features/used/signed-urls.ts`, hằng `USED_PHOTO_URL_TTL` = 604800 giây = 7 ngày).
-- [ ] Query công khai `'use cache'` + `cacheLife('hours')` (vòng 9); [x] trang người bán ký theo request (không cache);
+- [x] Query công khai `'use cache'` + `cacheLife('hours')` (vòng 9, `features/used/public-queries.ts`: client anon,
+  `books!inner` bỏ tin của sách ngừng bán; danh sách tag `used-listings` + `book:{id}`, một tin `used-listing:{id}`,
+  "Có N bản cũ" `used-book:{bookId}` không ký link); [x] trang người bán ký theo request (không cache);
   [x] admin ký theo request (`features/admin/used/queries.ts`, không cache; vòng 8).
 - [x] Vitest kiểm tĩnh điều kiện (a) (`features/used/cache-life.test.ts`): chỉ một file gọi `createSignedUrl(s)`, mọi
   `'use cache'` trong file import signed-urls / features/used/queries (trực tiếp hay bắc cầu: bao đóng import trong src,
@@ -184,8 +188,18 @@ công khai + "Có N bản cũ từ X ₫" + proxy 404 + link footer. Lên main m
   `'use cache'` đầu file, expire của các profile đó (đọc `defaultConfig` của Next; next.config.ts không khai báo
   cacheLife) < TTL.
 - [x] `next/image` `unoptimized` cho ảnh sách cũ; giữ `coverImagesConfig` (build không đòi thêm pattern).
-- [x] Ghi chú demo song ngữ ở form đăng / sửa tin; [ ] trang danh sách chợ sách cũ (vòng 9).
-- [x] Link "Sách tôi bán" ở trang tài khoản; [ ] link "Chợ sách cũ" ở footer + trang tài khoản (vòng 9).
+- [x] Ghi chú demo song ngữ ở form đăng / sửa tin; [x] trang danh sách chợ sách cũ + trang tin (vòng 9).
+- [x] Link "Sách tôi bán" ở trang tài khoản; [x] link "Chợ sách cũ" ở footer + trang tài khoản (vòng 9).
+- [x] Trang công khai (vòng 9): `/cho-sach-cu` (lưới thẻ tin, ảnh `unoptimized` khung 3:4, lọc danh mục + sắp xếp bằng
+  link, phân trang, rỗng, ghi chú demo, `?page=` vượt quá → InlineNotFound), `/cho-sach-cu/[id]` (params đọc trong
+  Suspense, `instant = false`, mọi ảnh ký, nhãn Đã bán, không nút mua, noindex + hreflang, không vào sitemap); proxy 404
+  `used-market`; trang sách "Có N bản cũ từ X ₫" (Suspense riêng, giữ chỗ một dòng, chỉ khi danh mục của sách đang hiện).
+  Ẩn danh mục: danh sách nhận id danh mục đang hiện làm tham số (khóa cache) từ `getCategories()` (tag `categories`,
+  action danh mục của admin đã updateTag) → không cần updateTag `used-listings` ở action danh mục.
+- [x] e2e trang công khai (`e2e/used-market-public-account.spec.ts`, vòng 9): mỗi project một sách thật, duyệt / gỡ / rút
+  qua giao diện. Trang chợ chưa vào crawl.spec (tin do spec song song tạo / xóa).
+- [x] Sửa review vòng 8 (vòng 9): admin so `updated_at` của tin trong app (ô ẩn `expected_updated_at`; còn khe ms giữa
+  select và RPC, bản chặt cần `p_expected_updated_at` trong RPC = SQL, chờ chủ dự án); trang sửa tin cũng dọn ảnh mồ côi.
 - [x] e2e người bán (`e2e/used-listing-account.spec.ts`): đăng tin có ảnh, tin chưa duyệt không công khai, sửa → về chờ
   duyệt, rút, bỏ ảnh khỏi form, giá vượt trần, 404 trang sửa tin; vòng 8 thêm: focus bàn phím khi rút tin / chọn sách /
   bỏ ảnh, hai lượt chọn ảnh liên tiếp (tối đa 3 ô, tải lần lượt), trần 30 ảnh (LISTING_PHOTO_LIMIT), dự phòng `<img>` khi
