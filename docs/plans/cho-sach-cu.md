@@ -89,7 +89,8 @@ Content-Type + cỡ); admin xem ảnh trước khi duyệt là chốt cuối.
   `can_delete_used_photo(name)` trong policy xóa (ảnh gắn tin `pending` / `approved` / `sold` không xóa được; ảnh chưa
   gắn tin, của tin `rejected` / `withdrawn` xóa được), `can_upload_used_photo(name)` trong policy tải lên (tên đã gắn
   tin ở bất kỳ trạng thái nào không tải lên lại được), `review_used_listing` khi duyệt kiểm lại ảnh còn đủ
-  (`LISTING_PHOTOS_INVALID`; ảnh có thể mất ngoài policy: service role, xóa tay trong Storage). Storage không báo lỗi
+  (`LISTING_PHOTOS_INVALID` (vòng 2 đổi thành `LISTING_PHOTOS_MISSING`); ảnh có thể mất ngoài policy: service role,
+  xóa tay trong Storage). Storage không báo lỗi
   khi policy chặn xóa, chỉ trả mảng rỗng.
 - P2 Trần 30 ảnh chỉ đếm ảnh trong thư mục của mình KHÔNG thuộc tin `sold` (đếm cả thì bán 10 tin × 3 ảnh là khóa
   đăng tin vĩnh viễn).
@@ -119,6 +120,27 @@ Content-Type + cỡ); admin xem ảnh trước khi duyệt là chốt cuối.
   `private.used_photos_stored(photos) returns boolean`.
 - Gợi ý đã chấp nhận (không sửa): ảnh của tin `sold` không tính vào trần 30; đơn bị hủy → tin về `approved` → ảnh tính
   lại vào trần, người bán có thể vượt 30 ảnh (hiếm; chỉ chặn tải thêm tới khi xuống dưới trần).
+
+### Chạy SQL production (24/10)
+
+- File `D:/Bán sách-backup/2026-10-24-cho-sach-cu-1.sql` = migration `20261024000000_used_market.sql` tại `2285889`,
+  sha256 `0db2500ab9317ccf6c7082bdec6431fc5505dd6ba235dc533d358a19b89f35e5`. Chủ dự án chạy trong SQL Editor lúc 9:03
+  ngày 24/10/2026 (giờ Việt Nam), "Success. No rows returned", không thêm `lock_timeout` (cả file là một transaction).
+  Kiểm trước / sau qua MCP chỉ đọc: `2026-10-24-cho-sach-cu-1-truoc.json`, `2026-10-24-cho-sach-cu-1-sau.json`
+  (cùng thư mục backup, không dữ liệu cá nhân).
+- Kết quả sau khi chạy (S0–S9, đúng mọi kỳ vọng): phiên MCP `transaction_read_only = on`; bucket `used-listing-photos`
+  không công khai, chỉ `image/webp`, ≤ 1048576 byte; 6 policy (3 `public`, 3 `storage.objects`); RLS bật ở 3 bảng
+  (`used_listings`, `seller_payouts`, `private.used_photo_names`); 24 hàm (10 `private` + 14 `public`); `orders` thêm
+  trigger `orders_used_market` (2 trigger cũ còn nguyên), `used_listings` có 4 trigger; FK
+  `order_items_used_listing_id_fkey` restrict; `handle_order_status_change` có nhánh `oi.used_listing_id is null`;
+  8 phép kiểm quyền (anon đọc cột ẩn, anon đọc `seller_payouts`, authenticated đọc `order_id`, authenticated insert
+  thẳng `used_listings`, anon gọi `place_used_order`, authenticated đọc `private.used_photo_names`) đều false; phí sàn
+  5.000 / 25.000 / 98.000 → 1.000 / 3.000 / 10.000; 0 tin, 0 khoản trả, 0 tên ảnh, 0 dòng đơn sách cũ.
+- Security advisor sau khi chạy: cảnh báo mới chỉ cùng loại với cảnh báo đã có (bảng `private` RLS bật không policy;
+  hàm security definer gọi được bởi anon / authenticated, gồm hàm trigger như `handle_order_status_change` có sẵn).
+- Quy trình: build ở thư mục chính bằng `git checkout --detach <commit>` thì `.next` là bản của nhánh (chạy với code
+  cần bảng mới); không `npm start` ở thư mục chính trước khi SQL chạy trên production. Sau khi build nhánh thì build
+  lại main, hoặc ghi rõ trong báo cáo `.next` đang là bản nào.
 
 ## App (P-B, P-C)
 
