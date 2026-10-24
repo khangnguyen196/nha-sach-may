@@ -379,7 +379,7 @@ test('(m7) mất mạng lúc đặt → NETWORK_ERROR, ghi chú còn nguyên, kh
 
 /** Thêm địa chỉ từ link "Thêm địa chỉ" của trang mua tin `id` → lưu → về lại đúng trang mua kèm ?address=<id mới> */
 async function addAddressFromBuyPage(page: Page, id: number, address: { name: string; street: string }) {
-  await expect(page).toHaveURL(new RegExp(`/tai-khoan/dia-chi/moi\?next=%2Fcho-sach-cu%2F${id}%2Fmua$`))
+  await expect(page).toHaveURL(new RegExp(`/tai-khoan/dia-chi/moi\\?next=%2Fcho-sach-cu%2F${id}%2Fmua$`))
   // Hủy cũng về trang mua (không về sổ địa chỉ)
   await expect(main(page).getByRole('link', { name: 'Hủy', exact: true })).toHaveAttribute('href', buyPath(id))
   await fillAddress(page, {
@@ -390,7 +390,7 @@ async function addAddressFromBuyPage(page: Page, id: number, address: { name: st
     street: address.street,
   })
   await main(page).getByRole('button', { name: 'Lưu địa chỉ' }).click()
-  await expect(page).toHaveURL(new RegExp(`/cho-sach-cu/${id}/mua\?address=\d+$`), { timeout: 20_000 })
+  await expect(page).toHaveURL(new RegExp(`/cho-sach-cu/${id}/mua\\?address=\\d+$`), { timeout: 20_000 })
   return Number(new URL(page.url()).searchParams.get('address'))
 }
 
@@ -410,7 +410,8 @@ test('(m8) người mua chưa có địa chỉ: "Thêm địa chỉ" → lưu �
   await expect(placeButton(page)).toBeDisabled()
   await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
   await addAddressFromBuyPage(page, first.id, { name: 'Người Mua Mới', street: '1 Tràng Tiền' })
-  const option = main(page).getByTestId('checkout-address-option')
+  // Next giữ trang mua vừa rời (cùng tin, khác ?address=) trong <main> ở dạng ẩn (Activity) → chỉ xét dòng đang hiển thị
+  const option = main(page).getByTestId('checkout-address-option').filter({ visible: true })
   await expect(option).toHaveCount(1)
   await expect(option).toContainText('Người Mua Mới')
   await expect(option.getByRole('radio')).toBeChecked()
@@ -425,7 +426,7 @@ test('(m8) người mua chưa có địa chỉ: "Thêm địa chỉ" → lưu �
   await openBuyPage(page, second.id)
   await main(page).getByRole('link', { name: 'Thêm địa chỉ' }).click()
   const added = await addAddressFromBuyPage(page, second.id, { name: 'Người Nhận Thứ Hai', street: '9 Hàng Bài' })
-  const options = main(page).getByTestId('checkout-address-option')
+  const options = main(page).getByTestId('checkout-address-option').filter({ visible: true })
   await expect(options).toHaveCount(2)
   const addedRadio = options.filter({ hasText: 'Người Nhận Thứ Hai' }).getByRole('radio')
   await expect(addedRadio).toBeChecked()

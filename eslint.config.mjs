@@ -60,6 +60,12 @@ const eslintConfig = defineConfig([
     files: ['src/components/admin/admin-link.tsx'],
     rules: { 'no-restricted-imports': 'off' },
   },
+  {
+    // Regex dựng bằng new RegExp(`…`) trong template literal: `\?` / `\d` mất dấu `\` (phải viết `\\?`), test vẫn
+    // chạy nhưng khớp sai. eslint-config-next không bật luật này.
+    files: ['e2e/**/*.ts'],
+    rules: { 'no-useless-escape': 'error' },
+  },
   globalIgnores(['.next/**', '.claude/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/types/database.ts', 'playwright-report/**', 'test-results/**']),
 ])
 
