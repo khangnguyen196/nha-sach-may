@@ -1107,7 +1107,27 @@
       "noDescription": "Người bán không ghi chú thêm.",
       "bookLink": "Xem sách mới trong cửa hàng",
       "soldNote": "Cuốn sách cũ này đã có người mua.",
-      "backToMarket": "Về Chợ sách cũ"
+      "backToMarket": "Về Chợ sách cũ",
+      "buyNow": "Mua ngay"
+    },
+    "buy": {
+      "title": "Mua sách cũ",
+      "metaDescription": "Đặt mua một cuốn sách cũ trên Chợ sách cũ của Nhà Sách Mây. Tính năng demo, không có giao dịch thật.",
+      "summary": "Sách bạn mua",
+      "usedLabel": "Sách cũ · {condition}",
+      "sellerNote": "Người bán ghi chú",
+      "viewListing": "Xem ảnh và tin bán",
+      "price": "Giá sách",
+      "placeOrder": "Đặt mua",
+      "unavailableTitle": "Không mua được tin này",
+      "ownTitle": "Đây là tin của bạn",
+      "backToListing": "Về tin bán",
+      "myListings": "Xem Sách tôi bán"
+    },
+    "order": {
+      "usedLabel": "Sách cũ · {condition}",
+      "usedLabelPlain": "Sách cũ",
+      "seller": "Người bán: {name}"
     }
   },
   "errors": {
@@ -1167,7 +1187,7 @@
     "LISTING_STATUS_CHANGED": "Tin vừa đổi trạng thái ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
     "LISTING_UNAVAILABLE": "Cuốn sách cũ này vừa có người mua hoặc không còn bán. Bạn xem các bản cũ khác trong Chợ sách cũ nhé.",
     "LISTING_OWN": "Đây là tin bạn đăng nên bạn không mua được.",
-    "LISTING_CHANGED": "Tin vừa được cập nhật (giá, tình trạng hoặc ảnh). Bạn xem lại tin rồi đặt mua.",
+    "LISTING_CHANGED": "Tin vừa được cập nhật (giá, tình trạng, mô tả hoặc ảnh). Bạn xem lại tin rồi đặt mua.",
     "LISTING_INVALID_TRANSITION": "Không thể chuyển tin sang trạng thái này. Bạn tải lại trang để xem trạng thái mới nhất.",
     "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
     "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ nên chưa tải thêm được. Số này tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh đã tải mà chưa đăng; ảnh đã tải quá 24 giờ mà chưa đăng được dọn khi bạn mở trang đăng hoặc sửa tin. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé."

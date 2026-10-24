@@ -22,4 +22,13 @@ describe('currentHref (LocaleSwitcher)', () => {
     expect(currentHref('/books/[slug]', {}, { page: ['2'] })).toEqual({ pathname: '/' })
     expect(currentHref('/account/orders/[code]', { code: ['a', 'b'] }, undefined)).toEqual({ pathname: '/' })
   })
+
+  it('[id] ở giữa đường dẫn (trang mua sách cũ) → giữ id', () => {
+    expect(currentHref('/used-books/[id]/buy', { id: '12' }, undefined)).toEqual({
+      pathname: '/used-books/[id]/buy',
+      params: { id: '12' },
+      query: undefined,
+    })
+    expect(currentHref('/used-books/[id]/buy', {}, undefined)).toEqual({ pathname: '/' })
+  })
 })

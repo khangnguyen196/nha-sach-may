@@ -624,7 +624,27 @@
       "noDescription": "The seller added no notes.",
       "bookLink": "See the new book in the store",
       "soldNote": "This used copy has already been bought.",
-      "backToMarket": "Back to Used Books"
+      "backToMarket": "Back to Used Books",
+      "buyNow": "Buy now"
+    },
+    "buy": {
+      "title": "Buy a used book",
+      "metaDescription": "Order a used copy from the Nhà Sách Mây Used Books market. Demo feature, no real transactions.",
+      "summary": "The copy you are buying",
+      "usedLabel": "Used · {condition}",
+      "sellerNote": "Seller’s notes",
+      "viewListing": "See photos and listing",
+      "price": "Book price",
+      "placeOrder": "Place order",
+      "unavailableTitle": "You can’t buy this listing",
+      "ownTitle": "This is your listing",
+      "backToListing": "Back to listing",
+      "myListings": "Go to My listings"
+    },
+    "order": {
+      "usedLabel": "Used · {condition}",
+      "usedLabelPlain": "Used",
+      "seller": "Seller: {name}"
     }
   },
   "errors": {
@@ -684,7 +704,7 @@
     "LISTING_STATUS_CHANGED": "This listing’s status just changed elsewhere. Reload the page to see its latest status.",
     "LISTING_UNAVAILABLE": "This used copy was just bought or is no longer for sale. Please check other used copies in the Used Books market.",
     "LISTING_OWN": "This is your own listing, so you can’t buy it.",
-    "LISTING_CHANGED": "This listing was just updated (price, condition or photos). Review it again, then place your order.",
+    "LISTING_CHANGED": "This listing was just updated (price, condition, description or photos). Review it again, then place your order.",
     "LISTING_INVALID_TRANSITION": "This listing cannot be moved to that status. Reload the page to see its latest status.",
     "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status.",
     "LISTING_PHOTO_LIMIT": "You already have 30 used-book photos, so you can’t upload more yet. This count includes photos of listings that are pending, for sale or rejected, and photos uploaded but not yet posted; unposted photos older than 24 hours are cleared when you open the new or edit listing page. Remove photos from a rejected listing or withdraw a listing you no longer want to sell, then try again."

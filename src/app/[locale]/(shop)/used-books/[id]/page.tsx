@@ -1,9 +1,10 @@
-import { ImageOffIcon } from 'lucide-react'
+import { ImageOffIcon, ShoppingBagIcon } from 'lucide-react'
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { InlineNotFound } from '@/components/layout/inline-not-found'
+import { buttonVariants } from '@/components/ui/button'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
 import { UsedDemoNote } from '@/features/used/components/demo-note'
 import { getMarketListing, type MarketListingDetail } from '@/features/used/public-queries'
@@ -110,7 +111,23 @@ async function UsedListing({ params }: { params: Props['params'] }) {
               {format.number(listing.price, 'price')}
             </span>
           </p>
-          {listing.sold && <p className="mt-2 text-sm text-muted-foreground">{t('soldNote')}</p>}
+          {listing.sold ? (
+            <p className="mt-2 text-sm text-muted-foreground">{t('soldNote')}</p>
+          ) : (
+            // Trang mua cần đăng nhập (proxy chuyển sang đăng nhập rồi quay lại); không prefetch: trang động theo phiên.
+            // data-chat-avoid: bong bóng chat ẩn khi nút đi vào dải đáy màn hình (không che CTA)
+            <div className="mt-6" data-chat-avoid>
+              <Link
+                href={{ pathname: '/used-books/[id]/buy', params: { id: String(listing.id) } }}
+                prefetch={false}
+                className={buttonVariants({ size: 'lg', className: 'h-11 w-full px-6 text-base sm:w-auto' })}
+                data-testid="market-listing-buy"
+              >
+                <ShoppingBagIcon aria-hidden />
+                {t('buyNow')}
+              </Link>
+            </div>
+          )}
 
           <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             <dt className="text-muted-foreground">{t('conditionLabel')}</dt>

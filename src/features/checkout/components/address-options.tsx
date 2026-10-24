@@ -11,12 +11,17 @@ type Props = {
   /** Địa chỉ chọn sẵn: ?address= (vừa thêm từ checkout) hoặc địa chỉ mặc định */
   selectedId: number | undefined
   locale: Locale
+  /**
+   * Link "Thêm địa chỉ". Mặc định: về lại /thanh-toan sau khi lưu (?next=, trang thêm địa chỉ chỉ nhận đúng URL đó).
+   * Trang mua sách cũ truyền trang thêm địa chỉ không kèm next (lưu xong về sổ địa chỉ).
+   */
+  addHref?: Href
 }
 
 /** Nhóm radio gốc: chọn được bằng bàn phím (mũi tên), không cần JS */
-export async function AddressOptions({ addresses, selectedId, locale }: Props) {
+export async function AddressOptions({ addresses, selectedId, locale, addHref: customAddHref }: Props) {
   const [t, tAddress] = await Promise.all([getTranslations('checkout'), getTranslations('address')])
-  const addHref: Href = {
+  const addHref: Href = customAddHref ?? {
     pathname: '/account/addresses/new',
     query: { next: getPathname({ href: '/checkout', locale }) },
   }

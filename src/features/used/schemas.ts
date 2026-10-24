@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { searchQuerySchema } from '@/features/books/schemas'
+import { NOTE_MAX } from '@/features/checkout/schemas'
 import type { ValidationKey } from '@/lib/errors'
 import { optionalMultilineText } from '@/lib/text-schema'
 import { Constants } from '@/types/database'
@@ -82,6 +83,20 @@ export const listingIdSchema = z.coerce.number().int().positive().max(Number.MAX
  * dòng, chuỗi không múi giờ sẽ được đọc theo múi giờ của phiên DB.
  */
 export const expectedUpdatedAtSchema = z.iso.datetime({ offset: true })
+
+/**
+ * Form mua một tin (/cho-sach-cu/[id]/mua). id tin do page bind (action parse lại); giá, phí ship, tổng do
+ * place_used_order tính. Ghi chú cùng giới hạn với đơn thường (orders_note_length).
+ */
+export const usedOrderSchema = z.object({
+  address_id: z.coerce.number(error('address')).int(error('address')).positive(error('address')),
+  payment_method: z.enum(['cod', 'bank_transfer']).default('cod'),
+  note: optionalMultilineText(NOTE_MAX, 'note'),
+  idempotency_key: z.uuid(),
+  /** Tổng đang hiển thị (quote_used_order): chỉ để RPC so, không dùng để tính */
+  expected_total: z.coerce.number().int().nonnegative(),
+  expected_updated_at: expectedUpdatedAtSchema,
+})
 
 /** Giá gửi từ ô giá để xem phí (quoteListing) */
 export const quotePriceSchema = z.number().int().min(1).max(2_147_483_647)

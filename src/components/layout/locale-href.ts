@@ -3,7 +3,8 @@ import type { routing } from '@/i18n/routing'
 // Tách khỏi locale-switcher.tsx (import i18n/navigation → next/root-params) để Vitest kiểm được
 type Pathname = keyof typeof routing.pathnames
 type SlugPathname = Extract<Pathname, `${string}[slug]`>
-type IdPathname = Extract<Pathname, `${string}[id]`>
+/** `[id]` ở cuối (/used-books/[id]) hoặc giữa (/used-books/[id]/buy) */
+type IdPathname = Extract<Pathname, `${string}[id]${string}`>
 type CodePathname = Extract<Pathname, `${string}[code]`>
 export type Query = Record<string, string[]>
 
@@ -12,7 +13,7 @@ function isSlugPathname(pathname: Pathname): pathname is SlugPathname {
 }
 
 function isIdPathname(pathname: Pathname): pathname is IdPathname {
-  return pathname.endsWith('[id]')
+  return pathname.includes('[id]')
 }
 
 function isCodePathname(pathname: Pathname): pathname is CodePathname {

@@ -20,6 +20,7 @@ export const routing = defineRouting({
     '/checkout/success/[code]': { vi: '/thanh-toan/thanh-cong/[code]', en: '/checkout/success/[code]' },
     '/used-books': { vi: '/cho-sach-cu', en: '/used-books' },
     '/used-books/[id]': { vi: '/cho-sach-cu/[id]', en: '/used-books/[id]' },
+    '/used-books/[id]/buy': { vi: '/cho-sach-cu/[id]/mua', en: '/used-books/[id]/buy' },
     '/account': { vi: '/tai-khoan', en: '/account' },
     '/account/addresses': { vi: '/tai-khoan/dia-chi', en: '/account/addresses' },
     '/account/addresses/new': { vi: '/tai-khoan/dia-chi/moi', en: '/account/addresses/new' },

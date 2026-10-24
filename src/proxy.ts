@@ -10,6 +10,7 @@ import {
   matchAddressPath,
   matchOrderPath,
   matchSlugPath,
+  matchUsedListingBuyPath,
   matchUsedListingPath,
   type SlugPathname,
 } from '@/i18n/paths'
@@ -128,13 +129,14 @@ async function missingListing(pathname: string, supabase: SupabaseClient<Databas
 }
 
 /**
- * Trang công khai một tin sách cũ mà tin không công khai: không có, chờ duyệt, bị từ chối, đã rút → cùng một trang 404.
- * BẮT BUỘC lọc status: client theo phiên, RLS cho người bán / admin đọc cả tin chờ duyệt / bị từ chối của mình (trang
- * công khai thì không hiện các tin đó). Chạy cả khi chưa đăng nhập (anon đọc được tin đã duyệt / đã bán). Lỗi → cho
- * qua: trang tự hiện UI 404.
+ * Trang công khai một tin sách cũ hoặc trang mua của tin mà tin không công khai: không có, chờ duyệt, bị từ chối, đã rút
+ * → cùng một trang 404. Tin đã bán không 404 (trang tin hiện "Đã bán", trang mua hiện câu không mua được). BẮT BUỘC lọc
+ * status: client theo phiên, RLS cho người bán / admin đọc cả tin chờ duyệt / bị từ chối của mình (trang công khai thì
+ * không hiện các tin đó). Trang tin chạy cả khi chưa đăng nhập (anon đọc được tin đã duyệt / đã bán); trang mua thì
+ * authRedirect chuyển sang đăng nhập trước. Lỗi → cho qua: trang tự hiện UI 404.
  */
 async function missingUsedListing(pathname: string, supabase: SupabaseClient<Database>): Promise<Missing | null> {
-  const match = matchUsedListingPath(pathname)
+  const match = matchUsedListingPath(pathname) ?? matchUsedListingBuyPath(pathname)
   if (!match) return null
   const missing = { locale: match.locale, kind: 'used-market' } as const
   if (!/^[1-9]\d{0,17}$/.test(match.id)) return missing
@@ -199,7 +201,7 @@ function matchLocalized(pathname: string, hrefs: Parameters<typeof localizedPath
 }
 
 /**
- * Chưa đăng nhập vào khu tài khoản / thanh toán → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới.
+ * Chưa đăng nhập vào khu tài khoản / thanh toán / trang mua sách cũ → trang đăng nhập; đã đăng nhập vào đăng nhập/đăng ký → trang muốn tới.
  * Chỉ GET / HEAD: POST là Server Action, tự kiểm phiên và trả AUTH_REQUIRED (form hiện "Đăng nhập lại"). Chuyển hướng
  * một Server Action sang trang HTML làm client coi là lỗi mạng ("Không kết nối được máy chủ") dù chỉ là phiên hết hạn.
  */
@@ -207,7 +209,7 @@ function authRedirect(request: NextRequest, signedIn: boolean) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null
   const { pathname, search, searchParams } = request.nextUrl
   if (!signedIn) {
-    const locale = matchLocalized(pathname, ['/account', '/checkout'])
+    const locale = matchLocalized(pathname, ['/account', '/checkout']) ?? matchUsedListingBuyPath(pathname)?.locale
     if (!locale) return null
     const login = localizedPath('/login', locale, { next: `${pathname}${search}` })
     return NextResponse.redirect(new URL(login, request.url))

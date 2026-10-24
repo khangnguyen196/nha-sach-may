@@ -2,9 +2,13 @@
 
 import { randomUUID } from 'node:crypto'
 import { refresh, updateTag } from 'next/cache'
+import { after } from 'next/server'
 import type { Locale } from 'next-intl'
+import { getTranslations } from 'next-intl/server'
 import { parseLocale } from '@/features/auth/schemas'
-import { redirect } from '@/i18n/navigation'
+import { expireOrderBooks } from '@/features/orders/cache'
+import { notifyOrder, ownRecipient } from '@/features/orders/emails'
+import { getPathname, redirect } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { withMessage } from '@/lib/error-message'
 import { invalidInput, toFailure, type Failure, type Result, type ValidationKey } from '@/lib/errors'
@@ -21,6 +25,7 @@ import {
   photoFolder,
   quotePriceSchema,
   updateListingSchema,
+  usedOrderSchema,
   type ListingInput,
 } from './schemas'
 import { signUsedPhotoUrls, USED_PHOTO_BUCKET } from './signed-urls'
@@ -249,4 +254,97 @@ export async function searchBooksForListing(_locale: Locale, q: string): Promise
       maxPrice: book.original_price ?? book.price,
     })),
   }
+}
+
+// ---------- Mua một tin (/cho-sach-cu/[id]/mua) ----------
+
+type Supabase = Awaited<ReturnType<typeof createClient>>
+
+function redirectToBuyLogin(locale: Locale, listingId: number): never {
+  const next = getPathname({ href: { pathname: '/used-books/[id]/buy', params: { id: String(listingId) } }, locale })
+  return redirect({ href: { pathname: '/login', query: { next } }, locale })
+}
+
+/** Lỗi do tin / sách / địa chỉ vừa đổi: trang mua đang hiện bản cũ → làm mới cache công khai của tin + trang mua */
+const STALE_PAGE_CODES = new Set(['LISTING_UNAVAILABLE', 'LISTING_OWN', 'BOOK_UNAVAILABLE', 'LISTING_CHANGED', 'INVALID_ADDRESS'])
+
+/**
+ * book_id của tin đọc lại ở server (không nhận từ client) để làm mới "Có N bản cũ" của sách. Tin không còn đọc được
+ * (đã rút / bị gỡ: RLS chỉ cho người mua đọc tin đã duyệt / đã bán) → null: tag của tin đó đã được làm mới lúc rút / gỡ.
+ */
+async function listingBookId(supabase: Supabase, listingId: number) {
+  const { data, error } = await supabase.from('used_listings').select('book_id').eq('id', listingId).maybeSingle()
+  if (error) {
+    console.error('listingBookId:', error.message)
+    return null
+  }
+  return data?.book_id ?? null
+}
+
+async function usedOrderFailed(locale: Locale, supabase: Supabase, listingId: number, failure: Failure): Promise<Failure> {
+  if (failure.code === 'AUTH_REQUIRED') redirectToBuyLogin(locale, listingId)
+  if (failure.code === 'INVALID_INPUT') {
+    // Ràng buộc của place_used_order trùng usedOrderSchema (chỉ ghi chú có ô) → hiện tại ô
+    return failure.details?.field === 'note' ? { ok: false, code: 'INVALID_INPUT', fieldErrors: { note: 'note' } } : failure
+  }
+  // UNKNOWN / lỗi mạng / mã khác: KHÔNG làm mới trang → lần bấm lại giữ nguyên idempotency key (đơn có thể đã tạo mà
+  // mất phản hồi: place_used_order trả đúng đơn đó)
+  if (!STALE_PAGE_CODES.has(failure.code)) return withMessage(locale, failure)
+
+  const bookId = await listingBookId(supabase, listingId)
+  if (bookId !== null) for (const tag of usedListingTags(listingId, bookId)) updateTag(tag)
+  // Trang render lại trạng thái thật: tin đã bán / của mình (không còn form), tổng + updated_at mới và key mới trong ô
+  // ẩn (LISTING_CHANGED: đặt lại là mua bản đang hiện), địa chỉ còn lại
+  refresh()
+
+  if (failure.code === 'INVALID_ADDRESS') {
+    const t = await getTranslations({ locale, namespace: 'checkout' })
+    return { ...failure, message: t('addressGone') }
+  }
+  return withMessage(locale, failure)
+}
+
+/**
+ * Đặt mua một tin (đơn riêng, không qua giỏ, không voucher). locale + id tin do page bind (đi qua client nên parse lại).
+ * Client chỉ gửi địa chỉ, phương thức thanh toán, ghi chú, idempotency key, tổng + updated_at của bản tin đang hiện (để
+ * place_used_order so); giá, phí ship, tổng do RPC tính. Xong → trang đặt hàng thành công như đơn thường.
+ */
+export async function placeUsedOrder(
+  locale: Locale,
+  listingId: number,
+  _prev: Result<null> | null,
+  formData: FormData,
+): Promise<Result<null>> {
+  const safeLocale = parseLocale(locale)
+  const id = listingIdSchema.safeParse(listingId)
+  if (!id.success) return withMessage(safeLocale, { ok: false, code: 'LISTING_UNAVAILABLE' })
+  const parsed = usedOrderSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return invalidInput(parsed.error)
+  const user = await getCurrentUser()
+  if (!user) redirectToBuyLogin(safeLocale, id.data)
+
+  const supabase = await createClient()
+  const { data: order, error } = await supabase.rpc('place_used_order', {
+    p_listing_id: id.data,
+    p_address_id: parsed.data.address_id,
+    p_expected_updated_at: parsed.data.expected_updated_at,
+    p_payment_method: parsed.data.payment_method,
+    p_note: parsed.data.note ?? undefined,
+    // Gửi lại cùng key (double submit, mất phản hồi) → trả đúng đơn đã tạo
+    p_idempotency_key: parsed.data.idempotency_key,
+    p_expected_total: parsed.data.expected_total,
+  })
+  if (error) return usedOrderFailed(safeLocale, supabase, id.data, toFailure(error))
+
+  // Tin → đã bán: chợ, trang tin, "Có N bản cũ" của sách
+  await expireOrderBooks(supabase, order.id)
+  // Gửi lại cùng key (đơn đã có) vẫn vào đây: email "đã nhận đơn" có thể gửi hai lần, chấp nhận (như placeOrder)
+  after(async () => {
+    const recipient = await ownRecipient(supabase, user)
+    if (recipient) await notifyOrder(supabase, order.id, 'placed', recipient)
+  })
+  return redirect({
+    href: { pathname: '/checkout/success/[code]', params: { code: order.order_code } },
+    locale: safeLocale,
+  })
 }

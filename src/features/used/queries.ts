@@ -92,3 +92,54 @@ export async function getMyListing(id: number, userId: string) {
 }
 
 export type MyListingDetail = NonNullable<Awaited<ReturnType<typeof getMyListing>>>
+
+/**
+ * Tin để mua (trang /cho-sach-cu/[id]/mua): đọc theo request bằng client theo phiên, KHÔNG cache (không dùng
+ * getMarketListing của trang tin: bản cache có thể cũ hơn tin thật vài giờ). `updated_at` đọc cùng lần với nội dung đang
+ * hiện, gửi nguyên chuỗi vào place_used_order (so sau khi khóa tin). BẮT BUỘC lọc status: RLS cho người bán / admin đọc
+ * cả tin chờ duyệt / bị từ chối / đã rút của mình. Không có → null. Sách ngừng bán: RLS của books ẩn dòng → book null.
+ */
+export async function getListingForPurchase(id: number) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('used_listings')
+    .select(
+      'id, book_id, seller_id, seller_name, condition, price, description, status, updated_at, books(title, slug, cover_url, is_active)',
+    )
+    .eq('id', id)
+    .in('status', ['approved', 'sold'])
+    .maybeSingle()
+  if (error) throw new Error(`getListingForPurchase: ${error.message}`)
+  if (!data) return null
+  return {
+    id: data.id,
+    bookId: data.book_id,
+    sellerId: data.seller_id,
+    sellerName: data.seller_name,
+    condition: data.condition,
+    description: data.description,
+    sold: data.status === 'sold',
+    updatedAt: data.updated_at,
+    book: data.books && {
+      title: data.books.title,
+      slug: data.books.slug,
+      coverUrl: data.books.cover_url,
+      active: data.books.is_active,
+    },
+  }
+}
+
+export type PurchaseListing = NonNullable<Awaited<ReturnType<typeof getListingForPurchase>>>
+
+/**
+ * Tiền của đơn sách cũ (quote_used_order: giá tin + ship cố định, không voucher / freeship) + `available` (tin đang bán
+ * và sách còn bán). Trang mua hiện đúng các số này, client không tự tính. Tin không có / không công khai → null.
+ */
+export async function getUsedOrderQuote(id: number) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('quote_used_order', { p_listing_id: id }).maybeSingle()
+  if (error) throw new Error(`getUsedOrderQuote: ${error.message}`)
+  return data
+}
+
+export type UsedOrderQuote = NonNullable<Awaited<ReturnType<typeof getUsedOrderQuote>>>

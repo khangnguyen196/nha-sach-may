@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { localizedPath, localizedSlugPath, matchOrderPath, matchSlugPath, matchUsedListingPath } from './paths'
+import {
+  localizedPath,
+  localizedSlugPath,
+  matchOrderPath,
+  matchSlugPath,
+  matchUsedListingBuyPath,
+  matchUsedListingPath,
+} from './paths'
 
 describe('localizedPath', () => {
   it('vi không prefix, en có /en, pathname đã dịch', () => {
@@ -76,5 +83,33 @@ describe('matchUsedListingPath', () => {
     expect(matchUsedListingPath('/cho-sach-cu/12/mua')).toBeNull()
     expect(matchUsedListingPath('/en/cho-sach-cu/12')).toBeNull()
     expect(matchUsedListingPath('/tai-khoan/sach-toi-ban/12')).toBeNull()
+  })
+})
+
+describe('matchUsedListingBuyPath', () => {
+  it('trang mua một tin ở cả hai locale, id chưa kiểm định dạng (đã giải mã)', () => {
+    expect(matchUsedListingBuyPath('/cho-sach-cu/12/mua')).toEqual({ id: '12', locale: 'vi' })
+    expect(matchUsedListingBuyPath('/en/used-books/12/buy')).toEqual({ id: '12', locale: 'en' })
+    expect(matchUsedListingBuyPath('/cho-sach-cu/abc/mua')).toEqual({ id: 'abc', locale: 'vi' })
+    expect(matchUsedListingBuyPath('/cho-sach-cu/a%20b/mua')).toEqual({ id: 'a b', locale: 'vi' })
+  })
+
+  it('không khớp trang tin, danh sách chợ, thiếu / thừa đoạn, hậu tố của locale khác, % hỏng', () => {
+    for (const path of [
+      '/cho-sach-cu/12',
+      '/en/used-books/12',
+      '/cho-sach-cu',
+      '/cho-sach-cu/mua',
+      '/cho-sach-cu//mua',
+      '/cho-sach-cu/1/2/mua',
+      '/cho-sach-cu/12/mua/x',
+      '/cho-sach-cu/12/buy',
+      '/en/used-books/12/mua',
+      '/en/cho-sach-cu/12/mua',
+      '/used-books/12/buy',
+      '/cho-sach-cu/%E0%A4%A/mua',
+    ]) {
+      expect(matchUsedListingBuyPath(path), path).toBeNull()
+    }
   })
 })

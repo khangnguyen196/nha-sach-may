@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { ZodType } from 'zod'
 import {
   createListingSchema,
   expectedUpdatedAtSchema,
@@ -7,6 +8,7 @@ import {
   listingIdSchema,
   photoFolder,
   updateListingSchema,
+  usedOrderSchema,
 } from './schemas'
 
 const SELLER = '0b0e8f8e-1c2d-4e5f-8a9b-0c1d2e3f4a5b'
@@ -20,7 +22,7 @@ const valid = {
   photos: [photo(1)],
 }
 
-const fieldOf = (input: unknown, schema = createListingSchema) => {
+const fieldOf = (input: unknown, schema: ZodType = createListingSchema) => {
   const result = schema.safeParse(input)
   return result.success ? null : Object.fromEntries(result.error.issues.map((issue) => [issue.path[0], issue.message]))
 }
@@ -122,6 +124,53 @@ describe('expectedUpdatedAtSchema (updated_at của bản tin đang hiển thị
   it('không phải thời điểm, thiếu múi giờ, trống / thiếu → lỗi', () => {
     for (const value of ['abc', '2026-10-24T05:05:00.123456', '2026-10-24T05:05:00', '', null, undefined]) {
       expect(expectedUpdatedAtSchema.safeParse(value).success, String(value)).toBe(false)
+    }
+  })
+})
+
+describe('usedOrderSchema (form mua một tin)', () => {
+  const order = {
+    address_id: '7',
+    payment_method: 'bank_transfer',
+    note: '  Giao giờ hành chính\r\n  ',
+    idempotency_key: '3f0c2b7e-8d4a-4b8e-9a51-2a7c1f6d9e30',
+    expected_total: '110000',
+    expected_updated_at: '2026-10-24T05:05:00.123456+00:00',
+  }
+
+  it('ô của form → kiểu của RPC: số, ghi chú cắt + CRLF → LF, updated_at giữ nguyên chuỗi', () => {
+    expect(usedOrderSchema.parse(order)).toEqual({
+      address_id: 7,
+      payment_method: 'bank_transfer',
+      note: 'Giao giờ hành chính',
+      idempotency_key: order.idempotency_key,
+      expected_total: 110_000,
+      expected_updated_at: order.expected_updated_at,
+    })
+  })
+
+  it('thiếu phương thức → cod; ghi chú trống → null', () => {
+    expect(usedOrderSchema.parse({ ...order, payment_method: undefined, note: '   ' })).toMatchObject({
+      payment_method: 'cod',
+      note: null,
+    })
+  })
+
+  it('ghi chú quá 500 ký tự → lỗi tại ô note; địa chỉ sai → lỗi address', () => {
+    expect(fieldOf({ ...order, note: 'a'.repeat(501) }, usedOrderSchema)).toEqual({ note: 'note' })
+    expect(fieldOf({ ...order, address_id: '' }, usedOrderSchema)).toEqual({ address_id: 'address' })
+  })
+
+  it('updated_at / key / tổng / phương thức sai hoặc thiếu → lỗi', () => {
+    for (const patch of [
+      { expected_updated_at: undefined },
+      { expected_updated_at: '2026-10-24T05:05:00' },
+      { idempotency_key: 'abc' },
+      { expected_total: '-1' },
+      { expected_total: '1.5' },
+      { payment_method: 'card' },
+    ]) {
+      expect(usedOrderSchema.safeParse({ ...order, ...patch }).success, JSON.stringify(patch)).toBe(false)
     }
   })
 })

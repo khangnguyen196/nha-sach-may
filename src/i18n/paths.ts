@@ -17,7 +17,7 @@ export function localizedPath(pathname: StaticPathname, locale: Locale, query?: 
 
 export type SlugPathname = '/books/[slug]' | '/categories/[slug]' | '/authors/[slug]'
 type OrderPathname = '/checkout/success/[code]' | '/account/orders/[code]'
-type ParamPathname = SlugPathname | OrderPathname | '/account/addresses/[id]' | '/used-books/[id]'
+type ParamPathname = SlugPathname | OrderPathname | '/account/addresses/[id]' | '/used-books/[id]' | '/used-books/[id]/buy'
 
 /** URL hiển thị của trang có một tham số động ([slug], [code]) theo locale */
 function localizedParamPath(pathname: ParamPathname, value: string, locale: Locale) {
@@ -77,9 +77,32 @@ export function matchAddressPath(pathname: string): { id: string; locale: Locale
 
 /**
  * Trang một tin trên Chợ sách cũ (/cho-sach-cu/<id>, /en/used-books/<id>) → id (chưa kiểm định dạng), locale. Danh sách
- * (/cho-sach-cu) và trang con của tin (/cho-sach-cu/<id>/mua ở P-C) không khớp.
+ * (/cho-sach-cu) và trang mua của tin (/cho-sach-cu/<id>/mua: matchUsedListingBuyPath) không khớp.
  */
 export function matchUsedListingPath(pathname: string): { id: string; locale: Locale } | null {
   const match = matchParamPath(pathname, ['/used-books/[id]'] as const)
   return match && { id: match.value, locale: match.locale }
+}
+
+/** Chỗ của tham số khi tách tiền tố / hậu tố của URL mẫu (chỉ chữ thường + `_`: encodeURIComponent giữ nguyên) */
+const PARAM_SLOT = '__param__'
+
+/**
+ * Trang mua một tin (/cho-sach-cu/<id>/mua, /en/used-books/<id>/buy) → id (chưa kiểm định dạng, đã giải mã), locale.
+ * Chỉ khớp đúng một đoạn giữa tiền tố và hậu tố: trang tin, danh sách chợ, `/cho-sach-cu/mua`, `/cho-sach-cu/1/2/mua`
+ * không khớp; chuỗi % hỏng → null.
+ */
+export function matchUsedListingBuyPath(pathname: string): { id: string; locale: Locale } | null {
+  for (const locale of routing.locales) {
+    const [prefix = '', suffix = ''] = localizedParamPath('/used-books/[id]/buy', PARAM_SLOT, locale).split(PARAM_SLOT)
+    if (!pathname.startsWith(prefix) || !pathname.endsWith(suffix)) continue
+    const id = pathname.slice(prefix.length, pathname.length - suffix.length)
+    if (!id || id.includes('/')) continue
+    try {
+      return { id: decodeURIComponent(id), locale }
+    } catch {
+      return null
+    }
+  }
+  return null
 }

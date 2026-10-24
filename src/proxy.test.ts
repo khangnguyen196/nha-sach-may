@@ -29,6 +29,7 @@ vi.mock('@supabase/ssr', () => ({
     const query = {
       select: () => query,
       eq: () => query,
+      in: () => query,
       then: (resolve: (value: { count: number; error: null }) => void) => resolve({ count: state.orderCount, error: null }),
     }
     return {
@@ -127,6 +128,53 @@ describe('proxy: x-not-found do khách tự gửi', () => {
     const response = await proxy(
       new NextRequest('http://localhost:3000/abc', { method: 'POST', body: 'a=1', headers: { 'x-not-found': 'book' } }),
     )
+    expect(forwarded(response, 'x-not-found')).toBeNull()
+  })
+})
+
+describe('proxy: trang mua sách cũ (/cho-sach-cu/<id>/mua)', () => {
+  beforeEach(() => {
+    state.slugExists = true
+    state.userId = null
+    state.orderCount = 0
+  })
+
+  it.each([
+    ['/cho-sach-cu/12/mua', '/dang-nhap?next=%2Fcho-sach-cu%2F12%2Fmua'],
+    ['/en/used-books/12/buy', '/en/login?next=%2Fen%2Fused-books%2F12%2Fbuy'],
+    ['/cho-sach-cu/abc/mua', '/dang-nhap?next=%2Fcho-sach-cu%2Fabc%2Fmua'],
+  ])('chưa đăng nhập GET %s → %s', async (path, login) => {
+    const response = await get(path)
+    const location = new URL(response.headers.get('location') ?? 'http://x/')
+    expect(`${location.pathname}${location.search}`).toBe(login)
+  })
+
+  it('chưa đăng nhập POST (Server Action) → không chuyển hướng, action tự trả AUTH_REQUIRED', async () => {
+    const response = await proxy(new NextRequest('http://localhost:3000/cho-sach-cu/12/mua', { method: 'POST', body: 'a=1' }))
+    expect(response.headers.get('location')).toBeNull()
+    expect(rewriteTo(response)).not.toContain('__not-found')
+  })
+
+  it('đã đăng nhập: tin không công khai / id sai dạng → 404 used-market (như trang tin)', async () => {
+    state.userId = 'user-1'
+    for (const [path, target] of [
+      ['/cho-sach-cu/12/mua', '/vi/__not-found'],
+      ['/en/used-books/12/buy', '/en/__not-found'],
+      ['/cho-sach-cu/abc/mua', '/vi/__not-found'],
+      ['/cho-sach-cu/0/mua', '/vi/__not-found'],
+    ] as const) {
+      const response = await get(path)
+      expect(rewriteTo(response), path).toBe(target)
+      expect(forwarded(response, 'x-not-found'), path).toBe('used-market')
+    }
+  })
+
+  it('đã đăng nhập, tin đã duyệt / đã bán → vào trang (không 404)', async () => {
+    state.userId = 'user-1'
+    state.orderCount = 1
+    const response = await get('/cho-sach-cu/12/mua')
+    expect(response.headers.get('location')).toBeNull()
+    expect(rewriteTo(response)).not.toContain('__not-found')
     expect(forwarded(response, 'x-not-found')).toBeNull()
   })
 })
