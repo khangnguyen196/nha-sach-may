@@ -294,10 +294,15 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
   trả" (`saleStatusWithPaidAt`, Vitest); `pickAddressId` (`features/checkout/address-selection.ts`, Vitest) dùng chung
   /thanh-toan + trang mua; comment `AddressOptions`; aria-label nút "Đã trả: “<tên sách>”" ở `/admin/tra-nguoi-ban`.
 
+- [x] Vòng 19: 404 segment prefetch `(shop)` ở /vi/* (flaky (m5)) → `experimental.prefetchInlining: false` (phương án A,
+  chủ dự án chọn); (m8) chờ `ready` thật (bộ đếm ghi chú) trước khi kiểm nút khóa; CLAUDE.md (pathnames trang mua, chữ
+  ký RPC + `admin_seller_payouts`, chat ẩn ở trang mua, `/admin/tra-nguoi-ban`, VietQR, Mutation, regex e2e, cờ prefetch).
+  Chủ dự án quyết (2026-10-24): duyệt `place_used_order` + `p_expected_updated_at`; giữ `seller_id` đọc được với
+  authenticated; `VIETQR_*` Production là số demo → giữ cách hiện QR như đơn thường.
+
 Còn lại: cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại commit đã duyệt) ra file ngoài
-repo + kiểm trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test điện thoại luồng mua; câu hỏi
-dồn: sửa CLAUDE.md (đoạn đề xuất ở báo cáo vòng 18, bản sửa của vòng 17), giữ `seller_id` đọc được với
-authenticated, duyệt `place_used_order` + `p_expected_updated_at`.
+repo + chụp trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test điện thoại luồng mua trên
+Preview → lên main. Giữa lúc chạy SQL và lúc lên main, admin trên web thật không duyệt / từ chối tin được.
 
 ## Test (P-A)
 
