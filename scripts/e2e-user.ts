@@ -788,6 +788,24 @@ export async function usedListingRow(id: number) {
   return data
 }
 
+/** Mọi tin sách cũ của một người bán, mới nhất trước (service role, thấy mọi trạng thái) */
+export async function usedListingsOf(sellerId: string) {
+  const { data, error } = await adminClient()
+    .from('used_listings')
+    .select('id, status, price, fee, condition, description, photos')
+    .eq('seller_id', sellerId)
+    .order('id', { ascending: false })
+  if (error) throw new Error(`usedListingsOf: ${error.message}`)
+  return data
+}
+
+/** Tải một ảnh sách cũ bằng service role (bỏ qua policy đọc) để kiểm định dạng / metadata */
+export async function downloadUsedPhoto(path: string) {
+  const { data, error } = await adminClient().storage.from(USED_PHOTO_BUCKET).download(path)
+  if (error) throw new Error(`downloadUsedPhoto: ${error.message}`)
+  return Buffer.from(await data.arrayBuffer())
+}
+
 /** Khoản trả người bán của một tin (service role) */
 export async function sellerPayoutsOf(listingId: number) {
   const { data, error } = await adminClient()
