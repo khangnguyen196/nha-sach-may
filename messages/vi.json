@@ -41,7 +41,9 @@
     "account": "Tài khoản",
     "firstPage": "Về trang đầu",
     "usedListing": "Không tìm thấy tin này. Có thể tin không có hoặc thuộc một tài khoản khác. Bạn xem lại trong Sách tôi bán nhé.",
-    "myListings": "Sách tôi bán"
+    "myListings": "Sách tôi bán",
+    "usedMarket": "Tin sách cũ này không có hoặc không còn trên chợ. Bạn xem các tin khác trong Chợ sách cũ nhé.",
+    "usedMarketLink": "Về Chợ sách cũ"
   },
   "errorPage": {
     "title": "Có lỗi phía Nhà Sách Mây",
@@ -547,7 +549,8 @@
     "footerAbout": "Dự án học tập, phi thương mại. Thông tin sách lấy từ Google Books, một số ảnh bìa từ <openLibrary>Open Library</openLibrary>; giá bán chỉ để minh họa.",
     "copyright": "© Nhà Sách Mây",
     "admin": "Quản trị",
-    "footerContact": "Liên hệ: {email}"
+    "footerContact": "Liên hệ: {email}",
+    "footerUsedMarket": "Chợ sách cũ"
   },
   "search": {
     "title": "Tìm kiếm sách",
@@ -652,7 +655,8 @@
       "en": "Tiếng Anh"
     },
     "related": "Cùng danh mục",
-    "metaDescription": "{title}: thông tin chi tiết, giá bán và tình trạng còn hàng tại Nhà Sách Mây."
+    "metaDescription": "{title}: thông tin chi tiết, giá bán và tình trạng còn hàng tại Nhà Sách Mây.",
+    "usedCopies": "{count, plural, other {Có # bản cũ từ {price}}}"
   },
   "cart": {
     "title": "Giỏ hàng",
@@ -943,7 +947,9 @@
     "admin": "Quản trị cửa hàng",
     "adminDescription": "Sách, đơn hàng, voucher (chỉ có tiếng Việt).",
     "myListings": "Sách tôi bán",
-    "myListingsDescription": "Đăng bán sách cũ, theo dõi tin chờ duyệt và đang bán."
+    "myListingsDescription": "Đăng bán sách cũ, theo dõi tin chờ duyệt và đang bán.",
+    "usedMarket": "Chợ sách cũ",
+    "usedMarketDescription": "Xem sách cũ thành viên đăng bán, đã được cửa hàng duyệt."
   },
   "address": {
     "title": "Sổ địa chỉ",
@@ -1058,6 +1064,50 @@
       "notEditable": "Tin này đã bán hoặc đã rút nên không sửa được.",
       "bookUnavailable": "Sách của tin này đã ngừng bán nên chưa sửa tin được. Bạn vẫn rút tin được ở Sách tôi bán.",
       "backToList": "Về Sách tôi bán"
+    },
+    "market": {
+      "title": "Chợ sách cũ",
+      "metaDescription": "Sách cũ do thành viên Nhà Sách Mây đăng bán, cửa hàng duyệt từng tin: ảnh thật, tình trạng, giá. Tính năng demo, không có giao dịch thật.",
+      "lead": "Sách đã đọc do thành viên đăng bán. Mỗi tin có ảnh thật của cuốn sách và được cửa hàng duyệt trước khi lên chợ.",
+      "resultCount": "{count, plural, other {# tin}}",
+      "categoryFilter": "Danh mục",
+      "allCategories": "Tất cả",
+      "sortLabel": "Sắp xếp",
+      "sort": {
+        "newest": "Mới nhất",
+        "price-asc": "Giá tăng dần",
+        "price-desc": "Giá giảm dần"
+      },
+      "bookFilter": "Bản cũ của “{title}”",
+      "bookFilterUnknown": "Bản cũ của một cuốn sách",
+      "clearBook": "Xem mọi sách cũ",
+      "empty": {
+        "title": "Chợ chưa có sách cũ nào",
+        "description": "Có cuốn sách đã đọc xong? Đăng bán ở Sách tôi bán, cửa hàng duyệt xong tin sẽ lên chợ."
+      },
+      "emptyFiltered": {
+        "title": "Không có sách cũ nào khớp",
+        "description": "Bạn thử danh mục khác hoặc xem mọi sách cũ nhé."
+      },
+      "sell": "Đăng bán sách của bạn",
+      "seller": "Người bán: {name}",
+      "member": "Thành viên",
+      "sold": "Đã bán",
+      "noPhoto": "Không có ảnh",
+      "detailTitle": "{title} (sách cũ)",
+      "detailDescription": "Bản cũ của “{title}”, tình trạng {condition}, giá {price} trên Chợ sách cũ của Nhà Sách Mây.",
+      "photos": "Ảnh thật của cuốn sách",
+      "photoAlt": "Ảnh {number} của bản cũ “{title}”",
+      "photoMissing": "Ảnh không còn",
+      "price": "Giá",
+      "conditionLabel": "Tình trạng",
+      "sellerLabel": "Người bán",
+      "approvedAt": "Lên chợ ngày",
+      "description": "Người bán ghi chú",
+      "noDescription": "Người bán không ghi chú thêm.",
+      "bookLink": "Xem sách mới trong cửa hàng",
+      "soldNote": "Cuốn sách cũ này đã có người mua.",
+      "backToMarket": "Về Chợ sách cũ"
     }
   },
   "errors": {

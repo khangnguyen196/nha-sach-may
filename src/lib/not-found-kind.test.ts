@@ -6,6 +6,7 @@ describe('parseNotFoundKind', () => {
     expect(parseNotFoundKind('book')).toBe('book')
     expect(parseNotFoundKind('order')).toBe('order')
     expect(parseNotFoundKind('used-listing')).toBe('used-listing')
+    expect(parseNotFoundKind('used-market')).toBe('used-market')
     expect(parseNotFoundKind('BOOK')).toBe('page')
     expect(parseNotFoundKind('<script>')).toBe('page')
     expect(parseNotFoundKind(null)).toBe('page')

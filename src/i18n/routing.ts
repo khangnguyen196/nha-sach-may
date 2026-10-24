@@ -18,6 +18,8 @@ export const routing = defineRouting({
     '/cart': { vi: '/gio-hang', en: '/cart' },
     '/checkout': { vi: '/thanh-toan', en: '/checkout' },
     '/checkout/success/[code]': { vi: '/thanh-toan/thanh-cong/[code]', en: '/checkout/success/[code]' },
+    '/used-books': { vi: '/cho-sach-cu', en: '/used-books' },
+    '/used-books/[id]': { vi: '/cho-sach-cu/[id]', en: '/used-books/[id]' },
     '/account': { vi: '/tai-khoan', en: '/account' },
     '/account/addresses': { vi: '/tai-khoan/dia-chi', en: '/account/addresses' },
     '/account/addresses/new': { vi: '/tai-khoan/dia-chi/moi', en: '/account/addresses/new' },

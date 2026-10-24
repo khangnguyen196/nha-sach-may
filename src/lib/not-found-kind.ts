@@ -2,7 +2,17 @@
 // dẫn proxy không chạy, xem withoutClientNotFoundKind) → not-found.tsx giải thích đúng chuyện:
 // sách ngừng bán, danh mục đang ẩn, đơn của tài khoản khác… File không import gì: proxy dùng được.
 // used-listing: trang sửa tin sách cũ của chính mình (tin không có / của người khác: cùng một câu)
-export const NOT_FOUND_KINDS = ['page', 'book', 'category', 'author', 'order', 'address', 'used-listing'] as const
+// used-market: trang công khai một tin trên Chợ sách cũ (tin không có, chưa duyệt, bị từ chối, đã rút: cùng một câu)
+export const NOT_FOUND_KINDS = [
+  'page',
+  'book',
+  'category',
+  'author',
+  'order',
+  'address',
+  'used-listing',
+  'used-market',
+] as const
 export type NotFoundKind = (typeof NOT_FOUND_KINDS)[number]
 
 export const NOT_FOUND_HEADER = 'x-not-found'

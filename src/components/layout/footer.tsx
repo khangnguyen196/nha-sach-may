@@ -33,6 +33,15 @@ export async function Footer() {
             })}
           </p>
           <Contact text={t('footerContact', { email: SUPPORT_EMAIL })} className="mt-3 text-sm text-muted-foreground" />
+          {/* Quyết định 11 của chợ sách cũ: link ở footer + trang tài khoản, không thêm vào header */}
+          <p className="mt-3 text-sm">
+            <Link
+              href="/used-books"
+              className="rounded-sm text-muted-foreground underline underline-offset-4 transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {t('footerUsedMarket')}
+            </Link>
+          </p>
         </div>
         {parents.length > 0 && (
           <nav aria-labelledby="footer-browse">

@@ -30,6 +30,7 @@ export async function NotFoundView({ kind, heading = 'h1', primary }: Props) {
     order: t('order'),
     address: t('address'),
     'used-listing': t('usedListing'),
+    'used-market': t('usedMarket'),
   }[kind]
   // Sách / danh mục / tác giả: tìm sách hoặc xem danh mục
   const catalogLinks: NotFoundLink[] = [
@@ -56,6 +57,10 @@ export async function NotFoundView({ kind, heading = 'h1', primary }: Props) {
     'used-listing': [
       { href: '/account/my-listings', label: t('myListings') },
       { href: '/account', label: t('account') },
+    ],
+    'used-market': [
+      { href: '/used-books', label: t('usedMarketLink') },
+      { href: '/', label: t('backHome') },
     ],
   }
   const [first, second] = primary ? [primary, links[kind][0]] : links[kind]

@@ -1,4 +1,12 @@
-import { ChevronRightIcon, LayoutDashboardIcon, MapPinIcon, PackageIcon, TagIcon, type LucideIcon } from 'lucide-react'
+import {
+  ChevronRightIcon,
+  LayoutDashboardIcon,
+  LibraryIcon,
+  MapPinIcon,
+  PackageIcon,
+  TagIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
@@ -66,6 +74,12 @@ async function AccountContent({ locale }: { locale: Locale }) {
         title={t('myListings')}
         description={t('myListingsDescription')}
       />
+      <AccountCard
+        href="/used-books"
+        icon={LibraryIcon}
+        title={t('usedMarket')}
+        description={t('usedMarketDescription')}
+      />
       {admin && (
         // Khu quản trị không có [locale] → AdminLink (sang root layout khác: Next tải lại cả trang). Chỉ render khi
         // server xác nhận role admin; không prefetch trang admin mỗi lần mở trang tài khoản.
@@ -101,7 +115,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
 }
 
 type AccountCardProps = {
-  href: '/account/orders' | '/account/addresses' | '/account/my-listings'
+  href: '/account/orders' | '/account/addresses' | '/account/my-listings' | '/used-books'
   icon: LucideIcon
   title: string
   description: string
@@ -139,6 +153,7 @@ function AccountSkeleton() {
     <div aria-hidden className="animate-pulse">
       <div className="mt-3 h-5 w-48 rounded-sm bg-surface-raised" />
       <div className="mt-8 h-[78px] rounded-lg bg-surface-raised" />
+      <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />

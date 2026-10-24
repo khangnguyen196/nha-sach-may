@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { localizedPath, localizedSlugPath, matchOrderPath, matchSlugPath } from './paths'
+import { localizedPath, localizedSlugPath, matchOrderPath, matchSlugPath, matchUsedListingPath } from './paths'
 
 describe('localizedPath', () => {
   it('vi không prefix, en có /en, pathname đã dịch', () => {
@@ -59,5 +59,22 @@ describe('matchOrderPath', () => {
     expect(matchOrderPath('/tai-khoan/don-hang')).toBeNull()
     expect(matchOrderPath('/thanh-toan')).toBeNull()
     expect(matchOrderPath('/tai-khoan/don-hang/a/b')).toBeNull()
+  })
+})
+
+describe('matchUsedListingPath', () => {
+  it('trang một tin ở cả hai locale, id chưa kiểm định dạng', () => {
+    expect(matchUsedListingPath('/cho-sach-cu/12')).toEqual({ id: '12', locale: 'vi' })
+    expect(matchUsedListingPath('/en/used-books/12')).toEqual({ id: '12', locale: 'en' })
+    expect(matchUsedListingPath('/cho-sach-cu/abc')).toEqual({ id: 'abc', locale: 'vi' })
+  })
+
+  it('không khớp danh sách chợ, trang con của tin, trang khác', () => {
+    expect(matchUsedListingPath('/cho-sach-cu')).toBeNull()
+    expect(matchUsedListingPath('/cho-sach-cu/')).toBeNull()
+    expect(matchUsedListingPath('/en/used-books')).toBeNull()
+    expect(matchUsedListingPath('/cho-sach-cu/12/mua')).toBeNull()
+    expect(matchUsedListingPath('/en/cho-sach-cu/12')).toBeNull()
+    expect(matchUsedListingPath('/tai-khoan/sach-toi-ban/12')).toBeNull()
   })
 })

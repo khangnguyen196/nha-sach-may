@@ -16,13 +16,14 @@ import {
   type BookDetail,
   type Category,
 } from '@/features/books/queries'
-import { discountPercent, showRelatedShelf, splitParagraphs, truncateText } from '@/features/books/utils'
+import { discountPercent, showRelatedShelf, splitParagraphs, truncateText, visibleCategoryIds } from '@/features/books/utils'
 import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
 import { cartLimit, MAX_LINES } from '@/features/cart/guest-cart'
 import { MyReview } from '@/features/reviews/components/my-review'
 import { RatingStars } from '@/features/reviews/components/rating-stars'
 import { ReviewList, ReviewListSkeleton } from '@/features/reviews/components/review-list'
+import { UsedCopies, UsedCopiesSkeleton } from '@/features/used/components/used-copies'
 import { localeAlternates } from '@/i18n/alternates'
 import { Link } from '@/i18n/navigation'
 import { localizedSlugPath } from '@/i18n/paths'
@@ -194,6 +195,12 @@ async function BookContent({ params }: { params: Props['params'] }) {
           <RatingSummary book={book} />
           <People book={book} />
           <PriceBlock book={book} />
+          {/* Chợ sách cũ: tin của sách thuộc danh mục ẩn không lên chợ (quyết định 10) → không hiện dòng này */}
+          {(book.category_id === null || visibleCategoryIds(categories).includes(book.category_id)) && (
+            <Suspense fallback={<UsedCopiesSkeleton />}>
+              <UsedCopies bookId={book.id} slug={book.slug} />
+            </Suspense>
+          )}
           <Description book={book} />
           <Details book={book} />
         </div>

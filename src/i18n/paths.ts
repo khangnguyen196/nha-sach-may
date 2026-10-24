@@ -17,7 +17,7 @@ export function localizedPath(pathname: StaticPathname, locale: Locale, query?: 
 
 export type SlugPathname = '/books/[slug]' | '/categories/[slug]' | '/authors/[slug]'
 type OrderPathname = '/checkout/success/[code]' | '/account/orders/[code]'
-type ParamPathname = SlugPathname | OrderPathname | '/account/addresses/[id]'
+type ParamPathname = SlugPathname | OrderPathname | '/account/addresses/[id]' | '/used-books/[id]'
 
 /** URL hiển thị của trang có một tham số động ([slug], [code]) theo locale */
 function localizedParamPath(pathname: ParamPathname, value: string, locale: Locale) {
@@ -73,4 +73,13 @@ export function matchAddressPath(pathname: string): { id: string; locale: Locale
   const match = matchParamPath(pathname, ['/account/addresses/[id]'] as const)
   if (!match || pathname === localizedPath('/account/addresses/new', match.locale)) return null
   return { id: match.value, locale: match.locale }
+}
+
+/**
+ * Trang một tin trên Chợ sách cũ (/cho-sach-cu/<id>, /en/used-books/<id>) → id (chưa kiểm định dạng), locale. Danh sách
+ * (/cho-sach-cu) và trang con của tin (/cho-sach-cu/<id>/mua ở P-C) không khớp.
+ */
+export function matchUsedListingPath(pathname: string): { id: string; locale: Locale } | null {
+  const match = matchParamPath(pathname, ['/used-books/[id]'] as const)
+  return match && { id: match.value, locale: match.locale }
 }

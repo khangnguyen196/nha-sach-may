@@ -3,6 +3,7 @@ import { searchQuerySchema } from '@/features/books/schemas'
 import type { ValidationKey } from '@/lib/errors'
 import { optionalMultilineText } from '@/lib/text-schema'
 import { Constants } from '@/types/database'
+import { MARKET_SORTS } from './market-params'
 
 // Chỉ import ở server (actions.ts): form đăng / sửa tin là client leaf không kéo zod (CLAUDE.md → Hiệu năng). Form dùng
 // thuộc tính HTML (maxLength…) cho phản hồi nhanh; kiểm tra thật ở đây và ở RPC (create / update_used_listing).
@@ -79,3 +80,21 @@ export const quotePriceSchema = z.number().int().min(1).max(2_147_483_647)
 
 /** Từ khóa tìm sách ở form đăng tin: cùng quy tắc với tìm kiếm của cửa hàng */
 export const listingSearchSchema = searchQuerySchema
+
+// ---------- Tham số URL của Chợ sách cũ (/cho-sach-cu) ----------
+
+/** searchParams có thể lặp key (`?a=1&a=2`) → chỉ lấy giá trị đầu */
+const firstValue = (value: unknown) => (Array.isArray(value) ? value[0] : value)
+const optionalParam = <T extends z.ZodType>(schema: T) => z.preprocess(firstValue, schema.optional()).catch(undefined)
+const slugParam = z
+  .string()
+  .max(100)
+  .regex(/^[a-z0-9-]+$/)
+
+/** Như catalogParamsSchema của /sach: giá trị sai → bỏ qua về mặc định, không throw (URL sửa tay không làm vỡ trang) */
+export const marketParamsSchema = z.object({
+  cat: optionalParam(slugParam),
+  book: optionalParam(slugParam),
+  sort: optionalParam(z.enum(MARKET_SORTS)),
+  page: z.preprocess(firstValue, z.coerce.number().int().min(1).max(10_000)).catch(1),
+})

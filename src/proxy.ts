@@ -5,7 +5,14 @@ import type { Locale } from 'next-intl'
 import { NextRequest, NextResponse } from 'next/server'
 import { safeNextPath } from '@/features/auth/next-path'
 import { ORDER_CODE } from '@/features/orders/params'
-import { localizedPath, matchAddressPath, matchOrderPath, matchSlugPath, type SlugPathname } from '@/i18n/paths'
+import {
+  localizedPath,
+  matchAddressPath,
+  matchOrderPath,
+  matchSlugPath,
+  matchUsedListingPath,
+  type SlugPathname,
+} from '@/i18n/paths'
 import { routing } from '@/i18n/routing'
 import type { Database } from '@/types/database'
 import { NOT_FOUND_HEADER, type NotFoundKind } from '@/lib/not-found-kind'
@@ -121,6 +128,29 @@ async function missingListing(pathname: string, supabase: SupabaseClient<Databas
 }
 
 /**
+ * Trang công khai một tin sách cũ mà tin không công khai: không có, chờ duyệt, bị từ chối, đã rút → cùng một trang 404.
+ * BẮT BUỘC lọc status: client theo phiên, RLS cho người bán / admin đọc cả tin chờ duyệt / bị từ chối của mình (trang
+ * công khai thì không hiện các tin đó). Chạy cả khi chưa đăng nhập (anon đọc được tin đã duyệt / đã bán). Lỗi → cho
+ * qua: trang tự hiện UI 404.
+ */
+async function missingUsedListing(pathname: string, supabase: SupabaseClient<Database>): Promise<Missing | null> {
+  const match = matchUsedListingPath(pathname)
+  if (!match) return null
+  const missing = { locale: match.locale, kind: 'used-market' } as const
+  if (!/^[1-9]\d{0,17}$/.test(match.id)) return missing
+  const { count, error } = await supabase
+    .from('used_listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', Number(match.id))
+    .in('status', ['approved', 'sold'])
+  if (error) {
+    console.error('used-market-guard:', error.message)
+    return null
+  }
+  return count === 0 ? missing : null
+}
+
+/**
  * Slug không tồn tại, đơn không thuộc người đang đăng nhập → rewrite sang một đường dẫn không khớp
  * route nào của locale đó: catch-all `[locale]/[...rest]` gọi notFound() trước khi stream → HTTP 404 thật +
  * not-found.tsx đúng ngôn ngữ. Trang tự kiểm thì đã stream (Cache Components) nên chỉ trả được 200.
@@ -131,6 +161,7 @@ async function notFoundRewrite(request: NextRequest, supabase: SupabaseClient<Da
   const { pathname } = request.nextUrl
   const missing =
     (await missingSlug(pathname)) ??
+    (await missingUsedListing(pathname, supabase)) ??
     (userId
       ? ((await missingOrder(pathname, supabase, userId)) ??
         (await missingAddress(pathname, supabase, userId)) ??

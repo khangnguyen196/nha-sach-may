@@ -41,7 +41,9 @@
     "account": "Account",
     "firstPage": "Go to first page",
     "usedListing": "We couldn’t find this listing. It may not exist or may belong to another account. Please check My listings.",
-    "myListings": "My listings"
+    "myListings": "My listings",
+    "usedMarket": "This used-book listing doesn’t exist or is no longer on the market. Take a look at other listings in Used Books.",
+    "usedMarketLink": "Back to Used Books"
   },
   "errorPage": {
     "title": "Something went wrong on our side",
@@ -64,7 +66,8 @@
     "footerAbout": "A non-commercial learning project. Book data comes from Google Books, some covers from <openLibrary>Open Library</openLibrary>; prices are for illustration only.",
     "copyright": "© Nhà Sách Mây",
     "admin": "Admin",
-    "footerContact": "Contact: {email}"
+    "footerContact": "Contact: {email}",
+    "footerUsedMarket": "Used Books"
   },
   "search": {
     "title": "Search books",
@@ -169,7 +172,8 @@
       "en": "English"
     },
     "related": "More in this category",
-    "metaDescription": "{title}: details, price and availability at Nhà Sách Mây."
+    "metaDescription": "{title}: details, price and availability at Nhà Sách Mây.",
+    "usedCopies": "{count, plural, one {# used copy from {price}} other {# used copies from {price}}}"
   },
   "cart": {
     "title": "Cart",
@@ -460,7 +464,9 @@
     "admin": "Store admin",
     "adminDescription": "Books, orders and vouchers (Vietnamese only).",
     "myListings": "My listings",
-    "myListingsDescription": "Sell your used books and track your pending and live listings."
+    "myListingsDescription": "Sell your used books and track your pending and live listings.",
+    "usedMarket": "Used Books",
+    "usedMarketDescription": "Browse used books listed by members and reviewed by the store."
   },
   "address": {
     "title": "Address book",
@@ -575,6 +581,50 @@
       "notEditable": "This listing has been sold or withdrawn, so it can’t be edited.",
       "bookUnavailable": "The book in this listing is no longer sold by the store, so the listing can’t be edited. You can still withdraw it from My listings.",
       "backToList": "Back to My listings"
+    },
+    "market": {
+      "title": "Used Books",
+      "metaDescription": "Used books listed by Nhà Sách Mây members, each listing reviewed by the store: real photos, condition and price. Demo feature, no real transactions.",
+      "lead": "Books members have finished reading, listed for sale. Every listing has real photos of the copy and is reviewed by the store before it goes live.",
+      "resultCount": "{count, plural, one {# listing} other {# listings}}",
+      "categoryFilter": "Category",
+      "allCategories": "All",
+      "sortLabel": "Sort by",
+      "sort": {
+        "newest": "Newest",
+        "price-asc": "Price: low to high",
+        "price-desc": "Price: high to low"
+      },
+      "bookFilter": "Used copies of “{title}”",
+      "bookFilterUnknown": "Used copies of one book",
+      "clearBook": "See all used books",
+      "empty": {
+        "title": "No used books for sale yet",
+        "description": "Finished a book? List it under My listings; once the store reviews it, it goes live here."
+      },
+      "emptyFiltered": {
+        "title": "No used books match",
+        "description": "Try another category or see all used books."
+      },
+      "sell": "Sell your books",
+      "seller": "Seller: {name}",
+      "member": "Member",
+      "sold": "Sold",
+      "noPhoto": "No photo",
+      "detailTitle": "{title} (used)",
+      "detailDescription": "A used copy of “{title}”, condition {condition}, priced at {price} on the Nhà Sách Mây Used Books market.",
+      "photos": "Real photos of the copy",
+      "photoAlt": "Photo {number} of the used copy of “{title}”",
+      "photoMissing": "Photo unavailable",
+      "price": "Price",
+      "conditionLabel": "Condition",
+      "sellerLabel": "Seller",
+      "approvedAt": "Listed on",
+      "description": "Seller’s notes",
+      "noDescription": "The seller added no notes.",
+      "bookLink": "See the new book in the store",
+      "soldNote": "This used copy has already been bought.",
+      "backToMarket": "Back to Used Books"
     }
   },
   "errors": {

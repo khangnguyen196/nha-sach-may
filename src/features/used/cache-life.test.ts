@@ -159,6 +159,11 @@ describe('link ký ảnh sách cũ: cache ngắn hơn hạn link (quyết địn
         'app/[locale]/(shop)/account/my-listings/page.tsx',
         'features/admin/used/queries.ts',
         'app/admin/sach-cu/[id]/page.tsx',
+        // Trang công khai (vòng 9): query 'use cache' có link ký + các trang dùng nó
+        'features/used/public-queries.ts',
+        'app/[locale]/(shop)/used-books/page.tsx',
+        'app/[locale]/(shop)/used-books/[id]/page.tsx',
+        'app/[locale]/(shop)/books/[slug]/page.tsx',
       ]),
     )
     expect(files.flatMap((file) => cacheProblems(parse(file)))).toEqual([])
