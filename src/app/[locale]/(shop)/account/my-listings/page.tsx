@@ -106,6 +106,7 @@ async function ListingRow({ listing, locale, errors }: RowProps) {
   ])
   const title = listing.book?.title ?? t('bookUnavailable')
   const active = ACTIVE_STATUSES.has(listing.status)
+  const headingId = `listing-${listing.id}-heading`
 
   return (
     <li data-testid="listing-row" data-listing-id={listing.id}>
@@ -121,7 +122,13 @@ async function ListingRow({ listing, locale, errors }: RowProps) {
           )}
         </div>
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {/* Nhận focus sau khi rút tin (nút Rút tin bị gỡ khỏi trang): đọc tên sách + trạng thái mới */}
+          <div
+            id={headingId}
+            tabIndex={-1}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            data-testid="listing-heading"
+          >
             <p className="line-clamp-2 font-medium">{title}</p>
             <ListingStatusBadge status={listing.status} />
           </div>
@@ -153,6 +160,7 @@ async function ListingRow({ listing, locale, errors }: RowProps) {
               <WithdrawButton
                 action={withdrawListing.bind(null, locale, listing.id)}
                 errors={errors}
+                focusAfterWithdrawId={headingId}
                 labels={{
                   button: tWithdraw('button'),
                   question: tWithdraw('question'),

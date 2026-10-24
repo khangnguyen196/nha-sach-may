@@ -1053,7 +1053,7 @@
     "LISTING_CHANGED": "Giá của tin vừa thay đổi. Kiểm tra lại tổng tiền rồi đặt mua.",
     "LISTING_INVALID_TRANSITION": "Không thể chuyển tin sang trạng thái này. Bạn tải lại trang để xem trạng thái mới nhất.",
     "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
-    "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ (tính cả ảnh của tin chờ duyệt, đang bán và bị từ chối) nên chưa tải thêm được. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé."
+    "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ (tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh vừa tải chưa đăng (tự dọn sau 24 giờ)) nên chưa tải thêm được. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé."
   },
   "allBooks": {
     "title": "Tất cả sách",

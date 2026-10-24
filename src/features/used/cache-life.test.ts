@@ -10,8 +10,9 @@ const { USED_PHOTO_URL_TTL } = await import('./signed-urls')
 // Quyết định 7 (a) của docs/plans/cho-sach-cu.md: link ký ảnh sách cũ hạn 7 ngày; mọi cache chứa link phải hết hạn
 // TRƯỚC link (không thì trang cache hiện ảnh vỡ). Kiểm tĩnh mã nguồn:
 // (i) chỉ features/used/signed-urls.ts gọi createSignedUrl(s) (giữ hằng TTL);
-// (ii) mọi file của src import signed-urls hoặc features/used/queries: mỗi hàm 'use cache' gọi
-//      cacheLife('hours' | 'minutes' | 'seconds'), không profile khác, không thiếu (default không có expire);
+// (ii) mọi file của src import signed-urls hoặc features/used/queries, TRỰC TIẾP HAY BẮC CẦU (A import B, B import
+//      signed-urls → A cũng tính): mỗi hàm 'use cache' gọi cacheLife('hours' | 'minutes' | 'seconds'), không profile
+//      khác, không thiếu (default không có expire), không có 'use cache' đầu file;
 // (iii) expire của các profile đó (cấu hình mặc định của Next, next.config.ts không khai báo cacheLife riêng) < TTL.
 
 const SRC = join(import.meta.dirname, '../..')
@@ -24,7 +25,14 @@ const sourceFiles = readdirSync(SRC, { withFileTypes: true, recursive: true })
   .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name))
   .map((entry) => join(entry.parentPath, entry.name))
 
-const parse = (file: string) => ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+const parsed = new Map<string, ts.SourceFile>()
+function parse(file: string) {
+  const cached = parsed.get(file)
+  if (cached) return cached
+  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+  parsed.set(file, source)
+  return source
+}
 const rel = (file: string) => relative(SRC, file).replaceAll('\\', '/')
 
 function walk(node: ts.Node, visit: (node: ts.Node) => void) {
@@ -80,6 +88,25 @@ function importedFiles(source: ts.SourceFile) {
   return files
 }
 
+/**
+ * Bao đóng bắc cầu: `roots` + mọi file của src import (tĩnh, `export … from`, import() động, kể cả `import type`) một
+ * file đã có trong tập. Lặp tới khi không thêm được file nào.
+ */
+function importClosure(roots: readonly string[]) {
+  const imports = new Map(sourceFiles.map((file) => [file, importedFiles(parse(file))]))
+  const closure = new Set(roots)
+  for (let grew = true; grew; ) {
+    grew = false
+    for (const [file, imported] of imports) {
+      if (!closure.has(file) && imported.some((dependency) => closure.has(dependency))) {
+        closure.add(file)
+        grew = true
+      }
+    }
+  }
+  return [...closure]
+}
+
 const isUseCache = (statement: ts.Statement) =>
   ts.isExpressionStatement(statement) &&
   ts.isStringLiteral(statement.expression) &&
@@ -122,13 +149,12 @@ describe('link ký ảnh sách cũ: cache ngắn hơn hạn link (quyết địn
     expect(callers).toEqual([rel(SIGNED_URLS)])
   })
 
-  it("(ii) file dùng signed-urls / features/used/queries: mọi 'use cache' gọi cacheLife('hours' | 'minutes' | 'seconds')", () => {
-    const watched = new Set([SIGNED_URLS, USED_QUERIES])
-    const files = sourceFiles.filter(
-      (file) => watched.has(file) || importedFiles(parse(file)).some((imported) => watched.has(imported)),
+  it("(ii) file dùng signed-urls / features/used/queries (bắc cầu): mọi 'use cache' gọi cacheLife('hours' | 'minutes' | 'seconds')", () => {
+    const files = importClosure([SIGNED_URLS, USED_QUERIES])
+    // Kiểm được thật: có file dùng link ký, kể cả file chỉ dùng qua file khác (trang → actions → signed-urls)
+    expect(files.map(rel)).toEqual(
+      expect.arrayContaining(['features/used/queries.ts', 'features/used/actions.ts', 'app/[locale]/(shop)/account/my-listings/page.tsx']),
     )
-    // Kiểm được thật: có file dùng link ký
-    expect(files.map(rel)).toContain('features/used/queries.ts')
     expect(files.flatMap((file) => cacheProblems(parse(file)))).toEqual([])
   })
 

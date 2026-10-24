@@ -25,6 +25,7 @@ import {
 } from './schemas'
 import { signUsedPhotoUrls, USED_PHOTO_BUCKET } from './signed-urls'
 import { usedListingTags } from './tags'
+import { uploadFailure } from './upload-errors'
 
 // Chợ sách cũ, phần người bán (docs/plans/cho-sach-cu.md). locale / id do page bind sẵn (Server Action không đọc được
 // next/root-params; tham số bind đi qua client nên vẫn parse lại). seller_id không bao giờ nhận từ client: RPC lấy
@@ -34,16 +35,6 @@ const AUTH_REQUIRED: Failure = { ok: false, code: 'AUTH_REQUIRED' }
 const PHOTOS_INVALID: Failure = { ok: false, code: 'LISTING_PHOTOS_INVALID' }
 
 export type UploadedPhoto = { path: string; url: string | null }
-
-/** Lỗi của Storage khi tải ảnh lên: policy chặn (đủ 30 ảnh) → LISTING_PHOTO_LIMIT; không tới được máy chủ → NETWORK_ERROR */
-function uploadFailure(error: { message: string; status?: number; statusCode?: string }): Failure {
-  if (error.status === 403 || error.statusCode === '403' || /row-level security/i.test(error.message)) {
-    return { ok: false, code: 'LISTING_PHOTO_LIMIT' }
-  }
-  if (error.status === undefined && error.statusCode === undefined) return { ok: false, code: 'NETWORK_ERROR' }
-  console.error('uploadListingPhoto:', error.message)
-  return { ok: false, code: 'UNKNOWN' }
-}
 
 /**
  * Tải MỘT ảnh lên (mỗi lần gọi một ảnh: body của mọi Server Action tối đa 4.5MB). Kiểm cỡ trước khi đọc, kiểm loại bằng
@@ -151,8 +142,9 @@ export async function createListing(locale: Locale, _prev: Result<null> | null, 
 }
 
 /**
- * Sửa tin (về chờ duyệt). Ảnh cũ không còn trong tin thì xóa sau khi lưu. Tin đang công khai (đã duyệt) → làm mới cache
- * của trang công khai (tin về chờ duyệt, phải biến khỏi chợ).
+ * Sửa tin (về chờ duyệt). Ảnh cũ không còn trong tin thì xóa sau khi lưu. RPC thành công → luôn làm mới cache của trang
+ * công khai: trạng thái đọc trước RPC có thể đã cũ (admin duyệt tin giữa lúc đọc và lúc sửa → tin vừa công khai rồi về
+ * chờ duyệt).
  */
 export async function updateListing(
   locale: Locale,
@@ -171,7 +163,7 @@ export async function updateListing(
   const supabase = await createClient()
   const before = await supabase
     .from('used_listings')
-    .select('book_id, status, photos')
+    .select('book_id, photos')
     .eq('id', listingId.data)
     .eq('seller_id', user.id)
     .maybeSingle()
@@ -181,7 +173,7 @@ export async function updateListing(
   const { error } = await supabase.rpc('update_used_listing', { p_id: listingId.data, ...rpcArgs(parsed.data) })
   if (error) return listingFailure(parseLocale(locale), error)
 
-  if (before.data.status === 'approved') expireListing(listingId.data, before.data.book_id)
+  expireListing(listingId.data, before.data.book_id)
   const kept = new Set(parsed.data.photos)
   await removeUnusedPhotos(
     supabase,
@@ -191,7 +183,10 @@ export async function updateListing(
   return redirect({ href: '/account/my-listings', locale: parseLocale(locale) })
 }
 
-/** Rút tin chưa bán. Tin đã rút là trạng thái cuối → xóa ảnh của tin (trả lại chỗ trong trần 30 ảnh) */
+/**
+ * Rút tin chưa bán. Tin đã rút là trạng thái cuối → xóa ảnh của tin (trả lại chỗ trong trần 30 ảnh). RPC thành công →
+ * luôn làm mới cache công khai (như updateListing: admin có thể vừa duyệt tin).
+ */
 export async function withdrawListing(_locale: Locale, id: number): Promise<Result<null>> {
   const listingId = listingIdSchema.safeParse(id)
   if (!listingId.success) return { ok: false, code: 'LISTING_NOT_EDITABLE' }
@@ -201,7 +196,7 @@ export async function withdrawListing(_locale: Locale, id: number): Promise<Resu
   const supabase = await createClient()
   const before = await supabase
     .from('used_listings')
-    .select('book_id, status, photos')
+    .select('book_id, photos')
     .eq('id', listingId.data)
     .eq('seller_id', user.id)
     .maybeSingle()
@@ -211,7 +206,7 @@ export async function withdrawListing(_locale: Locale, id: number): Promise<Resu
   const { error } = await supabase.rpc('withdraw_used_listing', { p_id: listingId.data })
   if (error) return toFailure(error)
 
-  if (before.data.status === 'approved') expireListing(listingId.data, before.data.book_id)
+  expireListing(listingId.data, before.data.book_id)
   await removeUnusedPhotos(supabase, user.id, before.data.photos)
   refresh()
   return { ok: true, data: null }

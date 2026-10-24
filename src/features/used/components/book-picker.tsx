@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Result } from '@/lib/errors'
 import { fillTemplate } from '@/lib/template'
 import type { ListingBookOption } from '../actions'
@@ -69,6 +69,16 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const latest = useRef(0)
   const searchInput = useRef<HTMLInputElement>(null)
+  const changeButton = useRef<HTMLButtonElement>(null)
+  /** Nút vừa bấm bị gỡ khỏi trang ("Chọn" → thẻ sách, "Đổi sách" → ô tìm): focus phần tử thay thế sau lần render tới */
+  const focusAfterRender = useRef<'change' | 'search' | null>(null)
+
+  useEffect(() => {
+    const target = focusAfterRender.current
+    if (!target) return
+    focusAfterRender.current = null
+    ;(target === 'change' ? changeButton : searchInput).current?.focus()
+  })
 
   function changeQuery(value: string) {
     setQuery(value)
@@ -93,15 +103,15 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
   }
 
   function choose(option: ListingBookOption) {
+    focusAfterRender.current = 'change'
     onChange(option)
     setQuery('')
     setSearch({ status: 'idle' })
   }
 
   function change() {
+    focusAfterRender.current = 'search'
     onChange(null)
-    // Ô tìm hiện lại sau lần render này
-    requestAnimationFrame(() => searchInput.current?.focus())
   }
 
   const statusText =
@@ -124,6 +134,7 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
           <BookSummary book={book} labels={labels} formatPrice={formatPrice} />
           {searchBooks && (
             <button
+              ref={changeButton}
               type="button"
               onClick={change}
               disabled={disabled}

@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { flushSync } from 'react-dom'
 import type { Result } from '@/lib/errors'
 import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
@@ -44,43 +45,83 @@ type Props = {
   disabled: boolean
 }
 
+type Decoded = { source: CanvasImageSource; width: number; height: number; release: () => void }
+
 /**
- * Thu nhỏ ảnh ở trình duyệt (canvas, xoay theo EXIF qua createImageBitmap) → JPEG. Canvas không chép EXIF / GPS sang
- * ảnh ra. Không giải mã được (VD HEIC trên Chrome / Firefox) → null.
+ * Giải mã ảnh, đã xoay theo EXIF. createImageBitmap(file, { imageOrientation: 'from-image' }) trước; trình duyệt cũ ném
+ * TypeError với giá trị enum lạ (hoặc không có createImageBitmap) → dự phòng thẻ <img> (tự xoay theo EXIF khi vẽ lên
+ * canvas). Cả hai không giải mã được (VD HEIC trên Chrome / Firefox) → null.
  */
-async function shrinkPhoto(file: File): Promise<Blob | null> {
-  let bitmap: ImageBitmap
+async function decodePhoto(file: File): Promise<Decoded | null> {
   try {
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    return { source: bitmap, width: bitmap.width, height: bitmap.height, release: () => bitmap.close() }
   } catch {
+    // Thử <img> bên dưới
+  }
+  const url = URL.createObjectURL(file)
+  const image = document.createElement('img')
+  image.src = url
+  try {
+    await image.decode()
+  } catch {
+    URL.revokeObjectURL(url)
     return null
   }
-  const scale = Math.min(1, CLIENT_MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+  return {
+    source: image,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    release: () => URL.revokeObjectURL(url),
+  }
+}
+
+/** Thu nhỏ ảnh ở trình duyệt (canvas) → JPEG. Canvas không chép EXIF / GPS sang ảnh ra. Không giải mã được → null */
+async function shrinkPhoto(file: File): Promise<Blob | null> {
+  const decoded = await decodePhoto(file)
+  if (!decoded) return null
+  const scale = Math.min(1, CLIENT_MAX_SIDE / Math.max(decoded.width, decoded.height))
   const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+  canvas.width = Math.max(1, Math.round(decoded.width * scale))
+  canvas.height = Math.max(1, Math.round(decoded.height * scale))
   const context = canvas.getContext('2d')
   if (!context) {
-    bitmap.close()
+    decoded.release()
     return null
   }
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  bitmap.close()
+  context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height)
+  decoded.release()
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', CLIENT_JPEG_QUALITY))
 }
 
 let nextKey = 0
 
+const placeholder = (key: number): PhotoItem => ({ key, path: null, url: null, uploading: true, saved: false })
+
 /**
- * Ảnh của tin (1–3): chọn file (không đặt `capture`: điện thoại cho chọn camera hoặc thư viện) → thu nhỏ → tải từng ảnh
- * (mỗi lần gọi Server Action một ảnh) → xem trước bằng link ký server trả về. Bỏ ảnh vừa tải → xóa ngay khỏi kho.
- * Đường dẫn ảnh đã tải xong đi vào form qua ô ẩn `photos`.
+ * Ảnh của tin (1–3): chọn file (không đặt `capture`: điện thoại cho chọn camera hoặc thư viện) → giữ chỗ ngay cho cả
+ * lô (ô "đang tải", không bao giờ quá MAX_PHOTOS) → thu nhỏ → tải từng ảnh (mỗi lần gọi Server Action một ảnh) → xem
+ * trước bằng link ký server trả về. Bỏ ảnh vừa tải → xóa ngay khỏi kho. Đường dẫn ảnh đã tải xong đi vào form qua ô ẩn
+ * `photos`.
  */
 export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels, messages, error, disabled }: Props) {
   const input = useRef<HTMLInputElement>(null)
-  /** Ảnh bị bỏ khi đang tải: tải xong thì xóa luôn */
+  /** Ảnh bị bỏ khi đang chờ / đang tải: chưa tới lượt thì không tải, tải xong thì xóa luôn, lỗi thì không báo */
   const dropped = useRef(new Set<number>())
+  /**
+   * Hàng đợi tải dùng chung cho MỌI lượt chọn (chuỗi promise): mỗi lúc một ảnh. Trần 30 ảnh / người đếm lúc tải lên,
+   * tải song song (kể cả hai lượt chọn liên tiếp) có thể vượt
+   */
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  /** Bỏ ảnh lúc đã đủ ảnh: ô chọn ảnh chưa render → focus sau lần render tới */
+  const focusAddAfterRender = useRef(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!focusAddAfterRender.current) return
+    focusAddAfterRender.current = false
+    input.current?.focus()
+  })
 
   async function removeUploaded(path: string) {
     try {
@@ -90,17 +131,17 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
     }
   }
 
-  async function upload(file: File) {
-    const key = nextKey++
-    onChange((current) => [...current, { key, path: null, url: null, uploading: true, saved: false }])
-    const drop = () => onChange((current) => current.filter((photo) => photo.key !== key))
+  async function upload(key: number, file: File) {
+    // Bỏ trước khi tới lượt: không tải
+    if (dropped.current.has(key)) return
+    const fail = (message: string) => {
+      onChange((current) => current.filter((photo) => photo.key !== key))
+      // Ảnh đã bỏ khỏi form: lỗi của nó không còn liên quan
+      if (!dropped.current.has(key)) setPhotoError(message)
+    }
 
     const blob = await shrinkPhoto(file)
-    if (!blob) {
-      drop()
-      setPhotoError(labels.photoUnreadable)
-      return
-    }
+    if (!blob) return fail(labels.photoUnreadable)
     const formData = new FormData()
     formData.set('photo', blob, 'photo.jpg')
     let result: Result<UploadedPhoto>
@@ -109,11 +150,7 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
     } catch {
       result = { ok: false, code: 'NETWORK_ERROR' }
     }
-    if (!result.ok) {
-      drop()
-      setPhotoError(result.message ?? messages.errors[result.code] ?? messages.errors.UNKNOWN)
-      return
-    }
+    if (!result.ok) return fail(result.message ?? messages.errors[result.code] ?? messages.errors.UNKNOWN)
     if (dropped.current.has(key)) {
       void removeUploaded(result.data.path)
       return
@@ -124,13 +161,27 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
     )
   }
 
-  async function choose(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []).slice(0, MAX_PHOTOS - photos.length)
+  function choose(event: ChangeEvent<HTMLInputElement>) {
+    const batch = Array.from(event.target.files ?? [], (file) => ({ key: nextKey++, file }))
     // Cho chọn lại đúng file đó lần nữa (VD sau khi bỏ ảnh)
     event.target.value = ''
     setPhotoError(null)
-    // Tuần tự: trần 30 ảnh / người đếm lúc tải lên, tải song song có thể vượt
-    for (const file of files) await upload(file)
+    if (batch.length === 0) return
+    // Số chỗ còn tính trong updater theo state hiện tại (gồm ô đang tải của lượt chọn trước), giữ chỗ cả lô ngay.
+    // flushSync: updater chạy xong (biết ảnh nào được nhận) trước khi xếp hàng tải
+    let accepted: typeof batch = []
+    flushSync(() =>
+      onChange((current) => {
+        accepted = batch.slice(0, Math.max(0, MAX_PHOTOS - current.length))
+        return [...current, ...accepted.map(({ key }) => placeholder(key))]
+      }),
+    )
+    for (const { key, file } of accepted) {
+      queue.current = queue.current
+        .then(() => upload(key, file))
+        // Lỗi ngoài dự kiến của một ảnh: bỏ ô đó, hàng đợi vẫn chạy tiếp các ảnh sau
+        .catch(() => onChange((current) => current.filter((photo) => photo.key !== key)))
+    }
   }
 
   function remove(photo: PhotoItem) {
@@ -138,7 +189,8 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
     onChange((current) => current.filter((item) => item.key !== photo.key))
     if (photo.uploading) dropped.current.add(photo.key)
     else if (!photo.saved && photo.path) void removeUploaded(photo.path)
-    input.current?.focus()
+    // Nút vừa bấm bị gỡ khỏi trang: đưa focus về ô chọn ảnh (luôn hiện lại vì đã có chỗ) sau lần render tới
+    focusAddAfterRender.current = true
   }
 
   const message = photoError ?? error

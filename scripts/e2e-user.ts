@@ -874,6 +874,41 @@ export async function removeUsedPhotoAsService(path: string) {
   if (data.length !== 1) throw new Error(`removeUsedPhotoAsService: không có ảnh ${path}`)
 }
 
+/** Tên các ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (service role, thấy cả ảnh chưa gắn tin) */
+export async function usedPhotosIn(userId: string) {
+  const { data, error } = await adminClient().storage.from(USED_PHOTO_BUCKET).list(userId, { limit: 1000 })
+  if (error) throw new Error(`usedPhotosIn: ${error.message}`)
+  return data.map((file) => `${userId}/${file.name}`)
+}
+
+/**
+ * Tải sẵn `count` ảnh WebP vào thư mục <user_id>/ bằng service role (bỏ qua policy, kể cả trần 30 ảnh: policy đếm ảnh
+ * theo thư mục) → giả lập người bán đã có sẵn ngần ấy ảnh. Trả đường dẫn các ảnh.
+ */
+export async function seedUsedPhotosAsService(userId: string, count: number, webp: Buffer) {
+  const storage = adminClient().storage.from(USED_PHOTO_BUCKET)
+  const paths = Array.from({ length: count }, () => `${userId}/${randomUUID()}.webp`)
+  for (const path of paths) {
+    const { error } = await storage.upload(path, webp, { contentType: 'image/webp' })
+    if (error) throw new Error(`seedUsedPhotosAsService: ${error.message}`)
+  }
+  return paths
+}
+
+/** Xóa mọi ảnh trong thư mục <user_id>/ (service role): dọn sau test tải ảnh qua UI mà không đăng tin */
+export function removeUsedPhotosOf(userId: string) {
+  return removeUsedPhotoFolders([userId])
+}
+
+/** Đổi giá / giá gốc sách test bằng service role (VD hạ trần giá dưới giá tin chờ duyệt) */
+export async function setBookPrices(bookId: number, prices: { price: number; originalPrice: number | null }) {
+  const { error } = await adminClient()
+    .from('books')
+    .update({ price: prices.price, original_price: prices.originalPrice })
+    .eq('id', bookId)
+  if (error) throw new Error(`setBookPrices: ${error.message}`)
+}
+
 /** Mọi ảnh trong thư mục <user_id>/ của bucket ảnh sách cũ (cả ảnh đã tải lên mà chưa gắn tin nào) */
 async function removeUsedPhotoFolders(userIds: readonly string[]) {
   const storage = adminClient().storage.from(USED_PHOTO_BUCKET)

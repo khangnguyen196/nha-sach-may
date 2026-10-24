@@ -1,6 +1,5 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { USED_PHOTO_BUCKET } from './signed-urls'
 
@@ -42,12 +41,12 @@ export async function removeUnusedPhotos(supabase: Client, userId: string, paths
 }
 
 /**
- * Dọn ảnh mồ côi của chính người bán (tải lên rồi bỏ form giữa chừng) cũ hơn 24 giờ, để không chạm trần 30 ảnh. Gọi khi
- * mở trang đăng tin, sau khi đã đọc phiên (Date.now() chỉ dùng được ở phần động của trang); lỗi bỏ qua.
+ * Dọn ảnh mồ côi của chính người bán (tải lên rồi bỏ form giữa chừng) cũ hơn 24 giờ, để không chạm trần 30 ảnh. Trang
+ * đăng tin gọi trong after() (không chặn trang), với client theo phiên tạo TRƯỚC after() (Server Component không đọc
+ * cookies trong after()); lỗi bỏ qua.
  */
-export async function removeMyOrphanPhotos(userId: string) {
+export async function removeMyOrphanPhotos(supabase: Client, userId: string) {
   try {
-    const supabase = await createClient()
     const { data, error } = await supabase.storage
       .from(USED_PHOTO_BUCKET)
       .list(userId, { limit: FOLDER_LIST_LIMIT, sortBy: { column: 'created_at', order: 'asc' } })

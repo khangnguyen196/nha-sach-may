@@ -1,5 +1,6 @@
 import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
+import { after } from 'next/server'
 import { Suspense } from 'react'
 import { accountPageMetadata } from '@/features/account/metadata'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
@@ -20,6 +21,7 @@ import { removeMyOrphanPhotos } from '@/features/used/photo-storage'
 import { countMyPendingListings } from '@/features/used/queries'
 import { getPathname } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/server'
 
 export async function generateMetadata() {
   const t = await getTranslations('used.form')
@@ -58,11 +60,13 @@ export default async function NewListingPage() {
 
 async function NewListingForm({ locale }: { locale: Locale }) {
   const user = await requireUser(locale, '/account/my-listings/new')
+  // Ảnh tải lên rồi bỏ form (cũ hơn 24 giờ) không chiếm trần 30 ảnh mãi. Dọn sau khi trả trang (after), client theo
+  // phiên tạo trước: Server Component không đọc cookies trong after(); lỗi bỏ qua
+  const supabase = await createClient()
+  after(() => removeMyOrphanPhotos(supabase, user.id))
   const [props, pendingCount] = await Promise.all([
     getListingFormProps(locale, getPathname({ href: '/account/my-listings/new', locale })),
     countMyPendingListings(user.id),
-    // Ảnh tải lên rồi bỏ form (cũ hơn 24 giờ) không chiếm trần 30 ảnh mãi; lỗi bỏ qua
-    removeMyOrphanPhotos(user.id),
   ])
   if (pendingCount >= USED_PENDING_LIMIT) return <PendingLimitNotice />
 

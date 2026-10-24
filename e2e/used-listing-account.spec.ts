@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Route } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 import sharp from 'sharp'
 import {
   anonClient,
@@ -9,11 +10,14 @@ import {
   deleteE2eUsers,
   downloadUsedPhoto,
   makeAdmin,
+  removeUsedPhotosOf,
+  seedUsedPhotosAsService,
   signedInClient,
   USED_PHOTO_BUCKET,
   usedListingRow,
   usedListingsOf,
   usedPhotoExists,
+  usedPhotosIn,
   type E2eAdminBook,
   type E2eUser,
 } from '../scripts/e2e-user'
@@ -21,8 +25,9 @@ import { login, NO_SESSION } from './auth'
 import { vnd } from './cart'
 import { collectErrors, collectErrorsAllow404 } from './helpers'
 
-// Chợ sách cũ phần người bán (docs/plans/cho-sach-cu.md, P-B vòng 7): đăng tin có ảnh qua UI, Sách tôi bán, sửa tin đã
-// duyệt, rút tin, bỏ ảnh khỏi form. User (người bán, admin) + sách test tạo riêng mỗi lần chạy, xóa ở afterAll (ảnh trong
+// Chợ sách cũ phần người bán (docs/plans/cho-sach-cu.md, P-B vòng 7, 8): đăng tin có ảnh qua UI, Sách tôi bán, sửa tin
+// đã duyệt, rút tin (focus bằng bàn phím), bỏ ảnh khỏi form, ô chọn ảnh không quá 3 + tải lần lượt, trần 30 ảnh, dự
+// phòng khi createImageBitmap lỗi. User (người bán, admin) + sách test tạo riêng mỗi lần chạy, xóa ở afterAll (ảnh trong
 // thư mục của người bán xóa cùng user): desktop-account và mobile-account chạy song song không giẫm nhau.
 //
 // Ảnh mẫu e2e/fixtures/used-photo-exif.jpg (400×300, nửa trái đỏ / nửa phải xanh, EXIF orientation 6 + tọa độ GPS) tạo
@@ -87,6 +92,8 @@ async function chooseBook(page: Page) {
   await main(page).getByLabel('Tìm sách trong cửa hàng').fill(book.title)
   await main(page).getByRole('button', { name: `Chọn sách “${book.title}”` }).click()
   await expect(main(page).getByTestId('listing-book')).toContainText(book.title)
+  // Nút "Chọn" bị gỡ khỏi trang → focus "Đổi sách"
+  await expect(main(page).getByRole('button', { name: 'Đổi sách' })).toBeFocused()
   await expect(main(page).getByText(`Tối đa ${vnd(ORIGINAL_PRICE)}`)).toBeVisible()
 }
 
@@ -109,6 +116,29 @@ async function pixel(webp: Buffer, x: number, y: number) {
   const { data, info } = await sharp(webp).raw().toBuffer({ resolveWithObject: true })
   const at = (y * info.width + x) * info.channels
   return { r: data[at] ?? 0, g: data[at + 1] ?? 0, b: data[at + 2] ?? 0 }
+}
+
+/** Ảnh trong kho: WebP, không EXIF / XMP, đã xoay theo orientation 6 của ảnh mẫu → ảnh dọc, nửa đỏ trên, xanh dưới */
+async function expectStoredPortrait(path: string) {
+  const stored = await downloadUsedPhoto(path)
+  const meta = await sharp(stored).metadata()
+  expect(meta.format).toBe('webp')
+  expect(meta.exif).toBeUndefined()
+  expect(meta.xmp).toBeUndefined()
+  expect(meta.height).toBeGreaterThan(meta.width ?? Infinity)
+  const top = await pixel(stored, Math.floor((meta.width ?? 0) / 2), 5)
+  const bottom = await pixel(stored, Math.floor((meta.width ?? 0) / 2), (meta.height ?? 0) - 5)
+  expect(top.r > 200 && top.b < 60, JSON.stringify(top)).toBe(true)
+  expect(bottom.b > 200 && bottom.r < 60, JSON.stringify(bottom)).toBe(true)
+}
+
+const fileInput = (page: Page) => main(page).locator('input[type="file"]')
+const photoPaths = (page: Page) => main(page).locator('input[type="hidden"][name="photos"]')
+
+/** Ảnh mẫu dưới dạng buffer, mỗi file một tên (chọn nhiều ảnh trong một lượt) */
+function photoFiles(...names: string[]) {
+  const buffer = readFileSync(PHOTO)
+  return names.map((name) => ({ name, mimeType: 'image/jpeg', buffer }))
 }
 
 test('(1)(3) đăng tin có ảnh → Chờ duyệt; "bạn nhận được" từ RPC; ảnh trong kho là WebP không EXIF, đã xoay', async ({
@@ -153,17 +183,11 @@ test('(1)(3) đăng tin có ảnh → Chờ duyệt; "bạn nhận được" t�
   await expect(item.getByTestId('listing-price')).toHaveText(vnd(25_000))
   await expect(item).toContainText(`Bạn nhận ${vnd(22_000)}`)
 
-  // Ảnh trong kho: WebP, không EXIF (GPS), đã xoay theo orientation 6 → ảnh dọc, nửa đỏ ở trên
-  const stored = await downloadUsedPhoto(photo)
-  const meta = await sharp(stored).metadata()
-  expect(meta.format).toBe('webp')
-  expect(meta.exif).toBeUndefined()
-  expect(meta.xmp).toBeUndefined()
-  expect(meta.height).toBeGreaterThan(meta.width ?? Infinity)
-  const top = await pixel(stored, Math.floor((meta.width ?? 0) / 2), 5)
-  const bottom = await pixel(stored, Math.floor((meta.width ?? 0) / 2), (meta.height ?? 0) - 5)
-  expect(top.r > 200 && top.b < 60, JSON.stringify(top)).toBe(true)
-  expect(bottom.b > 200 && bottom.r < 60, JSON.stringify(bottom)).toBe(true)
+  // Ảnh trong kho: WebP, không EXIF (GPS), đã xoay theo orientation 6 → ảnh dọc, nửa đỏ ở trên.
+  // Qua UI thì ảnh tới server là JPEG do canvas của trình duyệt vẽ lại: ĐÃ xoay (createImageBitmap 'from-image') và ĐÃ
+  // mất EXIF / GPS trước khi gửi. Ca này canh luồng client + kho; phần server tự xoay theo EXIF và bỏ EXIF / GPS (ảnh
+  // không qua canvas, VD gọi thẳng action) do Vitest src/features/used/photos.test.ts canh.
+  await expectStoredPortrait(photo)
   expect(errors).toEqual([])
 })
 
@@ -246,13 +270,25 @@ test('(6) rút tin → Đã rút, ảnh của tin không còn trong kho', async 
   await login(page, seller)
   await page.goto('/tai-khoan/sach-toi-ban')
   const item = row(page, id)
-  await expect(item.getByRole('button', { name: 'Rút tin' })).toBeEnabled()
-  await item.getByRole('button', { name: 'Rút tin' }).click()
+  const open = item.getByRole('button', { name: 'Rút tin' })
+  await expect(open).toBeEnabled()
+  // Focus (WCAG 2.4.3) bằng bàn phím: mở câu hỏi → focus "Không rút"; Enter ở "Không rút" → focus lại "Rút tin"
+  await open.focus()
+  await page.keyboard.press('Enter')
   const confirm = item.getByTestId('withdraw-confirm')
   await expect(confirm).toContainText('Rút tin này?')
+  await expect(confirm.getByRole('button', { name: 'Không rút' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(confirm).toHaveCount(0)
+  await expect(open).toBeFocused()
+
+  await open.click()
+  await expect(confirm.getByRole('button', { name: 'Không rút' })).toBeFocused()
   await confirm.getByRole('button', { name: 'Rút tin' }).click()
 
   await expect(item.getByTestId('listing-status')).toHaveText('Đã rút', { timeout: 15_000 })
+  // Nút Rút tin bị gỡ khỏi trang: focus về tên sách + trạng thái của mục tin, không rơi về body
+  await expect(item.getByTestId('listing-heading')).toBeFocused()
   await expect(item.getByRole('link', { name: /^Sửa tin/ })).toHaveCount(0)
   await expect(item.getByRole('button', { name: 'Rút tin' })).toHaveCount(0)
   expect(await usedListingRow(id)).toMatchObject({ status: 'withdrawn' })
@@ -267,7 +303,100 @@ test('(7) bỏ ảnh khỏi form trước khi gửi → ảnh bị xóa khỏi k
   expect(await usedPhotoExists(photo)).toBe(true)
   await main(page).getByRole('button', { name: 'Bỏ ảnh 1' }).click()
   await expect(main(page).locator('input[type="hidden"][name="photos"]')).toHaveCount(0)
+  // Nút vừa bấm bị gỡ khỏi trang → focus về ô chọn ảnh
+  await expect(fileInput(page)).toBeFocused()
   await expect.poll(() => usedPhotoExists(photo), { timeout: 15_000 }).toBe(false)
+})
+
+test('(8) chọn 2 ảnh, lúc ảnh đầu đang tải chọn thêm 2 → đúng 3 ô, 3 ảnh trong kho, tải lần lượt', async ({ page }) => {
+  test.setTimeout(120_000)
+  await expect.poll(() => usedPhotosIn(seller.id), { timeout: 15_000 }).toEqual([])
+  // Giữ request tải ảnh (Server Action gửi FormData = multipart) tới khi test cho đi: ảnh đầu chắc chắn còn đang tải lúc
+  // chọn lượt hai. Request khác (tìm sách, tính phí, tải trang) đi bình thường.
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let held = 0
+  const holdUploads = async (route: Route) => {
+    const request = route.request()
+    const multipart = (request.headers()['content-type'] ?? '').startsWith('multipart/form-data')
+    if (request.method() !== 'POST' || !request.headers()['next-action'] || !multipart) return route.continue()
+    held++
+    await gate
+    await route.continue()
+  }
+  const url = '**/tai-khoan/sach-toi-ban/dang-tin'
+  await page.route(url, holdUploads)
+  try {
+    await login(page, seller)
+    await openNewListing(page)
+    await fileInput(page).setInputFiles(photoFiles('a.jpg', 'b.jpg'))
+    const slots = main(page).getByTestId('listing-photos').getByRole('listitem')
+    await expect(slots).toHaveCount(2)
+    await expect.poll(() => held, { timeout: 15_000 }).toBe(1)
+
+    // Còn 1 chỗ: lượt hai chỉ nhận 1 ảnh, ô chọn ảnh ẩn ngay (tính cả ô đang tải)
+    await fileInput(page).setInputFiles(photoFiles('c.jpg', 'd.jpg'))
+    await expect(slots).toHaveCount(3)
+    await expect(fileInput(page)).toHaveCount(0)
+    await expect(main(page).getByRole('status').filter({ hasText: 'Đang tải ảnh…' })).toHaveCount(3)
+    // Hàng đợi dùng chung: ảnh sau chỉ tải khi ảnh trước xong → lúc ảnh đầu còn bị giữ chưa có request thứ hai (chặn
+    // dưới: kiểm ngay sau khi lượt hai đã giữ chỗ, không chờ thêm)
+    expect(held).toBe(1)
+
+    release()
+    await expect(photoPaths(page)).toHaveCount(3, { timeout: 60_000 })
+    await expect(slots).toHaveCount(3)
+    expect(held).toBe(3)
+    const shown = await photoPaths(page).evaluateAll((inputs) => inputs.map((input) => input.getAttribute('value')))
+    expect((await usedPhotosIn(seller.id)).sort()).toEqual(shown.sort())
+  } finally {
+    release()
+    await page.unroute(url, holdUploads)
+    await removeUsedPhotosOf(seller.id)
+  }
+})
+
+test('(9) đã có 30 ảnh trong kho → chọn ảnh: câu LISTING_PHOTO_LIMIT, không thêm ảnh', async ({ page }) => {
+  test.setTimeout(90_000)
+  const webp = await sharp({ create: { width: 30, height: 40, channels: 3, background: '#777' } }).webp().toBuffer()
+  // Service role bỏ qua policy; policy đếm ảnh theo thư mục <uid>/ (ảnh chưa gắn tin cũng tính)
+  const seeded = await seedUsedPhotosAsService(seller.id, 30, webp)
+  try {
+    await login(page, seller)
+    await openNewListing(page)
+    await fileInput(page).setInputFiles(PHOTO)
+    await expect(main(page).getByTestId('listing-photos-error')).toHaveText(
+      'Bạn đã có 30 ảnh sách cũ (tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh vừa tải chưa đăng (tự dọn sau 24 giờ)) nên chưa tải thêm được. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.',
+      { timeout: 20_000 },
+    )
+    await expect(main(page).getByTestId('listing-photos').getByRole('listitem')).toHaveCount(0)
+    await expect(photoPaths(page)).toHaveCount(0)
+    expect((await usedPhotosIn(seller.id)).sort()).toEqual([...seeded].sort())
+  } finally {
+    await removeUsedPhotosOf(seller.id)
+  }
+})
+
+test('(10) createImageBitmap ném TypeError (trình duyệt cũ) → dự phòng <img>: ảnh EXIF vẫn tải được, đã xoay dọc', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await page.addInitScript(() => {
+    window.createImageBitmap = () => {
+      throw new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation.")
+    }
+  })
+  try {
+    await login(page, seller)
+    await openNewListing(page)
+    const photo = await addPhoto(page, 1)
+    await expect(main(page).getByTestId('listing-photos-error')).toHaveCount(0)
+    await expectStoredPortrait(photo)
+  } finally {
+    await removeUsedPhotosOf(seller.id)
+  }
 })
 
 test('trang sửa tin không có / của người khác → 404 thật kiểu used-listing', async ({ page }) => {

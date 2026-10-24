@@ -637,7 +637,7 @@
     "LISTING_CHANGED": "This listing’s price just changed. Check the new total, then place your order.",
     "LISTING_INVALID_TRANSITION": "This listing cannot be moved to that status. Reload the page to see its latest status.",
     "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status.",
-    "LISTING_PHOTO_LIMIT": "You already have 30 used-book photos (including photos of listings that are pending, for sale or rejected), so you can’t upload more yet. Remove photos from a rejected listing or withdraw a listing you no longer want to sell, then try again."
+    "LISTING_PHOTO_LIMIT": "You already have 30 used-book photos (including photos of listings that are pending, for sale or rejected, and photos uploaded but not yet posted (cleared after 24 hours)), so you can’t upload more yet. Remove photos from a rejected listing or withdraw a listing you no longer want to sell, then try again."
   },
   "allBooks": {
     "title": "All books",
