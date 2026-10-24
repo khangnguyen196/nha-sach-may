@@ -2,13 +2,15 @@ import type { Locale } from 'next-intl'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Suspense } from 'react'
 import { createAddress } from '@/features/account/actions'
+import { parseAddressNext } from '@/features/account/address-return'
 import { AddressForm } from '@/features/account/components/address-form'
 import { AddressFormSkeleton } from '@/features/account/components/address-form-skeleton'
 import { getAddressFormProps } from '@/features/account/form-props'
 import { accountPageMetadata } from '@/features/account/metadata'
 import { getProfile } from '@/features/account/queries'
+import type { AddressReturnTo } from '@/features/account/schemas'
 import { Breadcrumb } from '@/features/books/components/breadcrumb'
-import { getPathname } from '@/i18n/navigation'
+import { getPathname, type Href } from '@/i18n/navigation'
 import { requireUser } from '@/lib/auth'
 
 type Props = PageProps<'/[locale]/account/addresses/new'>
@@ -41,21 +43,24 @@ export default async function NewAddressPage({ searchParams }: Props) {
 }
 
 async function NewAddressForm({ locale, searchParams }: { locale: Locale; searchParams: Props['searchParams'] }) {
-  // ?next= chỉ nhận đúng URL trang thanh toán của locale này (link "Thêm địa chỉ" ở checkout); giá trị khác bỏ qua
-  const { next } = await searchParams
-  const fromCheckout = next === getPathname({ href: '/checkout', locale })
-  const user = await requireUser(
-    locale,
-    fromCheckout ? { pathname: '/account/addresses/new', query: { next } } : '/account/addresses/new',
-  )
-  const signInNext = getPathname({ href: fromCheckout ? { pathname: '/account/addresses/new', query: { next } } : '/account/addresses/new', locale })
-  const [props, profile] = await Promise.all([getAddressFormProps(locale, signInNext), getProfile(user.id)])
+  // ?next= chỉ nhận trang thanh toán / trang mua một tin sách cũ của locale này (link "Thêm địa chỉ" ở hai trang đó),
+  // giá trị khác bỏ qua. Mọi URL dưới đây dựng lại từ mẫu route, không dùng chuỗi next thô
+  const returnTo = parseAddressNext((await searchParams).next, locale)
+  const back = returnHref(returnTo)
+  const href: Href = back
+    ? { pathname: '/account/addresses/new', query: { next: getPathname({ href: back, locale }) } }
+    : '/account/addresses/new'
+  const user = await requireUser(locale, href)
+  const [props, profile] = await Promise.all([
+    getAddressFormProps(locale, getPathname({ href, locale })),
+    getProfile(user.id),
+  ])
 
   return (
     <AddressForm
       {...props}
-      action={createAddress.bind(null, locale, fromCheckout ? 'checkout' : null)}
-      cancelHref={fromCheckout ? '/checkout' : '/account/addresses'}
+      action={createAddress.bind(null, locale, returnTo)}
+      cancelHref={back ?? '/account/addresses'}
       // Tên người nhận mặc định là tên chủ tài khoản (thường giao cho chính mình)
       initial={{
         recipientName: profile?.full_name ?? user.fullName ?? '',
@@ -67,4 +72,11 @@ async function NewAddressForm({ locale, searchParams }: { locale: Locale; search
       }}
     />
   )
+}
+
+/** Trang quay lại sau khi lưu / bấm Hủy; null = sổ địa chỉ */
+function returnHref(returnTo: AddressReturnTo): Href | null {
+  if (returnTo === 'checkout') return '/checkout'
+  if (returnTo) return { pathname: '/used-books/[id]/buy', params: { id: String(returnTo.usedListingId) } }
+  return null
 }

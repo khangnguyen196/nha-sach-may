@@ -3,12 +3,13 @@ import type { Database } from '@/types/database'
 
 type UsedItem = {
   used_listing_id: number | null
-  used_listings: { condition: Database['public']['Enums']['used_condition']; seller_name: string | null } | null
+  /** seller_name chỉ query admin lấy (đơn của khách chỉ nhúng tình trạng) */
+  used_listings: { condition: Database['public']['Enums']['used_condition']; seller_name?: string | null } | null
 }
 
 type Props = {
   item: UsedItem
-  /** Admin: thêm "Người bán: <tên hiển thị>" (người mua chỉ thấy nhãn) */
+  /** Admin: thêm "Người bán: <tên hiển thị>" (người mua chỉ thấy nhãn); chỉ đọc seller_name khi bật */
   showSeller?: boolean
   className?: string
 }

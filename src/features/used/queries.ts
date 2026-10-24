@@ -103,9 +103,8 @@ export async function getListingForPurchase(id: number) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('used_listings')
-    .select(
-      'id, book_id, seller_id, seller_name, condition, price, description, status, updated_at, books(title, slug, cover_url, is_active)',
-    )
+    // Không lấy giá tin: số tiền trang mua hiện lấy từ quote_used_order
+    .select('id, seller_id, seller_name, condition, description, status, updated_at, books(title, cover_url, is_active)')
     .eq('id', id)
     .in('status', ['approved', 'sold'])
     .maybeSingle()
@@ -113,7 +112,6 @@ export async function getListingForPurchase(id: number) {
   if (!data) return null
   return {
     id: data.id,
-    bookId: data.book_id,
     sellerId: data.seller_id,
     sellerName: data.seller_name,
     condition: data.condition,
@@ -122,7 +120,6 @@ export async function getListingForPurchase(id: number) {
     updatedAt: data.updated_at,
     book: data.books && {
       title: data.books.title,
-      slug: data.books.slug,
       coverUrl: data.books.cover_url,
       active: data.books.is_active,
     },

@@ -70,14 +70,15 @@ describe('dòng sách cũ trong đơn phía khách', () => {
       .map(([, columns]) => String(columns).replace(/\s+/g, ''))
       .join('|')
 
-  it('chi tiết + danh sách nhúng tình trạng + tên hiển thị người bán, không seller_id', async () => {
+  it('chi tiết + danh sách chỉ nhúng tình trạng của tin: không tên hiển thị, không seller_id người bán', async () => {
     result = { data: { id: 1 }, error: null }
     await getOrderByCode('NS26101600001', USER)
     result = { data: [], count: 0, error: null }
     await listOrders({ page: 1 }, USER)
     const [detail, list] = selected().split('|')
     for (const columns of [detail, list]) {
-      expect(columns).toContain('used_listing_id,used_listings(condition,seller_name)')
+      expect(columns).toContain('used_listing_id,used_listings(condition)')
+      expect(columns).not.toContain('seller_name')
       expect(columns).not.toContain('seller_id')
     }
   })

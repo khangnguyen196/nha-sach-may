@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import sharp from 'sharp'
 import {
-  cancelAndDeleteOrders,
   cleanupE2eAdminData,
   createE2eBook,
   createE2eCategory,
@@ -32,8 +31,8 @@ import { collectErrors, collectErrorsAllow404, failServerActions, waitForHydrati
 // - Tin tạo bằng RPC của người bán, duyệt bằng RPC của admin: tin mới chưa nằm trong cache công khai nào. Trang tin
 //   (cache theo id) chỉ mở SAU khi tin đã ở trạng thái cần kiểm, hoặc đổi trạng thái qua action của app (đặt / hủy đơn
 //   qua giao diện: updateTag tag của tin).
-// - Dọn ở afterAll: đơn của người mua (cancelAndDeleteOrders: hủy → tin về đang bán, xóa đơn) → deleteE2eUsers (khoản
-//   trả → đơn còn lại chứa tin → tin → ảnh → user) → sách / danh mục test.
+// - Dọn ở afterAll: deleteE2eUsers (khoản trả của người bán → đơn của các user (cancelAndDeleteOrders) → tin kèm đơn
+//   còn lại chứa tin → ảnh → user) → sách / danh mục test (trong finally).
 
 test.describe.configure({ mode: 'serial' })
 test.use({ storageState: NO_SESSION })
@@ -82,9 +81,20 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   const users = [seller, buyer, admin].filter((user) => user !== undefined)
-  await cancelAndDeleteOrders(users.map((user) => user.id))
-  await deleteE2eUsers(users.map((user) => user.id))
-  await cleanupE2eAdminData(slugs)
+  // deleteE2eUsers đã dọn khoản trả → đơn (cancelAndDeleteOrders) → tin → ảnh → user. Sách / danh mục test dọn cả khi
+  // bước đó lỗi; lỗi dọn sách khi đó chỉ ghi console để Playwright báo lỗi gốc
+  let usersDeleted = false
+  try {
+    await deleteE2eUsers(users.map((user) => user.id))
+    usersDeleted = true
+  } finally {
+    try {
+      await cleanupE2eAdminData(slugs)
+    } catch (error) {
+      if (usersDeleted) throw error
+      console.error('Dọn sách / danh mục test lỗi (sau khi xóa user lỗi)', error)
+    }
+  }
 })
 
 const main = (page: Page) => page.getByRole('main')

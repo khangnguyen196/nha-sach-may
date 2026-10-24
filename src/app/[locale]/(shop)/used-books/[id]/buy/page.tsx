@@ -24,8 +24,9 @@ import { placeholder } from '@/lib/template'
 
 type Props = PageProps<'/[locale]/used-books/[id]/buy'>
 
-// id không biết trước lúc build (không có generateStaticParams) nên header (LocaleSwitcher đọc useParams) không
-// prerender được shell cho route này. Trang riêng tư (cần đăng nhập), render theo request là đủ (như trang sửa tin).
+// instant = false chỉ tắt kiểm tra "instant navigation" của Next (dev) và kiểm static shell không rỗng; KHÔNG đổi cách
+// render: tin đọc theo phiên trong Suspense (không cache), không có generateStaticParams (tin tạo / gỡ liên tục).
+// Giữ tạm, xem docs/progress.md [Mức thấp] instant = false.
 export const instant = false
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -42,26 +43,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * Mua một tin trên Chợ sách cũ (đơn riêng, không qua giỏ, không voucher). Cần đăng nhập (proxy chặn một lớp,
  * requireUser kiểm tra lại); proxy trả 404 thật cho tin không có / không công khai. Static shell = tiêu đề.
  */
-export default async function BuyUsedListingPage({ params }: Props) {
+export default async function BuyUsedListingPage({ params, searchParams }: Props) {
   const [t, locale] = await Promise.all([getTranslations('used.buy'), getLocale()])
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
       <h1 className="font-serif text-3xl font-medium md:text-4xl">{t('title')}</h1>
       <Suspense fallback={<CheckoutSkeleton />}>
-        <BuyContent locale={locale} params={params} />
+        <BuyContent locale={locale} params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   )
 }
 
-async function BuyContent({ locale, params }: { locale: Locale; params: Props['params'] }) {
-  const { id: rawId } = await params
-  const href = { pathname: '/used-books/[id]/buy', params: { id: rawId } } as const
-  const user = await requireUser(locale, href)
+type ContentProps = { locale: Locale; params: Props['params']; searchParams: Props['searchParams'] }
+
+async function BuyContent({ locale, params, searchParams }: ContentProps) {
+  const [{ id: rawId }, query] = await Promise.all([params, searchParams])
+  const user = await requireUser(locale, { pathname: '/used-books/[id]/buy', params: { id: rawId } })
   const id = listingIdSchema.safeParse(rawId)
   // Proxy đã trả 404 thật cho id sai / tin không công khai; tới được đây là proxy không hỏi được DB → UI 404 trong
   // boundary (notFound() sau khi stream làm React bỏ SSR: lỗi #419)
   if (!id.success) return <InlineNotFound kind="used-market" />
+  // Dựng lại từ id đã parse (không từ chuỗi trên URL): trang thêm địa chỉ chỉ nhận đúng URL này làm ?next=
+  const href: Href = { pathname: '/used-books/[id]/buy', params: { id: String(id.data) } }
 
   const [listing, quote, addresses, t, tCheckout, messages] = await Promise.all([
     getListingForPurchase(id.data),
@@ -75,10 +79,18 @@ async function BuyContent({ locale, params }: { locale: Locale; params: Props['p
   ])
   if (!listing) return <InlineNotFound kind="used-market" />
 
-  // Cùng thứ tự kiểm với place_used_order: tin / sách không còn bán, rồi tin của chính mình
+  // Cùng thứ tự kiểm với place_used_order: tin không còn đang bán (kể cả đã bán) → tin của chính mình → sách ngừng
+  // bán. quote.available = tin đang bán và sách còn bán: false sau hai bước đầu là sách ngừng bán (hoặc tin vừa đổi
+  // trạng thái giữa hai lần đọc) → câu theo sách nếu đọc được dòng sách, không thì câu chung
   const book = listing.book
-  if (listing.sold || !quote?.available || !book?.active) return <Unavailable listing={listing} />
-  if (listing.sellerId === user.id) return <Unavailable listing={listing} own />
+  if (listing.sold) return <Unavailable listing={listing} reason="LISTING_UNAVAILABLE" />
+  if (listing.sellerId === user.id) return <Unavailable listing={listing} reason="LISTING_OWN" />
+  if (!book?.active || !quote?.available) {
+    return <Unavailable listing={listing} reason={book && !book.active ? 'BOOK_UNAVAILABLE' : 'LISTING_UNAVAILABLE'} />
+  }
+  // ?address= từ trang thêm địa chỉ; không thuộc sổ địa chỉ thì về địa chỉ mặc định (getAddresses xếp đầu), như /thanh-toan
+  const wanted = Number(query.address)
+  const selectedId = addresses.find((address) => address.id === wanted)?.id ?? addresses[0]?.id
 
   return (
     <UsedOrderForm
@@ -103,9 +115,10 @@ async function BuyContent({ locale, params }: { locale: Locale; params: Props['p
       address={
         <AddressOptions
           addresses={addresses}
-          selectedId={addresses[0]?.id}
+          selectedId={selectedId}
           locale={locale}
-          addHref="/account/addresses/new"
+          // Lưu xong quay lại đúng trang mua với địa chỉ mới chọn sẵn (parseAddressNext); ghi chú đã gõ thì mất
+          addHref={{ pathname: '/account/addresses/new', query: { next: getPathname({ href, locale }) } }}
         />
       }
       payment={<PaymentMethod />}
@@ -115,19 +128,26 @@ async function BuyContent({ locale, params }: { locale: Locale; params: Props['p
   )
 }
 
-/** Không mua được (đã bán, ngừng bán, tin của chính mình): không có form, link về tin / về chợ */
-async function Unavailable({ listing, own = false }: { listing: PurchaseListing; own?: boolean }) {
+type UnavailableProps = {
+  listing: PurchaseListing
+  /** Mã lỗi place_used_order sẽ trả cho tin này (cùng câu trong messages errors) */
+  reason: 'LISTING_UNAVAILABLE' | 'LISTING_OWN' | 'BOOK_UNAVAILABLE'
+}
+
+/** Không mua được (đã bán, tin của chính mình, ngừng bán): không có form, link về tin / về chợ */
+async function Unavailable({ listing, reason }: UnavailableProps) {
   const [t, tMarket, tErrors] = await Promise.all([
     getTranslations('used.buy'),
     getTranslations('used.market'),
     getTranslations('errors'),
   ])
-  // Sách ngừng bán: người mua không đọc được dòng sách (RLS) → câu chung "không còn bán"; admin đọc được → câu kèm tên
-  const reason = own
-    ? tErrors('LISTING_OWN')
-    : listing.book && !listing.book.active
+  const own = reason === 'LISTING_OWN'
+  // Sách ngừng bán: người mua không đọc được dòng sách (RLS) → trang gọi với LISTING_UNAVAILABLE (câu chung "không còn
+  // bán"); người đọc được dòng sách (admin) → câu kèm tên
+  const description =
+    reason === 'BOOK_UNAVAILABLE' && listing.book
       ? tErrors('BOOK_UNAVAILABLE', { title: listing.book.title })
-      : tErrors('LISTING_UNAVAILABLE')
+      : tErrors(reason === 'BOOK_UNAVAILABLE' ? 'LISTING_UNAVAILABLE' : reason)
   const listingHref: Href = { pathname: '/used-books/[id]', params: { id: String(listing.id) } }
   const linkClass = buttonVariants({ variant: 'outline', size: 'lg', className: 'h-10 px-4' })
 
@@ -136,7 +156,7 @@ async function Unavailable({ listing, own = false }: { listing: PurchaseListing;
       <EmptyState
         icon={PackageXIcon}
         title={own ? t('ownTitle') : t('unavailableTitle')}
-        description={reason}
+        description={description}
         action={
           <div className="flex flex-wrap justify-center gap-3">
             {own ? (
@@ -149,7 +169,7 @@ async function Unavailable({ listing, own = false }: { listing: PurchaseListing;
               </Link>
             )}
             {/* Tin đã bán vẫn có trang (nhãn "Đã bán"); sách ngừng bán thì trang tin là 404 → không dẫn tới */}
-            {(own || listing.book?.active) && (
+            {listing.book?.active && (
               <Link href={listingHref} prefetch={false} className={linkClass}>
                 {t('backToListing')}
               </Link>

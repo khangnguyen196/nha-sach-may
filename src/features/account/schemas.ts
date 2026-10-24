@@ -44,8 +44,14 @@ export type AddressInput = z.output<typeof addressSchema>
 
 export const addressIdSchema = z.coerce.number().int().positive()
 
-/** Trang quay lại sau khi thêm địa chỉ (tham số bind đi qua client); lạ → về sổ địa chỉ */
-export const addressReturnToSchema = z.enum(['checkout']).nullable().catch(null)
+/**
+ * Trang quay lại sau khi thêm địa chỉ (tham số bind đi qua client nên parse lại): thanh toán, hoặc trang mua một tin
+ * sách cũ (id nguyên dương an toàn); lạ → null (về sổ địa chỉ)
+ */
+export const addressReturnToSchema = z
+  .union([z.literal('checkout'), z.strictObject({ usedListingId: z.int().positive() })])
+  .nullable()
+  .catch(null)
 
 export type AddressReturnTo = z.output<typeof addressReturnToSchema>
 

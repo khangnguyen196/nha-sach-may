@@ -2,7 +2,7 @@
 
 import { refresh } from 'next/cache'
 import type { Locale } from 'next-intl'
-import { redirect } from '@/i18n/navigation'
+import { redirect, type Href } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { invalidInput, toFailure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
@@ -13,7 +13,10 @@ import { addressIdSchema, addressReturnToSchema, addressSchema, emailLocaleSchem
 // next/root-params. Tham số bind đi qua client nên vẫn parse lại.
 // user_id không bao giờ nhận từ client: lấy từ phiên; RLS `with check` chặn thêm một lớp.
 
-/** `returnTo` = 'checkout': lưu xong quay lại thanh toán với địa chỉ mới được chọn sẵn */
+/**
+ * `returnTo` (parseAddressNext ở page): 'checkout' / { usedListingId } → lưu xong quay lại thanh toán / trang mua tin
+ * sách cũ với địa chỉ mới được chọn sẵn (?address=). URL dựng lại từ mẫu route, không nhận chuỗi URL từ client.
+ */
 export async function createAddress(
   locale: Locale,
   returnTo: AddressReturnTo,
@@ -37,11 +40,14 @@ export async function createAddress(
     .single()
   if (error) return toFailure(error)
 
-  const target = addressReturnToSchema.parse(returnTo)
-  return redirect({
-    href: target === 'checkout' ? { pathname: '/checkout', query: { address: String(data.id) } } : '/account/addresses',
-    locale: parseLocale(locale),
-  })
+  return redirect({ href: afterCreateHref(addressReturnToSchema.parse(returnTo), data.id), locale: parseLocale(locale) })
+}
+
+function afterCreateHref(target: AddressReturnTo, addressId: number): Href {
+  const query = { address: String(addressId) }
+  if (target === 'checkout') return { pathname: '/checkout', query }
+  if (target) return { pathname: '/used-books/[id]/buy', params: { id: String(target.usedListingId) }, query }
+  return '/account/addresses'
 }
 
 export async function updateAddress(
