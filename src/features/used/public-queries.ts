@@ -7,9 +7,10 @@ import { MARKET_PAGE_SIZE, type MarketListInput } from './market-params'
 import { signUsedPhotoUrls } from './signed-urls'
 
 // Chợ sách cũ, phần công khai (docs/plans/cho-sach-cu.md, P-B vòng 9). Client anon không cookies → dùng được trong
-// 'use cache'; RLS cho anon chỉ đọc tin đã duyệt / đã bán, chỉ các cột được cấp (không seller_id, fee, reject_reason)
-// và chỉ sách đang bán (embed `books!inner` bỏ tin của sách ngừng bán). Quyết định 7a: hàm nào có link ảnh ký (hạn 7
-// ngày) giữ cacheLife('hours') (expire 1 ngày); Vitest cache-life.test.ts kiểm.
+// 'use cache'; RLS cho anon chỉ đọc tin đã duyệt / đã bán, chỉ các cột được cấp (không seller_id, fee, reject_reason).
+// Tin của sách ngừng bán không hiện: danh sách embed `books!inner` (bỏ dòng), trang tin embed thường rồi trả null khi
+// không đọc được sách (RLS của books). Quyết định 7a: hàm nào có link ảnh ký (hạn 7 ngày) giữ cacheLife('hours')
+// (expire 1 ngày); Vitest cache-life.test.ts kiểm.
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 
