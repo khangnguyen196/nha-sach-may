@@ -26,8 +26,8 @@ import { collectErrors, collectErrorsAllow404, waitForHydration } from './helper
 // Quy tắc dữ liệu:
 // - Tin cần lên DANH SÁCH dùng sách thật của e2e/fixtures/books.json (danh mục đang hiện; sách e2e tạo bằng service role
 //   nằm ngoài danh sách danh mục đã cache nên không bao giờ lên danh sách), MỖI PROJECT MỘT CUỐN (desktop-account /
-//   mobile-account chạy song song: "Có N bản cũ" đếm đúng tin của mình). Bất biến (danh mục, trần giá, không spec nào
-//   khác dùng) ở scripts/e2e-seed.test.ts. Giá tin ≤ trần của sách.
+//   mobile-account chạy song song: "Có N bản cũ" đếm đúng tin của mình). Bất biến (danh mục lá đang bật, giá gốc lớn
+//   hơn mọi giá tin của spec trên sách này, không spec nào khác dùng) ở scripts/e2e-seed.test.ts.
 // - Duyệt QUA GIAO DIỆN admin (/admin/sach-cu/<id>) để updateTag chạy; duyệt bằng RPC thì danh sách / trang sách đã
 //   cache không thấy tin. Tương tự, tin đã công khai được người bán rút QUA GIAO DIỆN (updateTag) trong finally của mỗi
 //   ca, trước deleteE2eUsers / cleanupE2eAdminData ở afterAll; đơn dọn bằng cancelAndDeleteOrders (tin về đang bán) rồi
@@ -149,9 +149,27 @@ async function withdrawViaUi(id: number) {
   await expect(item.getByTestId('listing-status')).toHaveText('Đã rút', { timeout: 15_000 })
 }
 
-/** Rút mọi tin của ca (kể cả khi ca đỏ giữa chừng) */
-async function withdrawAll(ids: readonly number[]) {
-  for (const id of ids) await withdrawViaUi(id)
+type CleanupStep = readonly [label: string, run: () => Promise<unknown>]
+
+/** Bước dọn: người bán rút từng tin của ca qua giao diện */
+const withdrawSteps = (ids: readonly number[]): CleanupStep[] =>
+  ids.map((id) => [`rút tin ${id}`, () => withdrawViaUi(id)] as const)
+
+/**
+ * Dọn cuối ca (trong finally, chạy cả khi ca đỏ giữa chừng): chạy hết mọi bước dù bước trước lỗi (không sót tin), lỗi
+ * ghi console kèm tên bước. Chỉ ném lại khi thân ca đã qua: ca đỏ thì Playwright báo lỗi gốc, không bị lỗi dọn che.
+ */
+async function cleanUp(bodyPassed: boolean, steps: readonly CleanupStep[]) {
+  const errors: unknown[] = []
+  for (const [label, run] of steps) {
+    try {
+      await run()
+    } catch (error) {
+      console.error(`Dọn cuối ca: ${label} lỗi`, error)
+      errors.push(error)
+    }
+  }
+  if (bodyPassed && errors.length > 0) throw new AggregateError(errors, `Dọn cuối ca lỗi ${errors.length} bước`)
 }
 
 test('(p1) khách thấy tin đã duyệt ở /cho-sach-cu (lọc ?book=): ảnh, người bán, giá; trang tin vi / en 200 + hreflang', async ({
@@ -159,6 +177,7 @@ test('(p1) khách thấy tin đã duyệt ở /cho-sach-cu (lọc ?book=): ảnh
 }) => {
   test.setTimeout(120_000)
   const ids: number[] = []
+  let passed = false
   try {
     const id = await createPendingListing(35_000)
     ids.push(id)
@@ -184,7 +203,8 @@ test('(p1) khách thấy tin đã duyệt ở /cho-sach-cu (lọc ?book=): ảnh
     await item.getByRole('link').click()
     await expect(page).toHaveURL(new RegExp(`/cho-sach-cu/${id}$`))
     await expect(main(page).getByTestId('market-listing-title')).toHaveText(book.title)
-    await expect(main(page).getByTestId('market-listing-seller')).toHaveText(seller.fullName)
+    // Next giữ trang lưới vừa rời trong DOM ở dạng ẩn (Activity, thẻ lưới cùng testid) → chỉ xét phần tử đang hiển thị
+    await expect(main(page).getByTestId('market-listing-seller').filter({ visible: true })).toHaveText(seller.fullName)
     await expect(main(page).getByTestId('market-listing-sold')).toHaveCount(0)
 
     const vi = await page.goto(`/cho-sach-cu/${id}`)
@@ -202,8 +222,9 @@ test('(p1) khách thấy tin đã duyệt ở /cho-sach-cu (lọc ?book=): ảnh
     await expect(main(page).getByTestId('market-listing-price')).toHaveText(vnd(35_000, 'en'))
     await expect(main(page).getByTestId('market-listing-seller')).toHaveText(seller.fullName)
     expect(errors).toEqual([])
+    passed = true
   } finally {
-    await withdrawAll(ids)
+    await cleanUp(passed, withdrawSteps(ids))
   }
 })
 
@@ -240,9 +261,10 @@ test('(p2) tin chờ duyệt: không lên danh sách, trang tin 404 used-market 
 test('(p3) tin đã bán: trang tin hiện "Đã bán", không lên danh sách', async ({ page }) => {
   test.setTimeout(120_000)
   const ids: number[] = []
+  let passed = false
   try {
-    const price = 45_000
-    const id = await createPendingListing(price)
+    // Giá viết thẳng trong lời gọi: scripts/e2e-seed.test.ts đọc giá tin từ đây để kiểm giá gốc của sách
+    const id = await createPendingListing(45_000)
     ids.push(id)
     await approveViaUi(id)
 
@@ -252,7 +274,7 @@ test('(p3) tin đã bán: trang tin hiện "Đã bán", không lên danh sách',
       p_address_id: address,
       p_payment_method: 'cod',
       p_idempotency_key: randomUUID(),
-      p_expected_total: price + SHIPPING_FEE,
+      p_expected_total: 45_000 + SHIPPING_FEE,
     })
     expect(error).toBeNull()
     expect(await usedListingRow(id)).toMatchObject({ status: 'sold' })
@@ -267,16 +289,20 @@ test('(p3) tin đã bán: trang tin hiện "Đã bán", không lên danh sách',
     await expect(main(page).getByTestId('market-count')).toBeVisible()
     await expect(card(page, id)).toHaveCount(0)
     expect(errors).toEqual([])
+    passed = true
   } finally {
     // Tin đã bán không rút được: hủy + xóa đơn trước (trigger trả tin về đang bán), rồi rút qua giao diện
-    await cancelAndDeleteOrders([buyer.id])
-    await withdrawAll(ids)
+    await cleanUp(passed, [
+      ['hủy + xóa đơn của người mua', () => cancelAndDeleteOrders([buyer.id])],
+      ...withdrawSteps(ids),
+    ])
   }
 })
 
 test('(p4) tin đã duyệt của sách thuộc danh mục ẩn: không lên danh sách, trang tin vẫn 200', async ({ page }) => {
   test.setTimeout(120_000)
   const ids: number[] = []
+  let passed = false
   try {
     const root = await createE2eCategory({ active: false })
     slugs.push(root.slug)
@@ -301,8 +327,9 @@ test('(p4) tin đã duyệt của sách thuộc danh mục ẩn: không lên dan
     expect(response?.status()).toBe(200)
     await expect(main(page).getByTestId('market-listing-title')).toHaveText(hiddenBook.title)
     expect(errors).toEqual([])
+    passed = true
   } finally {
-    await withdrawAll(ids)
+    await cleanUp(passed, withdrawSteps(ids))
   }
 })
 
@@ -311,6 +338,7 @@ test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= 
 }) => {
   test.setTimeout(180_000)
   const ids: number[] = []
+  let passed = false
   try {
     const cheap = await createPendingListing(25_000)
     ids.push(cheap)
@@ -337,13 +365,16 @@ test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= 
     await expect(
       main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name: 'Giá tăng dần' }),
     ).toHaveAttribute('aria-current', 'true')
+    // Next giữ lưới trước khi bấm chip trong DOM ở dạng ẩn (Activity) → chỉ đọc thứ tự của lưới đang hiển thị
     const order = await main(page)
       .getByTestId('market-listing')
+      .filter({ visible: true })
       .evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-listing-id'))))
     expect(order.filter((id) => id === cheap || id === dear)).toEqual([cheap, dear])
     await page.goto(marketOf(book.slug, '&sort=price-desc'))
     const desc = await main(page)
       .getByTestId('market-listing')
+      .filter({ visible: true })
       .evaluateAll((items) => items.map((item) => Number(item.getAttribute('data-listing-id'))))
     expect(desc.filter((id) => id === cheap || id === dear)).toEqual([dear, cheap])
 
@@ -358,7 +389,8 @@ test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= 
       `/en/used-books?book=${book.slug}`,
     )
     expect(errors).toEqual([])
+    passed = true
   } finally {
-    await withdrawAll(ids)
+    await cleanUp(passed, withdrawSteps(ids))
   }
 })

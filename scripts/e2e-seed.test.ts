@@ -79,12 +79,21 @@ describe('e2e/fixtures/books.json', () => {
     expect(books.some((b) => b.price >= 100_000 && b.price <= 200_000)).toBe(true)
   })
 
-  it('used-market-public-account.spec: mỗi project một sách thật cho chợ sách cũ (danh mục đang hiện, trần giá ≥ 40.000)', () => {
-    // Sách riêng của spec (desktop / mobile chạy song song, đếm "Có N bản cũ" trên đúng cuốn của mình): danh mục lá của
-    // seed (cha seed, đều đang bật), giá gốc / giá ≥ 40.000 (tin 25.000 và 40.000 không vượt trần), còn hàng, không
+  it('used-market-public-account.spec: mỗi project một sách thật cho chợ sách cũ (danh mục lá đang bật, giá gốc > giá tin)', () => {
+    // Sách riêng của spec (desktop / mobile chạy song song, đếm "Có N bản cũ" trên đúng cuốn của mình): danh mục LÁ của
+    // seed (không có danh mục con) và đang bật, cả cha (danh sách chợ chỉ hiện sách của danh mục đang hiện); có giá gốc
+    // lớn hơn mọi giá tin của spec trên sách này (lời gọi createPendingListing không truyền sách khác); còn hàng, không
     // nằm trong 20 cuốn đầu findBooksByStock(10, …) của cart spec, không spec nào khác nhắc tới slug
     const roomy = books.filter((b) => b.stock >= 10).slice(0, 20)
-    const seed = read('../supabase/seed.sql')
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const spec = read('../e2e/used-market-public-account.spec.ts')
+    // Mọi lời gọi trên sách của project (một tham số) phải viết thẳng giá; lời gọi có tham số sách (sách e2e) bỏ qua
+    const calls = [...spec.matchAll(/(?<!function )createPendingListing\(([^)]*)\)/g)].map((match) => match[1] ?? '')
+    const ownBook = calls.filter((args) => !args.includes(','))
+    for (const args of ownBook) expect(args, 'giá tin phải viết thẳng (VD 25_000)').toMatch(/^\d[\d_]*$/)
+    const listingPrices = ownBook.map((args) => Number(args.replaceAll('_', '')))
+    expect(listingPrices.length).toBeGreaterThan(0)
+    const maxListingPrice = Math.max(...listingPrices)
     const others = readdirSync(new URL('../e2e/', import.meta.url))
       .filter((file) => file.endsWith('.ts') && file !== 'used-market-public-account.spec.ts')
       .map((file) => read(`../e2e/${file}`))
@@ -93,14 +102,23 @@ describe('e2e/fixtures/books.json', () => {
       const book = books.find((b) => b.slug === slug)
       expect(book, slug).toBeDefined()
       if (!book) continue
-      expect(book.original_price ?? book.price, slug).toBeGreaterThanOrEqual(40_000)
+      expect(book.original_price, slug).not.toBeNull()
+      expect(book.original_price ?? 0, slug).toBeGreaterThan(maxListingPrice)
       expect(book.stock, slug).toBeGreaterThan(5)
       expect(roomy.map((b) => b.slug), slug).not.toContain(slug)
-      // Danh mục lá của seed.sql (dòng danh mục con: `('<cha>', '<tên>', '<tên en>', '<slug>', <thứ tự>)`)
-      expect(seed, slug).toContain(`'${book.category_slug}',`)
+      const category = categories.get(book.category_slug)
+      expect(category, `${slug}: danh mục ${book.category_slug} không có trong seed.sql`).toBeDefined()
+      if (!category) continue
+      expect(category.active, `${slug}: ${book.category_slug} đang tắt`).toBe(true)
+      if (category.parent) {
+        const parent = categories.get(category.parent)
+        expect(parent?.active, `${slug}: danh mục cha ${category.parent} không có / đang tắt`).toBe(true)
+      }
+      const children = [...categories.values()].filter((c) => c.parent === book.category_slug)
+      expect(children, `${slug}: ${book.category_slug} có danh mục con`).toEqual([])
       expect(others, slug).not.toContain(slug)
     }
-    expect(read('../e2e/used-market-public-account.spec.ts')).toContain(`'${USED_MARKET_BOOKS[0]}'`)
+    expect(spec).toContain(`'${USED_MARKET_BOOKS[0]}'`)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {
@@ -109,6 +127,34 @@ describe('e2e/fixtures/books.json', () => {
 })
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
+
+type SeedCategory = { parent: string | null; active: boolean }
+
+/**
+ * Danh mục của seed.sql theo slug: khối danh mục cha `(tên, tên en, slug, thứ tự)` và khối danh mục con `(cha, tên, tên
+ * en, slug, thứ tự)`; khối nào thêm cột (VD is_active) thì regex không khớp → không có danh mục nào (test đỏ). Không ghi
+ * is_active → lấy mặc định của schema.sql; seed có câu update danh mục thì coi mọi danh mục là tắt (không tự đoán câu
+ * update đổi danh mục nào).
+ */
+function seedCategories(sql: string) {
+  const defaultActive = /is_active\s+boolean not null default true/.test(read('../supabase/schema.sql'))
+  const active = defaultActive && !/update\s+public\.categories/i.test(sql)
+  const quoted = (line: string) => [...line.matchAll(/'([^']*)'/g)].map((match) => match[1] ?? '')
+  const rows = (block: string | undefined) => (block ?? '').split('\n').filter((line) => line.trim().startsWith('('))
+
+  const roots = /insert into public\.categories \(name, name_en, slug, sort_order\) values([\s\S]*?);/.exec(sql)?.[1]
+  const children = /from \(values([\s\S]*?)\) as c\(parent_slug, name, name_en, slug, sort_order\)/.exec(sql)?.[1]
+  const categories = new Map<string, SeedCategory>()
+  for (const line of rows(roots)) {
+    const [, , slug] = quoted(line)
+    if (slug) categories.set(slug, { parent: null, active })
+  }
+  for (const line of rows(children)) {
+    const [parent, , , slug] = quoted(line)
+    if (parent && slug) categories.set(slug, { parent, active })
+  }
+  return categories
+}
 
 describe('seed của Supabase local (ux-messages)', () => {
   it('seed.sql có ít nhất 1 voucher public (gợi ý mã ở checkout.spec có mã seed hiện chung)', () => {

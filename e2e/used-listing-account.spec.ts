@@ -390,43 +390,49 @@ test('(9) đã có 30 ảnh trong kho → chọn ảnh: câu LISTING_PHOTO_LIMIT
   }
 })
 
-/** Số lần trang gọi createImageBitmap giả (đếm trên <html data-e2e-bitmap>): chắc chắn bản giả được dùng */
-const fakeBitmapCalls = (page: Page) => page.evaluate(() => Number(document.documentElement.dataset.e2eBitmap ?? 0))
+/** Khóa sessionStorage chọn kiểu lỗi của createImageBitmap giả cho các lần tải trang sau trong cùng tab */
+const BITMAP_MODE_KEY = 'e2e-bitmap-mode'
+
+/** Kiểu lỗi + số lần gọi createImageBitmap giả (<html data-e2e-bitmap="throw:1">): chắc chắn đúng bản giả được dùng */
+const fakeBitmapCalls = (page: Page) => page.evaluate(() => document.documentElement.dataset.e2eBitmap ?? '')
 
 test('(10) createImageBitmap lỗi (trình duyệt cũ) → dự phòng <img>: ảnh EXIF vẫn tải được, đã xoay dọc', async ({
   page,
 }) => {
   test.setTimeout(120_000)
+  // MỘT init script (thứ tự chạy của nhiều addInitScript không được bảo đảm), chọn kiểu lỗi theo sessionStorage lúc tải
+  // trang: 'throw' (mặc định) ném TypeError ngay khi gọi; 'reject' như trình duyệt thật, trả Promise bị từ chối
+  await page.addInitScript((key) => {
+    let mode = 'throw'
+    try {
+      if (sessionStorage.getItem(key) === 'reject') mode = 'reject'
+    } catch {
+      // about:blank không có sessionStorage: giữ mặc định
+    }
+    let calls = 0
+    window.createImageBitmap = () => {
+      calls++
+      document.documentElement.dataset.e2eBitmap = `${mode}:${calls}`
+      const error = new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation.")
+      if (mode === 'throw') throw error
+      return Promise.reject(error)
+    }
+  }, BITMAP_MODE_KEY)
   try {
     // Lượt 1: ném TypeError ngay khi gọi
-    await page.addInitScript(() => {
-      window.createImageBitmap = () => {
-        const html = document.documentElement
-        html.dataset.e2eBitmap = String(Number(html.dataset.e2eBitmap ?? 0) + 1)
-        throw new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation.")
-      }
-    })
     await login(page, seller)
     await openNewListing(page)
     const thrown = await addPhoto(page, 1)
     await expect(main(page).getByTestId('listing-photos-error')).toHaveCount(0)
-    expect(await fakeBitmapCalls(page)).toBe(1)
+    expect(await fakeBitmapCalls(page)).toBe('throw:1')
     await expectStoredPortrait(thrown)
 
-    // Lượt 2: như trình duyệt thật, trả Promise bị từ chối với TypeError (script khởi tạo sau chạy sau, ghi đè lượt 1)
-    await page.addInitScript(() => {
-      window.createImageBitmap = () => {
-        const html = document.documentElement
-        html.dataset.e2eBitmap = String(Number(html.dataset.e2eBitmap ?? 0) + 1)
-        return Promise.reject(
-          new TypeError("The provided value 'from-image' is not a valid enum value of type ImageOrientation."),
-        )
-      }
-    })
+    // Lượt 2: Promise bị từ chối (đặt chế độ trước khi tải lại trang đăng tin)
+    await page.evaluate((key) => sessionStorage.setItem(key, 'reject'), BITMAP_MODE_KEY)
     await openNewListing(page)
     const rejected = await addPhoto(page, 1)
     await expect(main(page).getByTestId('listing-photos-error')).toHaveCount(0)
-    expect(await fakeBitmapCalls(page)).toBe(1)
+    expect(await fakeBitmapCalls(page)).toBe('reject:1')
     await expectStoredPortrait(rejected)
   } finally {
     await removeUsedPhotosOf(seller.id)
