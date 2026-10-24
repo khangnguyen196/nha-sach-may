@@ -15,6 +15,7 @@ type Props = PageProps<'/[locale]/used-books/[id]'>
 
 // instant = false chỉ tắt kiểm tra "instant navigation" của Next (dev) và kiểm static shell không rỗng; KHÔNG đổi cách
 // render: tin vẫn đọc từ cache ('use cache', cacheLife('hours')), không có generateStaticParams (tin tạo / gỡ liên tục).
+// Giữ tạm, xem docs/progress.md [Mức thấp] instant = false.
 export const instant = false
 
 // Tin tạm thời (bán / rút / gỡ bất cứ lúc nào) và link ảnh có hạn → không cho index, không vào sitemap

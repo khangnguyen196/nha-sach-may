@@ -138,7 +138,7 @@ function categoriesDefaultActive() {
   const schema = read('../supabase/schema.sql')
   const table = /create table public\.categories \(([\s\S]*?)\r?\n\);/.exec(schema)?.[1]
   if (table === undefined || !/is_active\s+boolean not null default true/.test(table)) return false
-  return !/alter\s+table\s+(only\s+)?(public\.)?categories\s+alter\s+column\s+is_active\s+set\s+default/i.test(schema)
+  return !/alter\s+table\s+(if\s+exists\s+)?(only\s+)?(public\.)?categories\s+alter\s+(column\s+)?is_active\s+(set|drop)\s+default/i.test(schema)
 }
 
 /** Seed nào (seed.sql + seed-foreign-books.sql, DB local nạp cả hai) có câu update danh mục, có hay không tiền tố schema */

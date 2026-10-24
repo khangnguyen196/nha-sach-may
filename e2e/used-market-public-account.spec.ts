@@ -180,8 +180,9 @@ async function cleanUp(bodyPassed: boolean, steps: readonly CleanupStep[]) {
     } catch (error) {
       console.error(`Dọn cuối ca: ${label} lỗi`, error)
       errors.push(error)
-      // Báo cáo Playwright chỉ in message của AggregateError: ghép bước + lỗi đầu để biết ngay bước nào hỏng
-      if (!first) first = `${label}: ${error instanceof Error ? error.message : String(error)}`
+      // Báo cáo Playwright chỉ in message của AggregateError: ghép bước + dòng đầu của lỗi đầu tiên (message lỗi
+      // expect nhiều dòng) để biết ngay bước nào hỏng
+      if (!first) first = `${label}: ${(error instanceof Error ? error.message : String(error)).split('\n')[0]}`
     }
   }
   if (bodyPassed && errors.length > 0) {
@@ -350,7 +351,7 @@ test('(p4) tin đã duyệt của sách thuộc danh mục ẩn: không lên dan
   }
 })
 
-test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= xếp giá tăng; gỡ một tin → "Có 1 bản cũ"; câu en', async ({
+test('(p5) trang sách: "Có 3 bản cũ từ 25.000 ₫" → danh sách ?book= mới duyệt / giá tăng / giá giảm; gỡ một tin → "Có 2 bản cũ"; câu en', async ({
   page,
 }) => {
   test.setTimeout(180_000)
@@ -361,37 +362,42 @@ test('(p5) trang sách: "Có 2 bản cũ từ 25.000 ₫" → danh sách ?book= 
     ids.push(cheap)
     const dear = await createPendingListing(40_000)
     ids.push(dear)
+    const mid = await createPendingListing(32_000)
+    ids.push(mid)
+    // Duyệt theo thứ tự cheap → dear → mid: ba cách xếp ra ba thứ tự khác nhau (mới duyệt khác giá giảm dần)
     await approveViaUi(cheap)
     await approveViaUi(dear)
+    await approveViaUi(mid)
+    const listed = [cheap, mid, dear]
 
     const errors = collectErrors(page)
     await page.goto(`/sach/${book.slug}`)
     const copies = main(page).getByTestId('used-copies')
-    await expect(copies).toHaveText(`Có 2 bản cũ từ ${vnd(25_000)}`)
+    await expect(copies).toHaveText(`Có 3 bản cũ từ ${vnd(25_000)}`)
     // Link LUÔN tới danh sách lọc theo sách (không trỏ thẳng một tin)
     const link = copies.getByRole('link')
     await expect(link).toHaveAttribute('href', `/cho-sach-cu?book=${book.slug}`)
     await link.click()
     await expect(page).toHaveURL(new RegExp(`/cho-sach-cu\\?book=${book.slug}$`))
-    await expect(card(page, cheap)).toBeVisible()
-    await expect(card(page, dear)).toBeVisible()
+    // Mặc định: mới duyệt trước (approved_at giảm dần)
+    await expect.poll(() => visibleOrder(page, listed)).toEqual([mid, dear, cheap])
 
-    // Sắp xếp giá tăng (tham số thật của chip): 25.000 đứng trước 40.000
-    await main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name: 'Giá tăng dần' }).click()
+    const sortChip = (name: string) => main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name })
+    // Sắp xếp giá tăng (tham số thật của chip)
+    await sortChip('Giá tăng dần').click()
     await expect(page).toHaveURL(new RegExp(`/cho-sach-cu\\?book=${book.slug}&sort=price-asc$`))
-    await expect(
-      main(page).getByRole('group', { name: 'Sắp xếp' }).getByRole('link', { name: 'Giá tăng dần' }),
-    ).toHaveAttribute('aria-current', 'true')
-    await expect.poll(() => visibleOrder(page, [cheap, dear])).toEqual([cheap, dear])
+    await expect(sortChip('Giá tăng dần')).toHaveAttribute('aria-current', 'true')
+    await expect.poll(() => visibleOrder(page, listed)).toEqual([cheap, mid, dear])
     await page.goto(marketOf(book.slug, '&sort=price-desc'))
-    await expect.poll(() => visibleOrder(page, [cheap, dear])).toEqual([dear, cheap])
+    await expect(sortChip('Giá giảm dần')).toHaveAttribute('aria-current', 'true')
+    await expect.poll(() => visibleOrder(page, listed)).toEqual([dear, mid, cheap])
 
     // Admin gỡ tin rẻ qua giao diện → updateTag used-book: trang sách đếm lại
     await takeDownViaUi(cheap)
     await page.goto(`/sach/${book.slug}`)
-    await expect(main(page).getByTestId('used-copies')).toHaveText(`Có 1 bản cũ từ ${vnd(40_000)}`)
+    await expect(main(page).getByTestId('used-copies')).toHaveText(`Có 2 bản cũ từ ${vnd(32_000)}`)
     await page.goto(`/en/books/${book.slug}`)
-    await expect(main(page).getByTestId('used-copies')).toHaveText(`1 used copy from ${vnd(40_000, 'en')}`)
+    await expect(main(page).getByTestId('used-copies')).toHaveText(`2 used copies from ${vnd(32_000, 'en')}`)
     await expect(main(page).getByTestId('used-copies').getByRole('link')).toHaveAttribute(
       'href',
       `/en/used-books?book=${book.slug}`,
