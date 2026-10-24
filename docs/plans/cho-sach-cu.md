@@ -298,11 +298,15 @@ cắt SQL, chủ dự án chạy, rồi mới lên main. [x] = đã làm (vòng 
   chủ dự án chọn); (m8) chờ `ready` thật (bộ đếm ghi chú) trước khi kiểm nút khóa; CLAUDE.md (pathnames trang mua, chữ
   ký RPC + `admin_seller_payouts`, chat ẩn ở trang mua, `/admin/tra-nguoi-ban`, VietQR, Mutation, regex e2e, cờ prefetch).
   Chủ dự án quyết (2026-10-24): duyệt `place_used_order` + `p_expected_updated_at`; giữ `seller_id` đọc được với
-  authenticated; `VIETQR_*` Production là số demo → giữ cách hiện QR như đơn thường.
+  authenticated; giữ cách hiện QR như đơn thường. Production không đặt `VIETQR_*` → tài khoản demo mặc định
+  (STK 0000000000) + luôn có cảnh báo (chủ dự án kiểm 2026-10-24).
+- [x] Điểm dừng SQL (vòng 19–20): cắt khối SQL migration `20261024120000_used_market_purchase.sql` (@ `0afa5c4`) ra file
+  ngoài repo + chụp trước MCP; chủ dự án chạy SQL trên production tối 2026-10-24 ("Success. No rows returned"); kiểm
+  sau S0–S5 bằng MCP chỉ đọc đúng hết (3 hàm chữ ký mới, quyền, md5 thân hàm, kiểu trả về `admin_seller_payouts`);
+  test điện thoại luồng mua trên Preview `0afa5c4`: đạt cả 7 bước (đơn thử đã hủy, tin thử đã rút).
 
-Còn lại: cắt khối SQL của migration `20261024120000_used_market_purchase.sql` (tại commit đã duyệt) ra file ngoài
-repo + chụp trước bằng MCP chỉ đọc → DỪNG chờ chủ dự án chạy SQL ("ĐÃ CHẠY SQL") + test điện thoại luồng mua trên
-Preview → lên main. Giữa lúc chạy SQL và lúc lên main, admin trên web thật không duyệt / từ chối tin được.
+Còn lại: lên main (fast-forward) → kiểm production chỉ đọc. Giữa lúc chạy SQL và lúc lên main, admin trên web thật
+không duyệt / từ chối tin được.
 
 ## Test (P-A)
 
