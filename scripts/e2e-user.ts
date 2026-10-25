@@ -553,6 +553,7 @@ export async function createE2eBook({
   originalPrice = null,
   stock = 10,
   active = true,
+  titleTag,
 }: {
   /** null: sách không có danh mục (vẫn lên danh sách, docs/plans/sau-ux.md mục 6 ★6c) */
   categoryId: number | null
@@ -561,12 +562,14 @@ export async function createE2eBook({
   originalPrice?: number | null
   stock?: number
   active?: boolean
+  /** Cụm thêm vào tên sách, VD `[mock:warn-self-harm]` điều khiển AI giả của gợi ý cảnh báo (features/warnings/mock.ts) */
+  titleTag?: string
 }): Promise<E2eAdminBook> {
   const slug = e2eAdminSlug()
   const { data, error } = await adminClient()
     .from('books')
     .insert({
-      title: `E2E sách ${slug.slice(-6)}`,
+      title: titleTag ? `E2E sách ${titleTag} ${slug.slice(-6)}` : `E2E sách ${slug.slice(-6)}`,
       slug,
       category_id: categoryId,
       price,
@@ -995,6 +998,80 @@ export async function warningSuggestionRow(id: number) {
     .maybeSingle()
   if (error) throw new Error(`warningSuggestionRow: ${error.message}`)
   return data
+}
+
+/** Gợi ý cảnh báo của một sách, cũ trước (service role) */
+export async function warningSuggestionsOf(bookId: number) {
+  const { data, error } = await adminClient()
+    .from('content_warning_suggestions')
+    .select('id, labels, status, reviewed_at')
+    .eq('book_id', bookId)
+    .order('id')
+  if (error) throw new Error(`warningSuggestionsOf: ${error.message}`)
+  return data
+}
+
+/** Thêm một gợi ý chờ duyệt bằng service role (không qua AI, không trừ lượt consume_warning_quota) → id */
+export async function insertWarningSuggestion(bookId: number, labels: Database['public']['Enums']['content_warning'][]) {
+  const { data, error } = await adminClient()
+    .from('content_warning_suggestions')
+    .insert({ book_id: bookId, labels, reason: 'Gợi ý e2e tạo bằng service role.', model: 'e2e' })
+    .select('id')
+    .single()
+  if (error) throw new Error(`insertWarningSuggestion: ${error.message}`)
+  return data.id
+}
+
+/** Id gợi ý cảnh báo lớn nhất hiện có (0 nếu chưa có): mốc để tìm gợi ý tạo sau đó */
+export async function maxWarningSuggestionId() {
+  const { data, error } = await adminClient()
+    .from('content_warning_suggestions')
+    .select('id')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`maxWarningSuggestionId: ${error.message}`)
+  return data?.id ?? 0
+}
+
+/** Gợi ý cảnh báo có id > `afterId` kèm slug sách (service role), theo id */
+export async function warningSuggestionsAfter(afterId: number) {
+  const { data, error } = await adminClient()
+    .from('content_warning_suggestions')
+    .select('id, book_id, status, books(slug)')
+    .gt('id', afterId)
+    .order('id')
+  if (error) throw new Error(`warningSuggestionsAfter: ${error.message}`)
+  return data
+}
+
+export async function deleteWarningSuggestions(ids: number[]) {
+  if (ids.length === 0) return
+  const { error } = await adminClient().from('content_warning_suggestions').delete().in('id', ids)
+  if (error) throw new Error(`deleteWarningSuggestions: ${error.message}`)
+}
+
+/** [api] max_rows trong supabase/config.toml */
+const LOCAL_MAX_ROWS = 1000
+
+/**
+ * Sách chưa xét (content_warnings_reviewed_at null) không có gợi ý chờ duyệt, theo id (service role). Tính trong bộ nhớ
+ * từ hai query riêng, KHÔNG dùng anti-join của PostgREST (đó là thứ spec đang kiểm).
+ */
+export async function unreviewedBooksWithoutPending() {
+  const admin = adminClient()
+  const [books, pending] = await Promise.all([
+    admin.from('books').select('id, slug').is('content_warnings_reviewed_at', null).order('id'),
+    admin.from('content_warning_suggestions').select('book_id').eq('status', 'pending'),
+  ])
+  if (books.error) throw new Error(`unreviewedBooksWithoutPending (books): ${books.error.message}`)
+  if (pending.error) throw new Error(`unreviewedBooksWithoutPending (gợi ý): ${pending.error.message}`)
+  // max_rows của PostgREST local (supabase/config.toml) cắt lặng lẽ: chạm trần thì kết quả không đủ → báo lỗi
+  if (books.data.length >= LOCAL_MAX_ROWS || pending.data.length >= LOCAL_MAX_ROWS) {
+    throw new Error('unreviewedBooksWithoutPending: chạm max_rows của PostgREST, kết quả có thể thiếu')
+  }
+  const suggested = new Set(pending.data.map((row) => row.book_id))
+  return books.data.filter((book) => !suggested.has(book.id))
 }
 
 /** Mục chặn của một user (service role, không qua RLS) */
