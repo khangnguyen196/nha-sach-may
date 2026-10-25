@@ -24,17 +24,39 @@ import type { Database } from '../src/types/database'
 // Gọi thẳng PostgREST bằng supabase-js theo phiên từng người (admin A, thành viên U, V, khách chưa đăng nhập): trigger
 // thời điểm xét, RLS + quyền cột của user_blocks / content_warning_suggestions, giới hạn 50 mục, 2 RPC chỉ admin.
 // admin-*.spec.ts → chỉ chạy ở desktop-admin: lượt consume_warning_quota hợp lệ (cộng vào bucket chung gemini:* của
-// chatbot) chỉ một lần mỗi lượt CI. User + sách + tác giả tạo riêng mỗi lần chạy, xóa ở afterAll.
+// chatbot) một lần mỗi lần chạy nhóm (≤ 3 khi CI retry cả nhóm serial). User + sách + tác giả tạo riêng mỗi lần chạy,
+// xóa ở afterAll.
 
 test.describe.configure({ mode: 'serial' })
 
 type Client = ReturnType<typeof anonClient>
 type Warning = Database['public']['Enums']['content_warning']
+type Functions = Database['public']['Functions']
+type ReviewFn = Functions['review_warning_suggestion']
+type QuotaFn = Functions['consume_warning_quota']
+/**
+ * Kiểu CLI sinh cho tham số hàm không bao giờ nullable (p_expected_reviewed_at: string) dù SQL nhận null (sách chưa
+ * xét). Bản nới riêng 2 RPC của spec: review_warning_suggestion nhận null ở p_labels / p_expected_reviewed_at,
+ * consume_warning_quota nhận p_limits bất kỳ (ca tham số sai); phần còn lại giữ nguyên kiểu Database.
+ */
+type LooseDatabase = Omit<Database, 'public'> & {
+  public: Omit<Database['public'], 'Functions'> & {
+    Functions: Omit<Functions, 'review_warning_suggestion' | 'consume_warning_quota'> & {
+      review_warning_suggestion: Omit<ReviewFn, 'Args'> & {
+        Args: Omit<ReviewFn['Args'], 'p_labels' | 'p_expected_reviewed_at'> & {
+          p_labels: Warning[] | null
+          p_expected_reviewed_at: string | null
+        }
+      }
+      consume_warning_quota: Omit<QuotaFn, 'Args'> & { Args: { p_limits: unknown } }
+    }
+  }
+}
 
 const PREFS_LIMIT = 50
 const WARNINGS: Warning[] = ['violence', 'loss', 'self_harm', 'adult', 'other_sensitive']
-// Lượt hợp lệ duy nhất: trần phút 100000 vì gemini:minute dùng chung với spec chatbot chạy song song (trần nhỏ → đỏ
-// ngẫu nhiên); trần ngày 60 = trần cứng của SQL (không bao giờ chạm: spec chỉ một lượt hợp lệ)
+// Lượt hợp lệ: trần phút 100000 vì gemini:minute dùng chung với spec chatbot chạy song song (trần nhỏ → đỏ ngẫu nhiên);
+// trần ngày 60 = trần cứng của SQL (không chạm: mỗi lần chạy nhóm một lượt hợp lệ)
 const VALID_LIMITS = { geminiCallsPerMinute: 100_000, warnCallsPerMinute: 100_000, warnCallsPerDay: 60 }
 
 let admin: E2eUser
@@ -44,9 +66,8 @@ let adminClient: Client
 let memberClient: Client
 let otherClient: Client
 let anon: Client
-// Kiểu CLI sinh cho tham số hàm không bao giờ nullable (p_expected_reviewed_at: string) dù SQL nhận null (sách chưa
-// xét) → riêng lời gọi gửi null đi qua client không gắn kiểu Database, cùng phiên admin A
-let adminUntyped: SupabaseClient
+/** Cùng phiên admin A, kiểu LooseDatabase: chỉ cho lời gọi gửi null / tham số sai kiểu */
+let adminLoose: SupabaseClient<LooseDatabase>
 let categoryId: number
 let authorIds: number[]
 let triggerBook: E2eAdminBook
@@ -87,11 +108,11 @@ test.beforeAll(async () => {
     signedInClient(other),
   ])
   const { url, publishableKey } = loadLocalSupabase()
-  adminUntyped = createClient(url, publishableKey, {
+  adminLoose = createClient<LooseDatabase>(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
-  const { error } = await adminUntyped.auth.signInWithPassword({ email: admin.email, password: admin.password })
-  if (error) throw new Error(`signInWithPassword (untyped): ${error.message}`)
+  const { error } = await adminLoose.auth.signInWithPassword({ email: admin.email, password: admin.password })
+  if (error) throw new Error(`signInWithPassword (admin, kiểu nới): ${error.message}`)
 })
 
 test.afterAll(async () => {
@@ -296,7 +317,7 @@ test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm x�
   expect(await bookWarnings(reviewBook.id)).toEqual({ content_warnings: [], content_warnings_reviewed_at: null })
 
   // Sách chưa xét: p_expected_reviewed_at = null; nhãn admin sửa (lặp, sai thứ tự) được chuẩn hóa
-  const approved = await adminUntyped.rpc('review_warning_suggestion', {
+  const approved = await adminLoose.rpc('review_warning_suggestion', {
     p_id: first,
     p_labels: ['self_harm', 'loss', 'loss'],
     p_approve: true,
@@ -337,7 +358,7 @@ test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm x�
 
   const manualReviewedAt = reviewedAt(manual)
   // Duyệt mà không có nhãn → INVALID_INPUT (trước khi khóa / so gì)
-  const noLabels = await adminUntyped.rpc('review_warning_suggestion', {
+  const noLabels = await adminLoose.rpc('review_warning_suggestion', {
     p_id: second,
     p_labels: null,
     p_approve: true,
@@ -353,6 +374,12 @@ test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm x�
   })
   expect(staleDismiss.error?.message).toBe('SUGGESTION_STATUS_CHANGED')
   expect(await warningSuggestionRow(second)).toMatchObject({ status: 'pending' })
+
+  // Đổi tồn kho (đổi updated_at, như đặt / hủy đơn) không làm gợi ý báo lệch: RPC chỉ so thời điểm xét
+  const restock = await adminClient.from('books').update({ stock: 7 }).eq('id', reviewBook.id).select('id')
+  expect(restock.error).toBeNull()
+  expect(restock.data).toHaveLength(1)
+  expect(await bookWarnings(reviewBook.id)).toEqual(manual)
 
   // Bỏ qua với thời điểm xét đúng: gợi ý dismissed, nhãn sách giữ bản sửa tay (p_labels bị bỏ qua)
   const dismissed = await adminClient.rpc('review_warning_suggestion', {
@@ -374,7 +401,7 @@ test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm x�
 
 test('(e) consume_warning_quota: tham số sai → INVALID_INPUT; một lượt hợp lệ của admin → ok', async () => {
   const consume = async (limits: unknown) => {
-    const { data, error } = await adminUntyped.rpc('consume_warning_quota', { p_limits: limits })
+    const { data, error } = await adminLoose.rpc('consume_warning_quota', { p_limits: limits })
     return error ? { code: error.message, details: error.details } : { code: 'ok', data }
   }
   const invalid: [unknown, { field: string; max: number }][] = [
@@ -389,11 +416,14 @@ test('(e) consume_warning_quota: tham số sai → INVALID_INPUT; một lượt 
     expect(JSON.parse(result.details ?? '{}'), JSON.stringify(limits)).toEqual(detail)
   }
 
+  // private.chat_quota không lộ qua PostgREST (kể cả service role) → không đọc trước được gemini:day / warn:day; bị chặn
+  // thì báo rõ phạm vi thay vì một lỗi chung
   const valid = await adminClient.rpc('consume_warning_quota', { p_limits: VALID_LIMITS })
-  if (valid.error?.message === 'WARNING_QUOTA_EXCEEDED' && valid.error.details?.includes('chat_reserve')) {
+  if (valid.error?.message === 'WARNING_QUOTA_EXCEEDED') {
     throw new Error(
-      'gemini:day của ngày LA hiện tại đã chạm ngưỡng 300 (chat_reserve): các spec chatbot của lượt CI này đã gọi quá ' +
-        'nhiều lượt, xem lại bất biến tổng lượt Gemini trong docs/plans/so-thich-canh-bao.md',
+      `consume_warning_quota bị chặn (${valid.error.details}): bộ đếm của DB CI đã chạm trần (chat_reserve: ` +
+        'gemini:day ≥ 300 do spec chatbot; warn_day: các spec gợi ý cảnh báo đã dùng hết 60 lượt), xem lại bất biến ' +
+        'tổng lượt Gemini trong docs/plans/so-thich-canh-bao.md',
     )
   }
   expect(valid.error).toBeNull()

@@ -1008,7 +1008,10 @@ export async function userBlocksOf(userId: string) {
   return data
 }
 
-/** Thay toàn bộ mục chặn của user bằng `rows` (service role; trigger giới hạn vẫn chạy cho từng dòng) */
+/**
+ * Thay toàn bộ mục chặn của user bằng `rows` (service role; trigger giới hạn vẫn chạy cho từng dòng). Các dòng khác
+ * bộ khóa: supabase-js gửi hợp các khóa, khóa thiếu ở một dòng thành NULL (không lấy default) → chỉ bỏ trống cột nullable.
+ */
 export async function replaceUserBlocks(userId: string, rows: Omit<UserBlockInsert, 'user_id'>[]) {
   const admin = adminClient()
   const { error } = await admin.from('user_blocks').delete().eq('user_id', userId)
