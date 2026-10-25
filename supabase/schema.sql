@@ -240,8 +240,9 @@ create table public.books (
 );
 
 -- Có nhãn thì phải "đã xét" (mục 16): sách chưa xét thì khách không thấy gì, nên nhãn khác rỗng + reviewed_at null là
--- hai cột lệch nhau. Form admin (P-B) đổi nhãn thì gửi kèm content_warnings_reviewed_at = now(). Câu alter riêng (không
--- nằm trong create table) để giống hệt migration 20261025000000_prefs_warnings.sql (supabase/migrations.test.ts).
+-- hai cột lệch nhau. DB tự ghi now() khi nhãn đổi (trigger books_content_warnings, mục 16), app không cần gửi; check giữ
+-- làm lớp chặn cuối (VD xóa reviewed_at của sách có nhãn). Câu alter riêng (không nằm trong create table) để giống hệt
+-- migration 20261025000000_prefs_warnings.sql (supabase/migrations.test.ts).
 alter table public.books add constraint books_content_warnings_reviewed_check
   check (cardinality(content_warnings) = 0 or content_warnings_reviewed_at is not null);
 
@@ -2298,6 +2299,10 @@ create policy "used_listing_photos_delete_own" on storage.objects
 -- Bỏ trùng + xếp theo thứ tự khai báo của enum (so sánh mảng / hiện nhãn ổn định). Phần tử null giữ lại để check của
 -- bảng từ chối. Trigger thay cho CHECK gọi hàm: authenticated không có usage trên schema private, CHECK gọi hàm private
 -- làm admin sửa sách lỗi; trigger security definer chạy bằng quyền owner.
+-- Cùng trigger giữ quy ước "có nhãn ⇒ đã xét" và thời điểm xét bằng now() của DB (không dựa vào form admin): nhãn đổi
+-- mà câu update không đổi content_warnings_reviewed_at → ghi now() (review_warning_suggestion thấy reviewed_at lệch,
+-- không đè nhãn vừa sửa tay); câu update tự gửi reviewed_at khác giá trị cũ → giữ giá trị gửi. Chỉ đổi reviewed_at thì
+-- trigger không chạy (update of content_warnings) → check bắt việc xóa reviewed_at của sách có nhãn.
 create or replace function private.content_warnings_sorted(p_labels public.content_warning[])
 returns public.content_warning[] language sql immutable set search_path = '' as $$
   select case
@@ -2310,7 +2315,18 @@ $$;
 create or replace function private.books_normalize_content_warnings()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
+  -- Chuẩn hóa TRƯỚC khi so: nhãn chỉ khác thứ tự / lặp lại không tính là đổi (không báo lệch giả cho gợi ý đang mở)
   new.content_warnings := private.content_warnings_sorted(new.content_warnings);
+
+  if tg_op = 'INSERT' then
+    if cardinality(new.content_warnings) > 0 and new.content_warnings_reviewed_at is null then
+      new.content_warnings_reviewed_at := now();
+    end if;
+  elsif new.content_warnings is distinct from old.content_warnings
+    and new.content_warnings_reviewed_at is not distinct from old.content_warnings_reviewed_at then
+    new.content_warnings_reviewed_at := now();
+  end if;
+
   return new;
 end;
 $$;
@@ -2500,7 +2516,8 @@ $$;
 -- dòng sách, cho cả duyệt lẫn bỏ qua) khi:
 --   - gợi ý không có / không còn pending (đã duyệt / bỏ qua ở tab khác);
 --   - books.content_warnings_reviewed_at khác p_expected_reviewed_at (giá trị lúc admin mở gợi ý, null nếu sách chưa
---     xét): nhãn của sách vừa được sửa tay ở form sách → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
+--     xét): nhãn của sách vừa được sửa tay ở form sách (trigger books_content_warnings tự ghi now() khi nhãn đổi)
+--     → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
 --     đặt / hủy đơn đổi tồn kho → báo lệch giả. App truyền lại nguyên chuỗi timestamptz đọc từ PostgREST, không qua
 --     Date của JS (mất phần micro giây → luôn lệch).
 create or replace function public.review_warning_suggestion(
@@ -2534,10 +2551,13 @@ begin
     raise exception 'SUGGESTION_STATUS_CHANGED';
   end if;
 
+  -- for no key update: không chặn khóa FOR KEY SHARE của khóa ngoại cart_items / order_items (khách thêm giỏ / đặt đơn
+  -- cùng lúc); câu update books bên dưới không đổi khóa nên cũng chỉ lấy NO KEY UPDATE. Thứ tự khóa gợi ý → sách ngược
+  -- với xóa sách (sách → cascade gợi ý) → deadlock rất hiếm, Postgres hủy một bên (40P01), chấp nhận.
   select b.content_warnings_reviewed_at into v_reviewed_at
     from public.books b
    where b.id = v_book_id
-     for update;
+     for no key update;
 
   if v_reviewed_at is distinct from p_expected_reviewed_at then
     raise exception 'SUGGESTION_STATUS_CHANGED';

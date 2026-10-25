@@ -23,12 +23,12 @@ const section = (() => {
   return normalize(schemaSql.slice(start, end))
 })()
 
-function functionStatement(name: string) {
-  const start = schema.indexOf(`create or replace function ${name}(`)
-  if (start < 0) throw new Error(`schema.sql không có hàm ${name}`)
-  const bodyStart = schema.indexOf('$$', start)
-  const bodyEnd = schema.indexOf('$$', bodyStart + 2)
-  return schema.slice(start, bodyEnd + 2)
+function functionStatement(name: string, text = schema) {
+  const start = text.indexOf(`create or replace function ${name}(`)
+  if (start < 0) throw new Error(`${text === schema ? 'schema.sql' : 'migration'} không có hàm ${name}`)
+  const bodyStart = text.indexOf('$$', start)
+  const bodyEnd = text.indexOf('$$', bodyStart + 2)
+  return text.slice(start, bodyEnd + 2)
 }
 
 /** Câu `chat_quota_take('<bucket>', …)` trong một thân hàm, tới hết tham số scope */
@@ -140,7 +140,7 @@ describe('RPC admin của mục 16', () => {
 
   it('review_warning_suggestion: khóa dòng, chỉ gợi ý pending, lệch → SUGGESTION_STATUS_CHANGED', () => {
     const body = functionStatement('public.review_warning_suggestion')
-    expect(body).toContain('for update')
+    expect(body).toContain('from public.content_warning_suggestions s where s.id = p_id for update;')
     expect(body).toContain("if not found or v_status <> 'pending' then raise exception 'suggestion_status_changed'")
   })
 
@@ -148,8 +148,9 @@ describe('RPC admin của mục 16', () => {
     const body = functionStatement('public.review_warning_suggestion')
     expect(body).toContain('p_approve boolean, p_expected_reviewed_at timestamptz )')
     const lockSuggestion = body.indexOf('from public.content_warning_suggestions s where s.id = p_id for update')
+    // Sách khóa for no key update (không chặn FOR KEY SHARE của khóa ngoại cart_items / order_items); gợi ý for update
     const lockBook = body.indexOf(
-      'select b.content_warnings_reviewed_at into v_reviewed_at from public.books b where b.id = v_book_id for update',
+      'select b.content_warnings_reviewed_at into v_reviewed_at from public.books b where b.id = v_book_id for no key update;',
     )
     const compare = body.indexOf(
       "if v_reviewed_at is distinct from p_expected_reviewed_at then raise exception 'suggestion_status_changed'",
@@ -270,6 +271,59 @@ describe('nhãn trên sách', () => {
 
   it('admin sửa được 2 cột mới', () => {
     expect(schema).toMatch(/grant update \([^)]*\bcontent_warnings, content_warnings_reviewed_at \) on public\.books to authenticated/)
+  })
+})
+
+// "Có nhãn ⇒ đã xét" và thời điểm xét do DB giữ (trigger), không dựa vào form admin: form quên gửi reviewed_at thì
+// review_warning_suggestion vẫn thấy lệch, không đè nhãn vừa sửa tay.
+describe('trigger books_content_warnings: DB tự ghi content_warnings_reviewed_at khi nhãn đổi', () => {
+  const name = 'private.books_normalize_content_warnings'
+  const sources = [
+    ['schema.sql', functionStatement(name)],
+    ['migration', functionStatement(name, migration)],
+  ] as const
+
+  it.each(sources)('%s: insert có nhãn mà reviewed_at null → now()', (_, body) => {
+    expect(body).toContain(
+      "if tg_op = 'insert' then if cardinality(new.content_warnings) > 0 and new.content_warnings_reviewed_at is null then new.content_warnings_reviewed_at := now(); end if;",
+    )
+  })
+
+  it.each(sources)('%s: update đổi nhãn (is distinct from) mà không đổi reviewed_at → now(); gửi reviewed_at khác thì giữ', (_, body) => {
+    expect(body).toContain(
+      'elsif new.content_warnings is distinct from old.content_warnings and new.content_warnings_reviewed_at is not distinct from old.content_warnings_reviewed_at then new.content_warnings_reviewed_at := now(); end if;',
+    )
+  })
+
+  it.each(sources)('%s: chuẩn hóa nhãn TRƯỚC khi so (khác thứ tự không tính là đổi)', (_, body) => {
+    const sorted = body.indexOf('new.content_warnings := private.content_warnings_sorted(new.content_warnings);')
+    expect(sorted).toBeGreaterThan(-1)
+    expect(body.indexOf("if tg_op = 'insert'")).toBeGreaterThan(sorted)
+    expect(body.indexOf('new.content_warnings is distinct from old.content_warnings')).toBeGreaterThan(sorted)
+  })
+
+  it('schema.sql và migration giống hệt', () => {
+    expect(sources[1][1]).toBe(sources[0][1])
+  })
+})
+
+// tableGrants chỉ thấy câu grant một bảng; câu cấp gộp (cả schema, nhiều bảng một lúc) lọt qua nó → chặn riêng
+describe('không cấp quyền gộp cho bảng của mục 16', () => {
+  const texts = [
+    ['schema.sql', schema],
+    ['migration', migration],
+  ] as const
+
+  it.each(texts)('%s: không grant on all tables in schema public', (_, text) => {
+    expect(text).not.toContain('on all tables in schema public')
+  })
+
+  it.each(texts)('%s: không câu grant nhiều bảng nhắc tới user_blocks / content_warning_suggestions', (_, text) => {
+    const targets = [...text.matchAll(/grant [^;]*? on (?:table )?([^;]*?) to /g)].map((m) => m[1] ?? '')
+    const grouped = targets.filter(
+      (target) => /\b(?:public\.)?(?:user_blocks|content_warning_suggestions)\b/.test(target) && target.includes(','),
+    )
+    expect(grouped).toEqual([])
   })
 })
 
