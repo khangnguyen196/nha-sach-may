@@ -146,8 +146,9 @@ test('(a) gợi ý → sửa nhãn → duyệt → khách thấy khung (vi + en)
     const response = await guestContext.request.get(`/sach/${book.slug}`)
     expect(response.status()).toBe(200)
     const html = await response.text()
-    expect(html).toContain(NOTICE.vi)
-    expect(html).toContain('Tự hại / tự tử')
+    // Khớp markup HTML (không phải chuỗi trong RSC payload `self.__next_f.push`, nơi id nằm trong JSON)
+    expect(html).toMatch(new RegExp(`<h2 id="content-warnings-title"[^>]*>[\\s\\S]*?${NOTICE.vi}</h2>`))
+    expect(html).toContain('<li>Tự hại / tự tử</li>')
     expect(guestErrors).toEqual([])
     expect(errors).toEqual([])
   } finally {
@@ -272,9 +273,16 @@ test('(e) lô: đúng 12 cuốn kế tiếp chưa xét chưa có gợi ý (anti-
   // Tính độc lập với anti-join của app (hai query + lọc trong bộ nhớ). Đầu danh sách là sách mẫu (id nhỏ nhất): spec
   // khác chỉ tạo / duyệt gợi ý trên sách e2e của mình, nên nhóm này không đổi trong lúc test chạy.
   const before = await maxWarningSuggestionId()
-  const [first, ...next] = (await unreviewedBooksWithoutPending()).slice(0, count + 1)
-  if (!first || next.length < count || [first, ...next].some((book) => book.slug.startsWith(E2E_BOOK_SLUG))) {
-    throw new Error(`Cần ${count + 1} sách mẫu chưa xét chưa có gợi ý đứng đầu theo id (e2e/fixtures/books.json)`)
+  // Bất biến của fixture: scripts/e2e-seed.test.ts (≥ booksPerCall + 2 sách mẫu, không slug e2e-, không cụm [mock:)
+  const candidates = await unreviewedBooksWithoutPending()
+  const [first, ...next] = candidates.slice(0, count + 1)
+  if (
+    !first ||
+    next.length < count ||
+    candidates.length < count + 2 ||
+    [first, ...next].some((book) => book.slug.startsWith(E2E_BOOK_SLUG))
+  ) {
+    throw new Error(`Cần ${count + 2} sách mẫu chưa xét chưa có gợi ý đứng đầu theo id (e2e/fixtures/books.json)`)
   }
   try {
     // Cuốn đầu đã có gợi ý chờ duyệt → lô phải bỏ qua nó (anti-join), lấy đúng 12 cuốn sau
@@ -282,7 +290,8 @@ test('(e) lô: đúng 12 cuốn kế tiếp chưa xét chưa có gợi ý (anti-
     await page.goto('/admin/canh-bao')
     await startBatch(page)
     await expectOrThrow(main(page).getByText(/^Xong lượt 1\./), main(page).getByRole('alert'), 'Lô gợi ý')
-    // Dừng trong lúc chờ lượt 2 (30 giây): chỉ đúng một lượt
+    // Dừng trong lúc chờ lượt 2: chỉ đúng một lượt. Khoảng chờ 60 000 / WARNING_LIMITS.callsPerMinute = 30 giây, không nhân
+    // MOCK_LIMIT_MULTIPLIER khi AI giả (app/admin/canh-bao/page.tsx): rút ngắn thì lượt 2 có thể chạy trước khi bấm Dừng
     await main(page).getByRole('button', { name: 'Dừng' }).click()
     await expect(main(page).getByText('Đã dừng lô.')).toBeVisible()
     await expect(main(page).getByText(`Đã tạo ${count} gợi ý.`)).toBeVisible()
@@ -296,7 +305,8 @@ test('(e) lô: đúng 12 cuốn kế tiếp chưa xét chưa có gợi ý (anti-
     // Số đếm (head: true + anti-join) của trang. Spec khác chạy song song tạo / duyệt gợi ý trên sách e2e của chúng nên
     // không so bằng tuyệt đối; hai cận dưới chỉ dựa vào sách mẫu (không ai khác đụng tới):
     // - chưa xét − chưa có gợi ý = số sách chưa xét có gợi ý chờ duyệt ≥ 13 gợi ý của test này (anti-join bị bỏ qua →
-    //   hai số bằng nhau → 0);
+    //   hai số bằng nhau → 0). Hai số đếm là hai câu chạy song song (hai snapshot): chỉ một sách mới được tạo đúng giữa
+    //   hai câu, lúc không còn gợi ý chờ duyệt nào trên sách e2e chưa xét của spec khác, mới làm hiệu thấp hơn 13;
     // - chưa có gợi ý ≥ số sách mẫu chưa xét chưa có gợi ý (count null / sai bộ lọc embed → 0 hoặc thiếu).
     await page.goto('/admin/canh-bao')
     const text = (await main(page).getByTestId('warnings-counts').textContent()) ?? ''

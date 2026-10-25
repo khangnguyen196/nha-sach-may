@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
+import { WARNING_LIMITS } from '../src/features/chat/config'
 import { readFixture } from './e2e-seed'
 
 // Dữ liệu sách của Supabase local e2e (scripts/e2e-seed.ts). Spec Playwright dựa vào các giả định dưới đây; sửa
@@ -119,6 +120,16 @@ describe('e2e/fixtures/books.json', () => {
       expect(others, slug).not.toContain(slug)
     }
     expect(spec).toContain(`'${USED_MARKET_BOOKS[0]}'`)
+  })
+
+  it('admin-warnings.spec (e): đủ sách mẫu cho lô gợi ý, không slug e2e-, không cụm [mock: trong tên', () => {
+    // Sách mẫu có id nhỏ nhất (nạp trước mọi sách e2e): cuốn đầu + một lượt booksPerCall cuốn + ít nhất 1 cuốn còn lại
+    // (lượt 1 phải còn sách → có nút Dừng). Cụm [mock:warn-…] trong tên sách điều khiển AI giả của cả lô.
+    expect(books.length).toBeGreaterThanOrEqual(WARNING_LIMITS.booksPerCall + 2)
+    for (const book of books) {
+      expect(book.slug.startsWith('e2e-'), book.slug).toBe(false)
+      expect(book.title, book.slug).not.toContain('[mock:')
+    }
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

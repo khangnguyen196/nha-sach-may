@@ -48,10 +48,12 @@ describe('e2e/gemini-budget.ts: bất biến hạn mức ngày trên CI', () => 
     expect(projectsOf('admin-smoke.spec.ts')).toEqual(['desktop-admin', 'mobile-admin'])
     expect(projectsOf('chat.spec.ts')).toEqual(['desktop', 'mobile'])
     expect(projectsOf('chat-account.spec.ts')).toEqual(['desktop-account', 'mobile-account'])
-    // Các project trên còn đúng như trong config (đổi tên / thêm project thì sửa projectsOf)
+    // Các project trên còn đúng như trong config, không thêm project nào (6 project chạy spec + setup + teardown): đổi tên /
+    // thêm project thì sửa projectsOf
     for (const project of ['desktop', 'mobile', 'desktop-account', 'mobile-account', 'desktop-admin', 'mobile-admin']) {
       expect(config).toContain(`name: '${project}'`)
     }
+    expect(countMatches(config, /\bname: '/g)).toBe(8)
   })
 
   it('warn:day: lượt gợi ý hợp lệ của mọi spec × (1 + retries) < WARNING_LIMITS.callsPerDay', () => {
