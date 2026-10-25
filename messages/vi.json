@@ -1252,7 +1252,8 @@
     "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ nên chưa tải thêm được. Số này tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh đã tải mà chưa đăng; ảnh đã tải quá 24 giờ mà chưa đăng được dọn khi bạn mở trang đăng hoặc sửa tin. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.",
     "PREFS_LIMIT": "Bạn đã chặn đủ {max} mục, mức tối đa cho một tài khoản. Bạn bỏ chặn bớt vài mục trong trang Sở thích rồi thử lại nhé.",
     "WARNING_QUOTA_EXCEEDED": "Đã hết lượt gợi ý cảnh báo bằng AI cho lúc này (giới hạn theo phút hoặc theo ngày, chừa lượt cho chatbot Mây). Bạn thử lại sau, hoặc tự chọn nhãn cho sách rồi lưu.",
-    "SUGGESTION_STATUS_CHANGED": "Gợi ý này hoặc nhãn cảnh báo của sách vừa được đổi ở nơi khác (đã duyệt, bỏ qua hoặc sửa nhãn ở trang sửa sách). Bạn tải lại trang, xem nhãn hiện tại của sách rồi duyệt lại nếu gợi ý vẫn còn chờ duyệt."
+    "SUGGESTION_STATUS_CHANGED": "Gợi ý này hoặc nhãn cảnh báo của sách vừa được đổi ở nơi khác (đã duyệt, bỏ qua hoặc sửa nhãn ở trang sửa sách). Bạn tải lại trang, xem nhãn hiện tại của sách rồi duyệt lại nếu gợi ý vẫn còn chờ duyệt.",
+    "WARNING_AI_FAILED": "AI chưa gợi ý được nhãn cảnh báo cho các sách này (AI không trả lời, bị chặn hoặc trả lời sai dạng). Lượt này không tự gọi lại. Bạn thử lại sau ít phút, hoặc tự chọn nhãn cho sách rồi lưu."
   },
   "allBooks": {
     "title": "Tất cả sách",
@@ -1329,6 +1330,16 @@
     "delete": "Xóa đánh giá",
     "deleting": "Đang xóa…",
     "deleted": "Đã xóa đánh giá."
+  },
+  "contentWarnings": {
+    "labels": {
+      "violence": "Bạo lực / máu me",
+      "loss": "Mất mát / tang thương",
+      "self_harm": "Tự hại / tự tử",
+      "adult": "Nội dung người lớn",
+      "other_sensitive": "Chủ đề nhạy cảm khác"
+    },
+    "selfHarmNote": "Nếu bạn đang gặp khó khăn, hãy chia sẻ với người bạn tin tưởng hoặc tìm hỗ trợ chuyên môn."
   },
   "chat": {
     "crisis": "Mây rất tiếc khi bạn đang phải trải qua cảm giác này. Bạn không cần một mình đối mặt với nó: hãy nói chuyện ngay với người thân hoặc một người bạn tin tưởng, hoặc tìm tới chuyên gia tâm lý, bác sĩ gần nhất. Nếu bạn đang gặp nguy hiểm, hãy gọi cấp cứu 115. Bạn cũng có thể gọi đường dây nóng Ngày Mai 096 306 1414 (13h–20h30, thứ Tư đến Chủ nhật).",

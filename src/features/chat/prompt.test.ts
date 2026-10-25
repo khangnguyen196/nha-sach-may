@@ -29,6 +29,15 @@ const input = (patch: Partial<PromptInput> = {}): PromptInput => ({
 })
 
 describe('buildRequestBody', () => {
+  // Bộ lọc an toàn của Gemini chỉ tắt ở request gợi ý cảnh báo của admin (features/warnings/prompt.ts, câu 6 của kế
+  // hoạch so-thich-canh-bao); Mây giữ mặc định
+  it('request của Mây không có safetySettings', () => {
+    for (const body of [buildRequestBody(input()), buildRequestBody(input({ candidates: [], currentBook: null, history: [] }))]) {
+      expect(body).not.toHaveProperty('safetySettings')
+      expect(JSON.stringify(body)).not.toContain('HARM_CATEGORY')
+    }
+  })
+
   it('chỉ có systemInstruction, contents, generationConfig; maxOutputTokens 1200; JSON theo schema', () => {
     const body = buildRequestBody(input())
     expect(Object.keys(body).sort()).toEqual(['contents', 'generationConfig', 'systemInstruction'])

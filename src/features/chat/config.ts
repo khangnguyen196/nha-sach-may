@@ -76,6 +76,22 @@ export const WARNING_LIMITS = {
   chatReserve: 100,
 } as const
 
+/** Request gợi ý cảnh báo (features/warnings/prompt.ts): một lô ≤ booksPerCall sách, dài hơn một lượt của Mây */
+export const WARNING_GEMINI = {
+  timeoutMs: 25_000,
+  // 12 × JSON một mục tối đa (id, 5 nhãn, lý do 200 ký tự) ≈ 3.500 ký tự ≈ 1.750 token bi quan, chừa cho suy luận
+  maxOutputTokens: 3_000,
+  temperature: 0.2,
+  /** Trần ước tính bi quan (số ký tự / 2) của phần đầu vào một lượt; Vitest kiểm với 12 sách dài tối đa + TPM */
+  maxPromptTokens: 12_000,
+  /** Mô tả mỗi sách cắt còn */
+  descriptionChars: 1_000,
+  /** Tên sách, tác giả, danh mục cắt còn (cột không giới hạn độ dài) */
+  fieldChars: 150,
+  /** = cột content_warning_suggestions.reason (1–200 ký tự) */
+  reasonMax: 200,
+} as const
+
 /** AI giả (e2e): mọi request từ 127.0.0.1, các project chạy song song → nới IP + trần chung; giữ giới hạn khách */
 export const MOCK_LIMIT_MULTIPLIER = 100
 

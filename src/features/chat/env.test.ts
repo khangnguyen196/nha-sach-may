@@ -11,6 +11,22 @@ async function load() {
   return import('./env')
 }
 
+describe('aiMockEnabled (chốt chặn AI giả dùng chung Mây + gợi ý cảnh báo)', () => {
+  it('chỉ bật khi CHAT_AI_MOCK=1 + Supabase local + không VERCEL; bỏ qua thì cảnh báo một lần', async () => {
+    const { aiMockEnabled } = await load()
+    const warn = vi.fn()
+    expect(aiMockEnabled({ CHAT_AI_MOCK: '1', NEXT_PUBLIC_SUPABASE_URL: LOCAL }, warn)).toBe(true)
+    expect(aiMockEnabled({ CHAT_AI_MOCK: '1', NEXT_PUBLIC_SUPABASE_URL: 'http://localhost:54321' }, warn)).toBe(true)
+    expect(aiMockEnabled({ NEXT_PUBLIC_SUPABASE_URL: LOCAL }, warn)).toBe(false)
+    expect(aiMockEnabled({ CHAT_AI_MOCK: 'true', NEXT_PUBLIC_SUPABASE_URL: LOCAL }, warn)).toBe(false)
+    expect(warn).not.toHaveBeenCalled()
+    expect(aiMockEnabled({ CHAT_AI_MOCK: '1', NEXT_PUBLIC_SUPABASE_URL: PRODUCTION }, warn)).toBe(false)
+    expect(aiMockEnabled({ CHAT_AI_MOCK: '1', VERCEL: '1', NEXT_PUBLIC_SUPABASE_URL: LOCAL }, warn)).toBe(false)
+    expect(aiMockEnabled({ CHAT_AI_MOCK: '1', NEXT_PUBLIC_SUPABASE_URL: 'không phải URL' }, warn)).toBe(false)
+    expect(warn).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('resolveChatMode', () => {
   it('mock + URL production → bỏ qua mock, cảnh báo đúng một lần, không có key → tắt', async () => {
     const { resolveChatMode } = await load()

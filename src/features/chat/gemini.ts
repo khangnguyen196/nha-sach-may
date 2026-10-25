@@ -1,10 +1,10 @@
 import 'server-only'
 import { COOLDOWN, GEMINI, type GeminiModel } from './config'
-import type { GeminiRequestBody } from './prompt'
 import type { GeminiTicket } from './ticket'
 
-// Gọi Gemini REST bằng fetch (không SDK). Mỗi lượt gọi cần một vé từ consume_chat_quota (ticket.ts): trần chung đếm
-// lượt gọi Gemini, không đếm tin nhắn. Không gọi lại, không đổi model khi gặp 429.
+// Gọi Gemini REST bằng fetch (không SDK), dùng chung cho Mây và gợi ý cảnh báo của admin (features/warnings). Mỗi lượt
+// gọi cần một vé (ticket.ts) từ consume_chat_quota (Mây) hoặc consume_warning_quota (gợi ý): trần chung đếm lượt gọi
+// Gemini, không đếm tin nhắn. Không gọi lại, không đổi model khi gặp 429.
 
 export type QuotaScope = 'gemini_minute' | 'gemini_day'
 
@@ -133,31 +133,64 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
+type Part = { text: string }
+
+/**
+ * Body generateContent mà callGemini nhận: kiểu chung của buildRequestBody (Mây, chat/prompt.ts) và
+ * buildWarningRequestBody (gợi ý cảnh báo, warnings/prompt.ts). safetySettings chỉ request gợi ý có.
+ */
+export type GeminiBody = {
+  systemInstruction: { parts: readonly Part[] }
+  contents: readonly { role: 'user' | 'model'; parts: readonly Part[] }[]
+  generationConfig: {
+    responseMimeType: string
+    responseJsonSchema: Record<string, unknown>
+    maxOutputTokens: number
+    temperature: number
+    thinkingConfig: { thinkingLevel: string }
+  }
+  safetySettings?: readonly { category: string; threshold: string }[]
+}
+
 export type GeminiCall = {
   model: GeminiModel
   apiKey: string
-  body: GeminiRequestBody
+  body: GeminiBody
   fetchImpl?: typeof fetch
   now?: () => Date
   cooldownKey?: string
+  /** Mặc định GEMINI.timeoutMs (Mây); gợi ý cảnh báo dùng WARNING_GEMINI.timeoutMs */
+  timeoutMs?: number
+  /** Tiền tố dòng log */
+  logTag?: 'chat' | 'warnings'
 }
 
 /** Một lượt gọi generateContent. Log chỉ status / quotaId / finishReason / số token, không log nội dung. */
 export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promise<GeminiOutcome> {
   ticket.use()
-  const { model, apiKey, body, fetchImpl = fetch, now = () => new Date(), cooldownKey = GLOBAL_COOLDOWN } = call
+  const {
+    model,
+    apiKey,
+    body,
+    fetchImpl = fetch,
+    now = () => new Date(),
+    cooldownKey = GLOBAL_COOLDOWN,
+    timeoutMs = GEMINI.timeoutMs,
+    logTag = 'chat',
+  } = call
+  const tag = `[${logTag}]`
   let response: Response
   try {
     response = await fetchImpl(`${GEMINI.endpoint}/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(GEMINI.timeoutMs),
+      signal: AbortSignal.timeout(timeoutMs),
       cache: 'no-store',
     })
   } catch (error) {
     const reason = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'network'
-    console.warn(`[chat] gemini ${reason}`)
+    console.warn(`${tag} gemini ${reason}`)
     return { ok: false, kind: 'error', reason }
   }
 
@@ -165,11 +198,11 @@ export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promis
   if (response.status === 429) {
     const cooldown = classify429(json, now())
     cooldowns.set(cooldownKey, cooldown)
-    console.warn(`[chat] gemini 429 quotaId=${quotaIdsForLog(json)}`)
+    console.warn(`${tag} gemini 429 quotaId=${quotaIdsForLog(json)}`)
     return { ok: false, kind: 'quota', scope: cooldown.scope, resetsAt: cooldown.resetsAt }
   }
   if (!response.ok) {
-    console.warn(`[chat] gemini HTTP ${response.status}`)
+    console.warn(`${tag} gemini HTTP ${response.status}`)
     return { ok: false, kind: 'error', reason: `http_${response.status}` }
   }
 
@@ -177,7 +210,7 @@ export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promis
   const { text, finishReason } = readText(json)
   const usage = readUsage(json)
   console.info(
-    `[chat] gemini ok model=${model} finish=${finishReason ?? '-'} prompt=${usage.prompt ?? '-'} candidates=${usage.candidates ?? '-'} thoughts=${usage.thoughts ?? '-'}`,
+    `${tag} gemini ok model=${model} finish=${finishReason ?? '-'} prompt=${usage.prompt ?? '-'} candidates=${usage.candidates ?? '-'} thoughts=${usage.thoughts ?? '-'}`,
   )
   if (blocked) return { ok: false, kind: 'error', reason: `blocked_${blocked}` }
   if (finishReason && finishReason !== 'STOP') return { ok: false, kind: 'error', reason: `finish_${finishReason}` }

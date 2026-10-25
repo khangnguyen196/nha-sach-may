@@ -1,7 +1,7 @@
 import 'server-only'
 
-// AI giả cho e2e / CI (CHAT_AI_MOCK=1, chỉ có hiệu lực với Supabase local, ngoài Vercel: env.ts). Thay `fetch` của
-// callGemini nên cùng một đường code (vé, phân loại 429, validate) với Gemini thật. Không bao giờ gọi mạng.
+// AI giả cho e2e / CI (CHAT_AI_MOCK=1, chỉ có hiệu lực với Supabase local, ngoài Vercel: aiMockEnabled, env.ts). Thay
+// `fetch` của callGemini nên cùng một đường code (vé, phân loại 429, validate) với Gemini thật. Không bao giờ gọi mạng.
 // Cụm điều khiển trong câu của khách:
 //   [mock:5-books]  trả 5 slug, gồm 1 slug lạ (kiểm lọc + tối đa 3 thẻ)
 //   [mock:429]      429 theo phút (RetryInfo 55s);  [mock:429-day]  429 có cả PerDay + PerMinute
@@ -9,17 +9,19 @@ import 'server-only'
 //   [mock:crisis]   intent "crisis" (lớp 2)
 //   [mock:english]  non_vietnamese = true
 
-const json = (status: number, body: unknown) =>
+/** Response JSON giả (dùng chung với AI giả của gợi ý cảnh báo: warnings/mock.ts) */
+export const jsonResponse = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 
-function quota429(perDay: boolean) {
+/** 429 giả đúng dạng của Google: luôn có PerMinute, perDay thêm PerDay; RetryInfo 55s */
+export function quota429(perDay: boolean) {
   const violations = [
     { quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' },
     ...(perDay ? [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] : []),
   ]
-  return json(429, {
+  return jsonResponse(429, {
     error: {
       code: 429,
       status: 'RESOURCE_EXHAUSTED',
@@ -69,7 +71,7 @@ export const mockFetch: typeof fetch = async (_input, init) => {
     follow_up: 'Bạn muốn đọc nhẹ nhàng hay sâu sắc hơn?',
     non_vietnamese: user.includes('[mock:english]'),
   }
-  return json(200, {
+  return jsonResponse(200, {
     candidates: [{ content: { role: 'model', parts: [{ text: JSON.stringify(reply) }] }, finishReason: 'STOP' }],
     usageMetadata: { promptTokenCount: 0, candidatesTokenCount: 0, thoughtsTokenCount: 0 },
   })

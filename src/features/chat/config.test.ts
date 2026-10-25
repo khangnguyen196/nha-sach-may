@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { ALLOWED_MODELS, BLOCKED_COUNTRIES, CHAT_LIMITS, DEFAULT_MODEL, FREE_TIER, GEMINI, WARNING_LIMITS } from './config'
+import {
+  ALLOWED_MODELS,
+  BLOCKED_COUNTRIES,
+  CHAT_LIMITS,
+  DEFAULT_MODEL,
+  FREE_TIER,
+  GEMINI,
+  WARNING_GEMINI,
+  WARNING_LIMITS,
+} from './config'
 
 describe('giới hạn chatbot', () => {
   // Gợi ý cảnh báo cộng vào cùng gemini:minute / gemini:day mà Mây dừng ở hai trần này → đây cũng là trần tổng mọi
@@ -48,5 +57,17 @@ describe('hạn mức gợi ý cảnh báo (đếm chung với Mây)', () => {
   it('một lượt gợi ý tối đa 12 sách; lô giãn ≥ 30 giây giữa các lượt', () => {
     expect(WARNING_LIMITS.booksPerCall).toBe(12)
     expect(60_000 / WARNING_LIMITS.callsPerMinute).toBeGreaterThanOrEqual(30_000)
+  })
+
+  // Cùng project của khóa → TPM cũng chung: Mây chạy đủ trần phút + gợi ý chạy đủ trần phút riêng, mỗi lượt ở trần token
+  it.each(ALLOWED_MODELS)('token đầu vào / phút (Mây + gợi ý cảnh báo) thấp hơn TPM của %s', (model) => {
+    const perMinute =
+      CHAT_LIMITS.geminiCallsPerMinute * GEMINI.targetPromptTokens + WARNING_LIMITS.callsPerMinute * WARNING_GEMINI.maxPromptTokens
+    expect(perMinute).toBeLessThan(FREE_TIER.limits[model].tpm)
+  })
+
+  it('lý do gợi ý vừa cột reason (1–200 ký tự)', () => {
+    expect(WARNING_GEMINI.reasonMax).toBeGreaterThan(0)
+    expect(WARNING_GEMINI.reasonMax).toBeLessThanOrEqual(200)
   })
 })

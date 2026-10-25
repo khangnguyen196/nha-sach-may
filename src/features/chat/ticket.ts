@@ -1,5 +1,8 @@
-// Vé cho MỘT lượt gọi Gemini, chỉ quota.ts cấp sau khi consume_chat_quota trừ trần chung thành công. callGemini
-// đòi vé và đánh dấu đã dùng: không có đường nào gọi Gemini mà không qua bộ đếm, và một vé không dùng được hai lần.
+// Vé cho MỘT lượt gọi Gemini. Chỉ hai nơi cấp (Vitest ticket.test.ts kiểm tĩnh), đều sau khi RPC trừ lượt thành công:
+//   - chat/quota.ts (consume_chat_quota: câu hỏi của Mây);
+//   - warnings/quota.ts (consume_warning_quota: gợi ý cảnh báo của admin, cộng cả bucket chung gemini:*).
+// callGemini đòi vé và đánh dấu đã dùng: không có đường nào gọi Gemini mà không qua bộ đếm, và một vé không dùng được
+// hai lần.
 // Trường #private làm kiểu thành danh nghĩa: object tự tạo không qua được kiểm tra kiểu lẫn kiểm tra lúc chạy.
 
 let issuedCount = 0
