@@ -148,7 +148,7 @@ export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
     console.error(`[warnings] chọn sách cho lô: ${error.code || '-'}`)
     return toFailure(error)
   }
-  if (data.length === 0) return { ok: true, data: { inserted: 0, missing: [], remaining: false } }
+  if (data.length === 0) return { ok: true, data: { inserted: 0, missing: [], suggested: [], remaining: false } }
 
   const batch = data.slice(0, WARNING_LIMITS.booksPerCall)
   const result = await suggestWarnings(batch.map(toWarningInput))
@@ -165,6 +165,7 @@ export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
     data: {
       inserted: outcomes.filter((outcome) => outcome.kind === 'inserted').length,
       missing: batch.filter((book) => missing.has(book.id)).map((book) => ({ id: book.id, title: book.title })),
+      suggested: result.results.filter((_, index) => outcomes[index]?.kind !== 'failed').map((item) => item.bookId),
       remaining: data.length > batch.length || missing.size > 0,
     },
   }

@@ -14,7 +14,6 @@ export const contentWarningsSchema = z
   .max(CONTENT_WARNINGS.length, { error: 'invalid' })
   .transform((labels): ContentWarning[] => CONTENT_WARNINGS.filter((label) => labels.includes(label)))
 
-
 export const reviewSuggestionSchema = z.object({
   labels: contentWarningsSchema,
   decision: z.enum(['approve', 'dismiss'], { error: 'invalid' }),
@@ -55,6 +54,8 @@ export type BatchOutcome = {
   inserted: number
   /** Sách của lượt mà AI không trả mục dùng được (vẫn chưa xét, lượt sau chọn lại); tên chỉ để hiện cho admin */
   missing: { id: number; title: string }[]
+  /** Sách của lượt vừa có gợi ý chờ duyệt (mình ghi, hoặc nơi khác vừa ghi: 23505): client bỏ khỏi danh sách `missing` cũ */
+  suggested: number[]
   /** Còn sách chưa xét và chưa có gợi ý chờ duyệt */
   remaining: boolean
 }

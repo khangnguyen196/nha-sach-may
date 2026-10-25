@@ -64,6 +64,7 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
   const [missing, setMissing] = useState<MissingBook[]>([])
   const [error, setError] = useState<string | null>(null)
   const [stopRequested, setStopRequested] = useState(false)
+  const [coolingSeconds, setCoolingSeconds] = useState(0)
   // Ref: callback của setTimeout / lượt đang chờ đọc giá trị mới nhất, không theo closure của lần render cũ
   const active = useRef(false)
   const mounted = useRef(true)
@@ -123,9 +124,10 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
       return
     }
     const outcome = result.data
-    const newIds = new Set(outcome.missing.map((book) => book.id))
+    // Sách lượt trước bỏ sót mà lượt này đã có gợi ý → bỏ khỏi danh sách; bỏ sót lần nữa → thay bằng bản mới (không trùng)
+    const seen = new Set([...outcome.suggested, ...outcome.missing.map((book) => book.id)])
     setInserted((count) => count + outcome.inserted)
-    setMissing((books) => [...books.filter((book) => !newIds.has(book.id)), ...outcome.missing])
+    setMissing((books) => [...books.filter((book) => !seen.has(book.id)), ...outcome.missing])
     if (!outcome.remaining) {
       active.current = false
       setPhase('done')
@@ -147,8 +149,10 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
     setInserted(0)
     setMissing([])
     const wait = intervalMs - (Date.now() - lastFinishedAt.current)
-    if (wait > 0) schedule(1, wait)
-    else void runRound(1)
+    if (wait > 0) {
+      setCoolingSeconds(Math.ceil(wait / 1000))
+      schedule(1, wait)
+    } else void runRound(1)
   }
 
   function stop() {
@@ -163,7 +167,10 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
   const status = {
     idle: '',
     running: fillTemplate(labels.running, { n: round }),
-    waiting: round === 0 ? fillTemplate(labels.cooling, { seconds }) : fillTemplate(labels.waiting, { n: round, seconds }),
+    waiting:
+      round === 0
+        ? fillTemplate(labels.cooling, { seconds: coolingSeconds })
+        : fillTemplate(labels.waiting, { n: round, seconds }),
     done: labels.done,
     stopped: labels.stopped,
     stalled: labels.stalled,

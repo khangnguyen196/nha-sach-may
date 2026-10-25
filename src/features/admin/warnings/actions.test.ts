@@ -77,7 +77,7 @@ beforeEach(() => {
 describe('suggestNextBatch', () => {
   it('không còn sách chưa xét → trả ngay, không gọi AI (không trừ lượt)', async () => {
     respond = () => ({ data: [], error: null })
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: [], remaining: false } })
+    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: [], suggested: [], remaining: false } })
     expect(suggestWarnings).not.toHaveBeenCalled()
   })
 
@@ -94,7 +94,12 @@ describe('suggestNextBatch', () => {
 
     expect(await suggestNextBatch()).toEqual({
       ok: true,
-      data: { inserted: 10, missing: [{ id: 12, title: 'Sách 12' }], remaining: true },
+      data: {
+        inserted: 10,
+        missing: [{ id: 12, title: 'Sách 12' }],
+        suggested: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        remaining: true,
+      },
     })
 
     const [select] = queries
@@ -120,7 +125,7 @@ describe('suggestNextBatch', () => {
         ? { data: [bookRow(1), bookRow(2)], error: null }
         : { data: { id: 9 }, error: null }
     suggestWarnings.mockResolvedValue(okSuggest([1, 2]))
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 2, missing: [], remaining: false } })
+    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 2, missing: [], suggested: [1, 2], remaining: false } })
   })
 
   it('AI không trả mục nào dùng được → inserted 0 + danh sách sách (id, tên) để client dừng lô và hiện link, không ghi gì', async () => {
@@ -134,6 +139,7 @@ describe('suggestNextBatch', () => {
           { id: 1, title: 'Sách 1' },
           { id: 2, title: 'Sách 2' },
         ],
+        suggested: [],
         remaining: true,
       },
     })
@@ -146,7 +152,10 @@ describe('suggestNextBatch', () => {
         ? { data: Array.from({ length: 13 }, (_, index) => bookRow(index + 1)), error: null }
         : { data: null, error: { code: '23505', message: 'duplicate key' } }
     suggestWarnings.mockResolvedValue(okSuggest([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: [], remaining: true } })
+    expect(await suggestNextBatch()).toEqual({
+      ok: true,
+      data: { inserted: 0, missing: [], suggested: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], remaining: true },
+    })
   })
 
   it('hết lượt → câu theo scope, không ghi gì', async () => {
