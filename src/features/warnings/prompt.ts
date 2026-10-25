@@ -107,7 +107,10 @@ export type WarningRequestBody = ReturnType<typeof requestBody>
 
 // Độ dài mô tả thử lần lượt: JSON.stringify nhân đôi mỗi " / \ nên mô tả nhiều dấu nháy có thể vượt trần token ở
 // mức 1.000 ký tự. 0 = bỏ mô tả.
-const DESCRIPTION_STEPS = [WARNING_GEMINI.descriptionChars, 750, 500, 250, 0]
+const DESCRIPTION_STEPS = [
+  WARNING_GEMINI.descriptionChars,
+  ...[750, 500, 250, 0].filter((chars) => chars < WARNING_GEMINI.descriptionChars),
+]
 
 /**
  * Lô rỗng, > booksPerCall hoặc trùng id là lỗi lập trình (action chia lô trước): throw, không gọi AI. Ước tính đầu

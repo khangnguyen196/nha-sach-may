@@ -83,8 +83,9 @@ export function classify429(body: unknown, now: Date): Cooldown {
 }
 
 // Cooldown trong bộ nhớ instance (không cần DB): mỗi instance tự học sau 429 đầu tiên của nó. Khóa 'global' với Gemini
-// thật (quota của Google là của cả project). AI giả (e2e) dùng khóa theo khách: 429 giả của một test không chặn các
-// test khác chạy song song trên cùng server.
+// thật, dùng chung cho Mây và gợi ý cảnh báo (quota của Google là của cả project). AI giả (e2e) dùng khóa theo khách
+// (Mây) / theo lô (gợi ý, `warnings:<ids>`): 429 giả của một test không chặn các test khác chạy song song trên cùng
+// server.
 export const GLOBAL_COOLDOWN = 'global'
 const cooldowns = new Map<string, Cooldown>()
 
