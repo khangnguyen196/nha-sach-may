@@ -5,7 +5,7 @@ Kế hoạch chủ dự án duyệt 2026-10-25 (bản vòng 0 + 9 chỗ điều 
 
 | Phần | Nội dung | SQL |
 |---|---|---|
-| **P-A** | Cơ sở dữ liệu: kiểu nhãn, cột nhãn của sách, bảng gợi ý, bảng chặn, RPC hạn mức + duyệt, mã lỗi | migration `20261025000000_prefs_warnings.sql`, chủ dự án chạy trước khi lên main |
+| **P-A** | Cơ sở dữ liệu: kiểu nhãn, cột nhãn của sách, bảng gợi ý, bảng chặn, RPC hạn mức + duyệt, mã lỗi | migration `20261025000000_prefs_warnings.sql`, chủ dự án chạy trước khi lên main (đã chạy 2026-10-25) |
 | **P-B** | Cảnh báo nội dung: admin gợi ý bằng AI (Gemini, đếm chung với Mây) → sửa → duyệt; khung cảnh báo ở trang sách | không |
 | **P-C** | Chặn theo sở thích: ô mờ ở mọi danh sách, dòng nhắc + nút chặn / bỏ chặn ở trang sách, trang Sở thích, Mây không gợi ý sách bị chặn, palette | không |
 
@@ -36,6 +36,8 @@ Kế hoạch chủ dự án duyệt 2026-10-25 (bản vòng 0 + 9 chỗ điều 
 13. Sách chưa xét cảnh báo: khách không thấy gì.
 
 ## P-A: cơ sở dữ liệu (mục 16 của `schema.sql`)
+
+Trạng thái (2026-10-25): SQL đã chạy production (lần 2, đúng project; lần 1 không vào production), kiểm sau 09:42Z đạt; lên main ngay sau commit docs này. Rollback chỉ khi production chưa có P-B, chưa chạy thử local.
 
 - `public.content_warning` enum: `violence` (bạo lực / máu me), `loss` (mất mát / tang thương), `self_harm` (tự hại / tự tử), `adult` (nội dung người lớn), `other_sensitive` (chủ đề nhạy cảm khác).
 - `books.content_warnings content_warning[] not null default '{}'` (≤ 5, không phần tử null) + `books.content_warnings_reviewed_at` (null = chưa xét). Check `books_content_warnings_reviewed_check`: có nhãn thì `content_warnings_reviewed_at` khác null (câu 13: chưa xét thì khách không thấy gì → hai cột không được lệch); trigger tự ghi `now()` vào `content_warnings_reviewed_at` khi nhãn đổi (cả insert có nhãn), app không gửi reviewed_at; check giữ làm lớp chặn cuối. Trigger chuẩn hóa nhãn **trước** khi so (chỉ khác thứ tự → không đổi reviewed_at, không báo lệch giả cho gợi ý đang mở); câu update gửi reviewed_at khác giá trị cũ (`review_warning_suggestion`) → giữ giá trị gửi; chỉ đổi reviewed_at thì trigger không chạy (`update of content_warnings`) → check bắt việc xóa reviewed_at của sách có nhãn. Trong `schema.sql` là câu `alter table … add constraint` ngay sau `create table books` (giống hệt câu của migration, `supabase/migrations.test.ts` so từng câu). Bỏ trùng + xếp theo thứ tự enum bằng trigger BEFORE (hàm `private`, security definer), **không** dùng CHECK gọi hàm `private` (authenticated không có usage trên `private` → admin sửa sách lỗi). Hai cột vào `grant update (…)` của `books`. Khách đọc nhãn như mọi cột công khai.
