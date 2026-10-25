@@ -165,7 +165,8 @@ export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
     data: {
       inserted: outcomes.filter((outcome) => outcome.kind === 'inserted').length,
       missing: batch.filter((book) => missing.has(book.id)).map((book) => ({ id: book.id, title: book.title })),
-      suggested: result.results.filter((_, index) => outcomes[index]?.kind !== 'failed').map((item) => item.bookId),
+      // Tới đây không insert nào 'failed': mỗi mục đã ghi hoặc vừa được ghi ở nơi khác (23505)
+      suggested: result.results.map((item) => item.bookId),
       remaining: data.length > batch.length || missing.size > 0,
     },
   }
