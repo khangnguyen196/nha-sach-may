@@ -64,6 +64,7 @@
       "orders": "Đơn hàng",
       "vouchers": "Voucher",
       "reviews": "Đánh giá",
+      "warnings": "Cảnh báo nội dung",
       "usedListings": "Sách cũ",
       "payouts": "Trả người bán",
       "backToShop": "Về cửa hàng"
@@ -146,7 +147,8 @@
         "details": "Chi tiết",
         "authors": "Tác giả",
         "cover": "Ảnh bìa",
-        "visibility": "Hiển thị"
+        "visibility": "Hiển thị",
+        "warnings": "Cảnh báo nội dung"
       },
       "fields": {
         "title": "Tên sách",
@@ -173,7 +175,9 @@
         "dimensions": "Kích thước",
         "dimensionsHint": "VD: 13 x 20.5 cm",
         "featured": "Nổi bật",
-        "featuredHint": "Hiện ở kệ Nổi bật trên trang chủ."
+        "featuredHint": "Hiện ở kệ Nổi bật trên trang chủ.",
+        "warningsLegend": "Nhãn cảnh báo",
+        "warningsHint": "Khách thấy khung cảnh báo liệt kê các nhãn đã chọn. Đổi nhãn rồi lưu thì sách thành đã xét."
       },
       "formats": {
         "paperback": "Bìa mềm",
@@ -573,6 +577,59 @@
       "markPaidPending": "Đang lưu…",
       "markPaidDone": "Đã đánh dấu đã trả.",
       "payoutChanged": "Khoản này vừa được cập nhật ở nơi khác (đã trả, hoặc đơn đổi trạng thái thanh toán). Trang đã hiện trạng thái mới."
+    },
+    "warnings": {
+      "title": "Cảnh báo nội dung",
+      "intro": "AI gợi ý nhãn cho sách chưa xét. Bạn sửa nhãn rồi Duyệt (nhãn lưu vào sách, khách thấy khung cảnh báo) hoặc Bỏ qua (sách thành đã xét, nhãn không đổi).",
+      "counts": "Sách chưa xét: {unreviewed}, trong đó chưa có gợi ý: {unsuggested}.",
+      "off": "Chưa cấu hình AI nên không gợi ý được. Bạn vẫn duyệt / bỏ qua các gợi ý đã có và tự chọn nhãn ở trang sửa sách.",
+      "batch": {
+        "start": "Gợi ý cho sách chưa xét",
+        "starting": "Đang gợi ý…",
+        "stop": "Dừng",
+        "hint": "Mỗi lượt gửi tối đa {books} sách cho AI, hai lượt cách nhau ít nhất {seconds} giây. Lô dừng khi hết sách, khi gặp lỗi, khi bạn bấm Dừng hoặc rời trang.",
+        "running": "Đang gọi lượt {n}…",
+        "waiting": "Xong lượt {n}. Lượt sau bắt đầu sau khoảng {seconds} giây.",
+        "totals": "Đã tạo {inserted} gợi ý. Số lần AI không trả lời cho một sách: {missing}.",
+        "done": "Đã gợi ý xong: không còn sách chưa xét nào chưa có gợi ý.",
+        "stopped": "Đã dừng lô."
+      },
+      "list": {
+        "label": "Gợi ý chờ duyệt",
+        "count": "{count} gợi ý chờ duyệt",
+        "empty": "Không có gợi ý nào chờ duyệt.",
+        "filtered": "Đang xem gợi ý của một sách.",
+        "showAll": "Xem mọi gợi ý",
+        "labels": "Nhãn (sửa được trước khi duyệt)",
+        "reason": "Lý do AI đưa ra",
+        "reasonHint": "Đọc lý do cạnh nhãn: nhãn lạ của AI đã bị bỏ, nên có thể không còn nhãn nào dù lý do nói về nội dung nhạy cảm.",
+        "model": "Model: {model}",
+        "createdAt": "Gợi ý lúc {time}",
+        "currentLabels": "Nhãn đang lưu của sách: {labels}",
+        "noCurrentLabels": "Sách chưa có nhãn nào.",
+        "approve": "Duyệt",
+        "dismiss": "Bỏ qua",
+        "saving": "Đang lưu…",
+        "bookDeleted": "(sách đã xóa)"
+      },
+      "book": {
+        "notReviewed": "Chưa xét.",
+        "reviewedAt": "Đã xét lúc {time}.",
+        "labels": "Nhãn đang lưu: {labels}",
+        "suggest": "Gợi ý bằng AI",
+        "suggesting": "Đang hỏi AI…",
+        "pending": "Sách có gợi ý đang chờ duyệt.",
+        "viewPending": "Xem gợi ý",
+        "markReviewed": "Đánh dấu đã xét (không có cảnh báo)",
+        "marking": "Đang lưu…"
+      },
+      "quota": {
+        "minute": "Đã hết lượt gợi ý cảnh báo bằng AI trong phút này. Bạn thử lại sau ít phút, hoặc tự chọn nhãn cho sách rồi lưu.",
+        "day": "Đã hết lượt gợi ý cảnh báo bằng AI hôm nay. Lượt mới có từ {time} (giờ Việt Nam); trong lúc chờ, bạn tự chọn nhãn cho sách rồi lưu.",
+        "dayNoTime": "Đã hết lượt gợi ý cảnh báo bằng AI hôm nay. Bạn thử lại vào ngày mai, hoặc tự chọn nhãn cho sách rồi lưu.",
+        "chatReserve": "Đã hết lượt gợi ý cảnh báo bằng AI hôm nay: số lượt còn lại được chừa cho chatbot Mây. Lượt mới có từ {time} (giờ Việt Nam); trong lúc chờ, bạn tự chọn nhãn cho sách rồi lưu.",
+        "chatReserveNoTime": "Đã hết lượt gợi ý cảnh báo bằng AI hôm nay: số lượt còn lại được chừa cho chatbot Mây. Bạn thử lại vào ngày mai, hoặc tự chọn nhãn cho sách rồi lưu."
+      }
     }
   },
   "layout": {
@@ -1251,7 +1308,7 @@
     "PAYOUT_STATUS_CHANGED": "Khoản này vừa được cập nhật ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất.",
     "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ nên chưa tải thêm được. Số này tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh đã tải mà chưa đăng; ảnh đã tải quá 24 giờ mà chưa đăng được dọn khi bạn mở trang đăng hoặc sửa tin. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.",
     "PREFS_LIMIT": "Bạn đã chặn đủ {max} mục, mức tối đa cho một tài khoản. Bạn bỏ chặn bớt vài mục trong trang Sở thích rồi thử lại nhé.",
-    "WARNING_QUOTA_EXCEEDED": "Đã hết lượt gợi ý cảnh báo bằng AI cho lúc này (giới hạn theo phút hoặc theo ngày, chừa lượt cho chatbot Mây). Bạn thử lại sau, hoặc tự chọn nhãn cho sách rồi lưu.",
+    "WARNING_QUOTA_EXCEEDED": "Đã hết lượt gợi ý cảnh báo bằng AI cho lúc này. Bạn thử lại sau, hoặc tự chọn nhãn cho sách rồi lưu.",
     "SUGGESTION_STATUS_CHANGED": "Gợi ý này hoặc nhãn cảnh báo của sách vừa được đổi ở nơi khác (đã duyệt, bỏ qua hoặc sửa nhãn ở trang sửa sách). Bạn tải lại trang, xem nhãn hiện tại của sách rồi duyệt lại nếu gợi ý vẫn còn chờ duyệt.",
     "WARNING_AI_FAILED": "AI chưa gợi ý được nhãn cảnh báo cho các sách này (AI không trả lời, bị chặn hoặc trả lời sai dạng). Lượt này không tự gọi lại. Bạn thử lại sau ít phút, hoặc tự chọn nhãn cho sách rồi lưu."
   },
