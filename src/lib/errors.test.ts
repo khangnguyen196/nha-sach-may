@@ -66,7 +66,7 @@ describe('mã lỗi raise trong supabase/schema.sql', () => {
 
   it('raise động (`%`) chỉ có ở chat_quota_take, mã của nó đọc được', () => {
     expect(schema.match(/raise exception '%'/g)).toHaveLength(1)
-    expect([...new Set(dynamic)].sort()).toEqual(['CHAT_FREE_QUOTA', 'CHAT_QUOTA_EXCEEDED'])
+    expect([...new Set(dynamic)].sort()).toEqual(['CHAT_FREE_QUOTA', 'CHAT_QUOTA_EXCEEDED', 'WARNING_QUOTA_EXCEEDED'])
   })
 
   it('mã nội bộ vẫn còn được raise (xóa khỏi danh sách khi schema bỏ)', () => {

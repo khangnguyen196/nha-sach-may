@@ -72,6 +72,11 @@ export const ERROR_CODES = [
   'CHAT_FREE_QUOTA',
   'CHAT_UNAVAILABLE',
   'CHAT_REGION',
+  // Cảnh báo nội dung + chặn theo sở thích (so-thich-canh-bao, mục 16 của schema.sql): đủ 50 mục chặn / tài khoản,
+  // hết lượt gợi ý cảnh báo bằng AI (admin; trần riêng hoặc ngưỡng chừa cho Mây), gợi ý vừa được duyệt / bỏ qua ở nơi khác
+  'PREFS_LIMIT',
+  'WARNING_QUOTA_EXCEEDED',
+  'SUGGESTION_STATUS_CHANGED',
   // Chunk JS tải lười (palette, sheet bộ lọc, gợi ý mã, khung chat) không tải được: LazyBoundary, chỉ ở client
   'CHUNK_LOAD_FAILED',
   // Không tới được máy chủ: request Server Action fail ở client, hoặc server không gọi được Supabase

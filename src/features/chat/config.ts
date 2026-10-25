@@ -55,6 +55,27 @@ export const CHAT_LIMITS = {
 
 export type ChatLimits = { [K in keyof typeof CHAT_LIMITS]: number }
 
+// Gợi ý cảnh báo nội dung của admin (so-thich-canh-bao P-B, docs/plans/so-thich-canh-bao.md) gọi Gemini bằng CÙNG
+// GEMINI_API_KEY và CÙNG model với Mây (resolveModel: GEMINI_MODEL trong ALLOWED_MODELS, không thì DEFAULT_MODEL).
+// Google tính RPM / RPD theo project của khóa + model, không theo tính năng → RPC consume_warning_quota cộng mỗi lượt
+// gợi ý vào bucket CHUNG gemini:minute + gemini:day như một lượt của Mây, cộng thêm warn:minute / warn:day riêng.
+// Gợi ý chỉ lấy được lượt khi gemini:day sau khi cộng ≤ geminiCallsPerDay − chatReserve (300, hằng cứng trong SQL:
+// private.warning_gemini_day_ceiling()) → Mây luôn còn ≥ chatReserve lượt, tổng cả web ≤ geminiCallsPerDay < rpd.
+// Lô ở P-B: giãn ≥ 60_000 / callsPerMinute ms giữa các lượt (không chiếm hết mốc geminiCallsPerMinute của Mây), gặp
+// WARNING_QUOTA_EXCEEDED thì dừng lô theo scope, không tự gọi lại.
+export const WARNING_LIMITS = {
+  /** Số sách gửi trong một lượt gọi */
+  booksPerCall: 12,
+  /** warn:minute (app gửi; AI giả nhân MOCK_LIMIT_MULTIPLIER như trần phút của chat) */
+  callsPerMinute: 2,
+  /** warn:day, ngày America/Los_Angeles (app gửi, không nhân khi mock) */
+  callsPerDay: 30,
+  /** Cận trên của warnCallsPerDay trong consume_warning_quota (SQL từ chối số lớn hơn) */
+  hardCallsPerDay: 60,
+  /** Số lượt gemini:day chừa cho Mây; ngưỡng thật nằm trong SQL (warning_gemini_day_ceiling) */
+  chatReserve: 100,
+} as const
+
 /** AI giả (e2e): mọi request từ 127.0.0.1, các project chạy song song → nới IP + trần chung; giữ giới hạn khách */
 export const MOCK_LIMIT_MULTIPLIER = 100
 
