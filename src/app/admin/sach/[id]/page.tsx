@@ -1,9 +1,10 @@
 import { BookIcon } from 'lucide-react'
 import Image from 'next/image'
-import { getTranslations } from 'next-intl/server'
+import { getFormatter, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { ActionButtonForm } from '@/components/admin/action-button-form'
+import { AdminLink } from '@/components/admin/admin-link'
 import { AdminBackLink, AdminPage } from '@/components/admin/admin-page'
 import { FormSkeleton } from '@/components/admin/form-skeleton'
 import { ShopLink } from '@/components/admin/shop-link'
@@ -16,6 +17,10 @@ import { getAdminCategories } from '@/features/admin/categories/queries'
 import { leafCategoryGroups } from '@/features/admin/categories/tree'
 import { getAdminFormMessages } from '@/features/admin/form-messages'
 import { rowIdSchema } from '@/features/admin/schemas'
+import { markReviewedNoWarnings, suggestOneBook } from '@/features/admin/warnings/actions'
+import { suggestionListHref } from '@/features/admin/warnings/params'
+import { getPendingSuggestionId } from '@/features/admin/warnings/queries'
+import { warningSuggestEnabled } from '@/features/warnings/mode'
 import { COVER_MAX_BYTES } from '@/lib/cover-image'
 
 type Props = PageProps<'/admin/sach/[id]'>
@@ -49,16 +54,23 @@ async function EditBook({ params }: { params: Props['params'] }) {
   const id = rowIdSchema.safeParse(rawId)
   if (!id.success) notFound()
 
-  const [book, categories, options, formProps, actionMessages, t, tCommon] = await Promise.all([
-    getAdminBook(id.data),
-    getAdminCategories(),
-    getBookFormOptions(),
-    getBookFormProps(),
-    getAdminFormMessages(),
-    getTranslations('admin.books'),
-    getTranslations('admin.common'),
-  ])
+  const [book, pendingSuggestionId, categories, options, formProps, actionMessages, suggestMessages, t, tCommon, tWarnings, tLabels, format] =
+    await Promise.all([
+      getAdminBook(id.data),
+      getPendingSuggestionId(id.data),
+      getAdminCategories(),
+      getBookFormOptions(),
+      getBookFormProps(),
+      getAdminFormMessages(),
+      getAdminFormMessages(['WARNING_QUOTA_EXCEEDED', 'WARNING_AI_FAILED']),
+      getTranslations('admin.books'),
+      getTranslations('admin.common'),
+      getTranslations('admin.warnings.book'),
+      getTranslations('contentWarnings.labels'),
+      getFormatter(),
+    ])
   if (!book) notFound()
+  const reviewedAt = book.content_warnings_reviewed_at
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] lg:items-start">
@@ -111,6 +123,51 @@ async function EditBook({ params }: { params: Props['params'] }) {
             labels={formProps.coverLabels}
             maxBytes={COVER_MAX_BYTES}
           />
+        </section>
+
+        <section aria-labelledby="warnings-title" className={panel} data-testid="book-warnings">
+          <h2 id="warnings-title" className="text-sm font-semibold">
+            {t('sections.warnings')}
+          </h2>
+          <div className="grid gap-1 text-sm text-muted-foreground">
+            <p>
+              {reviewedAt
+                ? tWarnings('reviewedAt', { time: format.dateTime(new Date(reviewedAt), 'withTime') })
+                : tWarnings('notReviewed')}
+            </p>
+            {book.content_warnings.length > 0 && (
+              <p>{tWarnings('labels', { labels: book.content_warnings.map((label) => tLabels(label)).join(', ') })}</p>
+            )}
+          </div>
+          {pendingSuggestionId !== null ? (
+            <p className="text-sm">
+              {tWarnings('pending')}{' '}
+              <AdminLink
+                href={suggestionListHref({ sach: book.id })}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                {tWarnings('viewPending')}
+              </AdminLink>
+            </p>
+          ) : (
+            warningSuggestEnabled() && (
+              <ActionButtonForm
+                action={suggestOneBook.bind(null, book.id)}
+                messages={suggestMessages}
+                label={tWarnings('suggest')}
+                pendingLabel={tWarnings('suggesting')}
+              />
+            )
+          )}
+          {!reviewedAt && book.content_warnings.length === 0 && (
+            <ActionButtonForm
+              action={markReviewedNoWarnings.bind(null, book.id)}
+              messages={actionMessages}
+              label={tWarnings('markReviewed')}
+              pendingLabel={tWarnings('marking')}
+              buttonClassName="h-auto min-h-11 py-2 text-left whitespace-normal"
+            />
+          )}
         </section>
 
         <section aria-labelledby="visibility-title" className={panel}>

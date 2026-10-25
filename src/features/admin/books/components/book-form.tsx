@@ -11,6 +11,7 @@ import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
 import { useFormAction } from '@/lib/use-form-action'
 import type { CategoryGroup } from '../../categories/tree'
+import { WarningLabelsField } from '../../warnings/components/warning-labels-field'
 import type { BookFormLabels } from '../form-props'
 import type { AdminBook } from '../queries'
 import { AUTHOR_ROLES, BOOK_FORMATS, BOOK_LANGUAGES, MAX_AUTHOR_ROWS } from '../schemas'
@@ -190,6 +191,21 @@ export function BookForm({ action, messages, labels, book, categoryGroups, publi
           hint={labels.fields.featuredHint}
           defaultChecked={book.is_featured}
         />
+      </Section>
+
+      <Section title={labels.sections.warnings}>
+        <WarningLabelsField
+          name="content_warnings"
+          legend={labels.fields.warningsLegend}
+          hint={labels.fields.warningsHint}
+          options={labels.warningOptions}
+          defaultValue={book.content_warnings}
+          error={fieldError('content_warnings')}
+        />
+        {/* Nhãn lúc mở form: server chỉ ghi nhãn khi admin đổi (không đè nhãn vừa duyệt ở tab khác) */}
+        {book.content_warnings.map((label) => (
+          <input key={label} type="hidden" name="content_warnings_before" value={label} />
+        ))}
       </Section>
 
       <Section title={labels.sections.authors}>

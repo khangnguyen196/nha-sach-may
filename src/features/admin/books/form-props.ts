@@ -1,14 +1,16 @@
 import 'server-only'
 import { getTranslations } from 'next-intl/server'
+import { CONTENT_WARNINGS } from '@/features/warnings/labels'
 import { placeholder } from '@/lib/template'
 import { getAdminFormMessages } from '../form-messages'
 import { AUTHOR_ROLES, BOOK_FORMATS, BOOK_LANGUAGES } from './schemas'
 
 /** Chuỗi đã dịch cho các form ở trang sửa sách (client leaf nhận qua props) */
 export async function getBookFormProps() {
-  const [t, tCommon, messages, coverMessages] = await Promise.all([
+  const [t, tCommon, tLabels, messages, coverMessages] = await Promise.all([
     getTranslations('admin.books'),
     getTranslations('admin.common'),
+    getTranslations('contentWarnings.labels'),
     getAdminFormMessages(['SLUG_TAKEN', 'BOOK_AUTHORS_NOT_SAVED']),
     getAdminFormMessages(['COVER_TOO_LARGE', 'COVER_INVALID']),
   ])
@@ -22,6 +24,7 @@ export async function getBookFormProps() {
         classification: t('sections.classification'),
         details: t('sections.details'),
         authors: t('sections.authors'),
+        warnings: t('sections.warnings'),
       },
       fields: {
         title: t('fields.title'),
@@ -51,7 +54,10 @@ export async function getBookFormProps() {
         featured: t('fields.featured'),
         featuredHint: t('fields.featuredHint'),
         hidden: tCommon('hidden'),
+        warningsLegend: t('fields.warningsLegend'),
+        warningsHint: t('fields.warningsHint'),
       },
+      warningOptions: CONTENT_WARNINGS.map((value) => ({ value, label: tLabels(value) })),
       formats: Object.fromEntries(BOOK_FORMATS.map((format) => [format, t(`formats.${format}`)])),
       languages: Object.fromEntries(BOOK_LANGUAGES.map((language) => [language, t(`languages.${language}`)])),
       roles: Object.fromEntries(AUTHOR_ROLES.map((role) => [role, t(`roles.${role}`)])),

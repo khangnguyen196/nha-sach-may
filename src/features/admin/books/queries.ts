@@ -39,7 +39,7 @@ export type AdminBookRow = Awaited<ReturnType<typeof listAdminBooks>>['books'][n
 
 const BOOK_COLUMNS = `id, title, slug, subtitle, description, description_en, isbn, price, original_price, stock, cover_url,
   page_count, format, language, published_year, weight_grams, dimensions, category_id, publisher_id, is_active,
-  is_featured, book_authors(author_id, role)`
+  is_featured, content_warnings, content_warnings_reviewed_at, book_authors(author_id, role)`
 
 export async function getAdminBook(id: number) {
   const supabase = await createAdminQueryClient()

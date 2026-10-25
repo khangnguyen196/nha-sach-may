@@ -105,6 +105,25 @@ describe('bookFormSchema', () => {
     expect(fieldErrors({ authors: [{ author_id: '5', role: 'editor' }] })).toEqual({ authors: 'invalid' })
     expect(fieldErrors({ authors: [{ author_id: 'abc', role: 'author' }] })).toEqual({ authors: 'invalid' })
   })
+
+  it('nhãn cảnh báo: chỉ ghi khi admin đổi so với lúc mở form (bỏ trùng, theo thứ tự enum); không có reviewed_at', () => {
+    const labels = (input: Record<string, unknown>) => {
+      const data = bookFormSchema.parse({ ...valid, ...input })
+      return 'content_warnings' in data ? data.content_warnings : 'không ghi'
+    }
+    expect(labels({ content_warnings: ['self_harm', 'violence', 'self_harm'] })).toEqual(['violence', 'self_harm'])
+    expect(labels({ content_warnings: ['loss', 'adult'], content_warnings_before: ['adult', 'loss'] })).toBe('không ghi')
+    expect(labels({ content_warnings: [], content_warnings_before: ['loss'] })).toEqual([])
+    expect(labels({})).toBe('không ghi')
+    expect(Object.keys(bookFormSchema.parse({ ...valid, content_warnings: ['loss'] }))).not.toContain(
+      'content_warnings_reviewed_at',
+    )
+  })
+
+  it('nhãn lạ / quá 5 → lỗi tại ô nhãn', () => {
+    expect(fieldErrors({ content_warnings: ['spoilers'] })).toEqual({ content_warnings: 'invalid' })
+    expect(fieldErrors({ content_warnings: Array.from({ length: 6 }, () => 'loss') })).toEqual({ content_warnings: 'invalid' })
+  })
 })
 
 describe('bookFormInput', () => {
@@ -121,6 +140,17 @@ describe('bookFormInput', () => {
         { author_id: '1', role: 'author' },
         { author_id: '', role: 'translator' },
       ],
+    })
+  })
+
+  it('ô nhãn lặp lại → mảng (cả bản lúc mở form)', () => {
+    const formData = new FormData()
+    formData.append('content_warnings', 'violence')
+    formData.append('content_warnings', 'loss')
+    formData.append('content_warnings_before', 'loss')
+    expect(bookFormInput(formData)).toMatchObject({
+      content_warnings: ['violence', 'loss'],
+      content_warnings_before: ['loss'],
     })
   })
 })

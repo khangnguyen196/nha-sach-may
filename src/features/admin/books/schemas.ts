@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { optionalMultilineText } from '@/lib/text-schema'
 import { Constants } from '@/types/database'
+import { contentWarningsSchema } from '../warnings/schemas'
 import {
   checkbox,
   integer,
@@ -71,24 +72,33 @@ export const bookFormSchema = z
     language: z.enum(BOOK_LANGUAGES, { error: 'invalid' }),
     is_featured: checkbox,
     authors,
+    // Nhãn cảnh báo: ô chọn + bản lúc mở form (ô ẩn). Form KHÔNG gửi content_warnings_reviewed_at: DB tự ghi thời điểm
+    // xét khi nhãn đổi (trigger books_content_warnings)
+    content_warnings: contentWarningsSchema.default([]),
+    content_warnings_before: contentWarningsSchema.default([]),
   })
-  .transform(({ slug, ...data }, ctx) => {
+  .transform(({ slug, content_warnings, content_warnings_before, ...data }, ctx) => {
     // Cùng ràng buộc với check constraint của books (original_price >= price), báo tại ô thay vì lỗi DB
     if (data.original_price !== null && data.original_price < data.price) {
       ctx.addIssue({ code: 'custom', path: ['original_price'], message: 'originalPrice' })
     }
-    return { ...data, slug: resolveSlug(slug, data.title, ctx) }
+    // Chỉ ghi nhãn khi admin đổi trong form: lưu form mở từ trước (sửa giá…) không đè nhãn vừa duyệt ở /admin/canh-bao.
+    // Hai mảng đã chuẩn hóa (thứ tự enum, không trùng) nên so theo chuỗi được
+    const labelsChanged = content_warnings.join() !== content_warnings_before.join()
+    return { ...data, slug: resolveSlug(slug, data.title, ctx), ...(labelsChanged && { content_warnings }) }
   })
 
 export type BookFormInput = z.output<typeof bookFormSchema>
 
-/** FormData của form sách → input cho schema: các dòng tác giả ghép từ hai mảng cùng thứ tự */
+/** FormData của form sách → input cho schema: các dòng tác giả ghép từ hai mảng cùng thứ tự; ô nhãn lặp lại (getAll) */
 export function bookFormInput(formData: FormData) {
   const authorIds = formData.getAll('author_id')
   const roles = formData.getAll('author_role')
   return {
     ...Object.fromEntries(formData),
     authors: authorIds.map((authorId, index) => ({ author_id: authorId, role: roles[index] })),
+    content_warnings: formData.getAll('content_warnings'),
+    content_warnings_before: formData.getAll('content_warnings_before'),
   }
 }
 
