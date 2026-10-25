@@ -9,23 +9,25 @@ import { CHAT_LIMITS, WARNING_LIMITS } from '../src/features/chat/config'
 // Kịch bản đếm thật (lượt 31 / 61 bị chặn, gemini:day = 300 thì gợi ý bị chặn còn Mây vẫn qua) chạy trên Postgres
 // local lúc cắt SQL, không chạy e2e (ăn hết warn:day trên DB của CI làm đỏ test khác chạy cùng lượt).
 const schemaSql = readFileSync(join(import.meta.dirname, 'schema.sql'), 'utf8')
-const normalize = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').toLowerCase()
+const migrationSql = readFileSync(join(import.meta.dirname, 'migrations', '20261025000000_prefs_warnings.sql'), 'utf8')
+/** Văn bản gốc: bỏ comment, gộp khoảng trắng, GIỮ chữ hoa / thường (chuỗi so trong PL/pgSQL phân biệt hoa thường) */
+const raw = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ')
+const normalize = (sql: string) => raw(sql).toLowerCase()
 const schema = normalize(schemaSql)
-const migration = normalize(
-  readFileSync(join(import.meta.dirname, 'migrations', '20261025000000_prefs_warnings.sql'), 'utf8'),
-)
+const migration = normalize(migrationSql)
 
-/** Mục 16 (tới khối chú thích cuối file) */
-const section = (() => {
+/** Mục 16 (tới khối chú thích cuối file), văn bản gốc */
+const sectionSql = (() => {
   const start = schemaSql.indexOf('-- 16. CẢNH BÁO NỘI DUNG')
   const end = schemaSql.indexOf('-- RPC cho app', start)
   if (start < 0 || end < 0) throw new Error('schema.sql không có mục 16')
-  return normalize(schemaSql.slice(start, end))
+  return schemaSql.slice(start, end)
 })()
+const section = normalize(sectionSql)
 
 function functionStatement(name: string, text = schema) {
   const start = text.indexOf(`create or replace function ${name}(`)
-  if (start < 0) throw new Error(`${text === schema ? 'schema.sql' : 'migration'} không có hàm ${name}`)
+  if (start < 0) throw new Error(`${text === schema ? 'schema.sql' : 'nguồn SQL'} không có hàm ${name}`)
   const bodyStart = text.indexOf('$$', start)
   const bodyEnd = text.indexOf('$$', bodyStart + 2)
   return text.slice(start, bodyEnd + 2)
@@ -304,6 +306,42 @@ describe('trigger books_content_warnings: DB tự ghi content_warnings_reviewed_
 
   it('schema.sql và migration giống hệt', () => {
     expect(sources[1][1]).toBe(sources[0][1])
+  })
+})
+
+// Các test trên so văn bản đã hạ chữ thường → không thấy lỗi viết nhầm chữ thường trong chuỗi: tg_op = 'insert' không
+// bao giờ đúng (TG_OP luôn 'INSERT') → nhánh insert không chạy, sách mới có nhãn thiếu reviewed_at; mã lỗi viết
+// thường thì app không map được sang errors.<CODE>. Kiểm trên văn bản gốc.
+describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
+  const rawSources = [
+    ['schema.sql', raw(schemaSql), raw(sectionSql)],
+    ['migration', raw(migrationSql), raw(migrationSql)],
+  ] as const
+
+  it.each(rawSources)("%s: trigger books_content_warnings so tg_op = 'INSERT'", (_, text) => {
+    expect(functionStatement('private.books_normalize_content_warnings', text)).toContain("if tg_op = 'INSERT' then")
+  })
+
+  it.each(rawSources)('%s: mã lỗi viết hoa', (_, text) => {
+    expect(text).toContain("raise exception 'PREFS_LIMIT'")
+    expect(text).toContain("raise exception 'SUGGESTION_STATUS_CHANGED'")
+    expect(text).toContain("'WARNING_QUOTA_EXCEEDED', 'warn_minute'")
+    expect(text).toContain("'WARNING_QUOTA_EXCEEDED', 'warn_day'")
+    expect(text).toContain("'WARNING_QUOTA_EXCEEDED', 'gemini_minute'")
+    expect(text).toContain("'WARNING_QUOTA_EXCEEDED', 'chat_reserve'")
+  })
+
+  // toContain chỉ cần một chỗ đúng; mã xuất hiện nhiều lần (SUGGESTION_STATUS_CHANGED 2 lần, FORBIDDEN, INVALID_INPUT…)
+  // thì mọi chỗ trong mục 16 / migration đều phải viết hoa
+  it.each(rawSources)('%s: mọi chỗ nhắc mã lỗi / tg_op trong mục 16 đều viết hoa', (_, __, part) => {
+    const codes = ['PREFS_LIMIT', 'SUGGESTION_STATUS_CHANGED', 'WARNING_QUOTA_EXCEEDED', 'FORBIDDEN', 'INVALID_INPUT']
+    for (const code of codes) {
+      const found = [...part.matchAll(new RegExp(`'${code}'`, 'gi'))].map((m) => m[0])
+      expect(found.length).toBeGreaterThan(0)
+      expect(found).toEqual(found.map(() => `'${code}'`))
+    }
+    const tgOp = [...part.matchAll(/tg_op = '(\w+)'/gi)].map((m) => m[1])
+    expect(tgOp).toEqual(['INSERT'])
   })
 })
 
