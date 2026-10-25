@@ -585,7 +585,7 @@ isOneToOne: false
 { Args: { "p_approve": boolean,"p_expected_status": Database["public"]['Enums']["used_listing_status"],"p_expected_updated_at": string,"p_id": number,"p_reason"?: string }; Returns: undefined
                            },
 "review_warning_suggestion":
-{ Args: { "p_approve": boolean,"p_expected_reviewed_at": string,"p_id": number,"p_labels": (Database["public"]['Enums']["content_warning"])[] }; Returns: number
+{ Args: { "p_approve": boolean,"p_expected_reviewed_at"?: string,"p_id": number,"p_labels": (Database["public"]['Enums']["content_warning"])[] }; Returns: number
                            },
 "search_books":
 { Args: { "q": string }; Returns: {
