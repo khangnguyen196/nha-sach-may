@@ -1399,6 +1399,10 @@
       "adult": "Nội dung người lớn",
       "other_sensitive": "Chủ đề nhạy cảm khác"
     },
+    "notice": {
+      "title": "Lưu ý về nội dung",
+      "intro": "Cuốn sách có đề cập tới:"
+    },
     "selfHarmNote": "Nếu bạn đang gặp khó khăn, hãy chia sẻ với người bạn tin tưởng hoặc tìm hỗ trợ chuyên môn."
   },
   "chat": {

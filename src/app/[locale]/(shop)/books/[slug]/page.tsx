@@ -24,6 +24,7 @@ import { MyReview } from '@/features/reviews/components/my-review'
 import { RatingStars } from '@/features/reviews/components/rating-stars'
 import { ReviewList, ReviewListSkeleton } from '@/features/reviews/components/review-list'
 import { UsedCopies, UsedCopiesSkeleton } from '@/features/used/components/used-copies'
+import { WarningNotice } from '@/features/warnings/components/warning-notice'
 import { localeAlternates } from '@/i18n/alternates'
 import { Link } from '@/i18n/navigation'
 import { localizedSlugPath } from '@/i18n/paths'
@@ -201,6 +202,8 @@ async function BookContent({ params }: { params: Props['params'] }) {
               <UsedCopies bookId={book.id} slug={book.slug} />
             </Suspense>
           )}
+          {/* Nhãn cảnh báo đã duyệt: cùng dữ liệu cache với mô tả (book:{id}), cùng boundary → không Suspense riêng, không CLS */}
+          <WarningNotice labels={book.content_warnings} />
           <Description book={book} />
           <Details book={book} />
         </div>

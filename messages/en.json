@@ -817,6 +817,10 @@
       "adult": "Adult content",
       "other_sensitive": "Other sensitive topics"
     },
+    "notice": {
+      "title": "Content notes",
+      "intro": "This book includes:"
+    },
     "selfHarmNote": "If you’re going through a hard time, consider talking to someone you trust or reaching out for professional support."
   }
 }

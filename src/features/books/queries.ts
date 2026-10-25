@@ -191,7 +191,7 @@ async function getBookBySlugCached(slug: string) {
     .select(
       `id, slug, title, subtitle, description, description_en, cover_url, price, original_price, stock, isbn,
        page_count, format, language, published_year, weight_grams, dimensions, category_id, avg_rating, review_count,
-       publishers(name), book_authors(role, authors(name, slug))`,
+       content_warnings, publishers(name), book_authors(role, authors(name, slug))`,
     )
     .eq('slug', slug)
     .maybeSingle()
