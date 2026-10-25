@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { CONTENT_WARNINGS, type ContentWarning } from '@/features/warnings/labels'
 import { Constants, type Database } from '@/types/database'
 
-// Input của action gợi ý cảnh báo (chỉ server import: action + test). Nhãn dùng chung cho form sửa sách.
+// Input của action gợi ý cảnh báo; contentWarningsSchema dùng chung cho schema form sửa sách (books/schemas.ts, file đó
+// cũng bị form client import để lấy hằng: zod đã nằm trong bundle admin từ trước, không vào trang cửa hàng).
 
 /**
  * Ô chọn nhãn (`name` lặp lại, FormData.getAll): chỉ 5 nhãn của enum, ≤ 5 phần tử; bỏ trùng + xếp theo thứ tự enum như
@@ -13,15 +14,16 @@ export const contentWarningsSchema = z
   .max(CONTENT_WARNINGS.length, { error: 'invalid' })
   .transform((labels): ContentWarning[] => CONTENT_WARNINGS.filter((label) => labels.includes(label)))
 
-// timestamptz như PostgREST trả về ("2026-10-25T09:42:01.123456+00:00"); form gửi lại nguyên chuỗi, không qua Date của JS
-// (mất phần micro giây → review_warning_suggestion luôn thấy lệch)
-const TIMESTAMPTZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)$/
 
 export const reviewSuggestionSchema = z.object({
   labels: contentWarningsSchema,
   decision: z.enum(['approve', 'dismiss'], { error: 'invalid' }),
-  /** content_warnings_reviewed_at của sách lúc mở trang; null = sách chưa xét */
-  expectedReviewedAt: z.string().max(40).regex(TIMESTAMPTZ).nullable(),
+  /**
+   * content_warnings_reviewed_at của sách lúc mở trang; null = sách chưa xét. timestamptz như PostgREST trả về
+   * ("2026-10-25T09:42:01.123456+00:00", cùng kiểu expected_updated_at của chợ sách cũ); form gửi lại nguyên chuỗi, không
+   * qua Date của JS (mất phần micro giây → review_warning_suggestion luôn thấy lệch)
+   */
+  expectedReviewedAt: z.iso.datetime({ offset: true }).nullable(),
 })
 
 export type ReviewSuggestionInput = z.output<typeof reviewSuggestionSchema>
@@ -51,8 +53,8 @@ export function reviewRpcArgs(id: number, input: ReviewSuggestionInput): ReviewA
 export type BatchOutcome = {
   /** Số gợi ý vừa ghi */
   inserted: number
-  /** Số sách của lượt mà AI không trả mục dùng được (vẫn chưa xét, lượt sau chọn lại) */
-  missing: number
+  /** Sách của lượt mà AI không trả mục dùng được (vẫn chưa xét, lượt sau chọn lại); tên chỉ để hiện cho admin */
+  missing: { id: number; title: string }[]
   /** Còn sách chưa xét và chưa có gợi ý chờ duyệt */
   remaining: boolean
 }

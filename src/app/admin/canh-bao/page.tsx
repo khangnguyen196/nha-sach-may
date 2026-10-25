@@ -75,9 +75,12 @@ async function Warnings({ searchParams }: { searchParams: Props['searchParams'] 
               hint: t('batch.hint', { books: WARNING_LIMITS.booksPerCall, seconds: Math.ceil(intervalMs / 1000) }),
               running: t('batch.running', { n: placeholder('n') }),
               waiting: t('batch.waiting', { n: placeholder('n'), seconds: placeholder('seconds') }),
-              totals: t('batch.totals', { inserted: placeholder('inserted'), missing: placeholder('missing') }),
+              cooling: t('batch.cooling', { seconds: placeholder('seconds') }),
+              totals: t('batch.totals', { inserted: placeholder('inserted') }),
               done: t('batch.done'),
               stopped: t('batch.stopped'),
+              stalled: t('batch.stalled'),
+              missing: t('batch.missing'),
             }}
           />
         ) : (

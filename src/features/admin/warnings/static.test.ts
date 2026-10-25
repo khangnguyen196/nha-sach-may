@@ -97,7 +97,10 @@ describe(`${COLUMN}: chỉ "Đánh dấu đã xét (không có cảnh báo)" ghi
 
 describe('maxDuration của trang admin gọi action gợi ý', () => {
   const pages = sourceFiles().filter(
-    (file) => file.endsWith('page.tsx') && readFileSync(file, 'utf8').includes("from '@/features/admin/warnings/actions'"),
+    // Trang import action gợi ý, hoặc component tự gọi action (BatchSuggest gọi suggestNextBatch)
+    (file) =>
+      file.endsWith('page.tsx') &&
+      /from '@\/features\/admin\/warnings\/(?:actions|components\/)/.test(readFileSync(file, 'utf8')),
   )
 
   it('bộ lọc còn đúng: /admin/canh-bao và /admin/sach/[id]', () => {

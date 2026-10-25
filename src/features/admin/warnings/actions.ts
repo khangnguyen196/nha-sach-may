@@ -1,5 +1,6 @@
 'use server'
 
+import type { QueryData } from '@supabase/supabase-js'
 import { refresh, updateTag } from 'next/cache'
 import { WARNING_LIMITS } from '@/features/chat/config'
 import type { WarningBookInput } from '@/features/warnings/prompt'
@@ -25,15 +26,17 @@ const AI_FAILED: Failure = { ok: false, code: 'WARNING_AI_FAILED' }
 // Sách đã có gợi ý chờ duyệt (unique index content_warning_suggestions_one_pending): tab / lô khác vừa tạo
 const UNIQUE_VIOLATION = '23505'
 
-const PROMPT_COLUMNS = 'id, title, description, categories(name), book_authors(role, authors(name))'
-
-type PromptRow = {
-  id: number
-  title: string
-  description: string | null
-  categories: { name: string } | null
-  book_authors: { role: string; authors: { name: string } | null }[]
+/**
+ * Sách gửi AI (một query: tác giả, danh mục). Kèm gợi ý của sách để lô lọc "không có gợi ý pending" bằng anti-join của
+ * PostgREST (`content_warning_suggestions.status=eq.pending` + `content_warning_suggestions=is.null`).
+ */
+function promptBooks(supabase: Supabase) {
+  return supabase
+    .from('books')
+    .select('id, title, description, categories(name), book_authors(role, authors(name)), content_warning_suggestions(id)')
 }
+
+type PromptRow = QueryData<ReturnType<typeof promptBooks>>[number]
 
 /** Dữ liệu gửi AI: tác giả vai trò author (như thẻ sách), tên danh mục lá */
 function toWarningInput(row: PromptRow): WarningBookInput {
@@ -100,7 +103,7 @@ export async function suggestOneBook(bookId: number): Promise<Result<{ suggestio
   }
   if (pending !== null) return pending
 
-  const book = await supabase.from('books').select(PROMPT_COLUMNS).eq('id', id.data).maybeSingle()
+  const book = await promptBooks(supabase).eq('id', id.data).maybeSingle()
   if (book.error) {
     console.error(`[warnings] đọc sách: ${book.error.code || '-'}`)
     return toFailure(book.error)
@@ -124,8 +127,9 @@ export async function suggestOneBook(bookId: number): Promise<Result<{ suggestio
 
 /**
  * Một lượt của lô "Gợi ý cho sách chưa xét". SERVER tự chọn ≤ booksPerCall sách chưa xét, chưa có gợi ý chờ duyệt, theo
- * id (client không gửi id). Không còn sách → trả ngay, không gọi AI (không trừ lượt). AI không trả mục nào dùng được →
- * WARNING_AI_FAILED (lô dừng: tránh gọi lại mãi đúng nhóm sách AI không trả lời).
+ * id (client không gửi id). Không còn sách → trả ngay, không gọi AI (không trừ lượt). Sách AI không trả mục dùng được
+ * → `missing` (id + tên, admin mở từng cuốn); lượt không ghi được gợi ý nào (AI bỏ sót cả lô, hoặc mọi sách vừa có gợi ý
+ * ở nơi khác) → `inserted` = 0, client dừng lô: chọn theo id nên gọi tiếp sẽ lặp đúng nhóm sách đó, tốn lượt.
  */
 export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
   const denied = await assertAdmin()
@@ -134,9 +138,7 @@ export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
   const supabase = await createClient()
   // Một query: lọc gợi ý của sách còn 'pending' rồi chỉ giữ sách không có gợi ý nào như vậy (anti-join của PostgREST).
   // Lấy thêm một cuốn để biết còn sách sau lượt này không.
-  const { data, error } = await supabase
-    .from('books')
-    .select(`${PROMPT_COLUMNS}, content_warning_suggestions(id)`)
+  const { data, error } = await promptBooks(supabase)
     .is('content_warnings_reviewed_at', null)
     .eq('content_warning_suggestions.status', 'pending')
     .is('content_warning_suggestions', null)
@@ -146,24 +148,24 @@ export async function suggestNextBatch(): Promise<Result<BatchOutcome>> {
     console.error(`[warnings] chọn sách cho lô: ${error.code || '-'}`)
     return toFailure(error)
   }
-  if (data.length === 0) return { ok: true, data: { inserted: 0, missing: 0, remaining: false } }
+  if (data.length === 0) return { ok: true, data: { inserted: 0, missing: [], remaining: false } }
 
   const batch = data.slice(0, WARNING_LIMITS.booksPerCall)
   const result = await suggestWarnings(batch.map(toWarningInput))
   if (!result.ok) return suggestFailure(result)
-  if (result.results.length === 0) return AI_FAILED
 
   // Từng gợi ý ghi riêng: một sách vừa có gợi ý ở nơi khác (23505) không làm hỏng cả lượt
   const outcomes = await Promise.all(result.results.map((item) => insertSuggestion(supabase, item, result.model)))
   const failed = outcomes.find((outcome) => outcome.kind === 'failed')
   if (failed?.kind === 'failed') return failed.failure
 
+  const missing = new Set(result.missing)
   return {
     ok: true,
     data: {
       inserted: outcomes.filter((outcome) => outcome.kind === 'inserted').length,
-      missing: result.missing.length,
-      remaining: data.length > batch.length || result.missing.length > 0,
+      missing: batch.filter((book) => missing.has(book.id)).map((book) => ({ id: book.id, title: book.title })),
+      remaining: data.length > batch.length || missing.size > 0,
     },
   }
 }
@@ -202,7 +204,7 @@ export async function reviewSuggestion(
 
 /**
  * "Đánh dấu đã xét (không có cảnh báo)": action DUY NHẤT của admin ghi content_warnings_reviewed_at (Vitest
- * reviewed-at.test.ts). Giờ server; chỉ khi sách còn chưa xét (`.is(…, null)`), mà chưa xét thì nhãn luôn rỗng (check
+ * static.test.ts). Giờ server; chỉ khi sách còn chưa xét (`.is(…, null)`), mà chưa xét thì nhãn luôn rỗng (check
  * books_content_warnings_reviewed_check: có nhãn ⇒ đã xét). Không bao giờ gửi lại giá trị đã đọc (tránh quay về mốc cũ).
  * 0 dòng = đã có người xét (hoặc sách vừa bị xóa) → làm mới trang, coi như xong.
  */
@@ -218,7 +220,10 @@ export async function markReviewedNoWarnings(bookId: number): Promise<Result<nul
     .update({ content_warnings_reviewed_at: new Date().toISOString() })
     .eq('id', id.data)
     .is('content_warnings_reviewed_at', null)
-  if (error) return toFailure(error)
+  if (error) {
+    console.error(`[warnings] đánh dấu đã xét: ${error.code || '-'}`)
+    return toFailure(error)
+  }
   // Nhãn vẫn rỗng: cửa hàng không đổi gì → không làm mới cache catalog
   refresh()
   return { ok: true, data: null }

@@ -590,9 +590,12 @@
         "hint": "Mỗi lượt gửi tối đa {books} sách cho AI; lượt sau bắt đầu {seconds} giây sau khi lượt trước xong. Lô dừng khi hết sách, khi gặp lỗi, khi bạn bấm Dừng hoặc rời trang.",
         "running": "Đang gọi lượt {n}…",
         "waiting": "Xong lượt {n}. Lượt sau bắt đầu sau khoảng {seconds} giây.",
-        "totals": "Đã tạo {inserted} gợi ý. Số lần AI không trả lời cho một sách: {missing}.",
+        "cooling": "Lượt trước vừa xong: lượt 1 bắt đầu sau khoảng {seconds} giây.",
+        "totals": "Đã tạo {inserted} gợi ý.",
         "done": "Đã gợi ý xong: không còn sách chưa xét nào chưa có gợi ý.",
-        "stopped": "Đã dừng lô."
+        "stopped": "Đã dừng lô.",
+        "stalled": "Lượt vừa rồi không tạo được gợi ý mới nào nên lô dừng (gọi tiếp sẽ lặp lại đúng các sách này). Với sách AI chưa trả lời, bạn mở từng cuốn để dùng \"Gợi ý bằng AI\", tự chọn nhãn hoặc \"Đánh dấu đã xét\".",
+        "missing": "AI chưa trả lời cho các sách sau (lô sau sẽ thử lại; hoặc mở từng cuốn để xử lý):"
       },
       "list": {
         "label": "Gợi ý chờ duyệt",

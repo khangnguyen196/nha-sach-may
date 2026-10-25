@@ -77,7 +77,7 @@ beforeEach(() => {
 describe('suggestNextBatch', () => {
   it('không còn sách chưa xét → trả ngay, không gọi AI (không trừ lượt)', async () => {
     respond = () => ({ data: [], error: null })
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: 0, remaining: false } })
+    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: [], remaining: false } })
     expect(suggestWarnings).not.toHaveBeenCalled()
   })
 
@@ -92,7 +92,10 @@ describe('suggestNextBatch', () => {
     }
     suggestWarnings.mockResolvedValue(okSuggest([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [12]))
 
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 10, missing: 1, remaining: true } })
+    expect(await suggestNextBatch()).toEqual({
+      ok: true,
+      data: { inserted: 10, missing: [{ id: 12, title: 'Sách 12' }], remaining: true },
+    })
 
     const [select] = queries
     expect(select?.table).toBe('books')
@@ -117,14 +120,33 @@ describe('suggestNextBatch', () => {
         ? { data: [bookRow(1), bookRow(2)], error: null }
         : { data: { id: 9 }, error: null }
     suggestWarnings.mockResolvedValue(okSuggest([1, 2]))
-    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 2, missing: 0, remaining: false } })
+    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 2, missing: [], remaining: false } })
   })
 
-  it('AI không trả mục nào dùng được → WARNING_AI_FAILED (lô dừng), không ghi gì', async () => {
+  it('AI không trả mục nào dùng được → inserted 0 + danh sách sách (id, tên) để client dừng lô và hiện link, không ghi gì', async () => {
     respond = () => ({ data: [bookRow(1), bookRow(2)], error: null })
     suggestWarnings.mockResolvedValue(okSuggest([], [1, 2]))
-    expect(await suggestNextBatch()).toEqual({ ok: false, code: 'WARNING_AI_FAILED' })
+    expect(await suggestNextBatch()).toEqual({
+      ok: true,
+      data: {
+        inserted: 0,
+        missing: [
+          { id: 1, title: 'Sách 1' },
+          { id: 2, title: 'Sách 2' },
+        ],
+        remaining: true,
+      },
+    })
     expect(queries.filter((query) => query.table === 'content_warning_suggestions')).toHaveLength(0)
+  })
+
+  it('mọi sách của lượt vừa có gợi ý ở nơi khác (23505) → inserted 0 (client dừng, không lặp lại nhóm sách đó)', async () => {
+    respond = (query) =>
+      query.table === 'books'
+        ? { data: Array.from({ length: 13 }, (_, index) => bookRow(index + 1)), error: null }
+        : { data: null, error: { code: '23505', message: 'duplicate key' } }
+    suggestWarnings.mockResolvedValue(okSuggest([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))
+    expect(await suggestNextBatch()).toEqual({ ok: true, data: { inserted: 0, missing: [], remaining: true } })
   })
 
   it('hết lượt → câu theo scope, không ghi gì', async () => {
