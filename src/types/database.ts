@@ -105,14 +105,14 @@ isOneToOne: false
                   ]
                 },"books": {
                   Row: {
-                    "avg_rating": number,"category_id": number | null,"cover_url": string | null,"cover_width": number | null,"created_at": string,"description": string | null,"description_en": string | null,"dimensions": string | null,"format": Database["public"]['Enums']["book_format"],"id": number,"is_active": boolean,"is_featured": boolean,"isbn": string | null,"language": string,"original_price": number | null,"page_count": number | null,"price": number,"published_year": number | null,"publisher_id": number | null,"review_count": number,"search_text": string | null,"slug": string,"sold_count": number,"stock": number,"subtitle": string | null,"title": string,"updated_at": string,"weight_grams": number | null
+                    "avg_rating": number,"category_id": number | null,"content_warnings": (Database["public"]['Enums']["content_warning"])[],"content_warnings_reviewed_at": string | null,"cover_url": string | null,"cover_width": number | null,"created_at": string,"description": string | null,"description_en": string | null,"dimensions": string | null,"format": Database["public"]['Enums']["book_format"],"id": number,"is_active": boolean,"is_featured": boolean,"isbn": string | null,"language": string,"original_price": number | null,"page_count": number | null,"price": number,"published_year": number | null,"publisher_id": number | null,"review_count": number,"search_text": string | null,"slug": string,"sold_count": number,"stock": number,"subtitle": string | null,"title": string,"updated_at": string,"weight_grams": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "avg_rating"?: number,"category_id"?: number | null,"cover_url"?: string | null,"cover_width"?: number | null,"created_at"?: string,"description"?: string | null,"description_en"?: string | null,"dimensions"?: string | null,"format"?: Database["public"]['Enums']["book_format"],"id"?: number,"is_active"?: boolean,"is_featured"?: boolean,"isbn"?: string | null,"language"?: string,"original_price"?: number | null,"page_count"?: number | null,"price": number,"published_year"?: number | null,"publisher_id"?: number | null,"review_count"?: number,"search_text"?: string | null,"slug": string,"sold_count"?: number,"stock"?: number,"subtitle"?: string | null,"title": string,"updated_at"?: string,"weight_grams"?: number | null
+                    "avg_rating"?: number,"category_id"?: number | null,"content_warnings"?: (Database["public"]['Enums']["content_warning"])[],"content_warnings_reviewed_at"?: string | null,"cover_url"?: string | null,"cover_width"?: number | null,"created_at"?: string,"description"?: string | null,"description_en"?: string | null,"dimensions"?: string | null,"format"?: Database["public"]['Enums']["book_format"],"id"?: number,"is_active"?: boolean,"is_featured"?: boolean,"isbn"?: string | null,"language"?: string,"original_price"?: number | null,"page_count"?: number | null,"price": number,"published_year"?: number | null,"publisher_id"?: number | null,"review_count"?: number,"search_text"?: string | null,"slug": string,"sold_count"?: number,"stock"?: number,"subtitle"?: string | null,"title": string,"updated_at"?: string,"weight_grams"?: number | null
                   }
                   Update: {
-                    "avg_rating"?: number,"category_id"?: number | null,"cover_url"?: string | null,"cover_width"?: number | null,"created_at"?: string,"description"?: string | null,"description_en"?: string | null,"dimensions"?: string | null,"format"?: Database["public"]['Enums']["book_format"],"id"?: number,"is_active"?: boolean,"is_featured"?: boolean,"isbn"?: string | null,"language"?: string,"original_price"?: number | null,"page_count"?: number | null,"price"?: number,"published_year"?: number | null,"publisher_id"?: number | null,"review_count"?: number,"search_text"?: string | null,"slug"?: string,"sold_count"?: number,"stock"?: number,"subtitle"?: string | null,"title"?: string,"updated_at"?: string,"weight_grams"?: number | null
+                    "avg_rating"?: number,"category_id"?: number | null,"content_warnings"?: (Database["public"]['Enums']["content_warning"])[],"content_warnings_reviewed_at"?: string | null,"cover_url"?: string | null,"cover_width"?: number | null,"created_at"?: string,"description"?: string | null,"description_en"?: string | null,"dimensions"?: string | null,"format"?: Database["public"]['Enums']["book_format"],"id"?: number,"is_active"?: boolean,"is_featured"?: boolean,"isbn"?: string | null,"language"?: string,"original_price"?: number | null,"page_count"?: number | null,"price"?: number,"published_year"?: number | null,"publisher_id"?: number | null,"review_count"?: number,"search_text"?: string | null,"slug"?: string,"sold_count"?: number,"stock"?: number,"subtitle"?: string | null,"title"?: string,"updated_at"?: string,"weight_grams"?: number | null
                   }
                   Relationships: [
                     {
@@ -172,6 +172,26 @@ isOneToOne: false
       columns: ["parent_id"]
 isOneToOne: false
       referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"content_warning_suggestions": {
+                  Row: {
+                    "book_id": number,"created_at": string,"id": number,"labels": (Database["public"]['Enums']["content_warning"])[],"model": string | null,"reason": string,"reviewed_at": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "book_id": number,"created_at"?: string,"id"?: number,"labels"?: (Database["public"]['Enums']["content_warning"])[],"model"?: string | null,"reason": string,"reviewed_at"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "book_id"?: number,"created_at"?: string,"id"?: number,"labels"?: (Database["public"]['Enums']["content_warning"])[],"model"?: string | null,"reason"?: string,"reviewed_at"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "content_warning_suggestions_book_id_fkey"
+      columns: ["book_id"]
+isOneToOne: false
+      referencedRelation: "books"
       referencedColumns: ["id"]
     }
                   ]
@@ -345,6 +365,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"user_blocks": {
+                  Row: {
+                    "author_id": number | null,"category_id": number | null,"created_at": string,"id": number,"kind": string,"publisher_id": number | null,"user_id": string,"warning": Database["public"]['Enums']["content_warning"] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id"?: number | null,"category_id"?: number | null,"created_at"?: string,"id"?: number,"kind": string,"publisher_id"?: number | null,"user_id"?: string,"warning"?: Database["public"]['Enums']["content_warning"] | null
+                  }
+                  Update: {
+                    "author_id"?: number | null,"category_id"?: number | null,"created_at"?: string,"id"?: number,"kind"?: string,"publisher_id"?: number | null,"user_id"?: string,"warning"?: Database["public"]['Enums']["content_warning"] | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_blocks_author_id_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "authors"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_blocks_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_blocks_publisher_id_fkey"
+      columns: ["publisher_id"]
+isOneToOne: false
+      referencedRelation: "publishers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "user_blocks_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"vouchers": {
                   Row: {
                     "code": string,"created_at": string,"description": string | null,"description_en": string | null,"discount_type": Database["public"]['Enums']["discount_type"],"discount_value": number,"ends_at": string | null,"id": number,"is_active": boolean,"is_public": boolean,"max_discount": number | null,"min_order_value": number,"starts_at": string | null,"usage_limit": number | null,"used_count": number
@@ -414,6 +472,9 @@ isOneToOne: false
                            },
 "consume_chat_quota":
 { Args: { "p_ip"?: string,"p_limits"?: Json,"p_token": string,"p_visitor"?: string }; Returns: Json
+                           },
+"consume_warning_quota":
+{ Args: { "p_limits": Json }; Returns: Json
                            },
 "create_used_listing":
 { Args: { "p_book_id": number,"p_condition": Database["public"]['Enums']["used_condition"],"p_description": string,"p_photos": (string)[],"p_price": number }; Returns: number
@@ -523,10 +584,15 @@ isOneToOne: false
 "review_used_listing":
 { Args: { "p_approve": boolean,"p_expected_status": Database["public"]['Enums']["used_listing_status"],"p_expected_updated_at": string,"p_id": number,"p_reason"?: string }; Returns: undefined
                            },
+"review_warning_suggestion":
+{ Args: { "p_approve": boolean,"p_expected_reviewed_at": string,"p_id": number,"p_labels": (Database["public"]['Enums']["content_warning"])[] }; Returns: number
+                           },
 "search_books":
 { Args: { "q": string }; Returns: {
               "avg_rating": number,
 "category_id": number | null,
+"content_warnings": (Database["public"]['Enums']["content_warning"])[],
+"content_warnings_reviewed_at": string | null,
 "cover_url": string | null,
 "cover_width": number | null,
 "created_at": string,
@@ -579,7 +645,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "book_format": "paperback"|"hardcover"|"boxset","discount_type": "percent"|"fixed","order_status": "pending"|"confirmed"|"shipping"|"delivered"|"cancelled","payment_method": "cod"|"bank_transfer","payment_status": "unpaid"|"paid"|"refunded","used_condition": "like_new"|"good"|"fair"|"worn","used_listing_status": "pending"|"approved"|"rejected"|"sold"|"withdrawn","user_role": "customer"|"admin"
+            "book_format": "paperback"|"hardcover"|"boxset","content_warning": "violence"|"loss"|"self_harm"|"adult"|"other_sensitive","discount_type": "percent"|"fixed","order_status": "pending"|"confirmed"|"shipping"|"delivered"|"cancelled","payment_method": "cod"|"bank_transfer","payment_status": "unpaid"|"paid"|"refunded","used_condition": "like_new"|"good"|"fair"|"worn","used_listing_status": "pending"|"approved"|"rejected"|"sold"|"withdrawn","user_role": "customer"|"admin"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -699,7 +765,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "book_format": ["paperback", "hardcover", "boxset"],"discount_type": ["percent", "fixed"],"order_status": ["pending", "confirmed", "shipping", "delivered", "cancelled"],"payment_method": ["cod", "bank_transfer"],"payment_status": ["unpaid", "paid", "refunded"],"used_condition": ["like_new", "good", "fair", "worn"],"used_listing_status": ["pending", "approved", "rejected", "sold", "withdrawn"],"user_role": ["customer", "admin"]
+            "book_format": ["paperback", "hardcover", "boxset"],"content_warning": ["violence", "loss", "self_harm", "adult", "other_sensitive"],"discount_type": ["percent", "fixed"],"order_status": ["pending", "confirmed", "shipping", "delivered", "cancelled"],"payment_method": ["cod", "bank_transfer"],"payment_status": ["unpaid", "paid", "refunded"],"used_condition": ["like_new", "good", "fair", "worn"],"used_listing_status": ["pending", "approved", "rejected", "sold", "withdrawn"],"user_role": ["customer", "admin"]
           }
         }
 } as const
