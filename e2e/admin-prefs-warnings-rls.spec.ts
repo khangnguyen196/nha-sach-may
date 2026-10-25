@@ -34,18 +34,26 @@ type Warning = Database['public']['Enums']['content_warning']
 type Functions = Database['public']['Functions']
 type ReviewFn = Functions['review_warning_suggestion']
 type QuotaFn = Functions['consume_warning_quota']
+type BooksTable = Database['public']['Tables']['books']
 /**
- * Kiểu CLI sinh cho tham số hàm không bao giờ nullable (p_expected_reviewed_at: string) dù SQL nhận null (sách chưa
- * xét). Bản nới riêng 2 RPC của spec: review_warning_suggestion nhận null ở p_labels / p_expected_reviewed_at,
- * consume_warning_quota nhận p_limits bất kỳ (ca tham số sai); phần còn lại giữ nguyên kiểu Database.
+ * Kiểu CLI sinh cho tham số hàm không bao giờ nullable. p_expected_reviewed_at có `default null` trong SQL → CLI sinh
+ * `?: string` (types trước đổi chữ ký: `: string`); bản nới `?: string | null` compile được với cả hai và cho ca bỏ
+ * khóa / gửi null tường minh. Nới riêng: review_warning_suggestion nhận null ở p_labels / p_expected_reviewed_at,
+ * consume_warning_quota nhận p_limits bất kỳ (ca tham số sai), books.content_warnings nhận phần tử null (ca 23514);
+ * phần còn lại giữ nguyên kiểu Database.
  */
 type LooseDatabase = Omit<Database, 'public'> & {
-  public: Omit<Database['public'], 'Functions'> & {
+  public: Omit<Database['public'], 'Functions' | 'Tables'> & {
+    Tables: Omit<Database['public']['Tables'], 'books'> & {
+      books: Omit<BooksTable, 'Update'> & {
+        Update: Omit<BooksTable['Update'], 'content_warnings'> & { content_warnings?: (Warning | null)[] }
+      }
+    }
     Functions: Omit<Functions, 'review_warning_suggestion' | 'consume_warning_quota'> & {
       review_warning_suggestion: Omit<ReviewFn, 'Args'> & {
         Args: Omit<ReviewFn['Args'], 'p_labels' | 'p_expected_reviewed_at'> & {
           p_labels: Warning[] | null
-          p_expected_reviewed_at: string | null
+          p_expected_reviewed_at?: string | null
         }
       }
       consume_warning_quota: Omit<QuotaFn, 'Args'> & { Args: { p_limits: unknown } }
@@ -66,14 +74,14 @@ let adminClient: Client
 let memberClient: Client
 let otherClient: Client
 let anon: Client
-/** Cùng phiên admin A, kiểu LooseDatabase: chỉ cho lời gọi gửi null / tham số sai kiểu */
+/** Cùng phiên admin A, kiểu LooseDatabase: chỉ cho lời gọi bỏ khóa / gửi null / tham số sai kiểu */
 let adminLoose: SupabaseClient<LooseDatabase>
 let categoryId: number
 let authorIds: number[]
 let triggerBook: E2eAdminBook
 let suggestionBook: E2eAdminBook
 let reviewBook: E2eAdminBook
-/** Gợi ý chờ duyệt của suggestionBook: ca (d) tạo, ca RPC chỉ admin dùng lại */
+/** Gợi ý chờ duyệt của suggestionBook: ca (d) tạo, ca RPC chỉ admin dùng lại, ca bỏ khóa duyệt nó */
 let pendingSuggestionId: number
 const slugs: string[] = []
 
@@ -175,6 +183,24 @@ test('(a) trigger: nhãn bỏ trùng + xếp theo enum, tự ghi thời điểm 
     .update({ content_warnings_reviewed_at: null })
     .eq('id', triggerBook.id)
   expect(clear.error?.code).toBe('23514')
+  expect(await bookWarnings(triggerBook.id)).toEqual(second)
+
+  // Nhãn có phần tử null: trigger chuẩn hóa giữ null (array_agg) → check books_content_warnings_check
+  const withNull = await adminLoose
+    .from('books')
+    .update({ content_warnings: ['violence', null] })
+    .eq('id', triggerBook.id)
+  expect(withNull.error?.code).toBe('23514')
+  expect(await bookWarnings(triggerBook.id)).toEqual(second)
+
+  // Thành viên: có quyền cột (grant cho authenticated) nhưng RLS books_admin_update lọc hết dòng → 0 dòng, không lỗi
+  const byMember = await memberClient
+    .from('books')
+    .update({ content_warnings: ['violence'] })
+    .eq('id', triggerBook.id)
+    .select('id')
+  expect(byMember.error).toBeNull()
+  expect(byMember.data).toEqual([])
   expect(await bookWarnings(triggerBook.id)).toEqual(second)
 
   // Cột công khai: khách chưa đăng nhập đọc được nhãn
@@ -310,6 +336,38 @@ test('(e) RPC chỉ admin: khách chưa đăng nhập không gọi được, th�
   expect(memberReview.error?.message).toBe('FORBIDDEN')
   expect(await warningSuggestionRow(pendingSuggestionId)).toMatchObject({ status: 'pending' })
   expect(await bookWarnings(suggestionBook.id)).toEqual({ content_warnings: [], content_warnings_reviewed_at: null })
+})
+
+test('(e) review_warning_suggestion bỏ khóa p_expected_reviewed_at: sách chưa xét → duyệt được; sách đã xét → SUGGESTION_STATUS_CHANGED', async () => {
+  // (i) Gợi ý pending của (d) trên suggestionBook, sách chưa xét: không gửi khóa = null (default của SQL)
+  expect(await bookWarnings(suggestionBook.id)).toEqual({ content_warnings: [], content_warnings_reviewed_at: null })
+  const approved = await adminLoose.rpc('review_warning_suggestion', {
+    p_id: pendingSuggestionId,
+    p_labels: ['adult', 'violence', 'adult'],
+    p_approve: true,
+  })
+  expect(approved.error).toBeNull()
+  expect(approved.data).toBe(suggestionBook.id)
+  const afterApprove = await bookWarnings(suggestionBook.id)
+  expect(afterApprove.content_warnings).toEqual(['violence', 'adult'])
+  expect(afterApprove.content_warnings_reviewed_at).not.toBeNull()
+  expect(await warningSuggestionRow(pendingSuggestionId)).toMatchObject({
+    status: 'approved',
+    labels: ['violence', 'adult'],
+  })
+
+  // (ii) Sách đã xét: quên gửi khóa (null ≠ thời điểm xét) → không ghi đè, gợi ý vẫn pending
+  const next = await suggest(suggestionBook.id, ['loss'])
+  for (const approve of [true, false]) {
+    const forgot = await adminLoose.rpc('review_warning_suggestion', {
+      p_id: next,
+      p_labels: ['loss'],
+      p_approve: approve,
+    })
+    expect(forgot.error?.message, `p_approve = ${approve}`).toBe('SUGGESTION_STATUS_CHANGED')
+  }
+  expect(await bookWarnings(suggestionBook.id)).toEqual(afterApprove)
+  expect(await warningSuggestionRow(next)).toMatchObject({ status: 'pending', reviewed_at: null })
 })
 
 test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm xét lệch → SUGGESTION_STATUS_CHANGED, bỏ qua', async () => {
