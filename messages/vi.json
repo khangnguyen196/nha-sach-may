@@ -587,7 +587,7 @@
         "start": "Gợi ý cho sách chưa xét",
         "starting": "Đang gợi ý…",
         "stop": "Dừng",
-        "hint": "Mỗi lượt gửi tối đa {books} sách cho AI, hai lượt cách nhau ít nhất {seconds} giây. Lô dừng khi hết sách, khi gặp lỗi, khi bạn bấm Dừng hoặc rời trang.",
+        "hint": "Mỗi lượt gửi tối đa {books} sách cho AI; lượt sau bắt đầu {seconds} giây sau khi lượt trước xong. Lô dừng khi hết sách, khi gặp lỗi, khi bạn bấm Dừng hoặc rời trang.",
         "running": "Đang gọi lượt {n}…",
         "waiting": "Xong lượt {n}. Lượt sau bắt đầu sau khoảng {seconds} giây.",
         "totals": "Đã tạo {inserted} gợi ý. Số lần AI không trả lời cho một sách: {missing}.",

@@ -93,7 +93,11 @@ export async function suggestOneBook(bookId: number): Promise<Result<{ suggestio
 
   const supabase = await createClient()
   const pending = await readPendingId(supabase, id.data)
-  if (typeof pending === 'number') return { ok: true, data: { suggestionId: pending } }
+  if (typeof pending === 'number') {
+    // Trang đang mở chưa biết gợi ý này (tạo ở tab / lô khác): làm mới để hiện link "Xem gợi ý"
+    refresh()
+    return { ok: true, data: { suggestionId: pending } }
+  }
   if (pending !== null) return pending
 
   const book = await supabase.from('books').select(PROMPT_COLUMNS).eq('id', id.data).maybeSingle()

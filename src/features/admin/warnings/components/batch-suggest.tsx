@@ -29,7 +29,7 @@ export type BatchSuggestLabels = {
 type Props = {
   labels: BatchSuggestLabels
   messages: FormMessages
-  /** Khoảng cách tối thiểu giữa hai lần bắt đầu gọi (server tính từ WARNING_LIMITS.callsPerMinute) */
+  /** Thời gian chờ từ lúc một lượt xong tới lượt sau (server tính từ WARNING_LIMITS.callsPerMinute) */
   intervalMs: number
   /** Không còn sách chưa xét nào chưa có gợi ý */
   disabled: boolean
@@ -40,9 +40,11 @@ type Phase = 'idle' | 'running' | 'waiting' | 'done' | 'stopped' | 'failed'
 const NETWORK_FAILURE: Result<BatchOutcome> = { ok: false, code: 'NETWORK_ERROR' }
 
 /**
- * "Gợi ý cho sách chưa xét": gọi suggestNextBatch lần lượt (mỗi lần một lượt Gemini), giãn ≥ intervalMs giữa hai lần bắt
- * đầu gọi. Dừng khi hết sách (remaining = false), khi gặp lỗi bất kỳ (hạn mức, AI lỗi, FORBIDDEN, mạng), khi bấm Dừng và
- * khi rời trang (dọn timer lúc unmount). Lượt đang chạy không hủy được (server đã trừ lượt): Dừng chỉ chặn lượt sau.
+ * "Gợi ý cho sách chưa xét": gọi suggestNextBatch lần lượt (mỗi lần một lượt Gemini), lượt sau bắt đầu intervalMs sau khi
+ * lượt trước xong. Tính từ lúc xong, không từ lúc bắt đầu: server trừ warn:minute giữa lần gọi, sau khoảng trễ mạng /
+ * truy vấn khác nhau mỗi lần; chờ từ lúc xong thì hai lần trừ luôn cách nhau ≥ intervalMs (không bao giờ 3 lượt / phút).
+ * Dừng khi hết sách (remaining = false), khi gặp lỗi bất kỳ (hạn mức, AI lỗi, FORBIDDEN, mạng), khi bấm Dừng và khi rời
+ * trang (dọn timer lúc unmount). Lượt đang chạy không hủy được (server đã trừ lượt): Dừng chỉ chặn lượt sau.
  */
 export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) {
   const router = useRouter()
@@ -69,7 +71,6 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
   async function runRound(n: number) {
     setPhase('running')
     setRound(n)
-    const startedAt = Date.now()
     let result: Result<BatchOutcome>
     try {
       result = await suggestNextBatch()
@@ -98,12 +99,9 @@ export function BatchSuggest({ labels, messages, intervalMs, disabled }: Props) 
       return
     }
     setPhase('waiting')
-    timer.current = setTimeout(
-      () => {
-        if (active.current) void runRound(n + 1)
-      },
-      Math.max(0, intervalMs - (Date.now() - startedAt)),
-    )
+    timer.current = setTimeout(() => {
+      if (active.current) void runRound(n + 1)
+    }, intervalMs)
   }
 
   function start() {

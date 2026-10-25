@@ -140,6 +140,7 @@ describe('suggestOneBook', () => {
     respond = () => ({ data: { id: 55 }, error: null })
     expect(await suggestOneBook(3)).toEqual({ ok: true, data: { suggestionId: 55 } })
     expect(suggestWarnings).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
     expect(argsOf(queries[0]!, 'eq')).toEqual([
       ['book_id', 3],
       ['status', 'pending'],

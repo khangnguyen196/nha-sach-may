@@ -18,7 +18,7 @@ type Props = {
  */
 export function WarningLabelsField({ name, legend, hint, options, defaultValue, error }: Props) {
   return (
-    <fieldset className="grid gap-2" aria-invalid={error ? true : undefined}>
+    <fieldset className="grid gap-2">
       <legend className="mb-1 text-sm font-medium">{legend}</legend>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       <div className="flex flex-wrap gap-x-5 gap-y-2">
