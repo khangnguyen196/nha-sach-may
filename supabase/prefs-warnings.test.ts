@@ -375,7 +375,7 @@ describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
     expect(tgOpLiterals(part)).toEqual(['INSERT'])
   })
 
-  it('tgOpLiterals bắt mọi dạng so (kể cả mọi phần tử của in (…))', () => {
+  it('tgOpLiterals bắt =, <>, !=, so ngược, mọi phần tử của [not] in (…), when đầu tiên của case tg_op', () => {
     expect(tgOpLiterals("if tg_op='insert' then")).toEqual(['insert'])
     expect(tgOpLiterals("if tg_op <> 'UPDATE' or 'delete' = tg_op then")).toEqual(['UPDATE', 'delete'])
     expect(tgOpLiterals("if tg_op in ('INSERT', 'update') then")).toEqual(['INSERT', 'update'])

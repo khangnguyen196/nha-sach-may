@@ -376,9 +376,17 @@ test('(e) review_warning_suggestion: duyệt sách chưa xét, thời điểm x�
   expect(await warningSuggestionRow(second)).toMatchObject({ status: 'pending' })
 
   // Đổi tồn kho (đổi updated_at, như đặt / hủy đơn) không làm gợi ý báo lệch: RPC chỉ so thời điểm xét
-  const restock = await adminClient.from('books').update({ stock: 7 }).eq('id', reviewBook.id).select('id')
+  const before = await adminClient.from('books').select('updated_at').eq('id', reviewBook.id).single()
+  if (before.error) throw new Error(`updated_at: ${before.error.message}`)
+  const restock = await adminClient
+    .from('books')
+    .update({ stock: 7 })
+    .eq('id', reviewBook.id)
+    .select('updated_at')
+    .single()
   expect(restock.error).toBeNull()
-  expect(restock.data).toHaveLength(1)
+  // updated_at đổi thật (trigger books_updated_at), không thì ca này đạt giả
+  expect(restock.data?.updated_at).not.toBe(before.data.updated_at)
   expect(await bookWarnings(reviewBook.id)).toEqual(manual)
 
   // Bỏ qua với thời điểm xét đúng: gợi ý dismissed, nhãn sách giữ bản sửa tay (p_labels bị bỏ qua)
