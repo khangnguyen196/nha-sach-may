@@ -2303,6 +2303,7 @@ create policy "used_listing_photos_delete_own" on storage.objects
 -- mà câu update không đổi content_warnings_reviewed_at → ghi now() (review_warning_suggestion thấy reviewed_at lệch,
 -- không đè nhãn vừa sửa tay); câu update tự gửi reviewed_at khác giá trị cũ → giữ giá trị gửi. Chỉ đổi reviewed_at thì
 -- trigger không chạy (update of content_warnings) → check bắt việc xóa reviewed_at của sách có nhãn.
+-- now() là giờ bắt đầu transaction, không tăng đều: chỉ so bằng / khác, không so lớn hơn / nhỏ hơn.
 create or replace function private.content_warnings_sorted(p_labels public.content_warning[])
 returns public.content_warning[] language sql immutable set search_path = '' as $$
   select case
@@ -2551,9 +2552,10 @@ begin
     raise exception 'SUGGESTION_STATUS_CHANGED';
   end if;
 
-  -- for no key update: không chặn khóa FOR KEY SHARE của khóa ngoại cart_items / order_items (khách thêm giỏ / đặt đơn
-  -- cùng lúc); câu update books bên dưới không đổi khóa nên cũng chỉ lấy NO KEY UPDATE. Thứ tự khóa gợi ý → sách ngược
-  -- với xóa sách (sách → cascade gợi ý) → deadlock rất hiếm, Postgres hủy một bên (40P01), chấp nhận.
+  -- for no key update: không chặn khóa FOR KEY SHARE của khóa ngoại trỏ tới sách (thêm giỏ, insert order_items, insert
+  -- gợi ý mới cùng lúc). place_order khóa sách FOR UPDATE nên vẫn chờ khóa này (rất ngắn: tới hết transaction này).
+  -- Câu update books bên dưới không đổi khóa nên cũng chỉ lấy NO KEY UPDATE. Thứ tự khóa gợi ý → sách ngược với xóa
+  -- sách (sách → cascade gợi ý) → deadlock rất hiếm, Postgres hủy một bên (40P01), chấp nhận.
   select b.content_warnings_reviewed_at into v_reviewed_at
     from public.books b
    where b.id = v_book_id
