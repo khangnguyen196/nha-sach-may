@@ -6,6 +6,7 @@ vi.mock('server-only', () => ({}))
 
 const {
   buildWarningRequestBody,
+  DESCRIPTION_STEPS,
   estimateWarningPromptTokens,
   WARNING_BOOKS_PREFIX,
   WARNING_SAFETY_SETTINGS,
@@ -34,6 +35,16 @@ function dataBlock(body: ReturnType<typeof buildWarningRequestBody>): unknown {
   expect(text.startsWith(WARNING_BOOKS_PREFIX)).toBe(true)
   return JSON.parse(text.slice(WARNING_BOOKS_PREFIX.length))
 }
+
+describe('DESCRIPTION_STEPS', () => {
+  it('bắt đầu bằng descriptionChars, giảm dần nghiêm ngặt, kết thúc bằng 0 (bỏ mô tả)', () => {
+    expect(DESCRIPTION_STEPS[0]).toBe(WARNING_GEMINI.descriptionChars)
+    for (let index = 1; index < DESCRIPTION_STEPS.length; index++) {
+      expect(DESCRIPTION_STEPS[index], `bước ${index}`).toBeLessThan(DESCRIPTION_STEPS[index - 1] ?? 0)
+    }
+    expect(DESCRIPTION_STEPS.at(-1)).toBe(0)
+  })
+})
 
 describe('buildWarningRequestBody', () => {
   it('JSON theo schema: enum id của lô (chuỗi số), enum 5 nhãn; safetySettings riêng; thinking như Mây', () => {

@@ -106,8 +106,8 @@ function requestBody(data: readonly ReturnType<typeof compact>[]) {
 export type WarningRequestBody = ReturnType<typeof requestBody>
 
 // Độ dài mô tả thử lần lượt: JSON.stringify nhân đôi mỗi " / \ nên mô tả nhiều dấu nháy có thể vượt trần token ở
-// mức 1.000 ký tự. 0 = bỏ mô tả.
-const DESCRIPTION_STEPS = [
+// mức 1.000 ký tự. 0 = bỏ mô tả. Vitest: giảm dần nghiêm ngặt, kết thúc bằng 0.
+export const DESCRIPTION_STEPS = [
   WARNING_GEMINI.descriptionChars,
   ...[750, 500, 250, 0].filter((chars) => chars < WARNING_GEMINI.descriptionChars),
 ]
