@@ -314,8 +314,13 @@ describe('trigger books_content_warnings: DB tự ghi content_warnings_reviewed_
 // thường thì app không map được sang errors.<CODE>. Kiểm trên văn bản gốc.
 describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
   const rawSources = [
-    ['schema.sql', raw(schemaSql), raw(sectionSql)],
-    ['migration', raw(migrationSql), raw(migrationSql)],
+    ['schema.sql', raw(schemaSql)],
+    ['migration', raw(migrationSql)],
+  ] as const
+  // Phạm vi quét "mọi chỗ": schema.sql chỉ mục 16 (mục khác có mã / tg_op riêng), migration cả file
+  const rawParts = [
+    ['schema.sql (mục 16)', raw(sectionSql)],
+    ['migration (cả file)', raw(migrationSql)],
   ] as const
 
   it.each(rawSources)("%s: trigger books_content_warnings so tg_op = 'INSERT'", (_, text) => {
@@ -332,15 +337,15 @@ describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
   })
 
   // toContain chỉ cần một chỗ đúng; mã xuất hiện nhiều lần (SUGGESTION_STATUS_CHANGED 2 lần, FORBIDDEN, INVALID_INPUT…)
-  // thì mọi chỗ trong mục 16 / migration đều phải viết hoa
-  it.each(rawSources)('%s: mọi chỗ nhắc mã lỗi / tg_op trong mục 16 đều viết hoa', (_, __, part) => {
+  // thì mọi chỗ trong phạm vi quét đều phải viết hoa. tg_op bắt cả =, <>, !=, in (…), có / không dấu cách.
+  it.each(rawParts)('%s: mọi chỗ nhắc mã lỗi / tg_op đều viết hoa', (_, part) => {
     const codes = ['PREFS_LIMIT', 'SUGGESTION_STATUS_CHANGED', 'WARNING_QUOTA_EXCEEDED', 'FORBIDDEN', 'INVALID_INPUT']
     for (const code of codes) {
       const found = [...part.matchAll(new RegExp(`'${code}'`, 'gi'))].map((m) => m[0])
       expect(found.length).toBeGreaterThan(0)
       expect(found).toEqual(found.map(() => `'${code}'`))
     }
-    const tgOp = [...part.matchAll(/tg_op = '(\w+)'/gi)].map((m) => m[1])
+    const tgOp = [...part.matchAll(/tg_op\s*(?:=|<>|!=|in\s*\()\s*'(\w+)'/gi)].map((m) => m[1])
     expect(tgOp).toEqual(['INSERT'])
   })
 })
