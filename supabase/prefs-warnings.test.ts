@@ -127,6 +127,20 @@ describe('consume_warning_quota: đếm chung với Mây', () => {
     expect(forbidden).toBeGreaterThan(-1)
     expect(body.indexOf('chat_quota_take(')).toBeGreaterThan(forbidden)
   })
+
+  // e2e không đọc được private.chat_quota (PostgREST không lộ schema private) → không kiểm được "tham số sai không đổi
+  // bucket" ở đó. Exception nào cũng rollback cả lời gọi; giữ thêm thứ tự: mọi INVALID_INPUT nằm trước lần cộng đầu tiên
+  it.each([
+    ['schema.sql', schema],
+    ['migration', migration],
+  ] as const)('%s: kiểm tham số (INVALID_INPUT) trước khi cộng bộ đếm', (_, text) => {
+    const fn = functionStatement('public.consume_warning_quota', text)
+    const raises = [...fn.matchAll(/raise exception 'invalid_input'/g)].map((m) => m.index)
+    expect(raises).toHaveLength(2)
+    const firstTake = fn.indexOf('chat_quota_take(')
+    expect(firstTake).toBeGreaterThan(-1)
+    for (const index of raises) expect(index).toBeLessThan(firstTake)
+  })
 })
 
 describe('RPC admin của mục 16', () => {
@@ -336,8 +350,21 @@ describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
     expect(text).toContain("'WARNING_QUOTA_EXCEEDED', 'chat_reserve'")
   })
 
+  /**
+   * Mọi chuỗi đem so với tg_op, có / không dấu cách: `tg_op = 'X'` (cả <>, !=), `'X' = tg_op`, `tg_op [not] in ('X', 'Y')`
+   * (mọi phần tử), `case tg_op when 'X'` (when đầu tiên)
+   */
+  const tgOpLiterals = (text: string) => [
+    ...[...text.matchAll(/tg_op\s*(?:=|<>|!=)\s*'(\w+)'/gi)].map((m) => m[1]),
+    ...[...text.matchAll(/'(\w+)'\s*(?:=|<>|!=)\s*tg_op\b/gi)].map((m) => m[1]),
+    ...[...text.matchAll(/tg_op\s+(?:not\s+)?in\s*\(([^)]*)\)/gi)].flatMap((m) =>
+      [...(m[1] ?? '').matchAll(/'(\w+)'/g)].map((literal) => literal[1]),
+    ),
+    ...[...text.matchAll(/case\s+tg_op\s+when\s+'(\w+)'/gi)].map((m) => m[1]),
+  ]
+
   // toContain chỉ cần một chỗ đúng; mã xuất hiện nhiều lần (SUGGESTION_STATUS_CHANGED 2 lần, FORBIDDEN, INVALID_INPUT…)
-  // thì mọi chỗ trong phạm vi quét đều phải viết hoa. tg_op bắt cả =, <>, !=, in (…), có / không dấu cách.
+  // thì mọi chỗ trong phạm vi quét đều phải viết hoa
   it.each(rawParts)('%s: mọi chỗ nhắc mã lỗi / tg_op đều viết hoa', (_, part) => {
     const codes = ['PREFS_LIMIT', 'SUGGESTION_STATUS_CHANGED', 'WARNING_QUOTA_EXCEEDED', 'FORBIDDEN', 'INVALID_INPUT']
     for (const code of codes) {
@@ -345,8 +372,15 @@ describe('chuỗi trong SQL giữ đúng chữ hoa / thường', () => {
       expect(found.length).toBeGreaterThan(0)
       expect(found).toEqual(found.map(() => `'${code}'`))
     }
-    const tgOp = [...part.matchAll(/tg_op\s*(?:=|<>|!=|in\s*\()\s*'(\w+)'/gi)].map((m) => m[1])
-    expect(tgOp).toEqual(['INSERT'])
+    expect(tgOpLiterals(part)).toEqual(['INSERT'])
+  })
+
+  it('tgOpLiterals bắt mọi dạng so (kể cả mọi phần tử của in (…))', () => {
+    expect(tgOpLiterals("if tg_op='insert' then")).toEqual(['insert'])
+    expect(tgOpLiterals("if tg_op <> 'UPDATE' or 'delete' = tg_op then")).toEqual(['UPDATE', 'delete'])
+    expect(tgOpLiterals("if tg_op in ('INSERT', 'update') then")).toEqual(['INSERT', 'update'])
+    expect(tgOpLiterals("if tg_op not in ('INSERT') then")).toEqual(['INSERT'])
+    expect(tgOpLiterals("case tg_op when 'insert' then")).toEqual(['insert'])
   })
 })
 
