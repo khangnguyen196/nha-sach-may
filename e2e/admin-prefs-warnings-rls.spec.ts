@@ -193,7 +193,11 @@ test('(a) trigger: nhãn bỏ trùng + xếp theo enum, tự ghi thời điểm 
   expect(withNull.error?.code).toBe('23514')
   expect(await bookWarnings(triggerBook.id)).toEqual(second)
 
-  // Thành viên: có quyền cột (grant cho authenticated) nhưng RLS books_admin_update lọc hết dòng → 0 dòng, không lỗi
+  // Thành viên: có quyền cột (grant cho authenticated) nhưng RLS books_admin_update lọc hết dòng → 0 dòng, không lỗi.
+  // Thành viên đọc được dòng sách (không thì "0 dòng" đến từ policy select, đạt giả)
+  const visible = await memberClient.from('books').select('id').eq('id', triggerBook.id)
+  expect(visible.error).toBeNull()
+  expect(visible.data).toEqual([{ id: triggerBook.id }])
   const byMember = await memberClient
     .from('books')
     .update({ content_warnings: ['violence'] })
