@@ -958,3 +958,62 @@ async function removeUsedPhotoFolders(userIds: readonly string[]) {
     if (removeError) throw new Error(`removeUsedPhotoFolders (remove): ${removeError.message}`)
   }
 }
+
+// ---------- Sở thích + cảnh báo nội dung (so-thich-canh-bao) ----------
+
+type UserBlockInsert = Database['public']['Tables']['user_blocks']['Insert']
+
+/** Nhiều tác giả test trong một câu insert (service role) */
+export async function createE2eAuthors(count: number) {
+  const rows = Array.from({ length: count }, () => {
+    const slug = e2eAdminSlug()
+    return { name: `E2E tác giả ${slug.slice(-6)}`, slug }
+  })
+  const { data, error } = await adminClient().from('authors').insert(rows).select('id, slug, name')
+  if (error) throw new Error(`createE2eAuthors: ${error.message}`)
+  if (data.length !== count) throw new Error(`createE2eAuthors: tạo ${data.length}/${count} tác giả`)
+  return data
+}
+
+/** Nhãn cảnh báo + thời điểm xét của sách, đọc bằng service role (chuỗi timestamptz nguyên văn của PostgREST) */
+export async function bookWarnings(id: number) {
+  const { data, error } = await adminClient()
+    .from('books')
+    .select('content_warnings, content_warnings_reviewed_at')
+    .eq('id', id)
+    .single()
+  if (error) throw new Error(`bookWarnings: ${error.message}`)
+  return data
+}
+
+/** Một gợi ý cảnh báo (service role); null nếu không có */
+export async function warningSuggestionRow(id: number) {
+  const { data, error } = await adminClient()
+    .from('content_warning_suggestions')
+    .select('id, book_id, labels, status, reviewed_at')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(`warningSuggestionRow: ${error.message}`)
+  return data
+}
+
+/** Mục chặn của một user (service role, không qua RLS) */
+export async function userBlocksOf(userId: string) {
+  const { data, error } = await adminClient()
+    .from('user_blocks')
+    .select('id, user_id, kind, category_id, author_id, publisher_id, warning')
+    .eq('user_id', userId)
+    .order('id')
+  if (error) throw new Error(`userBlocksOf: ${error.message}`)
+  return data
+}
+
+/** Thay toàn bộ mục chặn của user bằng `rows` (service role; trigger giới hạn vẫn chạy cho từng dòng) */
+export async function replaceUserBlocks(userId: string, rows: Omit<UserBlockInsert, 'user_id'>[]) {
+  const admin = adminClient()
+  const { error } = await admin.from('user_blocks').delete().eq('user_id', userId)
+  if (error) throw new Error(`replaceUserBlocks (delete): ${error.message}`)
+  if (rows.length === 0) return
+  const { error: insertError } = await admin.from('user_blocks').insert(rows.map((row) => ({ ...row, user_id: userId })))
+  if (insertError) throw new Error(`replaceUserBlocks (insert): ${insertError.message}`)
+}
