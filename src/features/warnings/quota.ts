@@ -56,7 +56,8 @@ export function mapWarningQuotaError(error: { message: string; details?: string 
   return { code: 'UNKNOWN' }
 }
 
-/** Trừ lượt cho một lượt gọi Gemini của gợi ý; thành công → vé cho đúng một lần gọi */
+/** Trừ lượt cho một lượt gọi Gemini của gợi ý; thành công → vé cho đúng một lần gọi. Chỉ suggest.ts gọi, `mock` lấy
+ * từ resolveWarningMode (true trên production không thể xảy ra: aiMockEnabled chặn; trần ngày cũng không nhân). */
 export async function consumeWarningQuota(mock: boolean): Promise<WarningQuotaResult> {
   const supabase = await createClient()
   // Client theo phiên không retry (lib/supabase/server.ts): RPC có ghi, gọi lại sau timeout có thể trừ hai lần

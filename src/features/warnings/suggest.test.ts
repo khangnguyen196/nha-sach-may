@@ -153,8 +153,9 @@ describe('suggestWarnings với AI giả: từng cụm qua callGemini + parse', 
     expect(issuedTickets() - tickets).toBe(fetchCalls())
   })
 
-  it('lô rỗng / > 12 sách → throw trước khi trừ lượt', async () => {
+  it('lô rỗng / > 12 sách / trùng id → throw trước khi trừ lượt', async () => {
     await expect(suggestWarnings([])).rejects.toThrow('lô')
+    await expect(suggestWarnings([book(1), book(1)])).rejects.toThrow('trùng')
     await expect(suggestWarnings(Array.from({ length: 13 }, (_, index) => book(index + 1)))).rejects.toThrow('lô')
     expect(rpc).not.toHaveBeenCalled()
   })

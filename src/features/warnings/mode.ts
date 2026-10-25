@@ -14,3 +14,8 @@ export function resolveWarningMode(env: Env = process.env, warn: (message: strin
   if (!apiKey) return { kind: 'off' }
   return { kind: 'gemini', apiKey, model: resolveModel(env.GEMINI_MODEL, warn) }
 }
+
+/** Trang admin ẩn nút "Gợi ý bằng AI" khi tắt (Preview / máy dev không có GEMINI_API_KEY): thử lại không bao giờ được */
+export function warningSuggestEnabled(env: Env = process.env): boolean {
+  return resolveWarningMode(env).kind !== 'off'
+}

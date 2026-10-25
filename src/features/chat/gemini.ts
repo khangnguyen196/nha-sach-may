@@ -99,6 +99,12 @@ export function resetCooldownForTests() {
   cooldowns.clear()
 }
 
+function googleStatus(body: unknown) {
+  const error = isRecord(body) ? body.error : undefined
+  const status = isRecord(error) ? error.status : undefined
+  return typeof status === 'string' && /^[A-Z_]{1,40}$/.test(status) ? status : '-'
+}
+
 function quotaIdsForLog(body: unknown) {
   return parse429(body).quotaIds.join(',') || '-'
 }
@@ -202,7 +208,8 @@ export async function callGemini(ticket: GeminiTicket, call: GeminiCall): Promis
     return { ok: false, kind: 'quota', scope: cooldown.scope, resetsAt: cooldown.resetsAt }
   }
   if (!response.ok) {
-    console.warn(`${tag} gemini HTTP ${response.status}`)
+    // error.status của Google (VD INVALID_ARGUMENT khi một tham số của request bị từ chối): mã, không có nội dung
+    console.warn(`${tag} gemini HTTP ${response.status} ${googleStatus(json)}`)
     return { ok: false, kind: 'error', reason: `http_${response.status}` }
   }
 

@@ -38,4 +38,12 @@ describe('resolveWarningMode', () => {
     })
     expect(resolveWarningMode({ GEMINI_API_KEY: 'k', GEMINI_MODEL: 'gemini-9' }, vi.fn())).toMatchObject({ model: DEFAULT_MODEL })
   })
+
+  it('warningSuggestEnabled: tắt khi không có key và không bật AI giả (Preview / máy dev)', async () => {
+    const { warningSuggestEnabled } = await load()
+    expect(warningSuggestEnabled({})).toBe(false)
+    expect(warningSuggestEnabled({ CHAT_QUOTA_TOKEN: 'a'.repeat(64) })).toBe(false)
+    expect(warningSuggestEnabled({ GEMINI_API_KEY: 'k' })).toBe(true)
+    expect(warningSuggestEnabled({ CHAT_AI_MOCK: '1', NEXT_PUBLIC_SUPABASE_URL: LOCAL })).toBe(true)
+  })
 })

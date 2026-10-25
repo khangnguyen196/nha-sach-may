@@ -56,13 +56,13 @@ export const WARNING_SAFETY_SETTINGS = [
 const field = (text: string) => truncateText(cleanInput(text), WARNING_GEMINI.fieldChars)
 
 /** Dạng gọn gửi AI; id là chuỗi số (enum chuỗi của responseJsonSchema) */
-function compact(book: WarningBookInput) {
+function compact(book: WarningBookInput, descriptionChars: number) {
   return {
     id: String(book.id),
     t: field(book.title),
     a: field(book.authors.join(', ')),
     c: book.category ? field(book.category) : '',
-    d: book.description ? truncateText(cleanInput(book.description), WARNING_GEMINI.descriptionChars) : '',
+    d: book.description && descriptionChars > 0 ? truncateText(cleanInput(book.description), descriptionChars) : '',
   }
 }
 
@@ -88,12 +88,7 @@ export function warningResponseSchema(ids: readonly string[]) {
   }
 }
 
-/** Lô rỗng hoặc > booksPerCall là lỗi lập trình (action chia lô trước): throw, không gọi AI */
-export function buildWarningRequestBody(books: readonly WarningBookInput[]) {
-  if (books.length === 0 || books.length > WARNING_LIMITS.booksPerCall) {
-    throw new Error(`[warnings] lô phải có 1–${WARNING_LIMITS.booksPerCall} sách, nhận ${books.length}`)
-  }
-  const data = books.map(compact)
+function requestBody(data: readonly ReturnType<typeof compact>[]) {
   return {
     systemInstruction: { parts: [{ text: WARNING_SYSTEM_PROMPT }] },
     contents: [{ role: 'user' as const, parts: [{ text: `${WARNING_BOOKS_PREFIX}${JSON.stringify(data)}` }] }],
@@ -108,7 +103,28 @@ export function buildWarningRequestBody(books: readonly WarningBookInput[]) {
   }
 }
 
-export type WarningRequestBody = ReturnType<typeof buildWarningRequestBody>
+export type WarningRequestBody = ReturnType<typeof requestBody>
+
+// Độ dài mô tả thử lần lượt: JSON.stringify nhân đôi mỗi " / \ nên mô tả nhiều dấu nháy có thể vượt trần token ở
+// mức 1.000 ký tự. 0 = bỏ mô tả.
+const DESCRIPTION_STEPS = [WARNING_GEMINI.descriptionChars, 750, 500, 250, 0]
+
+/**
+ * Lô rỗng, > booksPerCall hoặc trùng id là lỗi lập trình (action chia lô trước): throw, không gọi AI. Ước tính đầu
+ * vào > WARNING_GEMINI.maxPromptTokens → cắt mô tả ngắn dần cho cả lô tới khi vừa.
+ */
+export function buildWarningRequestBody(books: readonly WarningBookInput[]): WarningRequestBody {
+  if (books.length === 0 || books.length > WARNING_LIMITS.booksPerCall) {
+    throw new Error(`[warnings] lô phải có 1–${WARNING_LIMITS.booksPerCall} sách, nhận ${books.length}`)
+  }
+  if (new Set(books.map((book) => book.id)).size !== books.length) throw new Error('[warnings] lô có id trùng')
+  for (const chars of DESCRIPTION_STEPS) {
+    const body = requestBody(books.map((book) => compact(book, chars)))
+    if (estimateWarningPromptTokens(body) <= WARNING_GEMINI.maxPromptTokens) return body
+  }
+  // Bỏ hẳn mô tả luôn vừa (Vitest, lô 12 sách toàn dấu nháy): tới đây là hằng số trong config sai
+  throw new Error('[warnings] lô vượt trần token kể cả khi bỏ mô tả')
+}
 
 /** Ước tính bi quan như estimatePromptTokens của Mây: 2 ký tự / token */
 export function estimateWarningPromptTokens(body: WarningRequestBody): number {

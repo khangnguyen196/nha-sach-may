@@ -141,6 +141,14 @@ describe('callGemini', () => {
     expect(activeCooldown('global', NOW)).toBeNull()
   })
 
+  it('HTTP lỗi: log kèm error.status của Google (chỉ mã dạng A_Z), không log message', async () => {
+    const body400 = { error: { code: 400, status: 'INVALID_ARGUMENT', message: 'Invalid value at safety_settings[0]' } }
+    await callGemini(GeminiTicket.issue(), call(vi.fn<typeof fetch>(async () => new Response(JSON.stringify(body400), { status: 400 }))))
+    const odd = { error: { status: 'lạ <script> chứa nội dung' } }
+    await callGemini(GeminiTicket.issue(), { ...call(vi.fn<typeof fetch>(async () => new Response(JSON.stringify(odd), { status: 500 }))), logTag: 'warnings' })
+    expect(vi.mocked(console.warn).mock.calls.flat()).toEqual(['[chat] gemini HTTP 400 INVALID_ARGUMENT', '[warnings] gemini HTTP 500 -'])
+  })
+
   it('vé chỉ dùng một lần; số lần fetch luôn bằng số vé đã cấp', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => okResponse('{}'))
     const before = issuedTickets()

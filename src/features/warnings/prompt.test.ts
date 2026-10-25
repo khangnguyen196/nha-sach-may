@@ -23,6 +23,11 @@ const longBook = (index: number): Book => ({
   description: 'Mô tả rất dài có dấu ữ ứ ự. '.repeat(200),
 })
 
+/** Mô tả (trường d) của từng sách trong khối dữ liệu */
+function descriptions(body: ReturnType<typeof buildWarningRequestBody>): string[] {
+  return z.array(z.object({ d: z.string() })).parse(dataBlock(body)).map((book) => book.d)
+}
+
 /** Khối dữ liệu đọc ngược từ request: phần sau tiền tố là đúng một mảng JSON */
 function dataBlock(body: ReturnType<typeof buildWarningRequestBody>): unknown {
   const text = body.contents.at(-1)?.parts[0]?.text ?? ''
@@ -59,8 +64,9 @@ describe('buildWarningRequestBody', () => {
     expect(body.safetySettings.every((setting) => setting.threshold === 'OFF')).toBe(true)
   })
 
-  it('lô rỗng hoặc > 12 sách → throw (lỗi lập trình)', () => {
+  it('lô rỗng, > 12 sách hoặc trùng id → throw (lỗi lập trình)', () => {
     expect(() => buildWarningRequestBody([])).toThrow('lô')
+    expect(() => buildWarningRequestBody([longBook(1), longBook(2), longBook(1)])).toThrow('trùng')
     expect(() => buildWarningRequestBody(Array.from({ length: 13 }, (_, index) => longBook(index)))).toThrow('lô')
     expect(() => buildWarningRequestBody(Array.from({ length: 12 }, (_, index) => longBook(index)))).not.toThrow()
   })
@@ -101,9 +107,24 @@ describe('buildWarningRequestBody', () => {
     expect(body.generationConfig.responseJsonSchema.properties.books.items.properties.id.enum).toEqual(['42', '1'])
   })
 
-  it('ước tính token đầu vào của 12 sách dài tối đa ≤ WARNING_GEMINI.maxPromptTokens', () => {
+  it('ước tính token đầu vào của 12 sách dài tối đa ≤ WARNING_GEMINI.maxPromptTokens, mô tả giữ đủ 1.000 ký tự', () => {
     const body = buildWarningRequestBody(Array.from({ length: 12 }, (_, index) => longBook(index)))
     expect(estimateWarningPromptTokens(body)).toBeLessThanOrEqual(WARNING_GEMINI.maxPromptTokens)
+    for (const book of descriptions(body)) expect(book.length).toBeGreaterThan(WARNING_GEMINI.descriptionChars - 30)
+  })
+
+  // JSON.stringify nhân đôi mỗi " và \ → mọi trường toàn dấu nháy là đầu vào dài nhất có thể
+  it('12 sách mọi trường toàn dấu nháy / gạch chéo: cắt mô tả ngắn dần cho tới khi vừa trần, không throw', () => {
+    const quoted = (index: number): Book => ({
+      id: 9_000_000_000 + index,
+      title: '"\\'.repeat(200),
+      authors: ['"'.repeat(300)],
+      category: '\\'.repeat(300),
+      description: '"\\ '.repeat(1000),
+    })
+    const body = buildWarningRequestBody(Array.from({ length: 12 }, (_, index) => quoted(index)))
+    expect(estimateWarningPromptTokens(body)).toBeLessThanOrEqual(WARNING_GEMINI.maxPromptTokens)
+    for (const book of descriptions(body)) expect(book.length).toBeLessThan(WARNING_GEMINI.descriptionChars)
   })
 
   it('đầu ra 12 mục tối đa (5 nhãn, lý do 200 ký tự) vừa maxOutputTokens theo cùng cách ước tính bi quan', () => {

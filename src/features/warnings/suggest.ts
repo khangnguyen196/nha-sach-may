@@ -1,5 +1,5 @@
 import 'server-only'
-import { DEFAULT_MODEL, WARNING_GEMINI, WARNING_LIMITS } from '@/features/chat/config'
+import { DEFAULT_MODEL, WARNING_GEMINI, type GeminiModel } from '@/features/chat/config'
 import { activeCooldown, callGemini, GLOBAL_COOLDOWN, type QuotaScope } from '@/features/chat/gemini'
 import { mockWarningFetch } from './mock'
 import { resolveWarningMode } from './mode'
@@ -16,21 +16,19 @@ import { parseWarningReply, type WarningSuggestion } from './schemas'
 /** Scope của WARNING_QUOTA_EXCEEDED ở app: 4 scope của SQL + gemini_minute / gemini_day khi Google trả 429 */
 export type SuggestQuotaScope = WarningQuotaScope | QuotaScope
 
+/** Model ghi vào content_warning_suggestions.model (≤ 80 ký tự); AI giả ghi 'mock' cho dễ nhận ra */
+export const MOCK_MODEL_LABEL = 'mock'
+
 export type SuggestResult =
-  | { ok: true; model: string; results: WarningSuggestion[]; missing: number[] }
+  | { ok: true; model: GeminiModel | typeof MOCK_MODEL_LABEL; results: WarningSuggestion[]; missing: number[] }
   | { ok: false; code: 'WARNING_QUOTA_EXCEEDED'; scope: SuggestQuotaScope | null; resetsAt: Date | null }
   | { ok: false; code: 'WARNING_AI_FAILED' | 'FORBIDDEN' | 'UNKNOWN' }
 
 const aiFailed: SuggestResult = { ok: false, code: 'WARNING_AI_FAILED' }
 
-/** Model ghi vào content_warning_suggestions.model (≤ 80 ký tự); AI giả ghi 'mock' cho dễ nhận ra */
-export const MOCK_MODEL_LABEL = 'mock'
-
 export async function suggestWarnings(books: readonly WarningBookInput[]): Promise<SuggestResult> {
-  // Lỗi lập trình (action chia lô sai): throw trước khi trừ lượt
-  if (books.length === 0 || books.length > WARNING_LIMITS.booksPerCall) {
-    throw new Error(`[warnings] lô phải có 1–${WARNING_LIMITS.booksPerCall} sách, nhận ${books.length}`)
-  }
+  // Dựng body trước khi trừ lượt: lô sai (rỗng, > 12, trùng id) là lỗi lập trình, throw mà không tốn lượt
+  const body = buildWarningRequestBody(books)
   const mode = resolveWarningMode()
   if (mode.kind === 'off') {
     console.warn('[warnings] chưa cấu hình GEMINI_API_KEY')
@@ -47,7 +45,6 @@ export async function suggestWarnings(books: readonly WarningBookInput[]): Promi
   const quota = await consumeWarningQuota(mock)
   if (!quota.ok) return quota.code === 'WARNING_QUOTA_EXCEEDED' ? { ...quota } : { ok: false, code: quota.code }
 
-  const body = buildWarningRequestBody(books)
   const shared = { body, cooldownKey, timeoutMs: WARNING_GEMINI.timeoutMs, logTag: 'warnings' } as const
   const outcome = await callGemini(
     quota.ticket,
