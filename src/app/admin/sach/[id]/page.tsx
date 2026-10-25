@@ -20,6 +20,12 @@ import { COVER_MAX_BYTES } from '@/lib/cover-image'
 
 type Props = PageProps<'/admin/sach/[id]'>
 
+// Server Action gọi từ trang này chạy trong function của trang (tài liệu Next: route segment config → maxDuration). Nút
+// "Gợi ý bằng AI" một cuốn = một lượt Gemini (tới WARNING_GEMINI.timeoutMs = 25 giây) + RPC trừ lượt + insert gợi ý; trần
+// mặc định của nền tảng có thể ngắn hơn (Vercel Hobby không bật Fluid: 10 giây) → bị ngắt giữa chừng khi lượt đã trừ.
+// 60 giây = mức tối đa của Hobby khi không bật Fluid. Phải là số viết thẳng (Next đọc tĩnh lúc build).
+export const maxDuration = 60
+
 export async function generateMetadata() {
   const t = await getTranslations('admin.books')
   return { title: t('editTitle') }
