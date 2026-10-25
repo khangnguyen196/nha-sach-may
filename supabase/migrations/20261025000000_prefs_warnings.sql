@@ -1,14 +1,15 @@
 -- so-thich-canh-bao P-A (docs/plans/so-thich-canh-bao.md): toàn bộ SQL của cảnh báo nội dung + chặn theo sở thích.
 --   1. Kiểu content_warning (5 nhãn cố định). books.content_warnings (≤ 5 nhãn, không phần tử null; trigger bỏ trùng +
---      xếp theo thứ tự enum) + books.content_warnings_reviewed_at (null = chưa xét). Hai cột vào quyền cột update của
---      admin. Khách đọc nhãn như mọi cột công khai của sách.
+--      xếp theo thứ tự enum) + books.content_warnings_reviewed_at (null = chưa xét); có nhãn thì phải đã xét (check).
+--      Hai cột vào quyền cột update của admin. Khách đọc nhãn như mọi cột công khai của sách.
 --   2. content_warning_suggestions: gợi ý nhãn của AI chờ admin duyệt. Chỉ admin đọc / thêm (RLS); đổi trạng thái chỉ
 --      qua review_warning_suggestion; tối đa một gợi ý pending / sách.
 --   3. user_blocks: mục chặn của thành viên (danh mục / tác giả / NXB / nhãn cảnh báo), chỉ chủ tài khoản đọc / thêm /
 --      xóa (admin cũng không đọc: dữ liệu nhạy cảm), ≤ 50 mục / tài khoản (PREFS_LIMIT), không trùng (unique theo kind).
 --   4. consume_warning_quota: trừ lượt cho MỘT lượt gọi Gemini của gợi ý cảnh báo (chỉ admin). Đếm CHUNG với Mây
 --      (cùng GEMINI_API_KEY + model): gemini:minute, gemini:day; chỉ lấy lượt khi gemini:day ≤ 300 (chừa 100 cho Mây).
---   5. review_warning_suggestion: admin duyệt (ghi nhãn đã sửa vào sách) hoặc bỏ qua (sách thành "đã xét").
+--   5. review_warning_suggestion: admin duyệt (ghi nhãn đã sửa vào sách) hoặc bỏ qua (sách thành "đã xét"); nhãn của
+--      sách vừa sửa tay ở nơi khác (content_warnings_reviewed_at lệch) → không ghi đè.
 -- Chỉ THÊM (kiểu, cột có default, bảng, hàm, policy) → an toàn với bản app đang chạy; chạy TRƯỚC khi app P-B lên.
 -- Chạy MỘT lần trong SQL Editor (cả file là một transaction; chạy lần 2 lỗi ở create type, không đổi gì).
 -- Không đổi dữ liệu có sẵn (cột mới có default '{}' / null).
@@ -25,6 +26,12 @@ alter table public.books
 
 alter table public.books
   add column if not exists content_warnings_reviewed_at timestamptz;
+
+-- Có nhãn thì phải "đã xét": sách chưa xét thì khách không thấy gì (câu 13), nên nhãn khác rỗng + reviewed_at null là
+-- hai cột lệch nhau. Form admin (P-B) đổi nhãn thì gửi kèm content_warnings_reviewed_at = now(). Dữ liệu có sẵn đều
+-- '{}' → qua check.
+alter table public.books add constraint books_content_warnings_reviewed_check
+  check (cardinality(content_warnings) = 0 or content_warnings_reviewed_at is not null);
 
 -- Admin sửa nhãn ở form sách → cùng danh sách quyền cột với 20261016010000_cover_width.sql + 2 cột mới
 revoke update on public.books from anon, authenticated;
@@ -148,7 +155,7 @@ begin
 end;
 $$;
 
-create trigger user_blocks_limit before insert on public.user_blocks
+create trigger user_blocks_check_limit before insert on public.user_blocks
   for each row execute function private.user_blocks_check_limit();
 
 alter table public.user_blocks enable row level security;
@@ -235,18 +242,25 @@ end;
 $$;
 
 -- 5. Admin duyệt gợi ý (p_approve = true: ghi p_labels (bản admin đã sửa) vào sách) hoặc bỏ qua (sách thành "đã xét",
--- không đổi nhãn). Gợi ý không có / không còn pending (đã duyệt ở tab khác) → SUGGESTION_STATUS_CHANGED, so sau khi
--- khóa dòng. Trả book_id để app làm mới cache của sách.
+-- không đổi nhãn). Trả book_id để app làm mới cache của sách. SUGGESTION_STATUS_CHANGED (so sau khi khóa dòng gợi ý rồi
+-- dòng sách, cho cả duyệt lẫn bỏ qua) khi:
+--   - gợi ý không có / không còn pending (đã duyệt / bỏ qua ở tab khác);
+--   - books.content_warnings_reviewed_at khác p_expected_reviewed_at (giá trị lúc admin mở gợi ý, null nếu sách chưa
+--     xét): nhãn của sách vừa được sửa tay ở form sách → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
+--     đặt / hủy đơn đổi tồn kho → báo lệch giả. App truyền lại nguyên chuỗi timestamptz đọc từ PostgREST, không qua
+--     Date của JS (mất phần micro giây → luôn lệch).
 create or replace function public.review_warning_suggestion(
-  p_id      bigint,
-  p_labels  public.content_warning[],
-  p_approve boolean
+  p_id                   bigint,
+  p_labels               public.content_warning[],
+  p_approve              boolean,
+  p_expected_reviewed_at timestamptz
 )
 returns bigint
 language plpgsql volatile security definer set search_path = '' as $$
 declare
-  v_book_id bigint;
-  v_status  text;
+  v_book_id     bigint;
+  v_status      text;
+  v_reviewed_at timestamptz;
 begin
   if not (select public.is_admin()) then
     raise exception 'FORBIDDEN';
@@ -263,6 +277,15 @@ begin
      for update;
 
   if not found or v_status <> 'pending' then
+    raise exception 'SUGGESTION_STATUS_CHANGED';
+  end if;
+
+  select b.content_warnings_reviewed_at into v_reviewed_at
+    from public.books b
+   where b.id = v_book_id
+     for update;
+
+  if v_reviewed_at is distinct from p_expected_reviewed_at then
     raise exception 'SUGGESTION_STATUS_CHANGED';
   end if;
 
@@ -294,7 +317,9 @@ revoke execute on function private.warning_gemini_day_ceiling() from public, ano
 revoke execute on function public.consume_warning_quota(jsonb) from public, anon;
 grant  execute on function public.consume_warning_quota(jsonb) to authenticated;
 
-revoke execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean) from public, anon;
-grant  execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean) to authenticated;
+revoke execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean, timestamptz)
+  from public, anon;
+grant  execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean, timestamptz)
+  to authenticated;
 
 commit;

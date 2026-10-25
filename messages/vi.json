@@ -1252,7 +1252,7 @@
     "LISTING_PHOTO_LIMIT": "Bạn đã có 30 ảnh sách cũ nên chưa tải thêm được. Số này tính cả ảnh của tin chờ duyệt, đang bán, bị từ chối và ảnh đã tải mà chưa đăng; ảnh đã tải quá 24 giờ mà chưa đăng được dọn khi bạn mở trang đăng hoặc sửa tin. Bạn bỏ bớt ảnh khỏi tin bị từ chối hoặc rút tin không còn muốn bán rồi thử lại nhé.",
     "PREFS_LIMIT": "Bạn đã chặn đủ {max} mục, mức tối đa cho một tài khoản. Bạn bỏ chặn bớt vài mục trong trang Sở thích rồi thử lại nhé.",
     "WARNING_QUOTA_EXCEEDED": "Đã hết lượt gợi ý cảnh báo bằng AI cho lúc này (giới hạn theo phút hoặc theo ngày, chừa lượt cho chatbot Mây). Bạn thử lại sau, hoặc tự chọn nhãn cho sách rồi lưu.",
-    "SUGGESTION_STATUS_CHANGED": "Gợi ý này vừa được duyệt hoặc bỏ qua ở nơi khác. Bạn tải lại trang để xem trạng thái mới nhất."
+    "SUGGESTION_STATUS_CHANGED": "Gợi ý này hoặc nhãn cảnh báo của sách vừa được đổi ở nơi khác (đã duyệt, bỏ qua hoặc sửa nhãn ở trang sửa sách). Bạn tải lại trang, xem nhãn hiện tại của sách rồi duyệt lại."
   },
   "allBooks": {
     "title": "Tất cả sách",

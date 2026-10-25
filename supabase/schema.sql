@@ -239,6 +239,12 @@ create table public.books (
   updated_at      timestamptz not null default now()
 );
 
+-- Có nhãn thì phải "đã xét" (mục 16): sách chưa xét thì khách không thấy gì, nên nhãn khác rỗng + reviewed_at null là
+-- hai cột lệch nhau. Form admin (P-B) đổi nhãn thì gửi kèm content_warnings_reviewed_at = now(). Câu alter riêng (không
+-- nằm trong create table) để giống hệt migration 20261025000000_prefs_warnings.sql (supabase/migrations.test.ts).
+alter table public.books add constraint books_content_warnings_reviewed_check
+  check (cardinality(content_warnings) = 0 or content_warnings_reviewed_at is not null);
+
 create index books_category_idx   on public.books (category_id);
 create index books_publisher_idx  on public.books (publisher_id);
 create index books_created_idx    on public.books (created_at desc);
@@ -2288,7 +2294,7 @@ create policy "used_listing_photos_delete_own" on storage.objects
 --     Gợi ý cảnh báo gọi Gemini bằng cùng khóa + model với Mây → đếm chung bộ đếm của mục 14.
 -- ---------------------------------------------------------------------
 -- 1. Nhãn cảnh báo trên sách: kiểu content_warning ở mục 1, cột books.content_warnings / content_warnings_reviewed_at
--- ở mục 5, quyền cột update của admin ở mục 11.
+-- + check có nhãn ⇒ đã xét (books_content_warnings_reviewed_check) ở mục 5, quyền cột update của admin ở mục 11.
 -- Bỏ trùng + xếp theo thứ tự khai báo của enum (so sánh mảng / hiện nhãn ổn định). Phần tử null giữ lại để check của
 -- bảng từ chối. Trigger thay cho CHECK gọi hàm: authenticated không có usage trên schema private, CHECK gọi hàm private
 -- làm admin sửa sách lỗi; trigger security definer chạy bằng quyền owner.
@@ -2403,7 +2409,7 @@ begin
 end;
 $$;
 
-create trigger user_blocks_limit before insert on public.user_blocks
+create trigger user_blocks_check_limit before insert on public.user_blocks
   for each row execute function private.user_blocks_check_limit();
 
 alter table public.user_blocks enable row level security;
@@ -2490,18 +2496,25 @@ end;
 $$;
 
 -- 5. Admin duyệt gợi ý (p_approve = true: ghi p_labels (bản admin đã sửa) vào sách) hoặc bỏ qua (sách thành "đã xét",
--- không đổi nhãn). Gợi ý không có / không còn pending (đã duyệt ở tab khác) → SUGGESTION_STATUS_CHANGED, so sau khi
--- khóa dòng. Trả book_id để app làm mới cache của sách.
+-- không đổi nhãn). Trả book_id để app làm mới cache của sách. SUGGESTION_STATUS_CHANGED (so sau khi khóa dòng gợi ý rồi
+-- dòng sách, cho cả duyệt lẫn bỏ qua) khi:
+--   - gợi ý không có / không còn pending (đã duyệt / bỏ qua ở tab khác);
+--   - books.content_warnings_reviewed_at khác p_expected_reviewed_at (giá trị lúc admin mở gợi ý, null nếu sách chưa
+--     xét): nhãn của sách vừa được sửa tay ở form sách → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
+--     đặt / hủy đơn đổi tồn kho → báo lệch giả. App truyền lại nguyên chuỗi timestamptz đọc từ PostgREST, không qua
+--     Date của JS (mất phần micro giây → luôn lệch).
 create or replace function public.review_warning_suggestion(
-  p_id      bigint,
-  p_labels  public.content_warning[],
-  p_approve boolean
+  p_id                   bigint,
+  p_labels               public.content_warning[],
+  p_approve              boolean,
+  p_expected_reviewed_at timestamptz
 )
 returns bigint
 language plpgsql volatile security definer set search_path = '' as $$
 declare
-  v_book_id bigint;
-  v_status  text;
+  v_book_id     bigint;
+  v_status      text;
+  v_reviewed_at timestamptz;
 begin
   if not (select public.is_admin()) then
     raise exception 'FORBIDDEN';
@@ -2518,6 +2531,15 @@ begin
      for update;
 
   if not found or v_status <> 'pending' then
+    raise exception 'SUGGESTION_STATUS_CHANGED';
+  end if;
+
+  select b.content_warnings_reviewed_at into v_reviewed_at
+    from public.books b
+   where b.id = v_book_id
+     for update;
+
+  if v_reviewed_at is distinct from p_expected_reviewed_at then
     raise exception 'SUGGESTION_STATUS_CHANGED';
   end if;
 
@@ -2549,8 +2571,10 @@ revoke execute on function private.warning_gemini_day_ceiling() from public, ano
 revoke execute on function public.consume_warning_quota(jsonb) from public, anon;
 grant  execute on function public.consume_warning_quota(jsonb) to authenticated;
 
-revoke execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean) from public, anon;
-grant  execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean) to authenticated;
+revoke execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean, timestamptz)
+  from public, anon;
+grant  execute on function public.review_warning_suggestion(bigint, public.content_warning[], boolean, timestamptz)
+  to authenticated;
 
 
 -- =====================================================================
@@ -2591,8 +2615,9 @@ grant  execute on function public.review_warning_suggestion(bigint, public.conte
 --   Cảnh báo nội dung + chặn theo sở thích (mục 16, chỉ authenticated):
 --   consume_warning_quota(p_limits jsonb)   — admin: trừ lượt cho một lượt gọi Gemini của gợi ý cảnh báo (warn:minute,
 --                                           warn:day ≤ 60, bucket chung gemini:minute + gemini:day ≤ 300 chừa cho Mây)
---   review_warning_suggestion(p_id, p_labels, p_approve) — admin duyệt (ghi nhãn đã sửa vào sách) / bỏ qua gợi ý,
---                                           trả book_id
+--   review_warning_suggestion(p_id, p_labels, p_approve, p_expected_reviewed_at) — admin duyệt (ghi nhãn đã sửa vào
+--                                           sách) / bỏ qua gợi ý, trả book_id; content_warnings_reviewed_at của sách
+--                                           khác p_expected_reviewed_at → SUGGESTION_STATUS_CHANGED
 --   (user_blocks, content_warning_suggestions: đọc / ghi thẳng qua PostgREST theo RLS + quyền cột)
 --
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
@@ -2615,7 +2640,8 @@ grant  execute on function public.review_warning_suggestion(bigint, public.conte
 --   LISTING_INVALID_TRANSITION (trigger trạng thái tin; detail: {"from": ..., "to": ...}), PAYOUT_STATUS_CHANGED
 --   Cảnh báo / sở thích: PREFS_LIMIT (trigger user_blocks; detail: {"max": 50}),
 --   WARNING_QUOTA_EXCEEDED (consume_warning_quota; detail: {"scope": warn_minute | warn_day | gemini_minute |
---   chat_reserve, "resets_at": ...}), SUGGESTION_STATUS_CHANGED (gợi ý không có / đã duyệt hoặc bỏ qua ở nơi khác),
+--   chat_reserve, "resets_at": ...}), SUGGESTION_STATUS_CHANGED (gợi ý không có / đã duyệt hoặc bỏ qua ở nơi khác,
+--   hoặc nhãn của sách vừa sửa ở nơi khác),
 --   FORBIDDEN (2 RPC admin của mục 16: không phải admin)
 --
 -- SAU KHI CHẠY XONG:

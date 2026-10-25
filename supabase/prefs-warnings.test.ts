@@ -11,6 +11,9 @@ import { CHAT_LIMITS, WARNING_LIMITS } from '../src/features/chat/config'
 const schemaSql = readFileSync(join(import.meta.dirname, 'schema.sql'), 'utf8')
 const normalize = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').toLowerCase()
 const schema = normalize(schemaSql)
+const migration = normalize(
+  readFileSync(join(import.meta.dirname, 'migrations', '20261025000000_prefs_warnings.sql'), 'utf8'),
+)
 
 /** Mục 16 (tới khối chú thích cuối file) */
 const section = (() => {
@@ -36,10 +39,42 @@ function quotaTake(body: string, bucket: string) {
   return { start, text: body.slice(start, end < 0 ? undefined : end) }
 }
 
+/** Tách danh sách quyền theo dấu phẩy nằm ngoài ngoặc: `select, insert (a, b)` → `select`, `insert (a, b)` */
+function splitPrivileges(list: string) {
+  const out: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < list.length; i++) {
+    if (list[i] === '(') depth++
+    else if (list[i] === ')') depth--
+    else if (list[i] === ',' && depth === 0) {
+      out.push(list.slice(start, i).trim())
+      start = i + 1
+    }
+  }
+  out.push(list.slice(start).trim())
+  return out
+}
+
+/**
+ * Mọi quyền bảng cấp trong schema.sql, dạng `<người nhận>: <quyền>`. So bằng cả danh sách nên bắt được mọi câu grant
+ * thêm vào sau: `grant all`, `grant insert` cả bảng (không kèm danh sách cột), `grant update` / `delete`, cấp cho anon…
+ */
+function tableGrants(table: string) {
+  const pattern = new RegExp(`grant ([^;]*?) on (?:table )?${table.replace('.', '\\.')} to ([^;]*)`, 'g')
+  return [...schema.matchAll(pattern)]
+    .flatMap((m) => {
+      const grantees = (m[2] ?? '').split(',').map((grantee) => grantee.trim())
+      return splitPrivileges(m[1] ?? '').flatMap((privilege) => grantees.map((grantee) => `${grantee}: ${privilege}`))
+    })
+    .sort()
+}
+
 const ADMIN_RPCS = ['public.consume_warning_quota', 'public.review_warning_suggestion'] as const
 const GRANTS = {
   'public.consume_warning_quota': 'public.consume_warning_quota(jsonb)',
-  'public.review_warning_suggestion': 'public.review_warning_suggestion(bigint, public.content_warning[], boolean)',
+  'public.review_warning_suggestion':
+    'public.review_warning_suggestion(bigint, public.content_warning[], boolean, timestamptz)',
 } as const
 
 describe('consume_warning_quota: đếm chung với Mây', () => {
@@ -108,6 +143,24 @@ describe('RPC admin của mục 16', () => {
     expect(body).toContain('for update')
     expect(body).toContain("if not found or v_status <> 'pending' then raise exception 'suggestion_status_changed'")
   })
+
+  it('review_warning_suggestion: không ghi đè nhãn admin vừa sửa tay (so content_warnings_reviewed_at, không updated_at)', () => {
+    const body = functionStatement('public.review_warning_suggestion')
+    expect(body).toContain('p_approve boolean, p_expected_reviewed_at timestamptz )')
+    const lockSuggestion = body.indexOf('from public.content_warning_suggestions s where s.id = p_id for update')
+    const lockBook = body.indexOf(
+      'select b.content_warnings_reviewed_at into v_reviewed_at from public.books b where b.id = v_book_id for update',
+    )
+    const compare = body.indexOf(
+      "if v_reviewed_at is distinct from p_expected_reviewed_at then raise exception 'suggestion_status_changed'",
+    )
+    // Khóa gợi ý → khóa sách → so, trước khi rẽ nhánh duyệt / bỏ qua (áp cho cả hai)
+    expect(lockSuggestion).toBeGreaterThan(-1)
+    expect(lockBook).toBeGreaterThan(lockSuggestion)
+    expect(compare).toBeGreaterThan(lockBook)
+    expect(body.indexOf('if p_approve then')).toBeGreaterThan(compare)
+    expect(body).not.toContain('updated_at')
+  })
 })
 
 describe('user_blocks: chỉ chủ tài khoản', () => {
@@ -139,7 +192,17 @@ describe('user_blocks: chỉ chủ tài khoản', () => {
     expect(lock).toBeGreaterThan(-1)
     expect(body.indexOf('count(*)')).toBeGreaterThan(lock)
     expect(body).toContain("raise exception 'prefs_limit'")
-    expect(section).toContain('create trigger user_blocks_limit before insert on public.user_blocks')
+    expect(section).toContain(
+      'create trigger user_blocks_check_limit before insert on public.user_blocks for each row execute function private.user_blocks_check_limit()',
+    )
+  })
+
+  it('đúng 3 quyền bảng cho authenticated: select, delete, insert theo cột (không all / update / insert cả bảng / anon)', () => {
+    expect(tableGrants('public.user_blocks')).toEqual([
+      'authenticated: delete',
+      'authenticated: insert (kind, category_id, author_id, publisher_id, warning)',
+      'authenticated: select',
+    ])
   })
 
   it('chống trùng bằng unique index theo từng kind', () => {
@@ -166,6 +229,19 @@ describe('content_warning_suggestions: chỉ admin, đổi trạng thái qua RPC
     expect(schema).not.toMatch(/grant [^;]* on (table )?public\.content_warning_suggestions to [^;]*\banon\b/)
   })
 
+  it('đúng 2 quyền bảng cho authenticated: select, insert theo cột (không all / update / delete / insert cả bảng / anon)', () => {
+    expect(tableGrants('public.content_warning_suggestions')).toEqual([
+      'authenticated: insert (book_id, labels, reason, model)',
+      'authenticated: select',
+    ])
+  })
+
+  it('trigger chuẩn hóa nhãn chạy cả khi insert lẫn update cột labels', () => {
+    expect(section).toContain(
+      'create trigger content_warning_suggestions_labels before insert or update of labels on public.content_warning_suggestions for each row execute function private.content_warning_suggestions_normalize_labels()',
+    )
+  })
+
   it('một gợi ý pending / sách', () => {
     expect(section).toMatch(/create unique index \w+ on public\.content_warning_suggestions \(book_id\) where status = 'pending'/)
   })
@@ -177,6 +253,19 @@ describe('nhãn trên sách', () => {
     expect(check).toBe('cardinality(content_warnings) <= 5 and array_position(content_warnings, null) is null')
     expect(functionStatement('private.books_normalize_content_warnings')).toContain('security definer')
     expect(functionStatement('private.content_warning_suggestions_normalize_labels')).toContain('security definer')
+  })
+
+  it('trigger chuẩn hóa nhãn chạy cả khi insert lẫn update cột content_warnings', () => {
+    expect(section).toContain(
+      'create trigger books_content_warnings before insert or update of content_warnings on public.books for each row execute function private.books_normalize_content_warnings()',
+    )
+  })
+
+  it('có nhãn thì phải đã xét: check books_content_warnings_reviewed_check ở cả schema.sql lẫn migration', () => {
+    const statement =
+      'alter table public.books add constraint books_content_warnings_reviewed_check check (cardinality(content_warnings) = 0 or content_warnings_reviewed_at is not null)'
+    expect(schema).toContain(statement)
+    expect(migration).toContain(statement)
   })
 
   it('admin sửa được 2 cột mới', () => {
