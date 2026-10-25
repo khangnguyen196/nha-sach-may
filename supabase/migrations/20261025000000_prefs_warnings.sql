@@ -267,11 +267,14 @@ $$;
 --     → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
 --     đặt / hủy đơn đổi tồn kho → báo lệch giả. App truyền lại nguyên chuỗi timestamptz đọc từ PostgREST, không qua
 --     Date của JS (mất phần micro giây → luôn lệch).
+-- p_expected_reviewed_at default null: bỏ tham số = sách chưa xét (CLI sinh tham số tùy chọn → app bỏ tham số, không
+-- cần kiểu nới); quên gửi với sách đã xét → SUGGESTION_STATUS_CHANGED (không ghi đè). Kiểu tham số không đổi → grant /
+-- revoke giữ nguyên chữ ký.
 create or replace function public.review_warning_suggestion(
   p_id                   bigint,
   p_labels               public.content_warning[],
   p_approve              boolean,
-  p_expected_reviewed_at timestamptz
+  p_expected_reviewed_at timestamptz default null
 )
 returns bigint
 language plpgsql volatile security definer set search_path = '' as $$

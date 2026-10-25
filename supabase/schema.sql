@@ -2521,11 +2521,14 @@ $$;
 --     → không ghi đè. Không so books.updated_at: cột này đổi mỗi khi
 --     đặt / hủy đơn đổi tồn kho → báo lệch giả. App truyền lại nguyên chuỗi timestamptz đọc từ PostgREST, không qua
 --     Date của JS (mất phần micro giây → luôn lệch).
+-- p_expected_reviewed_at default null: bỏ tham số = sách chưa xét (CLI sinh tham số tùy chọn → app bỏ tham số, không
+-- cần kiểu nới); quên gửi với sách đã xét → SUGGESTION_STATUS_CHANGED (không ghi đè). Kiểu tham số không đổi → grant /
+-- revoke giữ nguyên chữ ký.
 create or replace function public.review_warning_suggestion(
   p_id                   bigint,
   p_labels               public.content_warning[],
   p_approve              boolean,
-  p_expected_reviewed_at timestamptz
+  p_expected_reviewed_at timestamptz default null
 )
 returns bigint
 language plpgsql volatile security definer set search_path = '' as $$
@@ -2639,7 +2642,8 @@ grant  execute on function public.review_warning_suggestion(bigint, public.conte
 --                                           warn:day ≤ 60, bucket chung gemini:minute + gemini:day ≤ 300 chừa cho Mây)
 --   review_warning_suggestion(p_id, p_labels, p_approve, p_expected_reviewed_at) — admin duyệt (ghi nhãn đã sửa vào
 --                                           sách) / bỏ qua gợi ý, trả book_id; content_warnings_reviewed_at của sách
---                                           khác p_expected_reviewed_at → SUGGESTION_STATUS_CHANGED
+--                                           khác p_expected_reviewed_at → SUGGESTION_STATUS_CHANGED;
+--                                           p_expected_reviewed_at mặc định null = sách chưa xét
 --   (user_blocks, content_warning_suggestions: đọc / ghi thẳng qua PostgREST theo RLS + quyền cột)
 --
 -- MÃ LỖI do các hàm trả về (map sang messages/{vi,en}.json → errors.*):
