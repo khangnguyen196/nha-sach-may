@@ -160,9 +160,14 @@ describe('RPC admin của mục 16', () => {
     expect(body).toContain("if not found or v_status <> 'pending' then raise exception 'suggestion_status_changed'")
   })
 
-  it('review_warning_suggestion: không ghi đè nhãn admin vừa sửa tay (so content_warnings_reviewed_at, không updated_at)', () => {
-    const body = functionStatement('public.review_warning_suggestion')
-    expect(body).toContain('p_approve boolean, p_expected_reviewed_at timestamptz )')
+  // default null: bỏ khóa = sách chưa xét (CLI sinh tham số tùy chọn, app không cần kiểu nới); quên gửi với sách đã xét
+  // → SUGGESTION_STATUS_CHANGED. Kiểm cả migration: chỉ sửa một file thì production chạy chữ ký khác schema.sql
+  it.each([
+    ['schema.sql', schema],
+    ['migration', migration],
+  ] as const)('%s: review_warning_suggestion không ghi đè nhãn admin vừa sửa tay (so content_warnings_reviewed_at, không updated_at)', (_, text) => {
+    const body = functionStatement('public.review_warning_suggestion', text)
+    expect(body).toContain('p_approve boolean, p_expected_reviewed_at timestamptz default null )')
     const lockSuggestion = body.indexOf('from public.content_warning_suggestions s where s.id = p_id for update')
     // Sách khóa for no key update (không chặn FOR KEY SHARE của khóa ngoại cart_items / order_items); gợi ý for update
     const lockBook = body.indexOf(
