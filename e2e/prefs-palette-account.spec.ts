@@ -127,6 +127,8 @@ test('(b)(d) chặn tác giả: dòng đó bị che (không tên / bìa), dòng 
       await page.keyboard.press('Enter')
     }
     await expectShown(veiled, blocked)
+    // Nội dung option đổi tại chỗ → tên sách vừa hiện được báo qua vùng live cho trình đọc màn hình
+    await expect(dialog.locator('p[aria-live="polite"]', { hasText: blocked.title })).toHaveCount(1)
     await expect(dialog).toBeVisible()
     expect(page.url()).toBe(url)
     if (!touch) await expect(veiled).toHaveAttribute('aria-selected', 'true')

@@ -317,6 +317,8 @@ export async function searchBookHits(q: string): Promise<SearchHit[]> {
     .or(visibleBooksFilter(visibleCategoryIds(categories)))
     .range(0, SEARCH_HIT_LIMIT - 1)
   if (error) throw new Error(`searchBookHits: ${error.message}`)
+  // Admin đổi nhãn / NXB / bìa của một cuốn chỉ làm mới book:{id}: khóa chặn và bìa trong gợi ý phải theo kịp như thẻ sách
+  tagBooks(data)
 
   return data.map((book) => ({
     id: book.id,

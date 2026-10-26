@@ -44,9 +44,10 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
   // Chọn kết quả → chuyển trang, không kéo focus về header (như trước)
   const navigating = useRef(false)
   // Chặn theo sở thích (quyết định (12)): mục chặn từ RevealBlocked (null: khách, chưa chặn, BlockStyles chưa stream
-  // xong → không che). Sách đã bấm "Xem" giữ tới khi tải lại trang (palette không unmount khi đóng).
+  // xong → không che). Sách đã bấm "Xem" giữ tới khi tải lại trang hoặc hết mục chặn (palette không unmount khi đóng).
   const blocks = useBlockedKeys()
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set())
+  const [revealedTitle, setRevealedTitle] = useState('')
 
   // Chọn kết quả rồi mở lại trước khi hiệu ứng đóng xong (content chưa unmount) → lần đóng sau vẫn trả focus
   useEffect(() => {
@@ -76,9 +77,22 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
-    if (!open) setInput('')
+    if (!open) {
+      setInput('')
+      setRevealedTitle('')
+    }
   }
 
+  // Hết mục chặn (đăng xuất / đăng nhập là chuyển trang phía client, palette không unmount; bỏ chặn hết) → quên các dòng
+  // đã Xem: người dùng sau trên cùng tab không thấy sách người trước đã mở
+  const [hadBlocks, setHadBlocks] = useState(blocks !== null)
+  if ((blocks !== null) !== hadBlocks) {
+    setHadBlocks(blocks !== null)
+    if (blocks === null) {
+      setRevealed(new Set())
+      setRevealedTitle('')
+    }
+  }
 
   function openBook(slug: string) {
     navigating.current = true
@@ -86,8 +100,10 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
     router.push({ pathname: '/books/[slug]', params: { slug } })
   }
 
-  function reveal(id: number) {
-    setRevealed((current) => new Set(current).add(id))
+  function reveal(hit: SearchHit) {
+    setRevealed((current) => new Set(current).add(hit.id))
+    // Nội dung option đổi tại chỗ (aria-activedescendant không đổi) → trình đọc màn hình không tự đọc lại: báo qua vùng live
+    setRevealedTitle(hit.title)
   }
 
   function openSearchPage() {
@@ -150,7 +166,7 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
                     <CommandItem
                       key={hit.id}
                       value={`book-${hit.id}`}
-                      onSelect={() => (veiled ? reveal(hit.id) : openBook(hit.slug))}
+                      onSelect={() => (veiled ? reveal(hit) : openBook(hit.slug))}
                       className="gap-3"
                     >
                       {veiled ? (
@@ -182,6 +198,9 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
         <p aria-live="polite" className="sr-only">
           {q !== null && current === null && t('loading')}
           {current?.status === 'success' && t('resultCount', { count: current.hits.length })}
+        </p>
+        <p aria-live="polite" className="sr-only">
+          {revealedTitle}
         </p>
       </Command>
     </CommandDialog>

@@ -37,10 +37,10 @@ function arrayOf<T>(value: unknown, check: (item: unknown) => item is T): T[] | 
 
 const isString = (value: unknown): value is string => typeof value === 'string'
 
-type BlockKeys = NonNullable<SearchHit['blockKeys']>
+type HitBlockKeys = NonNullable<SearchHit['blockKeys']>
 
 /** Như blockKeys của searchHitSchema; sai kiểu → null (cả hit bị loại, như zod) */
-function parseBlockKeys(value: unknown): BlockKeys | null {
+function parseBlockKeys(value: unknown): HitBlockKeys | null {
   if (!isRecord(value)) return null
   const categoryId: unknown = Reflect.get(value, 'categoryId')
   const publisherId: unknown = Reflect.get(value, 'publisherId')
