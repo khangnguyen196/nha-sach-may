@@ -19,6 +19,11 @@ const PREFS_BY_AUTHOR = 'muoi-chin-chan-dung-nha-van-cung-thoi'
 const PREFS_BY_PUBLISHER = 'buoc-qua-nuoc-mat-tu-khac-truong-thanh'
 const PREFS_FOREIGN_ROOT = 'sach-ngoai-van'
 const PREFS_FOREIGN_CHILD = 'ngoai-van-thieu-nhi'
+/** Dữ liệu thêm của prefs-book-account.spec */
+const PREFS_SHORT = 'vong-buom'
+const PREFS_CHILD_BOOK = 'how-not-to-be-a-twit-and-other-wisdom-from-roald-dahl'
+/** Trần độ dài mô tả của sách đo CLS (khối Sở thích cuối cột thông tin gần màn hình đầu nhất) */
+const PREFS_SHORT_MAX = 120
 
 describe('e2e/fixtures/books.json', () => {
   it('ISBN, slug không trùng', () => {
@@ -195,6 +200,29 @@ describe('e2e/fixtures/books.json', () => {
     )
     expect(foreignChildren).toContain(PREFS_FOREIGN_CHILD)
     expect(books.filter((b) => b.language === 'vi' && foreignChildren.includes(b.category_slug)).map((b) => b.slug)).toEqual([])
+  })
+
+  it('prefs-book-account.spec: sách đo CLS có mô tả ngắn nhất (trong sách có danh mục + tác giả + NXB), sách ở danh mục con của Sách ngoại văn có tác giả + NXB', () => {
+    // (h) đo CLS ở trang PREFS_SHORT (trường hợp xấu nhất: mô tả ngắn → khối Sở thích cuối cột gần màn hình đầu nhất) và
+    // chặn tác giả đầu của nó; (f) / (g) bấm "Không muốn thấy tác giả" ở cùng trang; (d) chặn PREFS_FOREIGN_ROOT rồi mở
+    // trang PREFS_CHILD_BOOK: dòng nhắc nêu tên danh mục gốc + menu còn nút tác giả. (b) dùng PREFS_BY_AUTHOR trong
+    // PREFS_CATEGORY (bất biến ở test prefs-blocks-account bên trên: tác giả chỉ có ở cuốn đó trong danh mục).
+    const spec = read('../e2e/prefs-book-account.spec.ts')
+    for (const slug of [PREFS_CATEGORY, PREFS_BY_AUTHOR, PREFS_BY_PUBLISHER, PREFS_SHORT, PREFS_FOREIGN_ROOT, PREFS_CHILD_BOOK]) {
+      expect(spec, slug).toContain(`'${slug}'`)
+    }
+    const complete = books.filter((b) => b.authors.length > 0 && b.publisher && b.category_slug)
+    const short = complete.find((b) => b.slug === PREFS_SHORT)
+    expect(short, PREFS_SHORT).toBeDefined()
+    if (!short) return
+    expect(short.category_slug).toBe(PREFS_CATEGORY)
+    const length = (short.description ?? '').length
+    expect(length).toBeLessThanOrEqual(PREFS_SHORT_MAX)
+    expect(Math.min(...complete.map((b) => (b.description ?? '').length))).toBe(length)
+
+    const child = complete.find((b) => b.slug === PREFS_CHILD_BOOK)
+    expect(child, PREFS_CHILD_BOOK).toBeDefined()
+    expect(child?.category_slug).toBe(PREFS_FOREIGN_CHILD)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

@@ -1099,23 +1099,28 @@ export async function replaceUserBlocks(userId: string, rows: Omit<UserBlockInse
 }
 
 /**
- * Khóa chặn của một sách theo slug (service role): tên, danh mục, NXB, tác giả vai trò author (câu 9). Không có sách
- * → throw (thiếu dữ liệu là lỗi, không skip).
+ * Khóa chặn của một sách theo slug (service role): tên, danh mục, NXB (id + tên), tác giả vai trò author (câu 9). Không
+ * có sách → throw (thiếu dữ liệu là lỗi, không skip).
  */
 export async function bookBlockTargets(slug: string) {
   const { data, error } = await adminClient()
     .from('books')
-    .select('id, title, category_id, publisher_id, book_authors(role, author_id)')
+    .select('id, title, category_id, publisher_id, publishers(name), book_authors(role, author_id, authors(name))')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error(`bookBlockTargets: ${error.message}`)
   if (!data) throw new Error(`bookBlockTargets: không có sách ${slug}`)
+  const authors = data.book_authors.flatMap((ba) =>
+    ba.role === 'author' && ba.authors ? [{ id: ba.author_id, name: ba.authors.name }] : [],
+  )
   return {
     id: data.id,
     title: data.title,
     categoryId: data.category_id,
     publisherId: data.publisher_id,
-    authorIds: data.book_authors.flatMap((ba) => (ba.role === 'author' ? [ba.author_id] : [])),
+    publisherName: data.publishers?.name ?? null,
+    authorIds: authors.map((author) => author.id),
+    authors,
   }
 }
 
@@ -1125,4 +1130,25 @@ export async function categoryIdBySlug(slug: string) {
   if (error) throw new Error(`categoryIdBySlug: ${error.message}`)
   if (!data) throw new Error(`categoryIdBySlug: không có danh mục ${slug}`)
   return data.id
+}
+
+/** Danh mục theo slug (service role): id + tên vi / en; không có → throw */
+export async function categoryBySlug(slug: string) {
+  const { data, error } = await adminClient().from('categories').select('id, name, name_en').eq('slug', slug).maybeSingle()
+  if (error) throw new Error(`categoryBySlug: ${error.message}`)
+  if (!data) throw new Error(`categoryBySlug: không có danh mục ${slug}`)
+  return data
+}
+
+/**
+ * Gắn nhãn cảnh báo đã duyệt cho sách test (service role, chỉ sách e2e-admin-…): check của bảng đòi có nhãn ⇒ đã xét,
+ * nên ghi cả content_warnings_reviewed_at.
+ */
+export async function setE2eBookWarnings(slug: string, labels: Database['public']['Enums']['content_warning'][]) {
+  if (!slug.startsWith(E2E_ADMIN_SLUG)) throw new Error(`setE2eBookWarnings: chỉ gắn nhãn cho sách e2e (${slug})`)
+  const { error } = await adminClient()
+    .from('books')
+    .update({ content_warnings: labels, content_warnings_reviewed_at: new Date().toISOString() })
+    .eq('slug', slug)
+  if (error) throw new Error(`setE2eBookWarnings: ${error.message}`)
 }
