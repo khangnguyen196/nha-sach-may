@@ -4,6 +4,7 @@ import {
   LibraryIcon,
   MapPinIcon,
   PackageIcon,
+  SlidersHorizontalIcon,
   TagIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -69,6 +70,12 @@ async function AccountContent({ locale }: { locale: Locale }) {
         description={t('addressesDescription')}
       />
       <AccountCard
+        href="/account/preferences"
+        icon={SlidersHorizontalIcon}
+        title={t('preferences')}
+        description={t('preferencesDescription')}
+      />
+      <AccountCard
         href="/account/my-listings"
         icon={TagIcon}
         title={t('myListings')}
@@ -115,7 +122,7 @@ async function AccountContent({ locale }: { locale: Locale }) {
 }
 
 type AccountCardProps = {
-  href: '/account/orders' | '/account/addresses' | '/account/my-listings' | '/used-books'
+  href: '/account/orders' | '/account/addresses' | '/account/preferences' | '/account/my-listings' | '/used-books'
   icon: LucideIcon
   title: string
   description: string
@@ -153,6 +160,7 @@ function AccountSkeleton() {
     <div aria-hidden className="animate-pulse">
       <div className="mt-3 h-5 w-48 rounded-sm bg-surface-raised" />
       <div className="mt-8 h-[78px] rounded-lg bg-surface-raised" />
+      <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
       <div className="mt-4 h-[86px] rounded-lg bg-surface-raised" />
