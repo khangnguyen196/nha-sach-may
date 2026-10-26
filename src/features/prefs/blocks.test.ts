@@ -17,6 +17,7 @@ import {
   type ExpandedBlocks,
   type StoredBlock,
 } from './blocks'
+import { cssHidesSlot } from './css-match.test-helper'
 
 const NONE: ExpandedBlocks = { categoryIds: [], authorIds: [], publisherIds: [], warnings: [] }
 
@@ -212,20 +213,6 @@ describe('isBlocked (dùng chung cho trang sách, chatbot Mây)', () => {
     )
   })
 })
-
-/** Khớp CSS sinh ra với data-* của một thẻ như trình duyệt (chỉ đúng dạng selector của blockCss: `=`, `~=`) */
-function cssHidesSlot(css: string, attributes: Record<string, string | undefined>): boolean {
-  const conditions = /:is\(([^)]*)\)/.exec(css)?.[1]
-  if (!conditions) return false
-  return conditions.split(',').some((condition) => {
-    const match = /^\[(data-[a-z]+)(~?=)"([^"]+)"\]$/.exec(condition)
-    if (!match) throw new Error(`điều kiện lạ: ${condition}`)
-    const [, name = '', operator, value = ''] = match
-    const actual = attributes[name]
-    if (actual === undefined) return false
-    return operator === '=' ? actual === value : actual.split(/\s+/).includes(value)
-  })
-}
 
 /** Bộ mẫu dùng chung cho CSS / isBlocked / matchingBlocks: 1 → 10, 11; 2 → 12 */
 const SAMPLE_CATEGORIES = [
