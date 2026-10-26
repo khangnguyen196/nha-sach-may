@@ -64,11 +64,11 @@ export function PrefsButton({
     () => () => {
       if (!submitted.current) return
       if (document.activeElement !== null && document.activeElement !== document.body) return
+      // Mọi phần tử trùng id (Next giữ trang vừa rời ở dạng ẩn, Activity): dừng khi focus thật sự vào được
       for (const id of focusKey.split(' ')) {
-        const target = document.getElementById(id)
-        if (target) {
+        for (const target of document.querySelectorAll<HTMLElement>(`[id="${id}"]`)) {
           target.focus()
-          return
+          if (document.activeElement === target) return
         }
       }
     },

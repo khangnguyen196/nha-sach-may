@@ -316,6 +316,8 @@ test('(e) trang Sở thích vi / en: nhóm + tên theo locale, bỏ chặn → m
       if (left > 1) await expect(main(page).getByTestId('prefs-count')).toHaveText(`Đã chặn ${left - 1} / 50 mục`)
     }
     await expect(main(page).getByTestId('prefs-empty')).toBeVisible()
+    // Nhóm cuối biến mất → focus dự phòng về h1
+    await expect(main(page).getByRole('heading', { level: 1, name: 'Sở thích' })).toBeFocused()
     expect(await userBlocksOf(userA.id)).toEqual([])
     expect(errors).toEqual([])
   } finally {
