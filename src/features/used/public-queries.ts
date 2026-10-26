@@ -31,9 +31,12 @@ export async function listMarketListings(input: MarketListInput) {
   const supabase = createPublicClient()
   let query = supabase
     .from('used_listings')
-    .select('id, condition, price, photos, seller_name, approved_at, books!inner(id, slug, title, category_id)', {
-      count: 'exact',
-    })
+    // Cột chặn theo sở thích (category_id, publisher_id, content_warnings, tác giả) lấy từ sách catalog của tin, không từ
+    // used_listings (anon không đọc seller_id / fee / reject_reason)
+    .select(
+      'id, condition, price, photos, seller_name, approved_at, books!inner(id, slug, title, category_id, publisher_id, content_warnings, book_authors(role, author_id))',
+      { count: 'exact' },
+    )
     .eq('status', 'approved')
   // Lọc trên sách nhúng `!inner`: tin không khớp bị bỏ khỏi danh sách (không chỉ để books null)
   if (input.categoryIds) query = query.in('books.category_id', input.categoryIds)
@@ -65,7 +68,14 @@ export async function listMarketListings(input: MarketListInput) {
   return {
     listings: data.map((listing, index) => ({
       id: listing.id,
-      book: { slug: listing.books.slug, title: listing.books.title },
+      book: {
+        slug: listing.books.slug,
+        title: listing.books.title,
+        category_id: listing.books.category_id,
+        publisher_id: listing.books.publisher_id,
+        content_warnings: listing.books.content_warnings,
+        book_authors: listing.books.book_authors,
+      },
       condition: listing.condition,
       price: listing.price,
       sellerName: listing.seller_name,

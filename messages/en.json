@@ -809,6 +809,10 @@
     "deleting": "Deleting…",
     "deleted": "Review deleted."
   },
+  "prefs": {
+    "hidden": "Hidden by your preferences",
+    "reveal": "Show"
+  },
   "contentWarnings": {
     "labels": {
       "violence": "Violence / gore",

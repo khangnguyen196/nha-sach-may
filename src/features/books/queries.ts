@@ -38,8 +38,10 @@ function tagBooks(books: readonly { id: number }[]) {
   if (books.length > 0) cacheTag(...books.map((book) => `book:${book.id}`))
 }
 
-// Cột của BookCard, dùng chung cho lưới, kệ, trang chủ. Kiểu BookCard derive từ query bên dưới.
-const BOOK_CARD_COLUMNS = 'id, slug, title, cover_url, price, original_price, stock, book_authors(role, authors(name))'
+// Cột của BookCard, dùng chung cho lưới, kệ, trang chủ. Kiểu BookCard derive từ query bên dưới. category_id,
+// publisher_id, content_warnings, author_id: khóa chặn theo sở thích trên khung thẻ (features/prefs/blocks.ts).
+const BOOK_CARD_COLUMNS =
+  'id, slug, title, cover_url, price, original_price, stock, category_id, publisher_id, content_warnings, book_authors(role, author_id, authors(name))'
 
 const SHELF_SIZE = 12
 /** Ẩn cả kệ (kể cả tiêu đề) khi ít sách hơn mức này; kệ khác luôn hiện */

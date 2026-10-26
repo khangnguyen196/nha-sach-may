@@ -2,6 +2,8 @@ import { ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { GRID_CLASS } from '@/features/books/components/book-grid'
+import { BlockedVeil } from '@/features/prefs/components/blocked-veil'
+import { bookSlotAttributes } from '@/features/prefs/blocks'
 import { Link } from '@/i18n/navigation'
 import type { MarketListing } from '../public-queries'
 
@@ -23,44 +25,49 @@ export async function MarketGrid({ listings }: { listings: MarketListing[] }) {
     <ul className={GRID_CLASS} data-testid="market-listings">
       {listings.map((listing, index) => (
         <li key={listing.id} data-testid="market-listing" data-listing-id={listing.id}>
-          {/* Không prefetch: mỗi prefetch trang tin đi qua proxy, proxy đếm used_listings theo id để trả 404 thật → tới
-              24 câu DB mỗi lần xem lưới */}
-          <Link
-            href={{ pathname: '/used-books/[id]', params: { id: String(listing.id) } }}
-            prefetch={false}
-            className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-          >
-            <div className="relative aspect-[3/4] overflow-hidden rounded-cover border bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">
-              {listing.photoUrl ? (
-                // alt rỗng: tên sách hiển thị ngay dưới, cùng một link (ngoại lệ alt trong CLAUDE.md)
-                <Image
-                  src={listing.photoUrl}
-                  alt=""
-                  fill
-                  unoptimized
-                  sizes={MARKET_IMAGE_SIZES}
-                  {...(index < PRELOAD_COUNT
-                    ? { preload: true, fetchPriority: 'high' }
-                    : { loading: index < EAGER_COUNT ? 'eager' : 'lazy' })}
-                  className="object-cover"
-                />
-              ) : (
-                <span className="flex h-full flex-col items-center justify-center gap-2 p-2 text-center text-xs text-subtle">
-                  <ImageIcon aria-hidden className="size-6" />
-                  {t('noPhoto')}
-                </span>
-              )}
-            </div>
-            {/* Giữ chỗ 2 dòng tên + 1 dòng tình trạng / giá / người bán để thẻ cùng chiều cao và khớp skeleton */}
-            <p className="mt-3 line-clamp-2 min-h-[2lh] text-sm font-medium">{listing.book.title}</p>
-            <p className="mt-1 line-clamp-1 min-h-[1lh] text-xs text-muted-foreground">{tCondition(listing.condition)}</p>
-            <p className="mt-1.5 text-sm font-semibold text-primary tabular-nums" data-testid="market-listing-price">
-              {format.number(listing.price, 'price')}
-            </p>
-            <p className="mt-1 line-clamp-1 min-h-[1lh] text-xs text-subtle" data-testid="market-listing-seller">
-              {t('seller', { name: listing.sellerName ?? t('member') })}
-            </p>
-          </Link>
+          {/* Khung thẻ mang khóa chặn của sách catalog của tin (như BookCard): BlockStyles che link + hiện ô mờ */}
+          <div {...bookSlotAttributes(listing.book)} className="relative">
+            {/* Không prefetch: mỗi prefetch trang tin đi qua proxy, proxy đếm used_listings theo id để trả 404 thật → tới
+                24 câu DB mỗi lần xem lưới */}
+            <Link
+              href={{ pathname: '/used-books/[id]', params: { id: String(listing.id) } }}
+              prefetch={false}
+              data-book-link
+              className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
+              <div className="relative aspect-[3/4] overflow-hidden rounded-cover border bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">
+                {listing.photoUrl ? (
+                  // alt rỗng: tên sách hiển thị ngay dưới, cùng một link (ngoại lệ alt trong CLAUDE.md)
+                  <Image
+                    src={listing.photoUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes={MARKET_IMAGE_SIZES}
+                    {...(index < PRELOAD_COUNT
+                      ? { preload: true, fetchPriority: 'high' }
+                      : { loading: index < EAGER_COUNT ? 'eager' : 'lazy' })}
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full flex-col items-center justify-center gap-2 p-2 text-center text-xs text-subtle">
+                    <ImageIcon aria-hidden className="size-6" />
+                    {t('noPhoto')}
+                  </span>
+                )}
+              </div>
+              {/* Giữ chỗ 2 dòng tên + 1 dòng tình trạng / giá / người bán để thẻ cùng chiều cao và khớp skeleton */}
+              <p className="mt-3 line-clamp-2 min-h-[2lh] text-sm font-medium">{listing.book.title}</p>
+              <p className="mt-1 line-clamp-1 min-h-[1lh] text-xs text-muted-foreground">{tCondition(listing.condition)}</p>
+              <p className="mt-1.5 text-sm font-semibold text-primary tabular-nums" data-testid="market-listing-price">
+                {format.number(listing.price, 'price')}
+              </p>
+              <p className="mt-1 line-clamp-1 min-h-[1lh] text-xs text-subtle" data-testid="market-listing-seller">
+                {t('seller', { name: listing.sellerName ?? t('member') })}
+              </p>
+            </Link>
+            <BlockedVeil />
+          </div>
         </li>
       ))}
     </ul>
