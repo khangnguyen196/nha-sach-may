@@ -21,6 +21,7 @@ export async function generateMetadata() {
 
 /** Nhóm theo thứ tự hiện trên trang */
 const GROUPS = ['category', 'author', 'publisher', 'warning'] as const
+const TITLE_ID = 'prefs-title'
 
 export default async function PreferencesPage() {
   const [t, tAccount, locale] = await Promise.all([getTranslations('prefs.page'), getTranslations('account'), getLocale()])
@@ -28,7 +29,10 @@ export default async function PreferencesPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 md:py-12">
       <Breadcrumb items={[{ label: tAccount('title'), href: '/account' }, { label: t('title') }]} />
-      <h1 className="mt-6 font-serif text-3xl font-medium md:text-4xl">{t('title')}</h1>
+      {/* tabIndex -1: nhận focus sau khi bỏ chặn (dòng vừa bấm bị gỡ) */}
+      <h1 id={TITLE_ID} tabIndex={-1} className="mt-6 font-serif text-3xl font-medium outline-none md:text-4xl">
+        {t('title')}
+      </h1>
       <p className="mt-3 max-w-reading text-sm text-muted-foreground">{t('intro')}</p>
       <Suspense fallback={<PreferencesSkeleton />}>
         <PreferencesList locale={locale} />
@@ -102,6 +106,7 @@ async function PreferencesList({ locale }: { locale: Locale }) {
                       action={unblockItem.bind(null, locale, { id: item.rowId })}
                       label={tPrefs('unblock')}
                       accessibleLabel={tPrefs('unblockLabel', { kind: tPrefs(`kinds.${group}`), name })}
+                      focusAfterId={TITLE_ID}
                       variant="outline"
                       size="sm"
                     />

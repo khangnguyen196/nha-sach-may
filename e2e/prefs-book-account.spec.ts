@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test'
 import {
   bookBlockTargets,
   categoryBySlug,
@@ -74,6 +74,13 @@ async function createWarnedBook() {
   }
 }
 
+/** Context mới chưa đăng nhập, cùng thiết bị với project (mobile-account: Pixel 7 đủ viewport, DSF, isMobile, hasTouch, UA) */
+function deviceContext(browser: Browser, testInfo: TestInfo) {
+  const { baseURL, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = testInfo.project.use
+  const device = { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch }
+  return browser.newContext({ ...device, baseURL, storageState: NO_SESSION })
+}
+
 /** Đánh dấu trên window: còn sau khi bấm = không tải lại trang */
 const markWindow = (page: Page) => page.evaluate(() => Reflect.set(window, '__prefsNoReload', true))
 const windowKept = (page: Page) => page.evaluate(() => Reflect.get(window, '__prefsNoReload') === true)
@@ -122,6 +129,8 @@ test('(b) thành viên chặn tác giả ở trang sách → dòng nhắc (khôn
     const menu = await openPrefsMenu(page)
     await menu.getByRole('button', { name: `Không muốn thấy tác giả «${author.name}»` }).click()
     await expect(blockedBox(page)).toContainText(`Bạn đã chặn tác giả «${author.name}»`)
+    // Nút vừa bấm bị gỡ → focus về khung Sở thích (không rơi về body)
+    await expect(main(page).getByTestId('book-prefs')).toBeFocused()
     await expect(blockedBox(page).getByRole('link', { name: 'Quản lý trong trang Sở thích' })).toHaveAttribute(
       'href',
       '/tai-khoan/so-thich',
@@ -171,6 +180,7 @@ test('(c) "Ẩn các sách có cảnh báo này" chặn đủ 2 nhãn; bỏ 1 nh
       const notice = main(page).getByTestId('content-warnings')
       await notice.getByRole('button', { name: HIDE_WARNINGS }).click()
       await expect(notice.getByTestId('warnings-hidden')).toHaveText('Bạn đã ẩn các sách có cảnh báo này.')
+      await expect(notice.getByTestId('warnings-hidden')).toBeFocused()
       await expect(blockedBox(page)).toContainText(`Bạn đã chặn cảnh báo «${LABELS.violence}»`)
       await expect(blockedBox(page)).toContainText(`Bạn đã chặn cảnh báo «${LABELS.loss}»`)
       expect((await userBlocksOf(user.id)).map((row) => row.warning).sort()).toEqual(['loss', 'violence'])
@@ -183,6 +193,7 @@ test('(c) "Ẩn các sách có cảnh báo này" chặn đủ 2 nhãn; bỏ 1 nh
       await warnings.getByRole('button', { name: `Bỏ chặn cảnh báo «${LABELS.loss}»` }).click()
       await expect(warnings.getByRole('listitem')).toHaveCount(1)
       await expect(warnings).not.toContainText(LABELS.loss)
+      await expect(main(page).getByRole('heading', { level: 1, name: 'Sở thích' })).toBeFocused()
 
       await page.goto(`/sach/${book.slug}`)
       await waitForSettled(page)
@@ -220,7 +231,6 @@ test('(d) chặn danh mục cha → trang sách ở danh mục con nêu tên dan
 test('(e) trang Sở thích vi / en: nhóm + tên theo locale, bỏ chặn → mục mất, hết mục → trạng thái rỗng; thành viên B không thấy mục của A', async ({
   page,
   browser,
-  baseURL,
 }, testInfo) => {
   const errors = collectErrors(page)
   const [root, byAuthor, byPublisher] = await Promise.all([
@@ -287,8 +297,7 @@ test('(e) trang Sở thích vi / en: nhóm + tên theo locale, bỏ chặn → m
     await expect(main(page).getByTestId('prefs-count')).toHaveText('Blocked: 3 / 50')
 
     // Thành viên B: trang rỗng, không thấy mục của A
-    const viewport = page.viewportSize()
-    const context = await browser.newContext({ baseURL, storageState: NO_SESSION, ...(viewport && { viewport }) })
+    const context = await deviceContext(browser, testInfo)
     contexts.push(context)
     const otherPage = await context.newPage()
     const otherErrors = collectErrors(otherPage)
@@ -404,16 +413,14 @@ function reportCls(testInfo: TestInfo, label: string, cls: number) {
 test('(h) CLS trang sách < 0.01: khách, thành viên chưa chặn, thành viên đã chặn 1 mục', async ({
   page,
   browser,
-  baseURL,
 }, testInfo) => {
   const target = await bookBlockTargets(SHORT)
   const [author] = target.authors
   if (!author) throw new Error(`${SHORT}: không có tác giả vai trò author`)
-  const viewport = page.viewportSize()
   const contexts: BrowserContext[] = []
   const userIds: string[] = []
   try {
-    const guestContext = await browser.newContext({ baseURL, storageState: NO_SESSION, ...(viewport && { viewport }) })
+    const guestContext = await deviceContext(browser, testInfo)
     contexts.push(guestContext)
     const guest = await guestContext.newPage()
     const guestErrors = collectErrors(guest)
@@ -433,7 +440,7 @@ test('(h) CLS trang sách < 0.01: khách, thành viên chưa chặn, thành viê
     const blocked = await createE2eUser(`${testInfo.project.name}-prefs-cls-blocked`)
     userIds.push(blocked.id)
     await replaceUserBlocks(blocked.id, [{ kind: 'author', author_id: author.id }])
-    const blockedContext = await browser.newContext({ baseURL, storageState: NO_SESSION, ...(viewport && { viewport }) })
+    const blockedContext = await deviceContext(browser, testInfo)
     contexts.push(blockedContext)
     const blockedPage = await blockedContext.newPage()
     const blockedErrors = collectErrors(blockedPage)
@@ -449,5 +456,57 @@ test('(h) CLS trang sách < 0.01: khách, thành viên chưa chặn, thành viê
   } finally {
     await Promise.all(contexts.map((context) => context.close()))
     await deleteE2eUsers(userIds)
+  }
+})
+
+test('(h) CLS trang sách có nhãn cảnh báo < 0.01: khách, thành viên chưa chặn, thành viên đã ẩn mọi nhãn', async ({
+  page,
+  browser,
+}, testInfo) => {
+  // Chỗ nút "Ẩn các sách có cảnh báo này" nằm giữa cột (trên Mô tả); sách e2e không có mô tả → khung cảnh báo gần màn
+  // hình đầu nhất
+  const { book, slugs } = await createWarnedBook()
+  const contexts: BrowserContext[] = []
+  const userIds: string[] = []
+  try {
+    const guestContext = await deviceContext(browser, testInfo)
+    contexts.push(guestContext)
+    const guest = await guestContext.newPage()
+    const guestErrors = collectErrors(guest)
+    const guestCls = await bookPageCls(guest, book.slug)
+    reportCls(testInfo, 'nhãn, khách', guestCls)
+    await expect(main(guest).getByRole('button', { name: HIDE_WARNINGS })).toHaveCount(0)
+
+    const plain = await createE2eUser(`${testInfo.project.name}-prefs-cls-warn-plain`)
+    userIds.push(plain.id)
+    const plainErrors = collectErrors(page)
+    await login(page, plain)
+    const plainCls = await bookPageCls(page, book.slug)
+    reportCls(testInfo, 'nhãn, thành viên chưa chặn', plainCls)
+    await expect(main(page).getByRole('button', { name: HIDE_WARNINGS })).toBeVisible()
+
+    const hidden = await createE2eUser(`${testInfo.project.name}-prefs-cls-warn-hidden`)
+    userIds.push(hidden.id)
+    await replaceUserBlocks(hidden.id, [
+      { kind: 'warning', warning: 'violence' },
+      { kind: 'warning', warning: 'loss' },
+    ])
+    const hiddenContext = await deviceContext(browser, testInfo)
+    contexts.push(hiddenContext)
+    const hiddenPage = await hiddenContext.newPage()
+    const hiddenErrors = collectErrors(hiddenPage)
+    await login(hiddenPage, hidden)
+    const hiddenCls = await bookPageCls(hiddenPage, book.slug)
+    reportCls(testInfo, 'nhãn, thành viên đã ẩn mọi nhãn', hiddenCls)
+    await expect(main(hiddenPage).getByTestId('warnings-hidden')).toBeVisible()
+
+    expect(guestCls).toBeLessThan(0.01)
+    expect(plainCls).toBeLessThan(0.01)
+    expect(hiddenCls).toBeLessThan(0.01)
+    expect([...guestErrors, ...plainErrors, ...hiddenErrors]).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+    await deleteE2eUsers(userIds)
+    await cleanupE2eAdminData(slugs)
   }
 })

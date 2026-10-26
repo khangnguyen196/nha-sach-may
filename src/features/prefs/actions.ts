@@ -69,6 +69,18 @@ export async function blockItem(locale: Locale, item: BlockItemInput): Promise<R
     }
     const { error } = await supabase.from('user_blocks').insert(row)
     result = singleBlockResult(error)
+    // Trigger giới hạn (BEFORE INSERT) chạy trước kiểm trùng: mục đã chặn (tab khác) khi đủ 50 mục báo PREFS_LIMIT →
+    // kiểm lại, đã có thì coi như đã chặn
+    if (!result.ok && result.code === 'PREFS_LIMIT') {
+      const { data: existing } = await supabase
+        .from('user_blocks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('kind', target.kind)
+        .eq(`${target.kind}_id`, target.id)
+        .limit(1)
+      if (existing && existing.length > 0) result = { ok: true, data: null }
+    }
   }
   if (!result.ok) return withMessage(safeLocale, result)
   refresh()

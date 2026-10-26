@@ -15,6 +15,11 @@ import { PrefsButton } from './prefs-button'
 // riêng của trang (như MyReview): trang vẫn prerender, BookContent không đọc phiên. Khách và fallback giữ đúng chiều
 // cao của trạng thái thu gọn bằng khoảng trống aria-hidden → không CLS khi stream xong.
 
+/** Khung khối Sở thích ở trang sách: nhận focus sau khi chặn / bỏ chặn (nút vừa bấm bị gỡ) */
+const BOOK_PREFS_ID = 'book-prefs'
+/** Câu "Bạn đã ẩn các sách có cảnh báo này.": nhận focus sau khi bấm nút ẩn cảnh báo */
+const WARNINGS_HIDDEN_ID = 'warnings-hidden'
+
 type Props = { bookId: number; slug: string; locale: Locale }
 
 /**
@@ -90,7 +95,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
   if (matches.length === 0 && buttons.length === 0) return <BookPrefsPlaceholder />
 
   return (
-    <div className="mt-10 space-y-4" data-testid="book-prefs">
+    <div id={BOOK_PREFS_ID} tabIndex={-1} className="mt-10 space-y-4 outline-none" data-testid="book-prefs">
       {matches.length > 0 && (
         <div className="rounded-lg border bg-surface p-4 text-sm" data-testid="book-prefs-blocked">
           <ul className="space-y-2">
@@ -104,6 +109,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
                     action={unblockItem.bind(null, locale, { id: block.rowId })}
                     label={t('unblock')}
                     accessibleLabel={t('unblockLabel', values)}
+                    focusAfterId={BOOK_PREFS_ID}
                     variant="outline"
                     size="sm"
                   />
@@ -113,6 +119,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
           </ul>
           <Link
             href="/account/preferences"
+            prefetch={false}
             className="mt-3 inline-block rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {t('manage')}
@@ -133,6 +140,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
                   {...shared}
                   action={blockItem.bind(null, locale, { kind: button.kind, id: button.id })}
                   label={t('block', { kind: t(`kinds.${button.kind}`), name: button.name })}
+                  focusAfterId={BOOK_PREFS_ID}
                   variant="outline"
                   size="lg"
                   className="h-auto min-h-9 py-1.5 text-left whitespace-normal"
@@ -164,7 +172,12 @@ export async function HideWarnings({ bookId, labels, slug, locale }: Props & { l
   const expanded = expandBlocks(data.blocks, data.categories)
   if (missingWarnings(labels, expanded.warnings).length === 0) {
     return (
-      <p className="mt-4 flex min-h-9 items-center text-sm text-muted-foreground" data-testid="warnings-hidden">
+      <p
+        id={WARNINGS_HIDDEN_ID}
+        tabIndex={-1}
+        className="mt-4 flex min-h-9 items-center text-sm text-muted-foreground outline-none"
+        data-testid="warnings-hidden"
+      >
         {t('warningsHidden')}
       </p>
     )
@@ -175,6 +188,7 @@ export async function HideWarnings({ bookId, labels, slug, locale }: Props & { l
         {...shared}
         action={blockItem.bind(null, locale, { kind: 'warnings', bookId })}
         label={t('blockWarnings')}
+        focusAfterId={WARNINGS_HIDDEN_ID}
         variant="outline"
         size="lg"
         className="h-9 px-3"

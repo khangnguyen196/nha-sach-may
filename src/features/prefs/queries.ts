@@ -35,7 +35,7 @@ export async function getBookBlockTargets(bookId: number) {
 
   const { data, error } = await createPublicClient()
     .from('books')
-    .select('id, category_id, publisher_id, content_warnings, publishers(name), book_authors(role, author_id, authors(name))')
+    .select('category_id, publisher_id, content_warnings, publishers(name), book_authors(role, author_id, authors(name))')
     .eq('id', bookId)
     .maybeSingle()
   if (error) throw new Error(`getBookBlockTargets: ${error.message}`)
