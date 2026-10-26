@@ -8,6 +8,12 @@ export type BlockRule =
   | { kind: 'category' | 'author' | 'publisher'; id: number }
   | { kind: 'warning'; warning: ContentWarning }
 
+/** Số mục chặn tối đa / tài khoản: cùng private.user_blocks_limit() của schema.sql (Vitest so) */
+export const BLOCK_LIMIT = 50
+
+/** Mục chặn đọc từ DB: kèm id dòng `user_blocks` (`rowId`, bỏ chặn xóa theo id này) */
+export type StoredBlock = BlockRule & { rowId: number }
+
 /** Mục chặn đã mở rộng: danh mục cha → mọi danh mục con (câu 8). Mảng tăng dần, không trùng. */
 export type ExpandedBlocks = {
   categoryIds: readonly number[]
@@ -39,22 +45,25 @@ function field(row: object, key: string): unknown {
 }
 
 /**
- * Một dòng `user_blocks` → mục chặn, hoặc null khi dòng sai (kind lạ, id không phải số nguyên dương, nhãn ngoài enum):
- * bỏ dòng, không throw (dữ liệu DB đã có check, đây là lớp chặn thứ hai trước khi ghép vào CSS).
+ * Một dòng `user_blocks` → mục chặn kèm id dòng, hoặc null khi dòng sai (id dòng / id đích không phải số nguyên dương,
+ * kind lạ, nhãn ngoài enum): bỏ dòng, không throw (dữ liệu DB đã có check, đây là lớp chặn thứ hai trước khi ghép vào
+ * CSS).
  */
-export function parseBlockRow(row: unknown): BlockRule | null {
+export function parseBlockRow(row: unknown): StoredBlock | null {
   if (typeof row !== 'object' || row === null) return null
+  const rowId = field(row, 'id')
+  if (!isBlockId(rowId)) return null
   const kind = field(row, 'kind')
   if (kind === 'warning') {
     const warning = field(row, 'warning')
-    return isContentWarning(warning) ? { kind, warning } : null
+    return isContentWarning(warning) ? { kind, warning, rowId } : null
   }
   if (kind !== 'category' && kind !== 'author' && kind !== 'publisher') return null
   const id = field(row, `${kind}_id`)
-  return isBlockId(id) ? { kind, id } : null
+  return isBlockId(id) ? { kind, id, rowId } : null
 }
 
-export function parseBlockRows(rows: readonly unknown[]): BlockRule[] {
+export function parseBlockRows(rows: readonly unknown[]): StoredBlock[] {
   return rows.flatMap((row) => {
     const rule = parseBlockRow(row)
     return rule ? [rule] : []
@@ -152,4 +161,42 @@ export function blockCss(expanded: ExpandedBlocks): string {
   if (conditions.length === 0) return ''
   const slot = `[data-book-slot]:is(${conditions.join(',')}):not([data-revealed])`
   return `${slot}>[data-book-link]{visibility:hidden}${slot}>[data-book-veil]{display:flex}`
+}
+
+/**
+ * Các mục chặn trúng cuốn này (dòng nhắc "Bạn đã chặn …" ở trang sách): danh mục cha trúng sách ở danh mục con, tác giả
+ * chỉ vai trò author. Cùng ngữ nghĩa với isBlocked: kết quả khác rỗng ⇔ isBlocked(book, expandBlocks(rules, categories)).
+ * Giữ nguyên thứ tự và kiểu của `rules` (StoredBlock → còn rowId để bỏ chặn).
+ */
+export function matchingBlocks<Rule extends BlockRule>(
+  book: BlockableBook,
+  rules: readonly Rule[],
+  categories: readonly { id: number; parent_id: number | null }[],
+): Rule[] {
+  const keys = bookBlockKeys(book)
+  return rules.filter((rule) => {
+    if (rule.kind === 'warning') return keys.warnings.includes(rule.warning)
+    if (!isBlockId(rule.id)) return false
+    if (rule.kind === 'author') return keys.authorIds.includes(rule.id)
+    if (rule.kind === 'publisher') return keys.publisherId === rule.id
+    return keys.categoryId !== null && expandBlocks([rule], categories).categoryIds.includes(keys.categoryId)
+  })
+}
+
+/**
+ * Đích của cuốn này chưa bị chặn (nút "Không muốn thấy …" ở trang sách): danh mục lá đã bị chặn, kể cả qua danh mục
+ * cha, thì không còn nút; tác giả chỉ vai trò author.
+ */
+export function unblockedTargets(book: BlockableBook, expanded: ExpandedBlocks) {
+  const keys = bookBlockKeys(book)
+  return {
+    categoryId: keys.categoryId !== null && !expanded.categoryIds.includes(keys.categoryId) ? keys.categoryId : null,
+    publisherId: keys.publisherId !== null && !expanded.publisherIds.includes(keys.publisherId) ? keys.publisherId : null,
+    authorIds: keys.authorIds.filter((id) => !expanded.authorIds.includes(id)),
+  }
+}
+
+/** Nhãn đã duyệt của sách chưa bị chặn, theo thứ tự enum ("Ẩn các sách có cảnh báo này" chỉ thêm phần còn thiếu) */
+export function missingWarnings(bookLabels: readonly string[], blocked: readonly string[]): ContentWarning[] {
+  return CONTENT_WARNINGS.filter((warning) => bookLabels.includes(warning) && !blocked.includes(warning))
 }
