@@ -220,6 +220,7 @@ test('(c)(d) chặn danh mục cha: kệ "Sách ngoại văn" ở trang chủ v�
     // Style đã có hiệu lực (đếm 0 không qua sớm vì style chưa tới)
     await page.goto(`/danh-muc/${CATEGORY}`)
     await waitForRevealReady(page)
+    expect(await slots(main).count()).toBeGreaterThan(0)
     await expect(main.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(0)
     expect(errors).toEqual([])
   } finally {

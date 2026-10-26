@@ -158,7 +158,8 @@ describe('e2e/fixtures/books.json', () => {
     if (!byAuthor || !byPublisher) return
     // Một tác giả (spec chặn authorIds[0]), không cuốn nào khác của danh mục có tác giả / NXB bị chặn. So như import gộp
     // (ensureNamed): NXB theo slugify, tác giả theo tập từ của slug (reuseByNameTokens: "Nguyễn Huy Thiệp" = "Huy Thiệp
-    // Nguyễn") → hai tên khác dấu câu / chữ hoa / thứ tự từ là cùng một dòng DB
+    // Nguyễn"). reuseByNameTokens chỉ gộp với dòng đã có trong DB (cùng lô trên DB mới vẫn 2 dòng) → so ở đây chặt hơn
+    // DB: chỉ có thể đỏ thừa, không bỏ sót
     expect(byAuthor.authors).toHaveLength(1)
     const authorKey = (name: string) => nameTokensKey(slugify(name))
     const blockedAuthor = authorKey(byAuthor.authors[0] ?? '')
