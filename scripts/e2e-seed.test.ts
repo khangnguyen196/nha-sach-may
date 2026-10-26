@@ -2,7 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
 import { WARNING_LIMITS } from '../src/features/chat/config'
+import { slugify } from '../src/lib/slug'
 import { readFixture } from './e2e-seed'
+import { nameTokensKey } from './import-books'
 
 // Dữ liệu sách của Supabase local e2e (scripts/e2e-seed.ts). Spec Playwright dựa vào các giả định dưới đây; sửa
 // fixture làm hỏng giả định thì fail ở đây (job check) thay vì fail mơ hồ lúc chạy e2e.
@@ -154,13 +156,17 @@ describe('e2e/fixtures/books.json', () => {
     expect(byAuthor, PREFS_BY_AUTHOR).toBeDefined()
     expect(byPublisher, PREFS_BY_PUBLISHER).toBeDefined()
     if (!byAuthor || !byPublisher) return
-    // Một tác giả (spec chặn authorIds[0]), không cuốn nào khác của danh mục có tác giả / NXB bị chặn
+    // Một tác giả (spec chặn authorIds[0]), không cuốn nào khác của danh mục có tác giả / NXB bị chặn. So như import gộp
+    // (ensureNamed): NXB theo slugify, tác giả theo tập từ của slug (reuseByNameTokens: "Nguyễn Huy Thiệp" = "Huy Thiệp
+    // Nguyễn") → hai tên khác dấu câu / chữ hoa / thứ tự từ là cùng một dòng DB
     expect(byAuthor.authors).toHaveLength(1)
-    const blockedAuthor = byAuthor.authors[0]?.toLowerCase()
-    const blockedPublisher = byPublisher.publisher?.toLowerCase()
+    const authorKey = (name: string) => nameTokensKey(slugify(name))
+    const blockedAuthor = authorKey(byAuthor.authors[0] ?? '')
+    const blockedPublisher = slugify(byPublisher.publisher ?? '')
+    expect(blockedAuthor, `${PREFS_BY_AUTHOR}: thiếu tác giả`).toBeTruthy()
     expect(blockedPublisher, `${PREFS_BY_PUBLISHER}: thiếu NXB`).toBeTruthy()
     const blocked = inCategory.filter(
-      (b) => b.authors.some((name) => name.toLowerCase() === blockedAuthor) || b.publisher?.toLowerCase() === blockedPublisher,
+      (b) => b.authors.some((name) => authorKey(name) === blockedAuthor) || slugify(b.publisher ?? '') === blockedPublisher,
     )
     expect(blocked.map((b) => b.slug).sort()).toEqual([PREFS_BY_AUTHOR, PREFS_BY_PUBLISHER].sort())
     // Lưới 2 cột (mobile): ít nhất một thẻ bị chặn có thẻ chưa chặn cùng hàng. Mọi sách mẫu sold_count 0 → thứ tự theo

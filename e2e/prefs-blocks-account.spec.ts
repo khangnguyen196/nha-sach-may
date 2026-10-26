@@ -211,14 +211,15 @@ test('(c)(d) chặn danh mục cha: kệ "Sách ngoại văn" ở trang chủ v�
 
     // Sách gắn vào danh mục con: chặn gốc → che ở trang danh mục con
     await page.goto(`/danh-muc/${FOREIGN_CHILD}`)
-    await waitForSettled(page)
+    await waitForRevealReady(page)
     const childCount = await slots(main).count()
     expect(childCount).toBeGreaterThan(0)
     await expect(main.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(childCount)
     await expect(main.locator('[data-book-link]').filter({ visible: true })).toHaveCount(0)
 
+    // Style đã có hiệu lực (đếm 0 không qua sớm vì style chưa tới)
     await page.goto(`/danh-muc/${CATEGORY}`)
-    await waitForSettled(page)
+    await waitForRevealReady(page)
     await expect(main.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(0)
     expect(errors).toEqual([])
   } finally {
@@ -251,7 +252,7 @@ test('(e) thành viên A chặn → A thấy ô mờ; khách chưa đăng nhập
     await expect(page.getByRole('main').locator('[data-book-veil]').filter({ visible: true })).toHaveCount(2)
     expect(blockerErrors).toEqual([])
 
-    // Cùng khung nhìn với project (mobile: lưới 2 cột)
+    // Cùng kích thước khung nhìn với project (mobile: lưới 2 cột)
     const viewport = page.viewportSize()
     const viewerPage = async () => {
       const context = await browser.newContext({ baseURL, storageState: NO_SESSION, ...(viewport && { viewport }) })
