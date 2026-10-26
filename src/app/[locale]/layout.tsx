@@ -3,10 +3,12 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages, getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locale as rootLocale } from 'next/root-params'
+import { Suspense } from 'react'
 import { getErrorPageMessages } from '@/components/layout/error-page-messages'
 import { ErrorMessagesProvider } from '@/components/layout/error-view'
 import { Header } from '@/components/layout/header'
 import { ThemeProvider } from '@/components/layout/theme-provider'
+import { BlockStyles } from '@/features/prefs/components/block-styles'
 import { routing } from '@/i18n/routing'
 import { siteUrl } from '@/lib/site-url'
 import { fontVariables } from '../fonts'
@@ -47,6 +49,11 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
         >
           {t('skipToContent')}
         </a>
+        {/* Che sách bị chặn theo sở thích ở mọi danh sách (header + mọi trang của cửa hàng): <style> theo phiên, ngoài phần
+            prerender. Khách / không chặn gì → không render (features/prefs/components/block-styles.tsx) */}
+        <Suspense fallback={null}>
+          <BlockStyles />
+        </Suspense>
         <ThemeProvider>
           {/* Client chỉ nhận namespace còn dùng useTranslations (palette, tải lười). Client leaf khác nhận
               chuỗi đã dịch qua props → không gửi cả file messages xuống, không kéo intl-messageformat vào bundle đầu. */}
