@@ -198,6 +198,7 @@ Khách mở link email thường có JS. Chỉ sửa comment sai (`confirm/page.
 
 - `/admin` (root layout khác, chỉ admin dùng): không có dải noscript, không đo. Admin: 7 component dùng `useFormAction` đã khóa nút tới khi hydrate ở ★8 (comment đã sửa); chưa đo admin khi tắt JS.
 - Thêm địa chỉ không JS (`address-form.tsx:164` ô phường `disabled`, phường nạp bằng `fetch`): không sửa ở đợt này; ghi để biết "không JS không thêm được địa chỉ" kể cả khi sau này form hiện được.
+- Chặn theo sở thích (so-thich-canh-bao P-C, 2026-10-26): tắt JS thì `<style>` che thẻ của `BlockStyles` (trong boundary ẩn) vẫn có hiệu lực → thẻ sách bị chặn vẫn che mà nút "Xem" không chạy (cửa hàng cần JS); nút chặn / bỏ chặn ở trang sách và trang Sở thích là form `useFormAction`, khóa tới khi hydrate như mọi form Server Action (★8).
 
 ## ★ Cần quyết
 

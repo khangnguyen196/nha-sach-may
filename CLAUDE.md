@@ -116,6 +116,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
 - Dữ liệu theo user (giỏ, đơn, tài khoản) không cache chung.
 - **Chặn theo sở thích** (`features/prefs/`, `docs/plans/so-thich-canh-bao.md` P-C) không phá cache catalog: thẻ sách ở danh sách (`BookCard`, thẻ chợ sách cũ) nằm trong khung `[data-book-slot]` (`relative h-full`) mang `data-c` / `data-p` / `data-a` (id tác giả vai trò author) / `data-w` từ `bookSlotAttributes`, gồm link `data-book-link` + ô mờ `BlockedVeil` (`data-book-veil`, ẩn bằng class `hidden`, không thuộc tính `hidden`). `BlockStyles` (Suspense ở `[locale]/layout.tsx`, sau khi đọc phiên) render `<style>` từ `blockCss` (chỉ id số + nhãn enum) + listener cho nút Xem của ô mờ (`RevealBlocked`); khách / không chặn → không render.
 - Thẻ sách mới ở danh sách dùng cùng khung; "sách nào bị chặn" chỉ tính bằng `isBlocked` / `blockCss` (cùng ngữ nghĩa, Vitest `features/prefs/blocks.test.ts`).
+- Ghi mục chặn qua Server Action `blockItem` / `unblockItem` (`features/prefs/actions.ts`): insert / delete thẳng `user_blocks` bằng client theo phiên (RLS + quyền cột, `user_id` = default `auth.uid()`), không upsert (unique index một phần theo kind) → trùng `23505` = đã chặn (ok), `23503` → `ITEM_DELETED`, `PREFS_LIMIT` (50 mục) dịch sẵn kèm `{max}`; "Ẩn các sách có cảnh báo này" = mọi nhãn đã duyệt của sách, server tự đọc, một câu insert. Thành công → `refresh()` (cập nhật `<style>` ở layout + trang hiện tại), không `updateTag` catalog. Trang sách: khối theo phiên trong Suspense riêng (`BookPrefs` cuối cột thông tin, `HideWarnings` trong khung cảnh báo), khách / fallback giữ sẵn chiều cao; dòng nhắc dùng `matchingBlocks`.
 - Dùng `React.cache` để dedupe query lặp trong cùng một request (VD: `generateMetadata` và page cùng lấy một cuốn sách).
 - `next.config.ts` đặt `experimental.prefetchInlining: false` (Next 16.4.1 bật mặc định): hint gộp segment prefetch ghi theo page, không tách locale (bản ghi đầu tiên thắng (build hiện tại: `en`)) → trang `/vi/...` dựng lại lúc chạy (tag hết hạn) mất segment `(shop)` riêng mà client đã thấy ở `/_tree` → prefetch 404 (flaky (m5) của `e2e/used-purchase-account.spec.ts`, `docs/progress.md` vòng 18–19). Tắt thì mỗi segment một response (trang lưới / giỏ: 4 → 7 file segment, tổng byte +2–3%; JS client không tăng). **Kiểm lại khi nâng Next** (changelog, build, `measure:js`, e2e).
 
@@ -185,6 +186,7 @@ Không dùng barrel file (`index.ts` re-export). Import trực tiếp.
   | `/cho-sach-cu` (chợ sách cũ) | `/en/used-books` |
   | `/cho-sach-cu/[id]` | `/en/used-books/[id]` |
   | `/cho-sach-cu/[id]/mua` (mua một tin) | `/en/used-books/[id]/buy` |
+  | `/tai-khoan/so-thich` (sở thích: mục đã chặn) | `/en/account/preferences` |
 
   Slug của sách, danh mục, tác giả dùng chung cho cả hai ngôn ngữ.
 - Luôn dùng `Link`, `redirect`, `useRouter`, `usePathname` từ `i18n/navigation.ts`, không import từ `next/link` hay các hàm tương ứng của `next/navigation` (ESLint chặn). Hàm next-intl không bọc (`notFound`, `useParams`, `useSearchParams`) thì import từ `next/navigation` bình thường.
