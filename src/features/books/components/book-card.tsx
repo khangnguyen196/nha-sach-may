@@ -32,8 +32,9 @@ export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false, 
   const soldOut = book.stock <= 0
 
   return (
-    // Khung thẻ mang khóa chặn (data-*): <style> theo phiên của BlockStyles che link + hiện ô mờ, không đổi HTML prerender
-    <div {...bookSlotAttributes(book)} className="relative">
+    // Khung thẻ mang khóa chặn (data-*): <style> theo phiên của BlockStyles che link + hiện ô mờ, không đổi HTML prerender.
+    // h-full: khung = cả ô của lưới / kệ (ô cùng hàng cao bằng nhau) → ô mờ cùng kích thước thẻ cạnh bên
+    <div {...bookSlotAttributes(book)} className="relative h-full">
       <Link
         href={{ pathname: '/books/[slug]', params: { slug: book.slug } }}
         data-book-link

@@ -8,7 +8,8 @@ import { RevealBlocked } from './reveal-blocked'
  * Che sách bị chặn ở mọi danh sách (câu 3, phương án A): trang catalog vẫn prerender / cache chung cho mọi người, phần
  * theo người dùng chỉ là một <style> sinh sau khi đọc phiên. Đặt trong <Suspense fallback={null}> của
  * `[locale]/layout.tsx` (bao header + mọi trang của cửa hàng; layout dùng chung không render lại khi chuyển trang phía
- * client → style giữ nguyên). Khách / không có mục chặn → không render gì (không <style>, không JS).
+ * client → style giữ nguyên). Khách / không có mục chặn → không render gì (không <style>, không nút Xem). <style> nằm
+ * trong RevealBlocked (client leaf), HTML vẫn có sẵn từ server.
  * Lỗi đọc mục chặn → không che (log mã lỗi), không đẩy lỗi lên error boundary của cả layout.
  */
 export async function BlockStyles() {
@@ -23,10 +24,5 @@ export async function BlockStyles() {
     return null
   }
   if (!css) return null
-  return (
-    <>
-      <style data-testid="block-styles">{css}</style>
-      <RevealBlocked />
-    </>
-  )
+  return <RevealBlocked css={css} />
 }

@@ -26,7 +26,7 @@ export async function MarketGrid({ listings }: { listings: MarketListing[] }) {
       {listings.map((listing, index) => (
         <li key={listing.id} data-testid="market-listing" data-listing-id={listing.id}>
           {/* Khung thẻ mang khóa chặn của sách catalog của tin (như BookCard): BlockStyles che link + hiện ô mờ */}
-          <div {...bookSlotAttributes(listing.book)} className="relative">
+          <div {...bookSlotAttributes(listing.book)} className="relative h-full">
             {/* Không prefetch: mỗi prefetch trang tin đi qua proxy, proxy đếm used_listings theo id để trả 404 thật → tới
                 24 câu DB mỗi lần xem lưới */}
             <Link
