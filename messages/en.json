@@ -466,7 +466,9 @@
     "myListings": "My listings",
     "myListingsDescription": "Sell your used books and track your pending and live listings.",
     "usedMarket": "Used Books",
-    "usedMarketDescription": "Browse used books listed by members and reviewed by the store."
+    "usedMarketDescription": "Browse used books listed by members and reviewed by the store.",
+    "preferences": "Preferences",
+    "preferencesDescription": "Genres, authors, publishers and content notes you don’t want to see."
   },
   "address": {
     "title": "Address book",
@@ -812,7 +814,38 @@
   "prefs": {
     "hidden": "Hidden by your preferences",
     "reveal": "Show",
-    "revealLabel": "Show hidden book"
+    "revealLabel": "Show hidden book",
+    "summary": "Don’t want to see books like this?",
+    "kinds": {
+      "category": "genre",
+      "author": "author",
+      "publisher": "publisher",
+      "warning": "content note"
+    },
+    "block": "Don’t show the {kind} “{name}”",
+    "blocked": "You blocked the {kind} “{name}”",
+    "unblock": "Unblock",
+    "unblockLabel": "Unblock the {kind} “{name}”",
+    "pending": "Saving…",
+    "blockWarnings": "Hide books with these content notes",
+    "warningsHidden": "You’ve hidden books with these content notes.",
+    "unknownTarget": "(no longer available)",
+    "manage": "Manage in Preferences",
+    "openPage": "Open Preferences",
+    "page": {
+      "title": "Preferences",
+      "intro": "Books matching the items below are hidden in every list of the store: the book card turns into a placeholder, select “Show” to see it. Unblock to show them again.",
+      "count": "Blocked: {count} / {max}",
+      "groups": {
+        "category": "Genres",
+        "author": "Authors",
+        "publisher": "Publishers",
+        "warning": "Content notes"
+      },
+      "emptyTitle": "You haven’t blocked anything",
+      "empty": "On a book page, open “Don’t want to see books like this?” to block a genre, author or publisher; in the content notes box, choose “Hide books with these content notes”.",
+      "browse": "Browse all books"
+    }
   },
   "contentWarnings": {
     "labels": {

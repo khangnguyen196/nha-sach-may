@@ -30,6 +30,7 @@ export const routing = defineRouting({
     '/account/my-listings': { vi: '/tai-khoan/sach-toi-ban', en: '/account/my-listings' },
     '/account/my-listings/new': { vi: '/tai-khoan/sach-toi-ban/dang-tin', en: '/account/my-listings/new' },
     '/account/my-listings/[id]': { vi: '/tai-khoan/sach-toi-ban/[id]', en: '/account/my-listings/[id]' },
+    '/account/preferences': { vi: '/tai-khoan/so-thich', en: '/account/preferences' },
     '/login': { vi: '/dang-nhap', en: '/login' },
     '/register': { vi: '/dang-ky', en: '/register' },
     '/forgot-password': { vi: '/quen-mat-khau', en: '/forgot-password' },

@@ -20,6 +20,12 @@ import { discountPercent, showRelatedShelf, splitParagraphs, truncateText, visib
 import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
 import { cartLimit, MAX_LINES } from '@/features/cart/guest-cart'
+import {
+  BookPrefs,
+  BookPrefsPlaceholder,
+  HideWarnings,
+  HideWarningsPlaceholder,
+} from '@/features/prefs/components/book-prefs'
 import { MyReview } from '@/features/reviews/components/my-review'
 import { RatingStars } from '@/features/reviews/components/rating-stars'
 import { ReviewList, ReviewListSkeleton } from '@/features/reviews/components/review-list'
@@ -202,10 +208,22 @@ async function BookContent({ params }: { params: Props['params'] }) {
               <UsedCopies bookId={book.id} slug={book.slug} />
             </Suspense>
           )}
-          {/* Nhãn cảnh báo đã duyệt: cùng dữ liệu cache với mô tả (book:{id}), cùng boundary → không Suspense riêng, không CLS */}
-          <WarningNotice labels={book.content_warnings} />
+          {/* Nhãn cảnh báo đã duyệt: cùng dữ liệu cache với mô tả (book:{id}), cùng boundary → không Suspense riêng, không CLS.
+              Nút "Ẩn các sách có cảnh báo này" theo phiên: Suspense riêng, chỗ nút giữ sẵn chiều cao cho mọi người */}
+          <WarningNotice
+            labels={book.content_warnings}
+            action={
+              <Suspense fallback={<HideWarningsPlaceholder />}>
+                <HideWarnings bookId={book.id} labels={book.content_warnings} slug={book.slug} locale={locale} />
+              </Suspense>
+            }
+          />
           <Description book={book} />
           <Details book={book} />
+          {/* Chặn theo sở thích (theo phiên, Suspense riêng như MyReview): khách / fallback giữ chỗ bằng summary thu gọn */}
+          <Suspense fallback={<BookPrefsPlaceholder />}>
+            <BookPrefs bookId={book.id} slug={book.slug} locale={locale} />
+          </Suspense>
         </div>
       </div>
 

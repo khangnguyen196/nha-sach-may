@@ -1,5 +1,6 @@
 import { InfoIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import type { ReactNode } from 'react'
 import { CONTENT_WARNINGS, type ContentWarning } from '../labels'
 
 /**
@@ -7,8 +8,9 @@ import { CONTENT_WARNINGS, type ContentWarning } from '../labels'
  * render cùng lần với mô tả từ cùng dữ liệu cache của sách (tag book:{id}): có mặt ngay trong HTML, không Suspense riêng,
  * không JS → không CLS. Không có nhãn → không render gì. Có nhãn tự hại → thêm một câu nhẹ nhàng (không số điện thoại,
  * không dùng lại chat.crisis). Màu trung tính (surface-raised), không dùng màu sale.
+ * `action`: chỗ nút "Ẩn các sách có cảnh báo này" (phần theo phiên, trang sách bọc Suspense + giữ sẵn chiều cao).
  */
-export async function WarningNotice({ labels }: { labels: readonly ContentWarning[] }) {
+export async function WarningNotice({ labels, action }: { labels: readonly ContentWarning[]; action?: ReactNode }) {
   const shown = CONTENT_WARNINGS.filter((label) => labels.includes(label))
   if (shown.length === 0) return null
   const t = await getTranslations('contentWarnings')
@@ -31,6 +33,7 @@ export async function WarningNotice({ labels }: { labels: readonly ContentWarnin
         ))}
       </ul>
       {shown.includes('self_harm') && <p className="mt-3 text-sm">{t('selfHarmNote')}</p>}
+      {action}
     </div>
   )
 }

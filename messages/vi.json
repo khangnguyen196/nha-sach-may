@@ -1048,7 +1048,9 @@
     "myListings": "Sách tôi bán",
     "myListingsDescription": "Đăng bán sách cũ, theo dõi tin chờ duyệt và đang bán.",
     "usedMarket": "Chợ sách cũ",
-    "usedMarketDescription": "Xem sách cũ thành viên đăng bán, đã được cửa hàng duyệt."
+    "usedMarketDescription": "Xem sách cũ thành viên đăng bán, đã được cửa hàng duyệt.",
+    "preferences": "Sở thích",
+    "preferencesDescription": "Thể loại, tác giả, nhà xuất bản và cảnh báo nội dung bạn không muốn thấy."
   },
   "address": {
     "title": "Sổ địa chỉ",
@@ -1394,7 +1396,38 @@
   "prefs": {
     "hidden": "Đã ẩn theo sở thích của bạn",
     "reveal": "Xem",
-    "revealLabel": "Xem sách đã ẩn"
+    "revealLabel": "Xem sách đã ẩn",
+    "summary": "Không muốn thấy sách như thế này?",
+    "kinds": {
+      "category": "thể loại",
+      "author": "tác giả",
+      "publisher": "NXB",
+      "warning": "cảnh báo"
+    },
+    "block": "Không muốn thấy {kind} «{name}»",
+    "blocked": "Bạn đã chặn {kind} «{name}»",
+    "unblock": "Bỏ chặn",
+    "unblockLabel": "Bỏ chặn {kind} «{name}»",
+    "pending": "Đang lưu…",
+    "blockWarnings": "Ẩn các sách có cảnh báo này",
+    "warningsHidden": "Bạn đã ẩn các sách có cảnh báo này.",
+    "unknownTarget": "(không còn hiển thị)",
+    "manage": "Quản lý trong trang Sở thích",
+    "openPage": "Mở trang Sở thích",
+    "page": {
+      "title": "Sở thích",
+      "intro": "Sách thuộc các mục dưới đây được ẩn ở mọi danh sách của cửa hàng: thẻ sách thành ô mờ, bấm “Xem” nếu muốn xem. Bỏ chặn để hiện lại.",
+      "count": "Đã chặn {count} / {max} mục",
+      "groups": {
+        "category": "Thể loại",
+        "author": "Tác giả",
+        "publisher": "Nhà xuất bản",
+        "warning": "Cảnh báo nội dung"
+      },
+      "emptyTitle": "Bạn chưa chặn mục nào",
+      "empty": "Ở trang một cuốn sách, mở “Không muốn thấy sách như thế này?” để chặn thể loại, tác giả hoặc NXB; trong khung lưu ý nội dung, chọn “Ẩn các sách có cảnh báo này”.",
+      "browse": "Xem tất cả sách"
+    }
   },
   "contentWarnings": {
     "labels": {
