@@ -17,7 +17,7 @@ export async function BlockStyles() {
   if (!user) return null
   let css: string
   try {
-    const [rules, categories] = await Promise.all([getMyBlocks(), getCategories()])
+    const [rules, categories] = await Promise.all([getMyBlocks(user.id), getCategories()])
     css = blockCss(expandBlocks(rules, categories))
   } catch (error) {
     console.error('[prefs] BlockStyles:', error instanceof Error ? error.message : 'unknown')

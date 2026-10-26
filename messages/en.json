@@ -811,7 +811,8 @@
   },
   "prefs": {
     "hidden": "Hidden by your preferences",
-    "reveal": "Show"
+    "reveal": "Show",
+    "revealLabel": "Show hidden book"
   },
   "contentWarnings": {
     "labels": {

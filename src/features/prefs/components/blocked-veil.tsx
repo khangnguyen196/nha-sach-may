@@ -17,6 +17,8 @@ export async function BlockedVeil() {
       <button
         type="button"
         data-reveal
+        // Mọi ô mờ cùng một nút: tên đọc được nói rõ là sách đã ẩn (chứa chữ hiển thị "Xem", không chứa tên sách)
+        aria-label={t('revealLabel')}
         className="rounded-md border px-3 py-1.5 text-sm font-medium outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         {t('reveal')}

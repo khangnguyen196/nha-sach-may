@@ -35,7 +35,7 @@ export function isContentWarning(value: unknown): value is ContentWarning {
 }
 
 function field(row: object, key: string): unknown {
-  return Object.entries(row).find(([name]) => name === key)?.[1]
+  return Reflect.get(row, key)
 }
 
 /**
@@ -63,7 +63,10 @@ export function parseBlockRows(rows: readonly unknown[]): BlockRule[] {
 
 const sortedIds = (ids: Iterable<number>) => [...new Set(ids)].filter(isBlockId).sort((a, b) => a - b)
 
-/** Chặn danh mục = chặn chính nó + mọi danh mục con cháu (cây nhiều cấp; dữ liệu vòng không làm lặp vô hạn) */
+/**
+ * Chặn danh mục = chặn chính nó + mọi danh mục con cháu (cây nhiều cấp; dữ liệu vòng không làm lặp vô hạn). Cây lấy từ
+ * `categories` truyền vào: danh mục không có trong đó thì con cháu của nó không được mở ra (cây hiện chỉ 2 cấp).
+ */
 export function expandBlocks(
   rules: readonly BlockRule[],
   categories: readonly { id: number; parent_id: number | null }[],

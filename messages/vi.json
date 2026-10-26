@@ -1393,7 +1393,8 @@
   },
   "prefs": {
     "hidden": "Đã ẩn theo sở thích của bạn",
-    "reveal": "Xem"
+    "reveal": "Xem",
+    "revealLabel": "Xem sách đã ẩn"
   },
   "contentWarnings": {
     "labels": {
