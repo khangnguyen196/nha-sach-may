@@ -17,6 +17,12 @@ const VIEWED = 'sapiens'
 
 type BlockTargets = Awaited<ReturnType<typeof bookBlockTargets>>
 
+/**
+ * Sách mẫu (không phải sách e2e-…): spec khác chạy song song có thể tạo / xóa sách e2e (không danh mục, không tác giả)
+ * và chúng vẫn lên catalog của Mây → không tra khóa chặn của chúng (có thể đã bị xóa khi tra).
+ */
+const isSample = (slug: string) => !slug.startsWith('e2e-')
+
 /** Slug của các thẻ sách trong một câu trả lời (link `/sach/<slug>`) */
 async function cardSlugs(reply: Locator) {
   const hrefs = await reply.getByTestId('chat-book-card').evaluateAll((cards) => cards.map((card) => card.getAttribute('href')))
@@ -52,27 +58,28 @@ test('(a)(b) thành viên B (không chặn) có thẻ thuộc tập sắp chặn
   browser,
   baseURL,
 }, testInfo) => {
+  // Hai lần đăng nhập + hai lượt hỏi Mây trong một test (mặc định 30 giây không đủ trên CI), không phải để chờ lỗi
   test.setTimeout(90_000)
   const [userB, userA] = await Promise.all([
     createE2eUser(`${testInfo.project.name}-prefs-chat-b`),
     createE2eUser(`${testInfo.project.name}-prefs-chat-a`),
   ])
   try {
-    // (a) Đối chứng: B không chặn gì → 3 thẻ; tập sắp chặn lấy từ chính các thẻ sách mẫu này (test không rỗng nghĩa).
-    // Bỏ sách e2e-… (spec khác chạy song song có thể tạo sách không danh mục / không tác giả, vẫn lên catalog của Mây)
+    // (a) Đối chứng: B không chặn gì → có thẻ (AI giả: tối đa 3); tập sắp chặn lấy từ chính các thẻ sách mẫu này (test
+    // không rỗng nghĩa): danh mục của thẻ đầu + tác giả của các thẻ còn lại (chỉ một thẻ mẫu: tác giả của chính nó), để
+    // thử cả hai loại mục
     const control = await askAs(browser, baseURL, userB, '/', QUESTION)
-    expect(control.slugs).toHaveLength(3)
-    const sample = control.slugs.filter((slug) => !slug.startsWith('e2e-'))
+    const sample = control.slugs.filter(isSample)
     expect(sample.length).toBeGreaterThan(0)
     const targets = await Promise.all(sample.map((slug) => bookBlockTargets(slug)))
     const [first, ...rest] = targets
     if (!first || first.categoryId === null) throw new Error(`${sample[0]}: không có danh mục`)
     const categoryId = first.categoryId
-    const authorIds = [...new Set(rest.flatMap((target) => target.authorIds))]
-    if (rest.some((target) => target.authorIds.length === 0)) throw new Error('Thẻ đối chứng không có tác giả vai trò author')
+    const byAuthor = rest.length > 0 ? rest : [first]
+    if (byAuthor.some((target) => target.authorIds.length === 0)) throw new Error('Thẻ đối chứng không có tác giả vai trò author')
+    const authorIds = [...new Set(byAuthor.flatMap((target) => target.authorIds))]
     const inBlockedSet = (target: BlockTargets) =>
       target.categoryId === categoryId || target.authorIds.some((id) => authorIds.includes(id))
-    expect(targets.every(inBlockedSet)).toBe(true)
 
     // (b) A chặn danh mục của thẻ đầu + tác giả của các thẻ còn lại → cùng câu: vẫn có thẻ, không thẻ nào thuộc tập
     await replaceUserBlocks(userA.id, [
@@ -82,8 +89,8 @@ test('(a)(b) thành viên B (không chặn) có thẻ thuộc tập sắp chặn
     const blocked = await askAs(browser, baseURL, userA, '/', QUESTION)
     expect(blocked.slugs.length).toBeGreaterThan(0)
     for (const slug of sample) expect(blocked.slugs).not.toContain(slug)
-    const shown = await Promise.all(blocked.slugs.map((slug) => bookBlockTargets(slug)))
-    for (const [index, target] of shown.entries()) expect(inBlockedSet(target), blocked.slugs[index]).toBe(false)
+    const shown = await Promise.all(blocked.slugs.filter(isSample).map((slug) => bookBlockTargets(slug)))
+    for (const target of shown) expect(inBlockedSet(target), target.title).toBe(false)
   } finally {
     await deleteE2eUsers([userA.id, userB.id])
   }
@@ -105,8 +112,8 @@ test('(c) trang của cuốn bị chặn: Mây vẫn trả lời về cuốn đ�
     // AI giả trả 3 slug đầu của ứng viên: chưa lọc thì cuốn đang xem đứng đầu danh sách → thẻ đầu
     expect(result.slugs.length).toBeGreaterThan(0)
     expect(result.slugs).not.toContain(VIEWED)
-    const shown = await Promise.all(result.slugs.map((slug) => bookBlockTargets(slug)))
-    for (const [index, target] of shown.entries()) expect(target.authorIds, result.slugs[index]).not.toContain(authorId)
+    const shown = await Promise.all(result.slugs.filter(isSample).map((slug) => bookBlockTargets(slug)))
+    for (const target of shown) expect(target.authorIds, target.title).not.toContain(authorId)
   } finally {
     await deleteE2eUsers([user.id])
   }

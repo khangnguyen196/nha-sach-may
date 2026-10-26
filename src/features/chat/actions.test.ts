@@ -253,9 +253,10 @@ describe('askMay', () => {
   describe('chặn theo sở thích (câu 10): không gợi ý sách bị chặn', () => {
     type Author = { role: string; author_id: number; authors: { name: string } }
     const author = (author_id: number, role = 'author'): Author => ({ role, author_id, authors: { name: `Người ${author_id}` } })
+    type BookKeys = { category_id?: number; publisher_id?: number; content_warnings?: string[]; authors?: Author[] }
     const catalogBook = (
       slug: string,
-      { category_id = 3, publisher_id = 8, content_warnings = [] as string[], authors = [author(60)] } = {},
+      { category_id = 3, publisher_id = 8, content_warnings = [], authors = [author(60)] }: BookKeys = {},
     ) => ({
       id: slug.length * 100 + slug.charCodeAt(0),
       slug,

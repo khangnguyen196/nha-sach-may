@@ -228,10 +228,11 @@ describe('e2e/fixtures/books.json', () => {
   })
 
   it('prefs-chat-account.spec: sách xem ở (c) có tác giả, còn hàng; chặn 1 danh mục + tác giả của 2 cuốn vẫn còn sách gợi ý được', () => {
-    // (a)(b): B hỏi Mây → 3 thẻ; A chặn danh mục của thẻ đầu + tác giả của các thẻ còn lại rồi hỏi lại → vẫn phải có
-    // thẻ (AI giả trả slug đầu của ứng viên) → mọi sách mẫu còn hàng có danh mục + tác giả, và trừ danh mục đông nhất +
-    // 2 lần số sách của tác giả nhiều sách nhất vẫn còn sách. (c): chặn tác giả của PREFS_CHAT_VIEWED rồi hỏi ở trang
-    // của nó → còn sách không cùng tác giả. Tác giả so như import gộp (nameTokensKey).
+    // (a)(b): B hỏi Mây → ≤ 3 thẻ; A chặn danh mục của thẻ đầu + mọi tác giả của tối đa 2 thẻ còn lại rồi hỏi lại → vẫn
+    // phải có thẻ (AI giả trả slug đầu của ứng viên) → mọi sách mẫu còn hàng có danh mục + tác giả, và trừ danh mục đông
+    // nhất + số sách chung tác giả với 2 cuốn bất kỳ (xét mọi cặp, sách nhiều tác giả tính đủ) vẫn còn sách. (c): chặn
+    // tác giả của PREFS_CHAT_VIEWED rồi hỏi ở trang của nó → còn sách không cùng tác giả. Tác giả so như import gộp
+    // (nameTokensKey).
     const spec = read('../e2e/prefs-chat-account.spec.ts')
     expect(spec).toContain(`'${PREFS_CHAT_VIEWED}'`)
     expect(spec).toContain('[mock:5-books]')
@@ -240,15 +241,19 @@ describe('e2e/fixtures/books.json', () => {
       expect(book.category_slug, book.slug).toBeTruthy()
       expect(book.authors.length, book.slug).toBeGreaterThan(0)
     }
-    const count = (keys: string[]) => {
-      const counts = new Map<string, number>()
-      for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1)
-      return Math.max(...counts.values())
-    }
+    const counts = new Map<string, number>()
+    for (const book of inStock) counts.set(book.category_slug, (counts.get(book.category_slug) ?? 0) + 1)
+    const perCategory = Math.max(...counts.values())
     const authorKey = (name: string) => nameTokensKey(slugify(name))
-    const perCategory = count(inStock.map((b) => b.category_slug))
-    const perAuthor = count(inStock.flatMap((b) => [...new Set(b.authors.map(authorKey))]))
-    expect(inStock.length - perCategory - 2 * perAuthor).toBeGreaterThanOrEqual(3)
+    const authorsOf = (book: (typeof inStock)[number]) => book.authors.map(authorKey)
+    let byTwoAuthors = 0
+    for (const a of inStock) {
+      for (const b of inStock) {
+        const blocked = new Set([...authorsOf(a), ...authorsOf(b)])
+        byTwoAuthors = Math.max(byTwoAuthors, inStock.filter((book) => authorsOf(book).some((key) => blocked.has(key))).length)
+      }
+    }
+    expect(inStock.length - perCategory - byTwoAuthors).toBeGreaterThanOrEqual(3)
 
     const viewed = inStock.find((b) => b.slug === PREFS_CHAT_VIEWED)
     expect(viewed, PREFS_CHAT_VIEWED).toBeDefined()
