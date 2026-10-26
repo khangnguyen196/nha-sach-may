@@ -24,6 +24,8 @@ const PREFS_SHORT = 'vong-buom'
 const PREFS_CHILD_BOOK = 'how-not-to-be-a-twit-and-other-wisdom-from-roald-dahl'
 /** Trần độ dài mô tả của sách đo CLS (khối Sở thích cuối cột thông tin gần màn hình đầu nhất) */
 const PREFS_SHORT_MAX = 120
+/** Sách của prefs-chat-account.spec (c): chặn tác giả của nó rồi hỏi Mây ở trang của nó */
+const PREFS_CHAT_VIEWED = 'sapiens'
 
 describe('e2e/fixtures/books.json', () => {
   it('ISBN, slug không trùng', () => {
@@ -223,6 +225,35 @@ describe('e2e/fixtures/books.json', () => {
     const child = complete.find((b) => b.slug === PREFS_CHILD_BOOK)
     expect(child, PREFS_CHILD_BOOK).toBeDefined()
     expect(child?.category_slug).toBe(PREFS_FOREIGN_CHILD)
+  })
+
+  it('prefs-chat-account.spec: sách xem ở (c) có tác giả, còn hàng; chặn 1 danh mục + tác giả của 2 cuốn vẫn còn sách gợi ý được', () => {
+    // (a)(b): B hỏi Mây → 3 thẻ; A chặn danh mục của thẻ đầu + tác giả của các thẻ còn lại rồi hỏi lại → vẫn phải có
+    // thẻ (AI giả trả slug đầu của ứng viên) → mọi sách mẫu còn hàng có danh mục + tác giả, và trừ danh mục đông nhất +
+    // 2 lần số sách của tác giả nhiều sách nhất vẫn còn sách. (c): chặn tác giả của PREFS_CHAT_VIEWED rồi hỏi ở trang
+    // của nó → còn sách không cùng tác giả. Tác giả so như import gộp (nameTokensKey).
+    const spec = read('../e2e/prefs-chat-account.spec.ts')
+    expect(spec).toContain(`'${PREFS_CHAT_VIEWED}'`)
+    expect(spec).toContain('[mock:5-books]')
+    const inStock = books.filter((b) => b.stock > 0)
+    for (const book of inStock) {
+      expect(book.category_slug, book.slug).toBeTruthy()
+      expect(book.authors.length, book.slug).toBeGreaterThan(0)
+    }
+    const count = (keys: string[]) => {
+      const counts = new Map<string, number>()
+      for (const key of keys) counts.set(key, (counts.get(key) ?? 0) + 1)
+      return Math.max(...counts.values())
+    }
+    const authorKey = (name: string) => nameTokensKey(slugify(name))
+    const perCategory = count(inStock.map((b) => b.category_slug))
+    const perAuthor = count(inStock.flatMap((b) => [...new Set(b.authors.map(authorKey))]))
+    expect(inStock.length - perCategory - 2 * perAuthor).toBeGreaterThanOrEqual(3)
+
+    const viewed = inStock.find((b) => b.slug === PREFS_CHAT_VIEWED)
+    expect(viewed, PREFS_CHAT_VIEWED).toBeDefined()
+    const viewedAuthors = (viewed?.authors ?? []).map(authorKey)
+    expect(inStock.filter((b) => !b.authors.some((name) => viewedAuthors.includes(authorKey(name)))).length).toBeGreaterThanOrEqual(3)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

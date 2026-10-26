@@ -27,6 +27,8 @@ export const CHAT_SPEC_CALLS: Readonly<Record<string, number>> = {
   // 15 ask() + vòng lặp 10 câu (hết lượt của khách) + 1 lần bấm chip
   'chat.spec.ts': 26,
   'chat-account.spec.ts': 1,
+  // askAs() 3 lần ((a) B, (b) A, (c)), mỗi lần một ask()
+  'prefs-chat-account.spec.ts': 3,
   // consume() gọi RPC trực tiếp: 1 + 2 + 4 + 2 + 2
   'chat-quota.spec.ts': 11,
 }
