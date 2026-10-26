@@ -730,7 +730,7 @@
     "LISTING_INVALID_TRANSITION": "This listing cannot be moved to that status. Reload the page to see its latest status.",
     "PAYOUT_STATUS_CHANGED": "This payout was just updated elsewhere. Reload the page to see its latest status.",
     "LISTING_PHOTO_LIMIT": "You already have 30 used-book photos, so you can’t upload more yet. This count includes photos of listings that are pending, for sale or rejected, and photos uploaded but not yet posted; unposted photos older than 24 hours are cleared when you open the new or edit listing page. Remove photos from a rejected listing or withdraw a listing you no longer want to sell, then try again.",
-    "PREFS_LIMIT": "You’ve hidden {max} items, the most one account can have. Unhide a few on your Preferences page, then try again.",
+    "PREFS_LIMIT": "You’ve blocked {max} items, the most one account can have. Unblock a few on your Preferences page, then try again.",
     "WARNING_QUOTA_EXCEEDED": "AI content warning suggestions are used up for now. Try again later, or choose the labels for the book yourself and save.",
     "SUGGESTION_STATUS_CHANGED": "This suggestion or the book’s content warnings were just changed elsewhere (approved, dismissed, or edited on the book form). Reload the page, check the book’s current warnings, then review again if it’s still pending.",
     "WARNING_AI_FAILED": "The AI couldn’t suggest content warnings for these books (no answer, blocked, or an invalid answer). It won’t retry on its own. Try again in a few minutes, or choose the labels for the book yourself and save."
@@ -822,7 +822,7 @@
       "publisher": "publisher",
       "warning": "content note"
     },
-    "block": "Don’t show the {kind} “{name}”",
+    "block": "Block the {kind} “{name}”",
     "blocked": "You blocked the {kind} “{name}”",
     "unblock": "Unblock",
     "unblockLabel": "Unblock the {kind} “{name}”",
