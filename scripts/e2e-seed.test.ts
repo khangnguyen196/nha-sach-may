@@ -11,6 +11,12 @@ const FREE_SHIP_FROM = 300_000
 const SHELF_SIZE = 12
 /** Sách thật của used-market-public-account.spec: desktop-account, mobile-account */
 const USED_MARKET_BOOKS = ['cha-me-5-0', 'nang-cao-von-tu-vung-tieng-nhat-theo-chu-de-bang-hinh-anh']
+/** Dữ liệu của prefs-blocks-account.spec */
+const PREFS_CATEGORY = 'truyen-ngan-tan-van'
+const PREFS_BY_AUTHOR = 'muoi-chin-chan-dung-nha-van-cung-thoi'
+const PREFS_BY_PUBLISHER = 'buoc-qua-nuoc-mat-tu-khac-truong-thanh'
+const PREFS_FOREIGN_ROOT = 'sach-ngoai-van'
+const PREFS_FOREIGN_CHILD = 'ngoai-van-thieu-nhi'
 
 describe('e2e/fixtures/books.json', () => {
   it('ISBN, slug không trùng', () => {
@@ -130,6 +136,44 @@ describe('e2e/fixtures/books.json', () => {
       expect(book.slug.startsWith('e2e-'), book.slug).toBe(false)
       expect(book.title, book.slug).not.toContain('[mock:')
     }
+  })
+
+  it('prefs-blocks-account.spec: danh mục một trang có đúng 2 sách bị chặn riêng (tác giả / NXB chỉ ở cuốn đó) + ≥ 2 sách không bị chặn; danh mục con của Sách ngoại văn có sách', () => {
+    // Spec chặn tác giả đầu (vai trò author) của PREFS_BY_AUTHOR và NXB của PREFS_BY_PUBLISHER rồi đếm đúng 2 ô mờ trong
+    // trang danh mục PREFS_CATEGORY (lưới một trang, ô mờ so kích thước với thẻ chưa chặn cùng hàng); chặn danh mục gốc
+    // sach-ngoai-van rồi đếm ô mờ ở trang danh mục con PREFS_FOREIGN_CHILD + kệ "Sách ngoại văn" / "Mới về" ở trang chủ.
+    const spec = read('../e2e/prefs-blocks-account.spec.ts')
+    for (const slug of [PREFS_CATEGORY, PREFS_BY_AUTHOR, PREFS_BY_PUBLISHER, PREFS_FOREIGN_ROOT, PREFS_FOREIGN_CHILD]) {
+      expect(spec, slug).toContain(`'${slug}'`)
+    }
+    const inCategory = books.filter((b) => b.category_slug === PREFS_CATEGORY)
+    expect(inCategory.length).toBeGreaterThanOrEqual(4)
+    expect(inCategory.length).toBeLessThanOrEqual(PAGE_SIZE)
+    const byAuthor = inCategory.find((b) => b.slug === PREFS_BY_AUTHOR)
+    const byPublisher = inCategory.find((b) => b.slug === PREFS_BY_PUBLISHER)
+    expect(byAuthor, PREFS_BY_AUTHOR).toBeDefined()
+    expect(byPublisher, PREFS_BY_PUBLISHER).toBeDefined()
+    if (!byAuthor || !byPublisher) return
+    // Một tác giả (spec chặn authorIds[0]), không cuốn nào khác của danh mục có tác giả / NXB bị chặn
+    expect(byAuthor.authors).toHaveLength(1)
+    const blockedAuthor = byAuthor.authors[0]?.toLowerCase()
+    const blockedPublisher = byPublisher.publisher?.toLowerCase()
+    expect(blockedPublisher, `${PREFS_BY_PUBLISHER}: thiếu NXB`).toBeTruthy()
+    const blocked = inCategory.filter(
+      (b) => b.authors.some((name) => name.toLowerCase() === blockedAuthor) || b.publisher?.toLowerCase() === blockedPublisher,
+    )
+    expect(blocked.map((b) => b.slug).sort()).toEqual([PREFS_BY_AUTHOR, PREFS_BY_PUBLISHER].sort())
+    // Danh mục lá của seed, đang bật, không thuộc Sách ngoại văn
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    expect(categories.get(PREFS_CATEGORY)?.active).toBe(true)
+    expect([...categories.values()].some((c) => c.parent === PREFS_CATEGORY)).toBe(false)
+
+    const foreign = read('../supabase/seed-foreign-books.sql')
+    expect(foreign).toContain(`join public.categories p on p.slug = '${PREFS_FOREIGN_ROOT}'`)
+    expect(foreign).toContain(`'${PREFS_FOREIGN_CHILD}'`)
+    const inChild = books.filter((b) => b.category_slug === PREFS_FOREIGN_CHILD)
+    expect(inChild.length).toBeGreaterThan(0)
+    expect(inChild.length).toBeLessThanOrEqual(PAGE_SIZE)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

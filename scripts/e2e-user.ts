@@ -1097,3 +1097,32 @@ export async function replaceUserBlocks(userId: string, rows: Omit<UserBlockInse
   const { error: insertError } = await admin.from('user_blocks').insert(rows.map((row) => ({ ...row, user_id: userId })))
   if (insertError) throw new Error(`replaceUserBlocks (insert): ${insertError.message}`)
 }
+
+/**
+ * Khóa chặn của một sách theo slug (service role): tên, danh mục, NXB, tác giả vai trò author (câu 9). Không có sách
+ * → throw (thiếu dữ liệu là lỗi, không skip).
+ */
+export async function bookBlockTargets(slug: string) {
+  const { data, error } = await adminClient()
+    .from('books')
+    .select('id, title, category_id, publisher_id, book_authors(role, author_id)')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) throw new Error(`bookBlockTargets: ${error.message}`)
+  if (!data) throw new Error(`bookBlockTargets: không có sách ${slug}`)
+  return {
+    id: data.id,
+    title: data.title,
+    categoryId: data.category_id,
+    publisherId: data.publisher_id,
+    authorIds: data.book_authors.flatMap((ba) => (ba.role === 'author' ? [ba.author_id] : [])),
+  }
+}
+
+/** id danh mục theo slug (service role); không có → throw */
+export async function categoryIdBySlug(slug: string) {
+  const { data, error } = await adminClient().from('categories').select('id').eq('slug', slug).maybeSingle()
+  if (error) throw new Error(`categoryIdBySlug: ${error.message}`)
+  if (!data) throw new Error(`categoryIdBySlug: không có danh mục ${slug}`)
+  return data.id
+}
