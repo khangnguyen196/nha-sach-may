@@ -163,6 +163,12 @@ describe('e2e/fixtures/books.json', () => {
       (b) => b.authors.some((name) => name.toLowerCase() === blockedAuthor) || b.publisher?.toLowerCase() === blockedPublisher,
     )
     expect(blocked.map((b) => b.slug).sort()).toEqual([PREFS_BY_AUTHOR, PREFS_BY_PUBLISHER].sort())
+    // Lưới 2 cột (mobile): ít nhất một thẻ bị chặn có thẻ chưa chặn cùng hàng. Mọi sách mẫu sold_count 0 → thứ tự theo
+    // created_at (thứ tự nạp = thứ tự fixture, cùng lúc hoặc tăng dần) rồi id: xét cả thứ tự fixture lẫn đảo ngược
+    const pairOf = (order: string[], slug: string) => Math.floor(order.indexOf(slug) / 2)
+    for (const order of [inCategory.map((b) => b.slug), inCategory.map((b) => b.slug).reverse()]) {
+      expect(pairOf(order, PREFS_BY_AUTHOR), order.join(', ')).not.toBe(pairOf(order, PREFS_BY_PUBLISHER))
+    }
     // Danh mục lá của seed, đang bật, không thuộc Sách ngoại văn
     const categories = seedCategories(read('../supabase/seed.sql'))
     expect(categories.get(PREFS_CATEGORY)?.active).toBe(true)
@@ -174,6 +180,14 @@ describe('e2e/fixtures/books.json', () => {
     const inChild = books.filter((b) => b.category_slug === PREFS_FOREIGN_CHILD)
     expect(inChild.length).toBeGreaterThan(0)
     expect(inChild.length).toBeLessThanOrEqual(PAGE_SIZE)
+    // Kệ "Mới về" (chỉ sách tiếng Việt) không có sách nào của nhánh Sách ngoại văn: spec đếm 0 ô mờ ở kệ đó
+    // Slug là cột thứ 3 của mỗi dòng values (tên có thể chứa '' của SQL: Children''s Books)
+    const sqlText = String.raw`'(?:[^']|'')*'`
+    const foreignChildren = [...foreign.matchAll(new RegExp(String.raw`^\s*\(${sqlText},\s*${sqlText},\s*'([^']+)',`, 'gm'))].map(
+      (match) => match[1],
+    )
+    expect(foreignChildren).toContain(PREFS_FOREIGN_CHILD)
+    expect(books.filter((b) => b.language === 'vi' && foreignChildren.includes(b.category_slug)).map((b) => b.slug)).toEqual([])
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {

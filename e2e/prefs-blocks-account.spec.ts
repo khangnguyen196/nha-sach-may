@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
 import {
   bookBlockTargets,
   categoryIdBySlug,
@@ -28,16 +28,12 @@ const slots = (scope: Locator) => scope.locator('[data-book-slot]')
 const slotOf = (page: Page, slug: string) =>
   slots(page.getByRole('main')).filter({ has: page.locator(`a[data-book-link][href$="/sach/${slug}"]`) })
 const veilOf = (slot: Locator) => slot.locator('[data-book-veil]')
-const revealOf = (slot: Locator) => veilOf(slot).getByRole('button', { name: 'Xem' })
+const revealOf = (slot: Locator) => veilOf(slot).getByRole('button', { name: 'Xem sách đã ẩn' })
 const blockStyles = (page: Page) => page.locator('style[data-testid="block-styles"]')
 
-/** <style> chặn đã hydrate (listener của nút Xem gắn trong effect) và main thread rảnh */
+/** Listener của nút Xem đã gắn (RevealBlocked đặt data-ready trong effect) và trang đã ổn định */
 async function waitForRevealReady(page: Page) {
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('style[data-testid="block-styles"]')].some((element) =>
-      Object.keys(element).some((key) => key.startsWith('__reactProps')),
-    ),
-  )
+  await expect(page.locator('style[data-testid="block-styles"][data-ready]').first()).toBeAttached()
   await waitForSettled(page)
 }
 
@@ -103,11 +99,14 @@ test('(a)(b)(f) lưới danh mục: ô mờ cùng khung thẻ cạnh bên, link 
         const box = element.getBoundingClientRect()
         const veil = element.querySelector('[data-book-veil]')
         const veilBox = veil?.getBoundingClientRect()
+        const link = element.querySelector('[data-book-link]')?.getBoundingClientRect()
         return {
           blocked: veil !== null && getComputedStyle(veil).display !== 'none',
           y: box.top,
           width: box.width,
           height: box.height,
+          linkWidth: link?.width ?? 0,
+          linkHeight: link?.height ?? 0,
           veilWidth: veilBox?.width ?? 0,
           veilHeight: veilBox?.height ?? 0,
         }
@@ -120,9 +119,12 @@ test('(a)(b)(f) lưới danh mục: ô mờ cùng khung thẻ cạnh bên, link 
         return neighbor ? [{ blocked, neighbor }] : []
       })[0]
     if (!pair) throw new Error('Không có thẻ bị che nào có thẻ chưa chặn cùng hàng')
+    // Rộng bằng thẻ (link) cạnh bên; cao bằng ô của thẻ cạnh bên (ô cùng hàng cao bằng nhau), không thấp hơn thẻ
     expect(pair.blocked.veilWidth).toBeGreaterThan(0)
+    expect(Math.abs(pair.blocked.veilWidth - pair.neighbor.linkWidth)).toBeLessThanOrEqual(1)
     expect(Math.abs(pair.blocked.veilWidth - pair.neighbor.width)).toBeLessThanOrEqual(1)
     expect(Math.abs(pair.blocked.veilHeight - pair.neighbor.height)).toBeLessThanOrEqual(1)
+    expect(pair.blocked.veilHeight).toBeGreaterThanOrEqual(pair.neighbor.linkHeight - 1)
 
     // (3a) Link bị che không nhận focus: focus() không có tác dụng; Shift+Tab từ nút Xem ra khỏi thẻ (bỏ qua link đứng
     // trước nút trong DOM), Tab quay lại đúng nút Xem
@@ -148,8 +150,9 @@ test('(a)(b)(f) lưới danh mục: ô mờ cùng khung thẻ cạnh bên, link 
     await expect(veilOf(blockedP)).toBeVisible()
     await expect(main.getByRole('link', { name: byPublisher.title })).toHaveCount(0)
 
-    // (f) Tải lại: che lại cả hai; tổng layout-shift < 0.01. Đo ở lần tải lại (font đã có trong bộ đệm: chỉ còn dịch
-    // chuyển do trang, không do đổi font)
+    // (f) Tải lại: che lại cả hai; tổng layout-shift cả trang < 0.01 (chặt hơn mục tiêu 0.1 của dự án: che chỉ đổi
+    // visibility + ô mờ absolute, không được dịch chuyển gì). Đo ở lần tải lại (font đã có trong bộ đệm: không tính dịch
+    // chuyển do đổi font lần đầu)
     await page.addInitScript({
       content: `window.__cls = 0
         new PerformanceObserver((list) => {
@@ -223,22 +226,42 @@ test('(c)(d) chặn danh mục cha: kệ "Sách ngoại văn" ở trang chủ v�
   }
 })
 
-test('(e) khách chưa đăng nhập và một thành viên khác: không ô mờ, không <style> chặn', async ({
+test('(e) thành viên A chặn → A thấy ô mờ; khách chưa đăng nhập và thành viên B: không ô mờ, không <style> chặn', async ({
   page,
   browser,
   baseURL,
 }, testInfo) => {
   const { byAuthor, authorId, publisherId } = await categoryBlockTargets()
-  const blocker = await blockedSetup(`${testInfo.project.name}-prefs-a`, [
-    { kind: 'author', author_id: authorId },
-    { kind: 'publisher', publisher_id: publisherId },
-  ])
-  const other = await createE2eUser(`${testInfo.project.name}-prefs-b`)
-  const context = await browser.newContext({ baseURL, storageState: NO_SESSION })
+  const userIds: string[] = []
+  const contexts: BrowserContext[] = []
   try {
-    const otherPage = await context.newPage()
+    const blocker = await blockedSetup(`${testInfo.project.name}-prefs-a`, [
+      { kind: 'author', author_id: authorId },
+      { kind: 'publisher', publisher_id: publisherId },
+    ])
+    userIds.push(blocker.id)
+    const other = await createE2eUser(`${testInfo.project.name}-prefs-b`)
+    userIds.push(other.id)
+
+    // A xem trước: <style> theo phiên của A không được dùng lại cho khách / B (cache chung, RLS)
+    const blockerErrors = collectErrors(page)
+    await login(page, blocker)
+    await page.goto(`/danh-muc/${CATEGORY}`)
+    await waitForRevealReady(page)
+    await expect(page.getByRole('main').locator('[data-book-veil]').filter({ visible: true })).toHaveCount(2)
+    expect(blockerErrors).toEqual([])
+
+    // Cùng khung nhìn với project (mobile: lưới 2 cột)
+    const viewport = page.viewportSize()
+    const viewerPage = async () => {
+      const context = await browser.newContext({ baseURL, storageState: NO_SESSION, ...(viewport && { viewport }) })
+      contexts.push(context)
+      return context.newPage()
+    }
+    const guestPage = await viewerPage()
+    const otherPage = await viewerPage()
     await login(otherPage, other)
-    for (const viewer of [page, otherPage]) {
+    for (const viewer of [guestPage, otherPage]) {
       const errors = collectErrors(viewer)
       await viewer.goto(`/danh-muc/${CATEGORY}`)
       await waitForSettled(viewer)
@@ -250,7 +273,7 @@ test('(e) khách chưa đăng nhập và một thành viên khác: không ô m�
       expect(errors).toEqual([])
     }
   } finally {
-    await context.close()
-    await deleteE2eUsers([blocker.id, other.id])
+    await Promise.all(contexts.map((context) => context.close()))
+    await deleteE2eUsers(userIds)
   }
 })
