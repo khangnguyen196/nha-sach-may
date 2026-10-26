@@ -26,6 +26,10 @@ const PREFS_CHILD_BOOK = 'how-not-to-be-a-twit-and-other-wisdom-from-roald-dahl'
 const PREFS_SHORT_MAX = 120
 /** Sách của prefs-chat-account.spec (c): chặn tác giả của nó rồi hỏi Mây ở trang của nó */
 const PREFS_CHAT_VIEWED = 'sapiens'
+/** Dữ liệu của prefs-palette-account.spec: từ khóa gõ vào palette, cuốn bị chặn (theo tác giả), cuốn vẫn hiện */
+const PALETTE_QUERY = 'van hoa'
+const PALETTE_BLOCKED = 'tuyen-tap-van-hoc-viet-cho-thieu-nhi-to-hoai-1-truyen-dong-thoai-kich'
+const PALETTE_VISIBLE = 'tu-dien-van-hoa-co-truyen-viet-nam'
 
 describe('e2e/fixtures/books.json', () => {
   it('ISBN, slug không trùng', () => {
@@ -259,6 +263,55 @@ describe('e2e/fixtures/books.json', () => {
     expect(viewed, PREFS_CHAT_VIEWED).toBeDefined()
     const viewedAuthors = (viewed?.authors ?? []).map(authorKey)
     expect(inStock.filter((b) => !b.authors.some((name) => viewedAuthors.includes(authorKey(name)))).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('prefs-palette-account.spec: từ khóa khớp 2–8 sách mẫu ở danh mục đang hiện, có cuốn bị chặn (tác giả riêng) lẫn cuốn không; không khớp sách / tác giả e2e', () => {
+    // Spec gõ PALETTE_QUERY vào palette (search_books: mọi từ là chuỗi con của search_text = tên + phụ đề + ISBN + tên tác
+    // giả, bỏ dấu, chữ thường), chặn tác giả đầu của PALETTE_BLOCKED rồi đợi đúng dòng đó bị che, PALETTE_VISIBLE vẫn hiện
+    // tên. Mọi kết quả phải vào palette (≤ SEARCH_HIT_LIMIT của searchBookHits) và thuộc danh mục đang hiện (palette bỏ
+    // sách của danh mục ẩn). So bỏ dấu như normalize_vi (unaccent): chỉ có thể lệch ở ký tự lạ (ligature…), không có ở đây.
+    const spec = read('../e2e/prefs-palette-account.spec.ts')
+    for (const value of [PALETTE_QUERY, PALETTE_BLOCKED, PALETTE_VISIBLE]) expect(spec, value).toContain(`'${value}'`)
+    const limit = Number(/const SEARCH_HIT_LIMIT = (\d+)/.exec(read('../src/features/books/queries.ts'))?.[1])
+    expect(limit).toBeGreaterThan(0)
+
+    const normalize = (text: string) =>
+      text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+    const terms = normalize(PALETTE_QUERY).split(/\s+/)
+    const searchText = (b: (typeof books)[number]) => normalize([b.title, b.subtitle, b.isbn, ...b.authors].filter(Boolean).join(' '))
+    const matches = books.filter((b) => terms.every((term) => searchText(b).includes(term)))
+    expect(matches.length).toBeGreaterThanOrEqual(2)
+    expect(matches.length).toBeLessThanOrEqual(limit)
+
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    for (const book of matches) {
+      const category = categories.get(book.category_slug)
+      expect(category?.active, `${book.slug}: ${book.category_slug} không có trong seed.sql / đang tắt`).toBe(true)
+      if (category?.parent) expect(categories.get(category.parent)?.active, `${book.slug}: danh mục cha`).toBe(true)
+    }
+
+    const blocked = matches.find((b) => b.slug === PALETTE_BLOCKED)
+    const visible = matches.find((b) => b.slug === PALETTE_VISIBLE)
+    expect(blocked, PALETTE_BLOCKED).toBeDefined()
+    expect(visible, PALETTE_VISIBLE).toBeDefined()
+    if (!blocked) return
+    // Một tác giả (spec chặn authors[0]); không kết quả nào khác của từ khóa có tác giả đó (so như import gộp)
+    expect(blocked.authors).toHaveLength(1)
+    const authorKey = (name: string) => nameTokensKey(slugify(name))
+    const blockedAuthor = authorKey(blocked.authors[0] ?? '')
+    expect(blockedAuthor).toBeTruthy()
+    expect(matches.filter((b) => b.authors.some((name) => authorKey(name) === blockedAuthor)).map((b) => b.slug)).toEqual([
+      PALETTE_BLOCKED,
+    ])
+
+    // Sách / tác giả e2e tạo song song (tên "E2E sách <hex>", "E2E tác giả <hex>"…, slug ngẫu nhiên hex) không khớp từ
+    // khóa: mỗi từ có chữ ngoài hex và không phải chuỗi con của tên mẫu nào trong scripts/e2e-user.ts
+    for (const term of terms) expect(term, term).toMatch(/[^0-9a-f]/)
+    const templates = [...read('./e2e-user.ts').matchAll(/(?:title|name): (?:titleTag \? )?`([^`]*)`/g)].map((match) =>
+      normalize((match[1] ?? '').replace(/\$\{[^}]*\}/g, ' ')),
+    )
+    expect(templates.length).toBeGreaterThan(0)
+    for (const template of templates) expect(terms.every((term) => template.includes(term)), template).toBe(false)
   })
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {
