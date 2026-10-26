@@ -514,3 +514,71 @@ test('(h) CLS trang sách có nhãn cảnh báo < 0.01: khách, thành viên ch�
     await cleanupE2eAdminData(slugs)
   }
 })
+
+test('(h) màn 320px: câu "Bạn đã ẩn các sách có cảnh báo này." (có thể 2 dòng) vừa chỗ giữ sẵn h-9, khung cảnh báo cao bằng của khách, CLS < 0.01', async ({
+  browser,
+}, testInfo) => {
+  // Quyết định (11): ở 320px câu xuống 2 dòng; leading-tight giữ 2 dòng ≤ 36px (h-9 của chỗ giữ sẵn). Font trên CI có
+  // thể đo khác máy dev 1px: kiểm chiều cao, ghi số dòng vào annotation thay vì đòi đúng 2 dòng
+  const { book, slugs } = await createWarnedBook()
+  const contexts: BrowserContext[] = []
+  const userIds: string[] = []
+  const narrow = async () => {
+    const { baseURL, userAgent, deviceScaleFactor, isMobile, hasTouch } = testInfo.project.use
+    const context = await browser.newContext({
+      userAgent,
+      deviceScaleFactor,
+      isMobile,
+      hasTouch,
+      viewport: { width: 320, height: 640 },
+      baseURL,
+      storageState: NO_SESSION,
+    })
+    contexts.push(context)
+    return context.newPage()
+  }
+  const noticeHeight = (page: Page) =>
+    main(page)
+      .getByTestId('content-warnings')
+      .evaluate((element) => element.getBoundingClientRect().height)
+  try {
+    const guest = await narrow()
+    const guestErrors = collectErrors(guest)
+    const guestCls = await bookPageCls(guest, book.slug)
+    reportCls(testInfo, '320px, nhãn, khách', guestCls)
+    const guestHeight = await noticeHeight(guest)
+
+    const hidden = await createE2eUser(`${testInfo.project.name}-prefs-320-hidden`)
+    userIds.push(hidden.id)
+    await replaceUserBlocks(hidden.id, [
+      { kind: 'warning', warning: 'violence' },
+      { kind: 'warning', warning: 'loss' },
+    ])
+    const page = await narrow()
+    const errors = collectErrors(page)
+    await login(page, hidden)
+    const cls = await bookPageCls(page, book.slug)
+    reportCls(testInfo, '320px, nhãn, thành viên đã ẩn mọi nhãn', cls)
+    const sentence = main(page).getByTestId('warnings-hidden')
+    await expect(sentence).toHaveText('Bạn đã ẩn các sách có cảnh báo này.')
+    const metrics = await sentence.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)))
+      return { height: element.getBoundingClientRect().height, lines: lines.size }
+    })
+    testInfo.annotations.push({
+      type: 'warnings-hidden-320',
+      description: `${testInfo.project.name}: cao ${metrics.height}px, ${metrics.lines} dòng; khung cảnh báo khách ${guestHeight}px`,
+    })
+    expect(metrics.height).toBeLessThanOrEqual(36)
+    expect(Math.abs((await noticeHeight(page)) - guestHeight)).toBeLessThanOrEqual(0.5)
+    expect(guestCls).toBeLessThan(0.01)
+    expect(cls).toBeLessThan(0.01)
+    expect([...guestErrors, ...errors]).toEqual([])
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()))
+    await deleteE2eUsers(userIds)
+    await cleanupE2eAdminData(slugs)
+  }
+})

@@ -165,7 +165,8 @@ function authorName(book: BookBlockTargets, authorId: number) {
 /**
  * Chỗ nút "Ẩn các sách có cảnh báo này" trong khung cảnh báo (chỉ render khi sách có nhãn). Khách / lỗi → chỗ giữ sẵn;
  * mọi nhãn của sách đã bị chặn → câu ngắn cùng chiều cao (bỏ chặn ở dòng nhắc cuối cột thông tin); còn nhãn chưa chặn
- * → nút (server tự đọc nhãn của sách, câu 7).
+ * → nút (server tự đọc nhãn của sách, câu 7). Câu ngắn dùng leading-tight: ở màn 320px câu xuống 2 dòng (2 × 17,5px =
+ * 35px) vẫn vừa chỗ giữ sẵn h-9 (36px), không lệch khi stream xong (quyết định (11)).
  */
 export async function HideWarnings({ bookId, labels, slug, locale }: Props & { labels: readonly string[] }) {
   const user = await getCurrentUser()
@@ -179,7 +180,7 @@ export async function HideWarnings({ bookId, labels, slug, locale }: Props & { l
       <p
         id={WARNINGS_HIDDEN_ID}
         tabIndex={-1}
-        className="mt-4 flex min-h-9 items-center text-sm text-muted-foreground outline-none"
+        className="mt-4 flex min-h-9 items-center text-sm leading-tight text-muted-foreground outline-none"
         data-testid="warnings-hidden"
       >
         {t('warningsHidden')}
