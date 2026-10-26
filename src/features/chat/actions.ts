@@ -5,8 +5,11 @@ import { cookies, headers } from 'next/headers'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { getBookBySlug, getCategories } from '@/features/books/queries'
 import { inVisibleCategories, truncateText } from '@/features/books/utils'
+import type { ExpandedBlocks } from '@/features/prefs/blocks'
+import { getMyBlocks } from '@/features/prefs/queries'
 import { getCurrentUser } from '@/lib/auth'
 import type { Failure, Result } from '@/lib/errors'
+import { chatBlocks, withoutBlocked } from './blocked'
 import { selectCandidates, type Candidate } from './candidates'
 import { CHAT_INPUT, DEFAULT_MODEL, VISITOR_COOKIE } from './config'
 import { isCrisisMessage } from './crisis'
@@ -104,8 +107,22 @@ function authorNames(row: { book_authors: { role: string; authors: { name: strin
   return row.book_authors.flatMap((ba) => (ba.role === 'author' && ba.authors ? [ba.authors.name] : []))
 }
 
-async function bookCards(reply: ValidReply): Promise<ChatBookCard[]> {
-  const rows = await getChatBookCards(reply.books.map((book) => book.slug))
+/**
+ * Mục chặn của người hỏi (client theo phiên, chỉ của chính họ). Đọc lỗi → null = không lọc, log mã lỗi (không log danh
+ * sách chặn), câu trả lời vẫn đi tiếp như BlockStyles.
+ */
+async function readMyBlocks(userId: string) {
+  try {
+    return await getMyBlocks(userId)
+  } catch (error) {
+    console.error('[chat] getMyBlocks:', error instanceof Error ? error.message : 'unknown')
+    return null
+  }
+}
+
+/** Lớp lọc thứ hai: bỏ thẻ bị chặn trên dữ liệu mới của getChatBookCards (catalog cache có thể cũ hơn) */
+async function bookCards(reply: ValidReply, blocks: ExpandedBlocks | null): Promise<ChatBookCard[]> {
+  const rows = withoutBlocked(await getChatBookCards(reply.books.map((book) => book.slug)), blocks)
   const bySlug = new Map<string, ChatBookCardRow>(rows.map((row) => [row.slug, row]))
   const format = await getFormatter({ locale: LOCALE })
   return reply.books.flatMap((book) => {
@@ -138,15 +155,19 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   const requestHeaders = await headers()
   if (isBlockedCountry(requestHeaders.get('x-vercel-ip-country'))) return { ok: false, code: 'CHAT_REGION' }
 
-  const [user, fullCatalog, categories, current] = await Promise.all([
-    getCurrentUser(),
+  // Mục chặn của thành viên đọc nối sau getCurrentUser, song song với các query còn lại (không thêm một lượt chờ)
+  const [{ user, rules }, fullCatalog, categories, current] = await Promise.all([
+    getCurrentUser().then(async (user) => ({ user, rules: user ? await readMyBlocks(user.id) : null })),
     getChatCatalog(),
     getCategories(),
     slug ? getBookBySlug(slug) : Promise.resolve(null),
   ])
-  // Một lần, cho cả ứng viên lẫn knownSlugs: sách thuộc danh mục ẩn không được gợi ý (docs/plans/sau-ux.md mục 6, A1).
-  // Sách đang xem thuộc danh mục ẩn vẫn vào prompt qua fallbackCandidate (link trực tiếp vẫn xem được).
-  const catalog = inVisibleCategories(fullCatalog, categories)
+  // Một lần, cho cả ứng viên lẫn knownSlugs: sách thuộc danh mục ẩn không được gợi ý (docs/plans/sau-ux.md mục 6, A1),
+  // sách bị chặn theo sở thích của người hỏi cũng vậy (câu 10, lớp lọc thứ nhất). Sách đang xem thuộc danh mục ẩn hoặc
+  // bị chặn vẫn vào prompt làm SÁCH ĐANG XEM qua fallbackCandidate (Mây vẫn trả lời về nó), nhưng slug của nó không nằm
+  // trong ứng viên → không vào enum slug / validateReply → không thành thẻ.
+  const blocks = chatBlocks(rules, categories)
+  const catalog = withoutBlocked(inVisibleCategories(fullCatalog, categories), blocks)
 
   const now = new Date()
   const identity = user
@@ -197,7 +218,7 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   }
   if (reply.intent === 'crisis') return crisisReply(message)
 
-  const books = await bookCards(reply)
+  const books = await bookCards(reply, blocks)
   return {
     ok: true,
     data: {
@@ -215,7 +236,10 @@ async function ask(input: unknown): Promise<Result<ChatReply>> {
   }
 }
 
-/** Cuốn đang xem không nằm trong catalog rút gọn (cache cũ hơn trang sách): dựng từ dữ liệu trang sách */
+/**
+ * Cuốn đang xem không nằm trong catalog đã lọc (danh mục ẩn, bị chặn theo sở thích, cache cũ hơn trang sách): dựng từ
+ * dữ liệu trang sách. Chỉ vào mục SÁCH ĐANG XEM, không vào danh sách ứng viên.
+ */
 function fallbackCandidate(book: NonNullable<Awaited<ReturnType<typeof getBookBySlug>>>): Candidate {
   return {
     slug: book.slug,
