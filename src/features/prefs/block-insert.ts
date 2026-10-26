@@ -33,6 +33,22 @@ export function singleBlockResult(error: DbError | null): Result<null> {
 }
 
 /**
+ * Trigger giới hạn (BEFORE INSERT) chạy trước kiểm trùng: mục đã chặn (VD ở tab khác) khi đã đủ 50 mục báo PREFS_LIMIT
+ * thay vì trùng → đọc lại, đã có thì coi như đã chặn. Lỗi đọc → giữ PREFS_LIMIT (log mã lỗi).
+ * `exists`: mục này đã có trong user_blocks của user chưa (lỗi đọc → DbError).
+ */
+export async function confirmLimit(
+  result: Result<null>,
+  exists: () => Promise<boolean | DbError>,
+): Promise<Result<null>> {
+  if (result.ok || result.code !== 'PREFS_LIMIT') return result
+  const found = await exists()
+  if (found === true) return OK
+  if (found !== false) console.error('[prefs] confirmLimit:', found.code ?? 'unknown')
+  return result
+}
+
+/**
  * "Ẩn các sách có cảnh báo này": thêm các nhãn của sách còn thiếu trong MỘT câu insert (nguyên tử: chạm PREFS_LIMIT thì
  * không nhãn nào được thêm). Trùng (tab khác vừa thêm một nhãn) → đọc lại, insert phần còn thiếu thêm một lần.
  * `readBlocked`: nhãn đang bị chặn của user (lỗi → Failure); `insert`: thêm đúng các nhãn truyền vào.

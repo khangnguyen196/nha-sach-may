@@ -19,6 +19,10 @@ import { PrefsButton } from './prefs-button'
 const BOOK_PREFS_ID = 'book-prefs'
 /** Câu "Bạn đã ẩn các sách có cảnh báo này.": nhận focus sau khi bấm nút ẩn cảnh báo */
 const WARNINGS_HIDDEN_ID = 'warnings-hidden'
+/** h1 tên sách (tabIndex -1 ở trang sách): đích dự phòng khi khung Sở thích không còn (bỏ chặn mục cuối, không còn nút) */
+export const BOOK_TITLE_ID = 'book-title'
+const AFTER_PREFS = [BOOK_PREFS_ID, BOOK_TITLE_ID]
+const AFTER_HIDE_WARNINGS = [WARNINGS_HIDDEN_ID, BOOK_PREFS_ID, BOOK_TITLE_ID]
 
 type Props = { bookId: number; slug: string; locale: Locale }
 
@@ -109,7 +113,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
                     action={unblockItem.bind(null, locale, { id: block.rowId })}
                     label={t('unblock')}
                     accessibleLabel={t('unblockLabel', values)}
-                    focusAfterId={BOOK_PREFS_ID}
+                    focusAfterIds={AFTER_PREFS}
                     variant="outline"
                     size="sm"
                   />
@@ -140,7 +144,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
                   {...shared}
                   action={blockItem.bind(null, locale, { kind: button.kind, id: button.id })}
                   label={t('block', { kind: t(`kinds.${button.kind}`), name: button.name })}
-                  focusAfterId={BOOK_PREFS_ID}
+                  focusAfterIds={AFTER_PREFS}
                   variant="outline"
                   size="lg"
                   className="h-auto min-h-9 py-1.5 text-left whitespace-normal"
@@ -188,7 +192,7 @@ export async function HideWarnings({ bookId, labels, slug, locale }: Props & { l
         {...shared}
         action={blockItem.bind(null, locale, { kind: 'warnings', bookId })}
         label={t('blockWarnings')}
-        focusAfterId={WARNINGS_HIDDEN_ID}
+        focusAfterIds={AFTER_HIDE_WARNINGS}
         variant="outline"
         size="lg"
         className="h-9 px-3"

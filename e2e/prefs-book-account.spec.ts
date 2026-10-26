@@ -193,7 +193,8 @@ test('(c) "Ẩn các sách có cảnh báo này" chặn đủ 2 nhãn; bỏ 1 nh
       await warnings.getByRole('button', { name: `Bỏ chặn cảnh báo «${LABELS.loss}»` }).click()
       await expect(warnings.getByRole('listitem')).toHaveCount(1)
       await expect(warnings).not.toContainText(LABELS.loss)
-      await expect(main(page).getByRole('heading', { level: 1, name: 'Sở thích' })).toBeFocused()
+      // Nhóm còn mục → focus về tiêu đề nhóm (gần dòng vừa bỏ), không rơi về body
+      await expect(warnings.getByRole('heading', { level: 2 })).toBeFocused()
 
       await page.goto(`/sach/${book.slug}`)
       await waitForSettled(page)
@@ -464,7 +465,8 @@ test('(h) CLS trang sách có nhãn cảnh báo < 0.01: khách, thành viên ch�
   browser,
 }, testInfo) => {
   // Chỗ nút "Ẩn các sách có cảnh báo này" nằm giữa cột (trên Mô tả); sách e2e không có mô tả → khung cảnh báo gần màn
-  // hình đầu nhất
+  // hình đầu nhất. Thành viên đã ẩn mọi nhãn còn thấy khung "Bạn đã chặn …" (2 dòng) cuối cột: cao hơn chỗ giữ sẵn (chỉ
+  // giữ chỗ cho summary thu gọn); khung này dưới màn hình đầu thì không tính vào CLS, như ca đã chặn ở (h) trên
   const { book, slugs } = await createWarnedBook()
   const contexts: BrowserContext[] = []
   const userIds: string[] = []

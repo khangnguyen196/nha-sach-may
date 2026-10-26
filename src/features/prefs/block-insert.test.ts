@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ContentWarning } from '@/features/warnings/labels'
 import type { Result } from '@/lib/errors'
-import { blockInsertError, blockMissingWarnings, singleBlockResult, type DbError } from './block-insert'
+import { blockInsertError, blockMissingWarnings, confirmLimit, singleBlockResult, type DbError } from './block-insert'
 
 const UNIQUE: DbError = { code: '23505', message: 'duplicate key value violates unique constraint "user_blocks_author_unique"' }
 const FOREIGN_KEY: DbError = { code: '23503', message: 'insert or update on table "user_blocks" violates foreign key constraint' }
@@ -109,5 +109,32 @@ describe('blockMissingWarnings (ẩn mọi nhãn của sách, một câu insert)
     const store = fakeStore([], [])
     expect(await blockMissingWarnings(['evil'], store.readBlocked, store.insert)).toEqual({ ok: true, data: null })
     expect(store.inserts).toEqual([])
+  })
+})
+
+describe('confirmLimit (PREFS_LIMIT khi mục đã có sẵn)', () => {
+  const limit = singleBlockResult(LIMIT)
+
+  it('mục đã có → ok; chưa có → giữ PREFS_LIMIT', async () => {
+    expect(await confirmLimit(limit, async () => true)).toEqual({ ok: true, data: null })
+    expect(await confirmLimit(limit, async () => false)).toEqual(limit)
+  })
+
+  it('lỗi đọc → giữ PREFS_LIMIT, log mã lỗi (không message)', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await confirmLimit(limit, async () => ({ code: 'PGRST301', message: 'JWT expired' }))).toEqual(limit)
+    expect(log).toHaveBeenCalledWith('[prefs] confirmLimit:', 'PGRST301')
+    log.mockRestore()
+  })
+
+  it('kết quả khác PREFS_LIMIT: không đọc lại', async () => {
+    let reads = 0
+    const exists = async () => {
+      reads += 1
+      return true
+    }
+    expect(await confirmLimit({ ok: true, data: null }, exists)).toEqual({ ok: true, data: null })
+    expect(await confirmLimit({ ok: false, code: 'ITEM_DELETED' }, exists)).toEqual({ ok: false, code: 'ITEM_DELETED' })
+    expect(reads).toBe(0)
   })
 })

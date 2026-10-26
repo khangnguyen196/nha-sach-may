@@ -29,7 +29,7 @@ export default async function PreferencesPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 md:py-12">
       <Breadcrumb items={[{ label: tAccount('title'), href: '/account' }, { label: t('title') }]} />
-      {/* tabIndex -1: nhận focus sau khi bỏ chặn (dòng vừa bấm bị gỡ) */}
+      {/* tabIndex -1: nhận focus sau khi bỏ chặn mục cuối của một nhóm (nhóm biến mất) */}
       <h1 id={TITLE_ID} tabIndex={-1} className="mt-6 font-serif text-3xl font-medium outline-none md:text-4xl">
         {t('title')}
       </h1>
@@ -80,7 +80,8 @@ async function PreferencesList({ locale }: { locale: Locale }) {
         const headingId = `prefs-${group}`
         return (
           <section key={group} aria-labelledby={headingId} className="mt-8" data-testid={headingId}>
-            <h2 id={headingId} className="text-lg font-semibold">
+            {/* tabIndex -1: đích focus sau khi bỏ chặn một mục của nhóm (giữ vị trí cuộn gần dòng vừa bỏ) */}
+            <h2 id={headingId} tabIndex={-1} className="text-lg font-semibold outline-none">
               {t(`groups.${group}`)}
             </h2>
             <ul className="mt-3 divide-y rounded-lg border bg-surface">
@@ -106,7 +107,7 @@ async function PreferencesList({ locale }: { locale: Locale }) {
                       action={unblockItem.bind(null, locale, { id: item.rowId })}
                       label={tPrefs('unblock')}
                       accessibleLabel={tPrefs('unblockLabel', { kind: tPrefs(`kinds.${group}`), name })}
-                      focusAfterId={TITLE_ID}
+                      focusAfterIds={[headingId, TITLE_ID]}
                       variant="outline"
                       size="sm"
                     />

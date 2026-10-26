@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { withMessage } from '@/lib/error-message'
 import { toFailure, type Result } from '@/lib/errors'
 import { createClient } from '@/lib/supabase/server'
-import { blockMissingWarnings, singleBlockResult } from './block-insert'
+import { blockMissingWarnings, confirmLimit, singleBlockResult } from './block-insert'
 import { blockItemSchema, unblockItemSchema, type BlockItemInput, type UnblockItemInput } from './schemas'
 
 // Chặn / bỏ chặn theo sở thích (docs/plans/so-thich-canh-bao.md, P-C). locale + mục do page bind sẵn (Server Action không
@@ -68,19 +68,16 @@ export async function blockItem(locale: Locale, item: BlockItemInput): Promise<R
       publisher_id: idFor('publisher'),
     }
     const { error } = await supabase.from('user_blocks').insert(row)
-    result = singleBlockResult(error)
-    // Trigger giới hạn (BEFORE INSERT) chạy trước kiểm trùng: mục đã chặn (tab khác) khi đủ 50 mục báo PREFS_LIMIT →
-    // kiểm lại, đã có thì coi như đã chặn
-    if (!result.ok && result.code === 'PREFS_LIMIT') {
-      const { data: existing } = await supabase
+    result = await confirmLimit(singleBlockResult(error), async () => {
+      const { data: existing, error: readError } = await supabase
         .from('user_blocks')
         .select('id')
         .eq('user_id', user.id)
         .eq('kind', target.kind)
         .eq(`${target.kind}_id`, target.id)
         .limit(1)
-      if (existing && existing.length > 0) result = { ok: true, data: null }
-    }
+      return readError ?? existing.length > 0
+    })
   }
   if (!result.ok) return withMessage(safeLocale, result)
   refresh()

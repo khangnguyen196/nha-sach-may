@@ -21,6 +21,7 @@ import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
 import { cartLimit, MAX_LINES } from '@/features/cart/guest-cart'
 import {
+  BOOK_TITLE_ID,
   BookPrefs,
   BookPrefsPlaceholder,
   HideWarnings,
@@ -197,7 +198,10 @@ async function BookContent({ params }: { params: Props['params'] }) {
         </div>
 
         <div className="min-w-0">
-          <h1 className="font-serif text-3xl font-medium md:text-4xl">{book.title}</h1>
+          {/* tabIndex -1: đích focus dự phòng sau khi bỏ chặn mục cuối (khối Sở thích thành chỗ giữ sẵn) */}
+          <h1 id={BOOK_TITLE_ID} tabIndex={-1} className="font-serif text-3xl font-medium outline-none md:text-4xl">
+            {book.title}
+          </h1>
           {book.subtitle && <p className="mt-2 text-lg text-muted-foreground">{book.subtitle}</p>}
           <RatingSummary book={book} />
           <People book={book} />

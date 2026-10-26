@@ -20,10 +20,10 @@ type Props = {
   /** Chữ link tới trang Sở thích, hiện kèm lỗi PREFS_LIMIT (đủ 50 mục) */
   prefsLink: string
   /**
-   * id phần tử ổn định (tabIndex={-1}) nhận focus khi nút này bị gỡ sau khi thành công (refresh() render lại không còn
-   * nút): focus không rơi về body (WCAG 2.4.3)
+   * id các phần tử ổn định (tabIndex={-1}) theo thứ tự ưu tiên: phần tử đầu tiên còn trong trang nhận focus khi nút này
+   * bị gỡ sau khi thành công (refresh() render lại không còn nút) → focus không rơi về body (WCAG 2.4.3)
    */
-  focusAfterId: string
+  focusAfterIds: readonly string[]
   variant: ComponentProps<typeof SubmitButton>['variant']
   size: ComponentProps<typeof SubmitButton>['size']
   className?: string
@@ -33,7 +33,7 @@ type Props = {
  * Một nút chặn / bỏ chặn ở trang sách và trang Sở thích: một form, useFormAction (nút khóa tới khi hydrate, mất mạng →
  * NETWORK_ERROR). Thành công: action gọi refresh() → server render lại (nút này thường biến mất). Lỗi hiện ngay dưới
  * nút; phiên hết → link "Đăng nhập lại", đủ 50 mục → link trang Sở thích. Không Radix / lucide / zod.
- * Thành công rồi nút bị gỡ → focus `focusAfterId` (cùng cách với WithdrawButton của chợ sách cũ).
+ * Thành công rồi nút bị gỡ → focus `focusAfterIds` (cùng cách với WithdrawButton của chợ sách cũ).
  */
 export function PrefsButton({
   action,
@@ -42,7 +42,7 @@ export function PrefsButton({
   accessibleLabel,
   pendingLabel,
   prefsLink,
-  focusAfterId,
+  focusAfterIds,
   variant,
   size,
   className,
@@ -57,12 +57,22 @@ export function PrefsButton({
     else if (state?.ok === false) submitted.current = false
   }, [pending, state])
 
-  // Cleanup chạy khi nút bị gỡ (sau khi DOM mới đã gắn): phần tử đích đã mang nội dung mới (VD dòng nhắc)
+  // Cleanup chạy khi nút bị gỡ (sau khi DOM mới đã gắn): phần tử đích đã mang nội dung mới (VD dòng nhắc). Chỉ khi focus
+  // đã rơi về body (nút vừa rời DOM): người dùng chuyển focus đi chỗ khác trong lúc gửi thì không kéo về
+  const focusKey = focusAfterIds.join(' ')
   useEffect(
     () => () => {
-      if (submitted.current) document.getElementById(focusAfterId)?.focus()
+      if (!submitted.current) return
+      if (document.activeElement !== null && document.activeElement !== document.body) return
+      for (const id of focusKey.split(' ')) {
+        const target = document.getElementById(id)
+        if (target) {
+          target.focus()
+          return
+        }
+      }
     },
-    [focusAfterId],
+    [focusKey],
   )
 
   const alertAction = signIn ? (
