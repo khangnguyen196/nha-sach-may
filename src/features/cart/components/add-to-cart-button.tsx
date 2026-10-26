@@ -85,7 +85,7 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction, icon }
   }
 
   return (
-    <form action={formAction} onSubmit={onSubmit}>
+    <form action={formAction} onSubmit={onSubmit} data-testid="add-to-cart">
       <Button type="submit" size="lg" className="h-11 w-full px-6 text-base sm:w-auto" aria-disabled={pending}>
         {icon}
         {pending ? labels.adding : labels.add}

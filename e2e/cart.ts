@@ -12,13 +12,23 @@ export async function readGuestCart(page: Page) {
 }
 
 /**
+ * Nút "Thêm vào giỏ" của trang sách. Trang sách của thành viên còn có các form của khối Sở thích (nút chặn, bỏ chặn,
+ * ẩn cảnh báo) nên không dùng bộ chọn chung `main form button[type="submit"]`. Dùng được cho cả waitForHydration
+ * (document.querySelector: phần tử khớp đầu tiên, kể cả bản ẩn Activity của trang trước) lẫn page.locator.
+ */
+export const ADD_TO_CART_SUBMIT = 'main [data-testid="add-to-cart"] button[type="submit"]'
+
+/** Nút "Thêm vào giỏ" đang hiển thị (bỏ bản ẩn Activity của trang trước nếu có) */
+export const addToCartButton = (page: Page) => page.locator(ADD_TO_CART_SUBMIT).filter({ visible: true })
+
+/**
  * Mở trang sách, bấm "Thêm vào giỏ" `times` lần. Mỗi lần chờ badge tăng VÀ nút hết "Đang thêm…": badge của
  * người đã đăng nhập tăng optimistic trước khi action ghi xong DB, chuyển trang ngay thì giỏ chưa kịp có sách.
  */
 export async function addFromBookPage(page: Page, book: E2eBook, { times = 1, startAt = 0, path = '/sach' } = {}) {
   await page.goto(`${path}/${book.slug}`)
-  await waitForHydration(page, 'main form button[type="submit"]')
-  const button = page.getByRole('main').locator('form button[type="submit"]')
+  await waitForHydration(page, ADD_TO_CART_SUBMIT)
+  const button = addToCartButton(page)
   for (let i = 1; i <= times; i++) {
     await button.click()
     await expect(badge(page)).toHaveText(String(startAt + i))

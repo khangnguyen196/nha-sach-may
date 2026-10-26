@@ -111,7 +111,8 @@ test('khách → đăng nhập → địa chỉ → voucher → VietQR → chi t
   // Next giữ trang vừa rời trong DOM ở dạng ẩn (Activity) → chỉ xét phần tử đang hiển thị
   const vietqr = main(page).getByTestId('vietqr').filter({ visible: true })
   await expect(vietqr).toBeVisible()
-  await waitForHydration(page, 'main details form button[type="submit"]')
+  // Form hủy đơn (ô lý do): không dùng bộ chọn chung `details form` (khối Sở thích của trang sách cũng là <details> có form)
+  await waitForHydration(page, 'main form:has([name="reason"]) button[type="submit"]')
   await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
   await main(page).getByLabel('Lý do hủy').fill('Đổi ý (e2e)')
   await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()

@@ -2,7 +2,7 @@ import { test as base, expect, type BrowserContext } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { cartQuantities, clearCart, findBooksByStock, type E2eBook } from '../scripts/e2e-user'
 import { login, NO_SESSION, readCredentials, storageStatePath, type ProjectUsers } from './auth'
-import { addFromBookPage, badge, readGuestCart, vnd } from './cart'
+import { ADD_TO_CART_SUBMIT, addFromBookPage, addToCartButton, badge, readGuestCart, vnd } from './cart'
 import { collectErrors, failServerActions, waitForHydration } from './helpers'
 
 // Giỏ tài khoản + gộp giỏ khi đăng nhập. Mặc định dùng phiên đăng nhập sẵn của project (auth.setup.ts).
@@ -73,7 +73,7 @@ test('vượt tồn kho → lỗi dịch sẵn ở server theo locale', async ({
   await expect(badge(page)).toHaveText(String(lowStock.stock))
 
   await page.goto(`/en/books/${lowStock.slug}`)
-  await waitForHydration(page, 'main form button[type="submit"]')
+  await waitForHydration(page, ADD_TO_CART_SUBMIT)
   await page.getByRole('main').getByRole('button', { name: 'Add to cart' }).click()
   await expect(
     page.getByRole('main').getByText(`Only ${lowStock.stock} copies of "${lowStock.title}" are left.`),
@@ -158,9 +158,9 @@ test('mất mạng khi thêm vào giỏ / đổi số lượng → báo tại ch
   const network = 'Không kết nối được máy chủ. Bạn kiểm tra mạng rồi bấm lại nhé.'
 
   await page.goto(`/sach/${book.slug}`)
-  await waitForHydration(page, 'main form button[type="submit"]')
+  await waitForHydration(page, ADD_TO_CART_SUBMIT)
   const restore = await failServerActions(page, `**/sach/${book.slug}`)
-  await page.getByRole('main').locator('form button[type="submit"]').click()
+  await addToCartButton(page).click()
   await expect(page.getByRole('main').getByRole('status').filter({ hasText: network })).toBeVisible()
   await expect(page.getByTestId('error-page')).toHaveCount(0)
   await restore()

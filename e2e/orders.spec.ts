@@ -220,7 +220,8 @@ test('đặt qua checkout → "Xem đơn hàng" → hủy kèm lý do: Đã hủ
   await main(page).getByRole('link', { name: 'Xem đơn hàng' }).click()
   await expect(page).toHaveURL(new RegExp(`/tai-khoan/don-hang/${code}$`))
 
-  await waitForHydration(page, 'main details form button[type="submit"]')
+  // Form hủy đơn (ô lý do): test vừa mở trang sách (khối Sở thích của thành viên cũng là <details> có form)
+  await waitForHydration(page, 'main form:has([name="reason"]) button[type="submit"]')
   await main(page).getByText('Hủy đơn hàng', { exact: true }).click()
   await main(page).getByLabel('Lý do hủy').fill('Đặt nhầm số lượng')
   await main(page).getByRole('button', { name: 'Xác nhận hủy' }).click()
