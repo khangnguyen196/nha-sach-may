@@ -658,6 +658,8 @@
     "hint": "Gõ ít nhất 2 ký tự để tìm. Có thể gõ không dấu.",
     "loading": "Đang tìm…",
     "books": "Sách",
+    "hidden": "Đã ẩn theo sở thích của bạn",
+    "reveal": "Xem",
     "seeAll": "Xem tất cả kết quả cho “{q}”",
     "resultCount": "{count, plural, =0 {Không có kết quả} other {# kết quả}}",
     "empty": "Không tìm thấy sách nào cho “{q}”",

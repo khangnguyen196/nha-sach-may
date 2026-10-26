@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { CONTENT_WARNINGS } from '@/features/warnings/labels'
 import {
   blockCss,
+  bookBlockKeys,
   bookSlotAttributes,
   expandBlocks,
   isBlocked,
+  keysBlocked,
   parseBlockRow,
   parseBlockRows,
   BLOCK_LIMIT,
@@ -259,6 +261,37 @@ describe('CSS và isBlocked cho cùng kết quả', () => {
     const hidden = SAMPLE_BOOKS.filter((sample) => isBlocked(sample, expanded))
     expect(hidden.length).toBeGreaterThan(0)
     expect(hidden.length).toBeLessThan(SAMPLE_BOOKS.length)
+  })
+})
+
+describe('keysBlocked (palette ⌘K: khóa đi kèm kết quả /api/search)', () => {
+  it('khớp isBlocked và CSS che thẻ trên bộ sách mẫu × mọi bộ mục chặn (khóa đã qua JSON như /api/search)', () => {
+    let blocked = 0
+    for (const rules of RULE_SETS) {
+      const expanded = expandBlocks(rules, SAMPLE_CATEGORIES)
+      const css = blockCss(expanded)
+      for (const sample of SAMPLE_BOOKS) {
+        const keys = JSON.parse(JSON.stringify(bookBlockKeys(sample)))
+        const label = `${JSON.stringify(rules)} ${JSON.stringify(sample)}`
+        expect(keysBlocked(keys, expanded), label).toBe(isBlocked(sample, expanded))
+        expect(keysBlocked(keys, expanded), label).toBe(cssHidesSlot(css, bookSlotAttributes(sample)))
+        if (keysBlocked(keys, expanded)) blocked += 1
+      }
+    }
+    expect(blocked).toBeGreaterThan(0)
+  })
+
+  it('đủ 4 kind; nhãn so bằng chuỗi', () => {
+    const keys = { categoryId: 10, publisherId: 20, authorIds: [30, 31], warnings: ['loss'] }
+    expect(keysBlocked(keys, NONE)).toBe(false)
+    expect(keysBlocked(keys, { ...NONE, categoryIds: [10] })).toBe(true)
+    expect(keysBlocked(keys, { ...NONE, publisherIds: [20] })).toBe(true)
+    expect(keysBlocked(keys, { ...NONE, authorIds: [31] })).toBe(true)
+    expect(keysBlocked(keys, { ...NONE, warnings: ['loss'] })).toBe(true)
+    expect(keysBlocked(keys, { ...NONE, warnings: ['adult'] })).toBe(false)
+    expect(keysBlocked({ categoryId: null, publisherId: null, authorIds: [], warnings: [] }, { ...NONE, categoryIds: [10] })).toBe(
+      false,
+    )
   })
 })
 

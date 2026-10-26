@@ -20,6 +20,18 @@ export const searchHitSchema = z.object({
   title: z.string(),
   coverUrl: z.string().nullable(),
   authors: z.array(z.string()),
+  /**
+   * Khóa chặn theo sở thích (bookBlockKeys của prefs/blocks.ts, dữ liệu công khai): palette che dòng bị chặn ở client.
+   * Không bắt buộc: CDN có thể còn phản hồi cũ chưa có trường này sau khi deploy → không che dòng đó.
+   */
+  blockKeys: z
+    .object({
+      categoryId: z.number().nullable(),
+      publisherId: z.number().nullable(),
+      authorIds: z.array(z.number()),
+      warnings: z.array(z.string()),
+    })
+    .optional(),
 })
 
 export const searchResponseSchema = z.object({ ok: z.literal(true), data: z.array(searchHitSchema) })

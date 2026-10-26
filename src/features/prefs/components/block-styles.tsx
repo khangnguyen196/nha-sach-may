@@ -1,6 +1,6 @@
 import { getCategories } from '@/features/books/queries'
 import { getCurrentUser } from '@/lib/auth'
-import { blockCss, expandBlocks } from '../blocks'
+import { blockCss, expandBlocks, type ExpandedBlocks } from '../blocks'
 import { getMyBlocks } from '../queries'
 import { RevealBlocked } from './reveal-blocked'
 
@@ -15,14 +15,16 @@ import { RevealBlocked } from './reveal-blocked'
 export async function BlockStyles() {
   const user = await getCurrentUser()
   if (!user) return null
-  let css: string
+  let expanded: ExpandedBlocks
   try {
     const [rules, categories] = await Promise.all([getMyBlocks(user.id), getCategories()])
-    css = blockCss(expandBlocks(rules, categories))
+    expanded = expandBlocks(rules, categories)
   } catch (error) {
     console.error('[prefs] BlockStyles:', error instanceof Error ? error.message : 'unknown')
     return null
   }
+  const css = blockCss(expanded)
   if (!css) return null
-  return <RevealBlocked css={css} />
+  // expanded: cùng mục chặn cho palette ⌘K (block-store); chỉ id số + nhãn enum như css
+  return <RevealBlocked css={css} expanded={expanded} />
 }

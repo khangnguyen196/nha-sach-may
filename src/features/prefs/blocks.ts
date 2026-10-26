@@ -108,6 +108,17 @@ export function expandBlocks(
   }
 }
 
+/**
+ * Khóa chặn của một cuốn (bookBlockKeys). Nhãn là string, không phải ContentWarning: palette ⌘K nhận khóa qua JSON của
+ * /api/search (search-input.ts kiểm kiểu, không kiểm enum), so khớp chỉ cần bằng nhau.
+ */
+export type BlockKeys = {
+  categoryId: number | null
+  publisherId: number | null
+  authorIds: readonly number[]
+  warnings: readonly string[]
+}
+
 /** Khóa chặn của một cuốn: tác giả chỉ tính vai trò 'author' (câu 9: dịch giả, minh họa không tính) */
 export function bookBlockKeys(book: BlockableBook) {
   return {
@@ -136,7 +147,14 @@ export function bookSlotAttributes(book: BlockableBook) {
 
 /** Cùng ngữ nghĩa với selector của blockCss (dòng nhắc trang sách, chatbot Mây) */
 export function isBlocked(book: BlockableBook, expanded: ExpandedBlocks): boolean {
-  const keys = bookBlockKeys(book)
+  return keysBlocked(bookBlockKeys(book), expanded)
+}
+
+/**
+ * So khớp khóa chặn của một cuốn với mục chặn đã mở rộng: một nguồn cho isBlocked (server) và palette ⌘K (client, khóa
+ * đi kèm kết quả /api/search).
+ */
+export function keysBlocked(keys: BlockKeys, expanded: ExpandedBlocks): boolean {
   return (
     (keys.categoryId !== null && expanded.categoryIds.includes(keys.categoryId)) ||
     (keys.publisherId !== null && expanded.publisherIds.includes(keys.publisherId)) ||

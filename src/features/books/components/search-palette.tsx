@@ -13,9 +13,10 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import { useBlockedKeys } from '@/features/prefs/block-store'
 import { useRouter } from '@/i18n/navigation'
 import type { SearchHit } from '../schemas'
-import { normalizeSearchQuery, parseSearchResponse } from '../search-input'
+import { normalizeSearchQuery, paletteRow, parseSearchResponse } from '../search-input'
 
 const DEBOUNCE_MS = 250
 const SKELETON_ROWS = 3
@@ -42,6 +43,10 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
   const [result, setResult] = useState<SearchResult | null>(null)
   // Chọn kết quả → chuyển trang, không kéo focus về header (như trước)
   const navigating = useRef(false)
+  // Chặn theo sở thích (quyết định (12)): mục chặn từ RevealBlocked (null: khách, chưa chặn, BlockStyles chưa stream
+  // xong → không che). Sách đã bấm "Xem" giữ tới khi tải lại trang (palette không unmount khi đóng).
+  const blocks = useBlockedKeys()
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set())
 
   // Chọn kết quả rồi mở lại trước khi hiệu ứng đóng xong (content chưa unmount) → lần đóng sau vẫn trả focus
   useEffect(() => {
@@ -79,6 +84,10 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
     navigating.current = true
     onOpenChange(false)
     router.push({ pathname: '/books/[slug]', params: { slug } })
+  }
+
+  function reveal(id: number) {
+    setRevealed((current) => new Set(current).add(id))
   }
 
   function openSearchPage() {
@@ -132,22 +141,40 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
                 </CommandItem>
               </CommandGroup>
               <CommandGroup heading={t('books')}>
-                {current.hits.map((hit) => (
-                  <CommandItem
-                    key={hit.id}
-                    value={`book-${hit.id}`}
-                    onSelect={() => openBook(hit.slug)}
-                    className="gap-3"
-                  >
-                    <Cover url={hit.coverUrl} />
-                    <span className="min-w-0">
-                      <span className="line-clamp-1 font-medium">{hit.title}</span>
-                      {hit.authors.length > 0 && (
-                        <span className="line-clamp-1 text-xs text-muted-foreground">{hit.authors.join(', ')}</span>
+                {current.hits.map((hit) => {
+                  // Dòng bị che: cùng CommandItem (cùng value → lựa chọn giữ nguyên sau khi Xem), không render tên / tác
+                  // giả / bìa (không tải ảnh); Enter / bấm = Xem, lần sau mới mở sách. "Xem" là chữ, không lồng <button>
+                  // trong option.
+                  const veiled = paletteRow(hit, blocks, revealed) === 'veiled'
+                  return (
+                    <CommandItem
+                      key={hit.id}
+                      value={`book-${hit.id}`}
+                      onSelect={() => (veiled ? reveal(hit.id) : openBook(hit.slug))}
+                      className="gap-3"
+                    >
+                      {veiled ? (
+                        <>
+                          <span aria-hidden className="h-12 w-8 shrink-0 rounded-cover bg-surface-raised" />
+                          <span className="min-w-0 flex-1 text-muted-foreground">
+                            <span className="line-clamp-1">{t('hidden')}</span>
+                          </span>
+                          <span className="shrink-0 font-medium text-primary">{t('reveal')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Cover url={hit.coverUrl} />
+                          <span className="min-w-0">
+                            <span className="line-clamp-1 font-medium">{hit.title}</span>
+                            {hit.authors.length > 0 && (
+                              <span className="line-clamp-1 text-xs text-muted-foreground">{hit.authors.join(', ')}</span>
+                            )}
+                          </span>
+                        </>
                       )}
-                    </span>
-                  </CommandItem>
-                ))}
+                    </CommandItem>
+                  )
+                })}
               </CommandGroup>
             </>
           )}

@@ -2,6 +2,7 @@ import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
 import { cache } from 'react'
 import { SHARP_COVER_WIDTH } from '@/lib/cover-image'
+import { bookBlockKeys } from '@/features/prefs/blocks'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
@@ -310,7 +311,9 @@ export async function searchBookHits(q: string): Promise<SearchHit[]> {
   const categories = await getCategories()
   const { data, error } = await createPublicClient()
     .rpc('search_books', { q })
-    .select('id, slug, title, cover_url, book_authors(role, authors(name))')
+    .select(
+      'id, slug, title, cover_url, category_id, publisher_id, content_warnings, book_authors(role, author_id, authors(name))',
+    )
     .or(visibleBooksFilter(visibleCategoryIds(categories)))
     .range(0, SEARCH_HIT_LIMIT - 1)
   if (error) throw new Error(`searchBookHits: ${error.message}`)
@@ -321,5 +324,7 @@ export async function searchBookHits(q: string): Promise<SearchHit[]> {
     title: book.title,
     coverUrl: book.cover_url,
     authors: book.book_authors.flatMap((ba) => (ba.role === 'author' && ba.authors ? [ba.authors.name] : [])),
+    // Khóa chặn công khai (id số + nhãn): palette che ở client, /api/search không đọc phiên (CDN cache theo URL)
+    blockKeys: bookBlockKeys(book),
   }))
 }

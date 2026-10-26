@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { syncBlockedKeys } from '../block-store'
+import type { ExpandedBlocks } from '../blocks'
 
 /**
  * <style> che thẻ bị chặn (CSS do server dựng bằng blockCss, chỉ id số + nhãn enum) + nút "Xem" trên ô mờ: một
@@ -9,9 +11,12 @@ import { useEffect, useRef } from 'react'
  * cùng DOM hiện tại: tải lại trang là che lại; chuyển trang phía client mà React giữ nguyên DOM của thẻ (Back về trang
  * cũ, cùng sách ở lần render sau của cùng route) thì thẻ đã Xem có thể vẫn hiện.
  * `data-ready` trên <style> (gắn trong effect, ngoài props của React): listener đã gắn, e2e chờ trước khi bấm Xem.
+ * `expanded` (cùng nguồn với `css`) vào block-store cho palette ⌘K: chặn / bỏ chặn → refresh() → props mới → store mới
+ * (không tải lại trang); unmount (bỏ chặn hết, đăng xuất) → store về null.
  */
-export function RevealBlocked({ css }: { css: string }) {
+export function RevealBlocked({ css, expanded }: { css: string; expanded: ExpandedBlocks }) {
   const styleRef = useRef<HTMLStyleElement>(null)
+  useEffect(() => syncBlockedKeys(expanded), [expanded])
   useEffect(() => {
     function onClick(event: MouseEvent) {
       if (!(event.target instanceof Element)) return
