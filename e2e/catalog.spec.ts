@@ -267,13 +267,16 @@ test('lưới stream vào không gây nhảy layout (CLS < 0.1)', async ({ page 
   expect(errors).toEqual([])
 })
 
-test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), bìa sau không', async ({ page }) => {
+// Văn học trên dữ liệu e2e có 12 sách (3 danh mục con) → đủ hàng thứ hai ở xl 6 cột
+test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), cả hàng đầu tải ngay, hàng sau tải lười', async ({ page }) => {
   await page.goto('/danh-muc/van-hoc')
   const covers = page.getByRole('main').locator('ul img')
   await expect(covers.nth(0)).toHaveAttribute('fetchpriority', 'high')
   await expect(covers.nth(1)).toHaveAttribute('fetchpriority', 'high')
   await expect(covers.nth(2)).not.toHaveAttribute('fetchpriority', 'high')
-  await expect(covers.nth(5)).toHaveAttribute('loading', 'lazy')
+  // Hàng đầu ở lưới rộng nhất (xl 6 cột) tải ngay (EAGER_COUNT của book-grid.tsx), bìa đầu hàng 2 tải lười
+  await expect(covers.nth(5)).toHaveAttribute('loading', 'eager')
+  await expect(covers.nth(6)).toHaveAttribute('loading', 'lazy')
 })
 
 test('sang trang / sắp xếp: hiện trạng thái đang tải ngay khi bấm, hết khi kết quả mới tới', async ({ page }) => {
