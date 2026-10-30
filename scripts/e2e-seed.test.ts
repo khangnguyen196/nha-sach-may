@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
 import { WARNING_LIMITS } from '../src/features/chat/config'
@@ -66,14 +67,17 @@ describe('e2e/fixtures/books.json', () => {
     expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(PAGE_SIZE)
   })
 
-  it('Văn học: ≥ 2 danh mục con có sách, Tiểu thuyết có sách, > 6 sách ở trang 1 (catalog.spec: lưới sách, EAGER_COUNT 6)', () => {
+  it('Văn học: ≥ 2 danh mục con có sách, Tiểu thuyết có sách, > EAGER_COUNT sách ở trang 1 (catalog.spec: lưới sách)', () => {
     const literature = books.filter((b) => ['tieu-thuyet', 'truyen-ngan-tan-van', 'tho'].includes(b.category_slug))
     const children = new Set(literature.map((b) => b.category_slug))
     expect(children.size).toBeGreaterThanOrEqual(2)
     expect(children.has('tieu-thuyet')).toBe(true)
-    // EAGER_COUNT của src/features/books/components/book-grid.tsx; đổi số đó thì sửa cả đây và catalog.spec (nth(5)
-    // eager, nth(6) lazy). Đếm mọi tồn kho: trang danh mục hiện cả sách hết hàng
-    const eagerCount = 6
+    // EAGER_COUNT đọc dạng chữ từ book-grid.tsx (không import component); đổi số đó thì sửa cả catalog.spec
+    // (nth(EAGER_COUNT − 1) eager, nth(EAGER_COUNT) lazy). Đếm mọi tồn kho: trang danh mục hiện cả sách hết hàng
+    const grid = readFileSync(join(import.meta.dirname, '../src/features/books/components/book-grid.tsx'), 'utf8')
+    const match = /const EAGER_COUNT = (\d+)/.exec(grid)
+    expect(match, 'không tìm thấy "const EAGER_COUNT = <số>" trong book-grid.tsx').not.toBeNull()
+    const eagerCount = Number(match?.[1])
     expect(literature.length).toBeGreaterThan(eagerCount)
     expect(PAGE_SIZE).toBeGreaterThan(eagerCount)
   })

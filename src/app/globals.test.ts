@@ -100,8 +100,8 @@ describe('ô "Tính năng demo" (demo-note.tsx) trên surface-raised', () => {
 
 describe('lớp vòng focus', () => {
   // Mọi vòng / outline màu ring hoặc primary có độ đục riêng (ring-ring/50, focus-visible:ring-primary/40,
-  // ring-primary/[0.4]…) bỏ qua token
-  const OLD = /\b(ring|outline)-(ring|primary)\/(\d+|\[[^\]]+\])/g
+  // ring-primary/[0.4], ring-primary/(--x)…) bỏ qua token
+  const OLD = /\b(ring|outline)-(ring|primary)\/(\d+|\[[^\]]+\]|\([^)]+\))/g
 
   it('không lớp (ring|outline)-(ring|primary)/N trong src (dùng ring-focus-ring / outline-focus-ring)', () => {
     const self = join(import.meta.dirname, 'globals.test.ts')
