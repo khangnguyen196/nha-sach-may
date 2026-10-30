@@ -4,8 +4,9 @@ import { BookCard } from './book-card'
 
 export const GRID_CLASS = 'grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
 
-// Số card thường lọt màn hình đầu ở mọi cỡ (mobile 2 cột × 2 hàng, desktop 1 hàng)
-const EAGER_COUNT = 4
+// Card tải ngay (không lazy) = cả hàng đầu ở lưới rộng nhất (xl 6 cột); trước đây 4 nên bìa thứ 5–6 của hàng đầu desktop
+// hiện trễ. Cỡ nhỏ hơn: hàng đầu + vài card hàng sau. Ưu tiên cao vẫn chỉ PRELOAD_COUNT ảnh đầu (bên dưới)
+const EAGER_COUNT = 6
 // Ảnh LCP của trang lưới là bìa đầu tiên (đo trên mobile: LCP danh mục 5,2 s vì 24 ảnh tranh băng thông như nhau).
 // 2 ảnh đầu (hàng đầu mobile) ưu tiên cao; ưu tiên nhiều ảnh hơn lại tranh băng thông của chính ảnh LCP.
 const PRELOAD_COUNT = 2

@@ -56,9 +56,13 @@ export default async function HomePage() {
           ),
         }}
       />
+      {/* Trang chủ không có tiêu đề hiển thị (hero là trích dẫn): h1 ẩn cho trình đọc màn hình / dàn ý trang */}
+      <h1 className="sr-only">{t('title')}</h1>
       <div className="py-16 md:py-24">
         <figure className="max-w-reading">
-          <blockquote className="font-serif text-2xl font-medium text-foreground md:text-3xl">“{t('quote')}”</blockquote>
+          <blockquote className="font-serif text-2xl font-medium text-balance text-foreground md:text-3xl">
+            “{t('quote')}”
+          </blockquote>
           <figcaption className="mt-4 text-sm text-muted-foreground">— {t('quoteAuthor')}</figcaption>
         </figure>
         <StoreClock
@@ -110,7 +114,7 @@ export default async function HomePage() {
         {parents.length === 0 ? (
           <p className="mt-4 text-muted-foreground">{t('categoriesEmpty')}</p>
         ) : (
-          <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {parents.map((parent) => (
               <li key={parent.id} className="rounded-lg border bg-surface p-4">
                 <Link
