@@ -10,11 +10,14 @@ test('header dính trên cùng khi cuộn', async ({ page }) => {
   expect((await header.boundingBox())?.y).toBe(0)
 })
 
-test('không tràn ngang: layout viewport bằng bề rộng màn hình (trang chủ, trang sách có kệ)', async ({ page }) => {
-  // Phần tử absolute trong kệ cuộn ngang từng kéo document rộng ~1456px ở trang sách → mobile thu nhỏ cả trang
+test('không tràn ngang: layout viewport bằng bề rộng màn hình (trang chủ, trang sách có kệ, chợ sách cũ vi / en)', async ({
+  page,
+}) => {
+  // Phần tử absolute trong kệ cuộn ngang từng kéo document rộng ~1456px ở trang sách → mobile thu nhỏ cả trang.
+  // Chợ sách cũ: hàng chip bộ lọc (w-max) từng kéo ô grid rộng 965px → trang 997px ở màn 390px (đánh giá 2026-10-30)
   await page.goto('/')
   const bookHref = await page.locator('main a[href^="/sach/"]').first().getAttribute('href')
-  for (const path of ['/', bookHref ?? '/']) {
+  for (const path of ['/', bookHref ?? '/', '/cho-sach-cu', '/en/used-books']) {
     await page.goto(path)
     // Đo bề rộng cả trang: chờ mọi phần stream (kệ "Cùng danh mục" trong Suspense) đã hiện + font đã tải
     await waitForSettled(page)
