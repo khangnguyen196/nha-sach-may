@@ -6,7 +6,7 @@ import { bookBlockKeys } from '@/features/prefs/blocks'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
-import { fillShelf, visibleBooksFilter, visibleCategoryIds } from './utils'
+import { homeShelves, visibleBooksFilter, visibleCategoryIds } from './utils'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -45,8 +45,10 @@ const BOOK_CARD_COLUMNS =
   'id, slug, title, cover_url, price, original_price, stock, category_id, publisher_id, content_warnings, book_authors(role, author_id, authors(name))'
 
 const SHELF_SIZE = 12
-/** Ẩn cả kệ (kể cả tiêu đề) khi ít sách hơn mức này; kệ khác luôn hiện */
+/** Ẩn cả kệ (kể cả tiêu đề) khi ít sách hơn mức này (sau khi loại sách trùng kệ trên); kệ khác luôn hiện */
 const SHELF_MIN = { featured: 4, bestselling: 6 }
+/** Ứng viên mỗi query của kệ: dư để kệ sau vẫn đầy sau khi loại sách đã hiện ở kệ trên (homeShelves) */
+const SHELF_CANDIDATES = SHELF_SIZE * 3
 
 function bookCards() {
   return createPublicClient().from('books').select(BOOK_CARD_COLUMNS)
@@ -56,7 +58,7 @@ type BookCardQuery = ReturnType<typeof bookCards>
 type BookCardResult = Awaited<BookCardQuery>
 
 const newestFirst = (query: BookCardQuery) =>
-  query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(SHELF_SIZE)
+  query.order('created_at', { ascending: false }).order('id', { ascending: false }).limit(SHELF_CANDIDATES)
 
 const sharpOnly = (query: BookCardQuery) => query.gte('cover_width', SHARP_COVER_WIDTH)
 
@@ -68,7 +70,8 @@ function rows({ data, error }: BookCardResult, context: string) {
 /**
  * Các kệ trang chủ (docs/plans/phase-8.md): Nổi bật (admin chọn), Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn
  * (cây danh mục `foreignCategoryIds`). Kệ có bìa nét trước (`cover_width`), thiếu thì lấp bằng sách bìa mờ cùng thứ
- * tự. Bán chạy giữ đúng thứ tự số bán. Tất cả query chạy song song.
+ * tự. Bán chạy giữ đúng thứ tự số bán. Không sách nào lên hai kệ, Nổi bật ưu tiên sách tiếng Việt (homeShelves). Tất cả
+ * query chạy song song.
  * Chỉ sách thuộc danh mục đang hiện (`visibleCategoryIds`): sách đang bán nhưng nằm trong danh mục admin ẩn không lên
  * kệ (trước đây kệ Bán chạy trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404).
  */
@@ -83,7 +86,21 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
   const vietnamese = () => shelfBooks().eq('language', 'vi')
   const foreign = () => bookCards().in('category_id', foreignCategoryIds.filter((id) => visible.has(id)))
 
-  const [featuredSharp, featuredAll, bestselling, newSharp, newAll, foreignSharp, foreignAll] = await Promise.all([
+  const featuredVi = () => featured().eq('language', 'vi')
+
+  const [
+    featuredViSharp,
+    featuredViAll,
+    featuredSharp,
+    featuredAll,
+    bestselling,
+    newSharp,
+    newAll,
+    foreignSharp,
+    foreignAll,
+  ] = await Promise.all([
+    newestFirst(sharpOnly(featuredVi())),
+    newestFirst(featuredVi()),
     newestFirst(sharpOnly(featured())),
     newestFirst(featured()),
     shelfBooks()
@@ -91,21 +108,24 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
       .order('sold_count', { ascending: false })
       .order('created_at', { ascending: false })
       .order('id')
-      .limit(SHELF_SIZE),
+      .limit(SHELF_CANDIDATES),
     newestFirst(sharpOnly(vietnamese())),
     newestFirst(vietnamese()),
     newestFirst(sharpOnly(foreign())),
     newestFirst(foreign()),
   ])
 
-  const featuredBooks = fillShelf(rows(featuredSharp, 'featured'), rows(featuredAll, 'featured'), SHELF_SIZE)
-  const bestsellingBooks = rows(bestselling, 'bestselling')
-  const shelves = {
-    featured: featuredBooks.length >= SHELF_MIN.featured ? featuredBooks : [],
-    bestselling: bestsellingBooks.length >= SHELF_MIN.bestselling ? bestsellingBooks : [],
-    newArrivals: fillShelf(rows(newSharp, 'new'), rows(newAll, 'new'), SHELF_SIZE),
-    foreign: fillShelf(rows(foreignSharp, 'foreign'), rows(foreignAll, 'foreign'), SHELF_SIZE),
-  }
+  const shelves = homeShelves(
+    {
+      featuredVi: { sharp: rows(featuredViSharp, 'featured vi'), all: rows(featuredViAll, 'featured vi') },
+      featured: { sharp: rows(featuredSharp, 'featured'), all: rows(featuredAll, 'featured') },
+      bestselling: rows(bestselling, 'bestselling'),
+      newArrivals: { sharp: rows(newSharp, 'new'), all: rows(newAll, 'new') },
+      foreign: { sharp: rows(foreignSharp, 'foreign'), all: rows(foreignAll, 'foreign') },
+    },
+    SHELF_SIZE,
+    SHELF_MIN,
+  )
   tagBooks(Object.values(shelves).flat())
   return shelves
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   discountPercent,
   fillShelf,
+  homeShelves,
   inVisibleCategories,
   paginationRange,
   showRelatedShelf,
@@ -82,6 +83,68 @@ describe('fillShelf', () => {
 
   it('không có bìa nét (chưa đo / trước migration) → giữ thứ tự thường', () => {
     expect(fillShelf([], books(3, 1, 2), 12).map((b) => b.id)).toEqual([3, 1, 2])
+  })
+
+  it('bỏ id trong exclude (đã hiện ở kệ trên), vẫn lấp đủ bằng sách sau', () => {
+    expect(fillShelf(books(5, 2), books(1, 2, 3, 4, 5), 3, new Set([5, 1])).map((b) => b.id)).toEqual([2, 3, 4])
+  })
+})
+
+describe('homeShelves', () => {
+  const books = (...ids: number[]) => ids.map((id) => ({ id }))
+  const ids = (list: { id: number }[]) => list.map((b) => b.id)
+  const source = (sharp: number[], all: number[]) => ({ sharp: books(...sharp), all: books(...all) })
+  const empty = source([], [])
+  const MIN = { featured: 2, bestselling: 3 }
+
+  // 1–9: sách tiếng Việt, 21–29: sách tiếng Anh. Nổi bật trùng Ngoại văn ở 21, 22 (lỗi của đánh giá 2026-10-30)
+  const sources = {
+    featuredVi: source([2], [1, 2]),
+    featured: source([21, 2], [22, 21, 1, 2]),
+    bestselling: books(22, 3, 1, 4, 5),
+    newArrivals: source([1, 6], [3, 1, 7, 6, 8]),
+    foreign: source([21, 23], [22, 21, 24, 23]),
+  }
+
+  it('Nổi bật: sách tiếng Việt trước (bìa nét trước trong nhóm), rồi sách khác cùng quy tắc', () => {
+    expect(ids(homeShelves(sources, 4, MIN).featured)).toEqual([2, 1, 21, 22])
+  })
+
+  it('không id nào lên hai kệ; kệ sau loại sách của kệ trên theo thứ tự Nổi bật → Bán chạy → Mới về → Ngoại văn', () => {
+    const shelves = homeShelves(sources, 4, MIN)
+    expect(ids(shelves.bestselling)).toEqual([3, 4, 5])
+    expect(ids(shelves.newArrivals)).toEqual([6, 7, 8])
+    expect(ids(shelves.foreign)).toEqual([23, 24])
+    const all = Object.values(shelves).flatMap(ids)
+    expect(new Set(all).size).toBe(all.length)
+  })
+
+  it('Bán chạy giữ thứ tự số bán (không xếp bìa nét lên trước)', () => {
+    const shelves = homeShelves({ ...sources, featuredVi: empty, featured: empty, bestselling: books(9, 3, 7, 1) }, 4, MIN)
+    expect(ids(shelves.bestselling)).toEqual([9, 3, 7, 1])
+  })
+
+  it('kệ dưới ngưỡng sau khi loại trùng thì ẩn, sách của nó không tính là đã hiện', () => {
+    // Bán chạy còn 2 cuốn (3, 4) sau khi bỏ 1, 2 của Nổi bật → ẩn; Mới về vẫn nhận 3, 4
+    const shelves = homeShelves(
+      { ...sources, featured: empty, bestselling: books(1, 2, 3, 4), newArrivals: source([], [3, 4, 6]) },
+      4,
+      MIN,
+    )
+    expect(ids(shelves.featured)).toEqual([2, 1])
+    expect(shelves.bestselling).toEqual([])
+    expect(ids(shelves.newArrivals)).toEqual([3, 4, 6])
+  })
+
+  it('Nổi bật dưới ngưỡng thì ẩn; Mới về / Ngoại văn không có ngưỡng (rỗng thì trang tự ẩn)', () => {
+    const shelves = homeShelves(
+      { ...sources, featuredVi: source([], [1]), featured: source([], [1]), newArrivals: empty, foreign: source([], [21]) },
+      4,
+      MIN,
+    )
+    expect(shelves.featured).toEqual([])
+    expect(ids(shelves.newArrivals)).toEqual([])
+    expect(ids(shelves.foreign)).toEqual([21])
   })
 })
 

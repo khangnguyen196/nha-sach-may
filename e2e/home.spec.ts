@@ -35,6 +35,15 @@ test('thứ tự kệ: Nổi bật, Bán chạy (nếu có) → Mới về → S
     expect(count === 0 || count >= (name === 'Nổi bật' ? 4 : 6), name).toBe(true)
   }
   expect(await shelfBooks(page, 'Mới về').count()).toBeGreaterThan(0)
+  // Không sách nào lên hai kệ (homeShelves, features/books/utils.ts)
+  const hrefs = (
+    await Promise.all(
+      ['Nổi bật', 'Bán chạy', 'Mới về', 'Sách ngoại văn'].map((name) =>
+        shelfBooks(page, name).evaluateAll((links) => links.map((a) => a.getAttribute('href') ?? '')),
+      ),
+    )
+  ).flat()
+  expect(hrefs.filter((href, index) => hrefs.indexOf(href) !== index)).toEqual([])
   expect(errors).toEqual([])
 })
 

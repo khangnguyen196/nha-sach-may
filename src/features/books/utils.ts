@@ -1,17 +1,60 @@
 /**
  * Kệ trang chủ: sách bìa nét trước, rồi lấp cho đủ `limit` bằng danh sách thường (cùng điều kiện, cùng thứ tự; có thể
- * chứa lại sách bìa nét → bỏ trùng theo id). Kệ không ngắn đi khi có ít sách bìa nét.
+ * chứa lại sách bìa nét → bỏ trùng theo id). Kệ không ngắn đi khi có ít sách bìa nét. `exclude`: id sách đã hiện ở kệ
+ * phía trên (homeShelves), bỏ qua.
  */
-export function fillShelf<T extends { id: number }>(sharp: readonly T[], all: readonly T[], limit: number): T[] {
+export function fillShelf<T extends { id: number }>(
+  sharp: readonly T[],
+  all: readonly T[],
+  limit: number,
+  exclude: ReadonlySet<number> = new Set(),
+): T[] {
   const seen = new Set<number>()
   const out: T[] = []
   for (const book of [...sharp, ...all]) {
     if (out.length === limit) break
-    if (seen.has(book.id)) continue
+    if (seen.has(book.id) || exclude.has(book.id)) continue
     seen.add(book.id)
     out.push(book)
   }
   return out
+}
+
+/** Ứng viên một kệ: sách bìa nét (`cover_width` đủ lớn) và mọi sách, cùng điều kiện, cùng thứ tự */
+export type ShelfSource<T> = { sharp: readonly T[]; all: readonly T[] }
+
+/**
+ * Các kệ trang chủ theo thứ tự hiển thị Nổi bật → Bán chạy → Mới về → Ngoại văn; mỗi kệ bỏ sách đã có ở kệ đang hiện phía
+ * trên (đánh giá 2026-10-30: Nổi bật và Ngoại văn từng trùng 5 cuốn đầu). Nổi bật: sách tiếng Việt trước (`featuredVi`,
+ * trong nhóm vẫn bìa nét trước), rồi sách khác. Bán chạy giữ thứ tự số bán. Nổi bật / Bán chạy ít hơn `min` sau khi loại
+ * trùng thì ẩn (rỗng) và sách của kệ ẩn không tính là đã hiện. Ứng viên nên dư (query lấy gấp mấy lần `size`) để kệ sau
+ * vẫn đầy sau khi loại.
+ */
+export function homeShelves<T extends { id: number }>(
+  sources: {
+    featuredVi: ShelfSource<T>
+    featured: ShelfSource<T>
+    bestselling: readonly T[]
+    newArrivals: ShelfSource<T>
+    foreign: ShelfSource<T>
+  },
+  size: number,
+  min: { featured: number; bestselling: number },
+) {
+  const shown = new Set<number>()
+  const shelf = (first: readonly T[], rest: readonly T[], minimum = 0) => {
+    const books = fillShelf(first, rest, size, shown)
+    if (books.length < minimum) return []
+    for (const book of books) shown.add(book.id)
+    return books
+  }
+  const { featuredVi, featured: anyLanguage } = sources
+  // Gọi theo đúng thứ tự hiển thị: kệ sau loại sách của kệ trước
+  const featured = shelf([...featuredVi.sharp, ...featuredVi.all], [...anyLanguage.sharp, ...anyLanguage.all], min.featured)
+  const bestselling = shelf(sources.bestselling, [], min.bestselling)
+  const newArrivals = shelf(sources.newArrivals.sharp, sources.newArrivals.all)
+  const foreign = shelf(sources.foreign.sharp, sources.foreign.all)
+  return { featured, bestselling, newArrivals, foreign }
 }
 
 /** % giảm so với giá gốc, làm tròn; không giảm (hoặc dữ liệu lạ) → null */
