@@ -2,7 +2,7 @@ import { BanknoteIcon, QrCodeIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 
 const OPTION_CLASS =
-  'flex cursor-pointer gap-3 rounded-lg border bg-surface p-4 transition-colors duration-150 ease-out hover:bg-surface-raised has-checked:border-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50'
+  'flex cursor-pointer gap-3 rounded-lg border bg-surface p-4 transition-colors duration-150 ease-out hover:bg-surface-raised has-checked:border-primary has-focus-visible:ring-3 has-focus-visible:ring-focus-ring'
 
 /** Nhóm radio gốc (không JS): COD mặc định, chuyển khoản VietQR (QR hiện ở trang đặt hàng thành công) */
 export async function PaymentMethod() {

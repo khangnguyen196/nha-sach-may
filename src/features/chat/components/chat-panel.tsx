@@ -137,7 +137,7 @@ export default function ChatPanel({
             <DialogPrimitive.Close
               className={cn(
                 'inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-muted-foreground',
-                'transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50',
+                'transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring',
               )}
             >
               <XIcon aria-hidden className="size-5" />
@@ -163,7 +163,7 @@ export default function ChatPanel({
                     onConfirmAge()
                     requestAnimationFrame(() => input.current?.focus())
                   }}
-                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-center font-medium text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-center font-medium text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
                 >
                   {labels.gate.confirm}
                 </button>
@@ -180,7 +180,7 @@ export default function ChatPanel({
                       disabled={!ageConfirmed || pending}
                       aria-describedby={ageConfirmed ? undefined : 'chat-gate'}
                       onClick={() => send(chip)}
-                      className="rounded-full border px-3 py-1.5 text-left transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                      className="rounded-full border px-3 py-1.5 text-left transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-50"
                     >
                       {chip}
                     </button>
@@ -243,13 +243,13 @@ export default function ChatPanel({
                   }
                 }}
                 // ≥ 16px trên mobile: iOS Safari tự phóng to khi chạm vào ô nhập chữ nhỏ hơn 16px
-                className="min-h-11 flex-1 resize-none rounded-md border border-input bg-surface-raised px-3 py-2 text-base outline-none placeholder:text-subtle focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 sm:text-sm"
+                className="min-h-11 flex-1 resize-none rounded-md border border-input bg-surface-raised px-3 py-2 text-base outline-none placeholder:text-subtle focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-50 sm:text-sm"
               />
               <button
                 type="submit"
                 aria-label={labels.send}
                 disabled={!ageConfirmed || pending || !checkMessage(draft).ok}
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-50"
               >
                 <SendHorizontalIcon aria-hidden className="size-5" />
               </button>
@@ -303,7 +303,7 @@ function BookCard({ book, onNavigate }: { book: ChatBookCard; onNavigate: () => 
       href={{ pathname: '/books/[slug]', params: { slug: book.slug } }}
       onClick={onNavigate}
       data-testid="chat-book-card"
-      className="flex gap-3 rounded-lg border p-2 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="flex gap-3 rounded-lg border p-2 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring"
     >
       <span className="relative h-18 w-12 shrink-0 overflow-hidden rounded-cover bg-surface-raised">
         {book.coverUrl ? (
@@ -360,7 +360,7 @@ function ErrorBlock({
 }) {
   const text = errorText(entry, labels)
   const linkClass =
-    'inline-flex min-h-9 items-center rounded-full border px-3 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50'
+    'inline-flex min-h-9 items-center rounded-full border px-3 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring'
   return (
     <div className="space-y-2 rounded-lg border bg-surface-raised p-3" data-testid="chat-error" data-code={entry.code}>
       <p>{text.vi}</p>

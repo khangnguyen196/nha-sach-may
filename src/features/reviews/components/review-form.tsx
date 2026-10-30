@@ -85,7 +85,7 @@ export function ReviewForm({
             {labels.ratingOptions.map((label, index) => (
               <label
                 key={label}
-                className="relative flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50 [&_svg]:size-7 has-checked:[&_svg]:fill-primary"
+                className="relative flex cursor-pointer flex-col items-center rounded-sm p-1 text-xs text-subtle transition-colors hover:text-primary has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-focus-ring [&_svg]:size-7 has-checked:[&_svg]:fill-primary"
               >
                 <input
                   type="radio"

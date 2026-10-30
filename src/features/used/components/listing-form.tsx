@@ -141,7 +141,7 @@ export function ListingForm({
           {conditions.map((option) => (
             <label
               key={option.value}
-              className="flex cursor-pointer gap-3 rounded-lg border bg-surface p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 hover:bg-surface-raised"
+              className="flex cursor-pointer gap-3 rounded-lg border bg-surface p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-focus-ring hover:bg-surface-raised"
             >
               <input
                 type="radio"

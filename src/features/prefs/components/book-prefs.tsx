@@ -124,7 +124,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
           <Link
             href="/account/preferences"
             prefetch={false}
-            className="mt-3 inline-block rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="mt-3 inline-block rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
           >
             {t('manage')}
           </Link>
@@ -133,7 +133,7 @@ export async function BookPrefs({ bookId, slug, locale }: Props) {
       {buttons.length > 0 && (
         <details className="group" data-testid="book-prefs-menu">
           {/* Cao đúng h-6 khi thu gọn: bằng chỗ giữ sẵn (BookPrefsPlaceholder) */}
-          <summary className="flex h-6 w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+          <summary className="flex h-6 w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring [&::-webkit-details-marker]:hidden">
             <span className="truncate">{t('summary')}</span>
             <ChevronDownIcon aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
           </summary>

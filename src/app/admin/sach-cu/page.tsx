@@ -119,7 +119,7 @@ async function UsedListingList({ searchParams }: { searchParams: PageProps<'/adm
                   <th scope="row" className={cn(cell, 'text-left font-normal')}>
                     <AdminLink
                       href={`/admin/sach-cu/${listing.id}`}
-                      className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                     >
                       {listing.book?.title ?? t('bookDeleted')}
                     </AdminLink>

@@ -143,7 +143,7 @@ async function ListingRow({ listing, locale, errors }: RowProps) {
           <div
             id={headingId}
             tabIndex={-1}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
             data-testid="listing-heading"
           >
             <p className="line-clamp-2 font-medium">{title}</p>

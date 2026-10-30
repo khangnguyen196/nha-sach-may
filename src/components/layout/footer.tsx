@@ -25,7 +25,7 @@ export async function Footer() {
               openLibrary: (chunks) => (
                 <a
                   href="https://openlibrary.org"
-                  className="rounded-sm underline underline-offset-4 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="rounded-sm underline underline-offset-4 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
                 >
                   {chunks}
                 </a>
@@ -37,7 +37,7 @@ export async function Footer() {
           <p className="mt-3 text-sm">
             <Link
               href="/used-books"
-              className="rounded-sm text-muted-foreground underline underline-offset-4 transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm text-muted-foreground underline underline-offset-4 transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {t('footerUsedMarket')}
             </Link>
@@ -53,7 +53,7 @@ export async function Footer() {
                 <li key={category.id}>
                   <Link
                     href={{ pathname: '/categories/[slug]', params: { slug: category.slug } }}
-                    className="rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
                   >
                     {localize(category, 'name', locale)}
                   </Link>

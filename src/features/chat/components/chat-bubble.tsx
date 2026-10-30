@@ -141,7 +141,7 @@ function ChatBubbleInner({ labels, categories, lazyError, icon }: Props) {
           'fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] z-30',
           'inline-flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground',
           'transition-[opacity,translate] duration-200 ease-out outline-none hover:-translate-y-0.5',
-          'focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none [&_svg]:size-6',
+          'focus-visible:ring-3 focus-visible:ring-focus-ring motion-reduce:transition-none [&_svg]:size-6',
           hidden && 'pointer-events-none invisible translate-y-4 opacity-0',
         )}
       >

@@ -18,7 +18,7 @@ export async function Breadcrumb({ items }: { items: Crumb[] }) {
             {crumb.href ? (
               <Link
                 href={crumb.href}
-                className="rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
               >
                 {crumb.label}
               </Link>

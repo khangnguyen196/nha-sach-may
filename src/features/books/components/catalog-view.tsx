@@ -102,7 +102,7 @@ export async function CatalogView({ params, context, base, result, subcategories
   const clearTextLink = (
     <Link
       href={href(clearPatch)}
-      className="shrink-0 rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="shrink-0 rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
     >
       {t('clearFilters')}
     </Link>
@@ -218,7 +218,7 @@ function Chip({ href, active, children }: { href: Href; active: boolean; childre
       href={href}
       aria-current={active ? 'true' : undefined}
       className={cn(
-        'inline-flex h-8 items-center rounded-full border px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        'inline-flex h-8 items-center rounded-full border px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-focus-ring',
         active
           ? 'border-primary bg-primary/10 text-foreground'
           : 'border-input text-muted-foreground hover:bg-surface-raised hover:text-foreground',

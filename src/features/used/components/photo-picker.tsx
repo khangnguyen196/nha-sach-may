@@ -244,7 +244,7 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
               onClick={() => remove(photo)}
               disabled={disabled}
               aria-label={fillTemplate(labels.removePhoto, { number: index + 1 })}
-              className="absolute top-1.5 right-1.5 flex size-8 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+              className="absolute top-1.5 right-1.5 flex size-8 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-60"
             >
               {/* lucide x, vẽ thẳng: client leaf không import lucide (CLAUDE.md → Hiệu năng) */}
               <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="size-4">
@@ -258,7 +258,7 @@ export function PhotoPicker({ photos, onChange, uploadPhoto, deletePhoto, labels
       {!full && (
         <label
           className={cn(
-            'mt-1 inline-flex h-11 w-fit cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50 hover:bg-surface-raised',
+            'mt-1 inline-flex h-11 w-fit cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-focus-ring hover:bg-surface-raised',
             disabled && 'pointer-events-none opacity-60',
           )}
         >

@@ -20,7 +20,7 @@ export function AdminNav({ label, items }: { label: string; items: AdminNavItem[
             <AdminLink
               href={item.href}
               aria-current={isCurrent(item.href) ? 'page' : undefined}
-              className="flex h-9 items-center gap-2.5 rounded-md px-3 text-sm whitespace-nowrap text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-surface-raised aria-[current=page]:font-medium aria-[current=page]:text-foreground [&_svg]:size-4"
+              className="flex h-9 items-center gap-2.5 rounded-md px-3 text-sm whitespace-nowrap text-muted-foreground transition-colors outline-none hover:bg-surface-raised hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring aria-[current=page]:bg-surface-raised aria-[current=page]:font-medium aria-[current=page]:text-foreground [&_svg]:size-4"
             >
               {item.icon}
               {item.label}

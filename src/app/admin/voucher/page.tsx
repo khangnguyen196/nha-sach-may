@@ -144,7 +144,7 @@ async function VoucherList({ searchParams }: { searchParams: PageProps<'/admin/v
                     <th scope="row" className={cn(cell, 'text-left font-normal')}>
                       <AdminLink
                         href={`/admin/voucher/${voucher.id}`}
-                        className="rounded-sm font-mono font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="rounded-sm font-mono font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                       >
                         {voucher.code}
                       </AdminLink>

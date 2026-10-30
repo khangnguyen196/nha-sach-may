@@ -23,4 +23,4 @@ export function AuthPage({
 }
 
 export const authLinkClass =
-  'rounded-sm font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50'
+  'rounded-sm font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring'

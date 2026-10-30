@@ -168,7 +168,7 @@ async function PayoutRow({ payout, messages }: { payout: AdminPayout; messages: 
       <td className={cn(cell, 'whitespace-nowrap')}>
         <AdminLink
           href={`/admin/don-hang/${payout.orderCode}`}
-          className="rounded-sm font-mono outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-sm font-mono outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {payout.orderCode}
         </AdminLink>

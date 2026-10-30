@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 // id suy từ `name` (+ `idPrefix` khi một trang có hai form trùng tên ô).
 
 const control =
-  'h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive aria-invalid:ring-destructive/20'
+  'h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 
 type FieldOwnProps = {
   name: string

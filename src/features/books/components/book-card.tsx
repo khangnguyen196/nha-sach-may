@@ -38,7 +38,7 @@ export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false, 
       <Link
         href={{ pathname: '/books/[slug]', params: { slug: book.slug } }}
         data-book-link
-        className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-focus-ring"
       >
         <div className="relative aspect-[2/3] overflow-hidden rounded-cover bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">
           {book.cover_url ? (

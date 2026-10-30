@@ -30,7 +30,7 @@ export async function MarketFilters({ params, categories, book }: Props) {
           <span className="font-medium">{book ? t('bookFilter', { title: book.title }) : t('bookFilterUnknown')}</span>
           <Link
             href={href({ book: undefined })}
-            className="inline-flex items-center gap-1 rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex items-center gap-1 rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
           >
             <XIcon aria-hidden className="size-4" />
             {t('clearBook')}
@@ -81,7 +81,7 @@ function Chip({ href, active, children }: { href: Href; active: boolean; childre
         href={href}
         aria-current={active ? 'true' : undefined}
         className={cn(
-          'inline-flex h-8 items-center rounded-full border px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+          'inline-flex h-8 items-center rounded-full border px-3 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-focus-ring',
           active
             ? 'border-primary bg-primary/10 text-foreground'
             : 'border-input text-muted-foreground hover:bg-surface-raised hover:text-foreground',

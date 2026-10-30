@@ -124,7 +124,7 @@ async function StatusFilters({ current }: { current: OrderListParams['status'] }
                 href={{ pathname: '/account/orders', query: orderListQuery({ status, page: 1 }) }}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex h-9 items-center rounded-full border px-4 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                  'flex h-9 items-center rounded-full border px-4 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-focus-ring',
                   active
                     ? 'border-primary bg-primary/15 font-medium text-primary'
                     : 'text-muted-foreground hover:bg-surface-raised hover:text-foreground',
@@ -149,7 +149,7 @@ async function OrderRow({ order }: { order: OrderListItem }) {
     <li data-testid="order-row">
       <Link
         href={{ pathname: '/account/orders/[code]', params: { code: order.order_code } }}
-        className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 rounded-lg border bg-surface p-4 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-5"
+        className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 rounded-lg border bg-surface p-4 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-5"
       >
         {/* Khối bìa rộng cố định (3 bìa chồng nhau) để cột chữ thẳng hàng giữa các dòng. Mobile: tổng tiền xuống dưới
             thông tin; từ sm: cột phải */}

@@ -28,7 +28,7 @@ export async function UsedCopies({ bookId, slug }: { bookId: number; slug: strin
       {copies && (
         <Link
           href={{ pathname: '/used-books', query: { book: slug } }}
-          className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {t('usedCopies', { count: copies.count, price: format.number(copies.minPrice, 'price') })}
         </Link>

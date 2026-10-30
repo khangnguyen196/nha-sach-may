@@ -26,7 +26,7 @@ export function SortSelect({ label, value, options, icon }: Props) {
           const option = options.find((o) => o.value === event.target.value)
           if (option) router.push(option.href)
         }}
-        className="h-9 appearance-none rounded-lg border border-input bg-surface py-0 pr-9 pl-3 text-base text-foreground sm:text-sm transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-9 appearance-none rounded-lg border border-input bg-surface py-0 pr-9 pl-3 text-base text-foreground sm:text-sm transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

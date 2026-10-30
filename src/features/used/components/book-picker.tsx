@@ -138,7 +138,7 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
               type="button"
               onClick={change}
               disabled={disabled}
-              className="h-9 shrink-0 rounded-md px-3 text-sm font-medium text-primary transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+              className="h-9 shrink-0 rounded-md px-3 text-sm font-medium text-primary transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-60"
             >
               {labels.changeBook}
             </button>
@@ -162,7 +162,7 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
             disabled={disabled}
             aria-describedby="listing-book-hint"
             aria-invalid={error ? true : undefined}
-            className="h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+            className="h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring aria-invalid:border-destructive"
           />
           <p id="listing-book-hint" className="text-xs text-muted-foreground">
             {labels.bookSearchHint}
@@ -180,7 +180,7 @@ export function BookPicker({ book, onChange, searchBooks, labels, formatPrice, e
                     onClick={() => choose(option)}
                     disabled={disabled}
                     aria-label={fillTemplate(labels.chooseBookLabel, { title: option.title })}
-                    className="h-9 shrink-0 rounded-md border border-input px-3 text-sm font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                    className="h-9 shrink-0 rounded-md border border-input px-3 text-sm font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring disabled:opacity-60"
                   >
                     {labels.chooseBook}
                   </button>

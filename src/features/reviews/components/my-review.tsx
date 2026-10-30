@@ -26,7 +26,7 @@ export async function MyReview({ bookId, slug, locale }: Props) {
         {t('loginPrompt')}{' '}
         <Link
           href={{ pathname: '/login', query: { next: bookPath } }}
-          className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {t('login')}
         </Link>

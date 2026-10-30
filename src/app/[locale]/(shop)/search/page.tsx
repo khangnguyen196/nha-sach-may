@@ -66,7 +66,7 @@ async function SearchForm({ locale, defaultValue }: { locale: Locale; defaultVal
           defaultValue={defaultValue}
           maxLength={100}
           autoComplete="off"
-          className="h-11 w-full rounded-lg border border-input bg-surface pr-3 pl-9 text-base outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="h-11 w-full rounded-lg border border-input bg-surface pr-3 pl-9 text-base outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring"
         />
       </div>
       <Button type="submit" size="lg" className="h-11 px-5">

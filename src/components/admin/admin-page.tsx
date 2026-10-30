@@ -7,7 +7,7 @@ export function AdminBackLink({ href, label }: { href: AdminHref; label: string 
   return (
     <AdminLink
       href={href}
-      className="mb-4 inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="mb-4 inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
     >
       <ChevronLeftIcon aria-hidden className="size-4" />
       {label}

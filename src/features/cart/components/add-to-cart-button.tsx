@@ -100,7 +100,7 @@ export function AddToCartButton({ bookId, limit, labels, add, formAction, icon }
             </span>
             <Link
               href="/cart"
-              className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {labels.viewCart}
             </Link>

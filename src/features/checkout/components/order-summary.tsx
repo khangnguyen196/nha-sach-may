@@ -25,7 +25,7 @@ export async function OrderSummary({ lines, quote, voucherCode }: Props) {
         <h2 id="checkout-summary-heading" className="text-lg font-semibold">
           {t('summary')}
         </h2>
-        <Link href="/cart" className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
+        <Link href="/cart" className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring">
           {t('editCart')}
         </Link>
       </div>

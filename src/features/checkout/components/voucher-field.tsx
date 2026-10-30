@@ -49,7 +49,7 @@ export async function VoucherField({ voucher, addressId, suggestions }: Props) {
           <span className="text-success">{t('voucherApplied', { code: applied })}</span>
           <Link
             href={{ pathname: '/checkout', query: addressId ? { address: String(addressId) } : {} }}
-            className="rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
           >
             {t('voucherRemove')}
           </Link>
@@ -86,7 +86,7 @@ export async function VoucherField({ voucher, addressId, suggestions }: Props) {
               autoCapitalize="characters"
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? 'voucher-error' : undefined}
-              className="h-9 min-w-0 flex-1 rounded-sm border border-input bg-surface-raised px-3 text-base uppercase sm:text-sm outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive"
+              className="h-9 min-w-0 flex-1 rounded-sm border border-input bg-surface-raised px-3 text-base uppercase sm:text-sm outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring aria-invalid:border-destructive"
             />
             <Button type="submit" form={VOUCHER_FORM_ID} variant="outline" className="h-9">
               {t('voucherApply')}

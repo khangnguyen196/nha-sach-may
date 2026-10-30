@@ -253,7 +253,7 @@ async function RatingSummary({ book }: { book: BookDetail }) {
   return (
     <a
       href="#reviews"
-      className="mt-3 inline-flex items-center gap-2 rounded-sm text-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="mt-3 inline-flex items-center gap-2 rounded-sm text-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
       data-testid="rating-summary"
     >
       <RatingStars rating={book.avg_rating} />
@@ -307,7 +307,7 @@ async function People({ book }: { book: BookDetail }) {
                 {index > 0 && ', '}
                 <Link
                   href={{ pathname: '/authors/[slug]', params: { slug: person.slug } }}
-                  className="rounded-sm font-medium transition-colors outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="rounded-sm font-medium transition-colors outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                 >
                   {person.name}
                 </Link>
@@ -409,7 +409,7 @@ async function Description({ book }: { book: BookDetail }) {
         )}
         {rest.length > 0 && (
           <details className="group mt-4">
-            <summary className="inline-flex cursor-pointer list-none rounded-sm text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex cursor-pointer list-none rounded-sm text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">{t('readMore')}</span>
               <span className="hidden group-open:inline">{t('readLess')}</span>
             </summary>

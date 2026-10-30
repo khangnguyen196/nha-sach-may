@@ -52,7 +52,7 @@ export function VoucherPicker({ vouchers, labels, lazyError, formId, inputId }: 
           setMounted(true)
           setOpen(true)
         }}
-        className="inline-flex min-h-11 items-center rounded-sm text-base font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-0 sm:text-sm"
+        className="inline-flex min-h-11 items-center rounded-sm text-base font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring sm:min-h-0 sm:text-sm"
       >
         {labels.pick}
       </button>

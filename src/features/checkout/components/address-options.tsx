@@ -50,7 +50,7 @@ export async function AddressOptions({ addresses, selectedId, locale, addHref: c
               return (
                 <label
                   key={address.id}
-                  className="flex cursor-pointer gap-3 rounded-lg border bg-surface p-4 transition-colors duration-150 ease-out hover:bg-surface-raised has-checked:border-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+                  className="flex cursor-pointer gap-3 rounded-lg border bg-surface p-4 transition-colors duration-150 ease-out hover:bg-surface-raised has-checked:border-primary has-focus-visible:ring-3 has-focus-visible:ring-focus-ring"
                   data-testid="checkout-address-option"
                 >
                   <input

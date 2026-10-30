@@ -74,7 +74,7 @@ async function EditAuthor({ params }: { params: Props['params'] }) {
                 <li key={book.id}>
                   <AdminLink
                     href={`/admin/sach/${book.id}`}
-                    className="rounded-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="rounded-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                   >
                     {book.title}
                   </AdminLink>

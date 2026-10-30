@@ -33,7 +33,7 @@ export async function MarketGrid({ listings }: { listings: MarketListing[] }) {
               href={{ pathname: '/used-books/[id]', params: { id: String(listing.id) } }}
               prefetch={false}
               data-book-link
-              className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-focus-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
               <div className="relative aspect-[3/4] overflow-hidden rounded-cover border bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">
                 {listing.photoUrl ? (

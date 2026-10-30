@@ -100,7 +100,7 @@ export async function OrderDetails({ order, locale, highlight, renderItemExtra, 
                     {href ? (
                       <Link
                         href={href}
-                        className="line-clamp-2 rounded-sm font-medium underline-offset-4 outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="line-clamp-2 rounded-sm font-medium underline-offset-4 outline-none hover:text-primary hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
                         data-testid="order-item-link"
                       >
                         {item.title}

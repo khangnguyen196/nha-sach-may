@@ -267,6 +267,7 @@ Tên token theo **quy ước shadcn** để thêm component không phải sửa 
 | `border` | `rgb(255 255 255 / 0.08)` | `rgb(0 0 0 / 0.10)` | viền 1px |
 | `input` | `rgb(255 255 255 / 0.14)` | `rgb(0 0 0 / 0.16)` | viền ô nhập |
 | `qr`, `qr-background` | `#000000`, `#FFFFFF` | như dark | mã VietQR (app ngân hàng cần module tối trên nền sáng) |
+| `focus-ring` | `primary` 50% | `primary` | vòng focus (≥ 3:1 với `background` / `surface` / `surface-raised`, Vitest `src/app/globals.test.ts`) |
 
 Alias (không có giá trị riêng, trỏ về token ở trên):
 
@@ -278,6 +279,8 @@ Alias (không có giá trị riêng, trỏ về token ở trên):
 | `destructive` | `sale` |
 
 Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **một** màu nhấn (`primary`). Không thêm gradient sặc sỡ.
+
+Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-ring/50` (primary 50% trên nền sáng chỉ ~2:1; Vitest chặn).
 
 **Typography**
 - UI và nội dung: **Be Vietnam Pro** (400/500/600).

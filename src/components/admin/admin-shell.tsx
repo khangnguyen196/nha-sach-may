@@ -22,7 +22,7 @@ import { AdminLink } from './admin-link'
 import { AdminNav, type AdminNavItem } from './admin-nav'
 import { SHOP_HOME_PATH } from './shop-link'
 
-const focusRing = 'rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+const focusRing = 'rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-focus-ring'
 
 /** Khung admin: thanh điều hướng trên (mobile) / trái (desktop). Trang tự dựng `<main id="main">`. */
 export async function AdminShell({ children }: { children: ReactNode }) {

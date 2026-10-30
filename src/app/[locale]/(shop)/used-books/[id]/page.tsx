@@ -158,13 +158,13 @@ async function UsedListing({ params }: { params: Props['params'] }) {
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm">
             <Link
               href={{ pathname: '/books/[slug]', params: { slug: listing.book.slug } }}
-              className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {t('bookLink')}
             </Link>
             <Link
               href="/used-books"
-              className="rounded-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {t('backToMarket')}
             </Link>

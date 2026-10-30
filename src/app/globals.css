@@ -5,10 +5,10 @@
 /*
  * Design system "Phòng đọc về đêm" — NGUỒN DUY NHẤT của màu, font, radius, chữ.
  * Tên token theo quy ước shadcn để thêm component không phải sửa tay:
- *   primary        = màu "đèn đọc sách" (CTA, giá, link, focus ring)
+ *   primary        = màu "đèn đọc sách" (CTA, giá, link); focus-ring = vòng focus (từ primary)
  *   accent, muted  = surface-raised (nền hover / nền phụ) — KHÔNG phải màu nhấn
  *   muted-foreground = chữ phụ (tác giả, mô tả ngắn)
- * Token riêng: surface, surface-raised, subtle, sale, success.
+ * Token riêng: surface, surface-raised, subtle, sale, success, focus-ring.
  * Dark là mặc định (:root); .light ghi đè. Không dùng mã màu ở component.
  * .light phải nằm trên <html> (next-themes làm vậy): token alias như --card: var(--surface)
  * được tính ở phần tử khai báo, đặt .light trên phần tử con sẽ không đổi được alias.
@@ -60,6 +60,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-focus-ring: var(--focus-ring);
   --color-qr: var(--qr);
   --color-qr-background: var(--qr-background);
 
@@ -125,6 +126,9 @@
   --border: rgb(255 255 255 / 0.08);
   --input: rgb(255 255 255 / 0.14);
   --ring: var(--primary);
+  /* Vòng focus (ring-focus-ring / outline-focus-ring): tối = primary 50% (đủ 3:1 trên nền tối); sáng ghi đè = primary
+     100%, vì primary 50% trên nền sáng chỉ ~2:1 (WCAG 1.4.11 cần 3:1, Vitest src/app/globals.test.ts) */
+  --focus-ring: color-mix(in oklab, var(--primary) 50%, transparent);
 
   --glow: 0 0 24px color-mix(in oklab, var(--primary) 12%, transparent);
 
@@ -149,13 +153,14 @@
   --muted-foreground: #57534e;
   --border: rgb(0 0 0 / 0.1);
   --input: rgb(0 0 0 / 0.16);
+  --focus-ring: var(--primary);
 
   --glow: none;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-focus-ring;
   }
   html {
     @apply font-sans;

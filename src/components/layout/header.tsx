@@ -20,7 +20,7 @@ export async function Header() {
       <div className="mx-auto flex h-full max-w-6xl items-center gap-2 px-4 sm:px-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 rounded-sm text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex shrink-0 items-center gap-2 rounded-sm text-foreground outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           <LogoMark />
           {/* Màn < 375px không đủ chỗ cho chữ cạnh 5 nút → chỉ còn biểu tượng, tên vẫn đọc được bằng trình đọc màn hình */}

@@ -147,7 +147,7 @@ function CartLineItem({ line, labels, formatPrice, onQuantityChange, onRemove }:
           <div className="min-w-0">
             <Link
               href={{ pathname: '/books/[slug]', params: { slug: book.slug } }}
-              className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {book.title}
             </Link>

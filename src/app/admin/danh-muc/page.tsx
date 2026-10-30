@@ -90,7 +90,7 @@ async function CategoryTable() {
                 <AdminLink
                   href={`/admin/danh-muc/${category.id}`}
                   className={cn(
-                    'rounded-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50',
+                    'rounded-sm outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring',
                     !child && 'font-medium',
                   )}
                 >

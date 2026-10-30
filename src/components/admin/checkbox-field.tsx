@@ -15,7 +15,7 @@ export function CheckboxField({
         name={name}
         type="checkbox"
         aria-describedby={hint ? `${id}-hint` : undefined}
-        className="mt-0.5 size-5 shrink-0 accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="mt-0.5 size-5 shrink-0 accent-primary outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
         {...props}
       />
       <div className="grid gap-0.5">

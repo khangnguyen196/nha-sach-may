@@ -13,7 +13,7 @@ import { siteUrl } from '@/lib/site-url'
 import { placeholder } from '@/lib/template'
 
 const categoryLink =
-  'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50'
+  'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring'
 
 /** Nhánh danh mục sách tiếng Anh (supabase/seed-foreign-books.sql): một kệ riêng, không trộn vào "Mới về" */
 const FOREIGN_CATEGORY_SLUG = 'sach-ngoai-van'

@@ -107,7 +107,7 @@ async function AuthorList({ searchParams }: { searchParams: PageProps<'/admin/ta
                   <th scope="row" className={cn(cell, 'text-left font-normal')}>
                     <AdminLink
                       href={`/admin/tac-gia/${author.id}`}
-                      className="rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                     >
                       {author.name}
                     </AdminLink>

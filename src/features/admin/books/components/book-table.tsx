@@ -61,7 +61,7 @@ export async function BookTable({ books }: { books: AdminBookRow[] }) {
               <th scope="row" className={cn(cell, 'max-w-sm text-left font-normal')}>
                 <AdminLink
                   href={`/admin/sach/${book.id}`}
-                  className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="line-clamp-2 rounded-sm font-medium outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                 >
                   {book.title}
                 </AdminLink>

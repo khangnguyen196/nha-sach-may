@@ -32,7 +32,7 @@ export async function Shelf({ id, title, href, books }: Props) {
           {href && (
             <Link
               href={href}
-              className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm text-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {t('seeAll')}
             </Link>

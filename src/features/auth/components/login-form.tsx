@@ -48,7 +48,7 @@ export function LoginForm({ action, resend, messages, labels, resendLabels }: Pr
           labelAside={
             <Link
               href="/forgot-password"
-              className="rounded-sm text-sm text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-sm text-sm text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-focus-ring"
             >
               {labels.forgot}
             </Link>

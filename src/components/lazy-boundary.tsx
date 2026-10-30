@@ -109,14 +109,14 @@ function LazyError({ labels, onDismiss }: { labels: LazyErrorLabels; onDismiss: 
           ref={reloadRef}
           type="button"
           onClick={() => window.location.reload()}
-          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-5 font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {labels.reload}
         </button>
         <button
           type="button"
           onClick={onDismiss}
-          className="inline-flex min-h-11 items-center rounded-lg border border-input px-5 font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="inline-flex min-h-11 items-center rounded-lg border border-input px-5 font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {labels.close}
         </button>

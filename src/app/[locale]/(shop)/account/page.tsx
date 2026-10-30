@@ -129,7 +129,7 @@ type AccountCardProps = {
 }
 
 const cardClass =
-  'group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50'
+  'group mt-4 flex items-center gap-4 rounded-lg border bg-surface p-5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring'
 
 // Không prefetch (cả thẻ "Sách tôi bán"): lúc bấm "Đăng xuất" ở trang này, prefetch của các thẻ có thể chạy sau khi cookie đã bị xóa → proxy 307
 // sang /dang-nhap → Next 404 cho segment của trang tài khoản (e2e từng bắt `next=%2Ftai-khoan%2Fdon-hang`,

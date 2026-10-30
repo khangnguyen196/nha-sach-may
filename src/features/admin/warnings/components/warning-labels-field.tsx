@@ -29,7 +29,7 @@ export function WarningLabelsField({ name, legend, hint, options, defaultValue, 
               name={name}
               value={option.value}
               defaultChecked={defaultValue.includes(option.value)}
-              className="size-5 shrink-0 accent-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="size-5 shrink-0 accent-primary outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
             />
             {option.label}
           </label>

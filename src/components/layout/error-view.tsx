@@ -80,7 +80,7 @@ export function ErrorView({ messages, digest, onRetry, homeLink }: Props) {
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-primary px-5 text-base font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="inline-flex h-11 items-center gap-1.5 rounded-lg bg-primary px-5 text-base font-medium text-primary-foreground transition-colors outline-none hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           <Icon className="size-4">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -89,7 +89,7 @@ export function ErrorView({ messages, digest, onRetry, homeLink }: Props) {
           {messages.retry}
         </button>
         {homeLink(
-          'inline-flex h-11 items-center rounded-lg border border-input px-5 text-base font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-ring/50',
+          'inline-flex h-11 items-center rounded-lg border border-input px-5 text-base font-medium transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring',
         )}
       </div>
     </div>
@@ -108,7 +108,7 @@ function WithSupportEmail({ text }: { text: string }) {
           // mailto: không phải link nội bộ
           // eslint-disable-next-line no-restricted-syntax
           href={`mailto:${SUPPORT_EMAIL}`}
-          className="rounded-sm break-all underline underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-sm break-all underline underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {SUPPORT_EMAIL}
         </a>

@@ -15,7 +15,7 @@ export function SupportEmailText({ text }: { text: string }) {
           // mailto: không phải link nội bộ
           // eslint-disable-next-line no-restricted-syntax
           href={`mailto:${SUPPORT_EMAIL}`}
-          className="rounded-sm break-all underline underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded-sm break-all underline underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           {SUPPORT_EMAIL}
         </a>

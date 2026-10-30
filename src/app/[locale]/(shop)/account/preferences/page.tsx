@@ -95,7 +95,7 @@ async function PreferencesList({ locale }: { locale: Locale }) {
                     {item.href ? (
                       <Link
                         href={item.href}
-                        className="min-w-0 rounded-sm font-medium break-words outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="min-w-0 rounded-sm font-medium break-words outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-focus-ring"
                       >
                         {name}
                       </Link>
