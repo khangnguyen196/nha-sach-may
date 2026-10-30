@@ -66,10 +66,16 @@ describe('e2e/fixtures/books.json', () => {
     expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(PAGE_SIZE)
   })
 
-  it('Văn học có ≥ 2 danh mục con có sách, danh mục con đầu (Tiểu thuyết) có sách (catalog.spec)', () => {
-    const children = new Set(books.map((b) => b.category_slug).filter((slug) => ['tieu-thuyet', 'truyen-ngan-tan-van', 'tho'].includes(slug)))
+  it('Văn học: ≥ 2 danh mục con có sách, Tiểu thuyết có sách, > 6 sách ở trang 1 (catalog.spec: lưới sách, EAGER_COUNT 6)', () => {
+    const literature = books.filter((b) => ['tieu-thuyet', 'truyen-ngan-tan-van', 'tho'].includes(b.category_slug))
+    const children = new Set(literature.map((b) => b.category_slug))
     expect(children.size).toBeGreaterThanOrEqual(2)
     expect(children.has('tieu-thuyet')).toBe(true)
+    // EAGER_COUNT của src/features/books/components/book-grid.tsx; đổi số đó thì sửa cả đây và catalog.spec (nth(5)
+    // eager, nth(6) lazy). Đếm mọi tồn kho: trang danh mục hiện cả sách hết hàng
+    const eagerCount = 6
+    expect(literature.length).toBeGreaterThan(eagerCount)
+    expect(PAGE_SIZE).toBeGreaterThan(eagerCount)
   })
 
   it('mọi danh mục con của Sách ngoại văn có sách', () => {

@@ -267,8 +267,8 @@ test('lưới stream vào không gây nhảy layout (CLS < 0.1)', async ({ page 
   expect(errors).toEqual([])
 })
 
-// Văn học trên dữ liệu e2e có 12 sách (3 danh mục con) → đủ hàng thứ hai ở xl 6 cột
-test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), cả hàng đầu tải ngay, hàng sau tải lười', async ({ page }) => {
+// Văn học trên dữ liệu e2e có > 6 sách ở trang 1 (bất biến ở scripts/e2e-seed.test.ts) → đủ hàng thứ hai ở xl 6 cột
+test('lưới sách: 2 bìa đầu ưu tiên cao (ảnh LCP), 6 bìa đầu tải ngay (hàng đầu xl), bìa thứ 7 tải lười', async ({ page }) => {
   await page.goto('/danh-muc/van-hoc')
   const covers = page.getByRole('main').locator('ul img')
   await expect(covers.nth(0)).toHaveAttribute('fetchpriority', 'high')
