@@ -62,7 +62,9 @@ export async function MarketFilters({ params, categories, book }: Props) {
 
 function ChipGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div role="group" aria-label={label} className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+    // min-w-0: ô của grid cha mặc định min-width: auto → hàng chip w-max kéo cả cột (và trang) rộng theo chip, tràn ngang
+    // trên điện thoại thay vì cuộn trong khung overflow-x-auto bên dưới
+    <div role="group" aria-label={label} className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
       <span aria-hidden className="text-xs font-medium text-subtle md:w-20 md:shrink-0">
         {label}
       </span>
