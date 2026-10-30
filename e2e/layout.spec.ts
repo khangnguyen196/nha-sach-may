@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { ADD_TO_CART_SUBMIT, addToCartButton, vnd } from './cart'
 import { collectErrors, openPalette, waitForHydration, waitForSettled } from './helpers'
+
+// Playwright biên dịch spec sang CommonJS (không có import.meta): đọc fixture theo đường dẫn từ gốc repo
+const fixture: { slug: string; price: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
+const sapiens = fixture.find((book) => book.slug === 'sapiens')
+if (!sapiens) throw new Error('e2e/fixtures/books.json thiếu sapiens')
+/** Dải đáy màn hình mà bong bóng chat tự ẩn khi khối [data-chat-avoid] chạm vào (BOTTOM_BAND_PX, chat-bubble.tsx) */
+const CHAT_BOTTOM_BAND_PX = 88
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')
@@ -253,4 +262,30 @@ test('khách chưa đăng nhập: không có request RSC / prefetch nào tới /
   }
   expect(accountRsc).toEqual([])
   expect(errors).toEqual([])
+})
+
+test.describe('trang sách trên điện thoại 390×844 (đánh giá 2026-10-30)', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('giá + nút "Thêm vào giỏ" trong màn hình đầu (không cuộn), khối nút nằm trên dải đáy của bong bóng chat', async ({
+    page,
+  }) => {
+    await page.goto('/sach/sapiens')
+    await waitForHydration(page, ADD_TO_CART_SUBMIT)
+    await page.evaluate(async () => {
+      await document.fonts.ready
+    })
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+    await expect(addToCartButton(page)).toBeInViewport()
+    const price = page.getByRole('main').getByText(vnd(sapiens.price), { exact: true }).filter({ visible: true }).first()
+    await expect(price).toBeInViewport()
+    // Khối nút chạm dải đáy → bong bóng chat ẩn ngay khi mở trang (chat.spec cần bong bóng hiện ở /sach/sapiens)
+    const { bottom, innerHeight } = await page
+      .getByRole('main')
+      .locator('[data-chat-avoid]')
+      .filter({ visible: true })
+      .evaluate((element) => ({ bottom: element.getBoundingClientRect().bottom, innerHeight: window.innerHeight }))
+    expect(bottom).toBeLessThanOrEqual(innerHeight - CHAT_BOTTOM_BAND_PX)
+  })
 })

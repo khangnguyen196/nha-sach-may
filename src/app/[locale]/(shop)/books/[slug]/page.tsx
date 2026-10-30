@@ -46,6 +46,17 @@ const META_DESCRIPTION_LENGTH = 160
 // Dưới mức này coi là sắp hết; chỉ để hiện "Chỉ còn N cuốn"
 const LOW_STOCK = 5
 
+// Khung bìa (trang + skeleton dùng chung → không CLS). Dưới md: khóa chiều cao theo màn hình, rộng theo tỉ lệ 2:3, để giá
+// + nút "Thêm vào giỏ" nằm trong màn hình đầu ở điện thoại 390×844 / 412×839 (đánh giá 2026-10-30). 644px = phần trên bìa
+// (header, breadcrumb 2 dòng, khoảng cách ≈ 169px) + từ đáy bìa tới đáy khối nút ở /sach/sapiens (≈ 376px) + dải đáy 88px
+// của bong bóng chat (khối [data-chat-avoid] phải nằm trọn trên dải đó, không thì bong bóng ẩn ngay khi mở trang) + ~11px
+// dư. Thấp nhất 160px (màn thấp vẫn thấy bìa, nút có thể ra ngoài), cao nhất 360px (rộng 240px: COVER_SIZES). Từ md giữ
+// như cũ: rộng theo cột, cao theo tỉ lệ.
+const COVER_FRAME =
+  'relative mx-auto aspect-[2/3] h-[clamp(160px,calc(100svh_-_644px),360px)] max-w-full rounded-cover bg-surface-raised md:h-auto md:w-full'
+// Phần mobile = rộng tối đa của khung dưới md (360px × 2/3)
+const COVER_SIZES = '(min-width: 1152px) 420px, (min-width: 768px) 38vw, 240px'
+
 // Slug tạo sau lần build (admin thêm / đổi slug, import giữa hai lần deploy) không có trong generateStaticParams: Next
 // dựng App Shell cho tham số chưa biết. Page chỉ đọc `params` bên trong <Suspense> (và LocaleSwitcher đọc useParams
 // trong Suspense riêng) → shell dựng được, slug mới stream theo request; slug đã prerender vẫn có sẵn trong HTML tĩnh,
@@ -101,7 +112,7 @@ function BookPageSkeleton() {
     <div aria-hidden className="animate-pulse motion-reduce:animate-none">
       <div className="h-5 w-48 rounded-sm bg-surface-raised" />
       <div className="mt-6 grid gap-8 md:mt-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 lg:gap-16">
-        <div className="mx-auto aspect-[2/3] w-full max-w-xs rounded-cover bg-surface-raised md:max-w-none" />
+        <div className={COVER_FRAME} />
         <div className="space-y-4">
           <div className="h-10 w-3/4 rounded-sm bg-surface-raised" />
           <div className="h-5 w-1/2 rounded-sm bg-surface-raised" />
@@ -176,7 +187,10 @@ async function BookContent({ params }: { params: Props['params'] }) {
 
       <div className="mt-6 grid gap-8 md:mt-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 lg:gap-16">
         <div className="md:sticky md:top-24 md:self-start">
-          <div className="relative mx-auto aspect-[2/3] w-full max-w-xs overflow-hidden rounded-cover bg-surface-raised md:max-w-none">
+          {/* Viền mảnh: lớp ::after nằm trên ảnh (như BookCard), không nhận chuột */}
+          <div
+            className={`${COVER_FRAME} overflow-hidden after:pointer-events-none after:absolute after:inset-0 after:rounded-cover after:ring-1 after:ring-border after:ring-inset`}
+          >
             {book.cover_url ? (
               // Ảnh đứng một mình → alt là tên sách. Là LCP của trang → preload + ưu tiên cao.
               <Image
@@ -185,7 +199,7 @@ async function BookContent({ params }: { params: Props['params'] }) {
                 fill
                 preload
                 fetchPriority="high"
-                sizes="(min-width: 1152px) 420px, (min-width: 768px) 38vw, 320px"
+                sizes={COVER_SIZES}
                 className="object-cover"
               />
             ) : (

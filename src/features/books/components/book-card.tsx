@@ -40,7 +40,9 @@ export async function BookCard({ book, sizes = GRID_IMAGE_SIZES, eager = false, 
         data-book-link
         className="group block rounded-lg transition-transform duration-200 ease-out outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-focus-ring"
       >
-        <div className="relative aspect-[2/3] overflow-hidden rounded-cover bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow">
+        {/* Viền mảnh quanh bìa (bìa nền trắng lẫn vào nền sáng): lớp ::after nằm trên ảnh (ring-inset của chính khung bị ảnh
+            đè), không nhận chuột; nhãn hết hàng nằm cách mép nên không bị viền chạm, ô mờ BlockedVeil ngoài link vẫn đè lên */}
+        <div className="relative aspect-[2/3] overflow-hidden rounded-cover bg-surface-raised transition-shadow duration-200 ease-out group-hover:shadow-glow after:pointer-events-none after:absolute after:inset-0 after:rounded-cover after:ring-1 after:ring-border after:ring-inset">
           {book.cover_url ? (
             // alt rỗng: tên sách hiển thị ngay dưới, cùng một link (ngoại lệ alt trong CLAUDE.md)
             <Image
