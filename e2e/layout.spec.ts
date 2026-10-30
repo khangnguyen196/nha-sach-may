@@ -286,6 +286,8 @@ test.describe('trang sách trên điện thoại 390×844 (đánh giá 2026-10-3
       .locator('[data-chat-avoid]')
       .filter({ visible: true })
       .evaluate((element) => ({ bottom: element.getBoundingClientRect().bottom, innerHeight: window.innerHeight }))
-    expect(bottom).toBeLessThanOrEqual(innerHeight - CHAT_BOTTOM_BAND_PX)
+    // Nhỏ hơn hẳn: IntersectionObserver (rootMargin trong chat-bubble.tsx) coi chạm mép là giao nhau → bằng đúng giới hạn
+    // thì bong bóng vẫn ẩn
+    expect(bottom).toBeLessThan(innerHeight - CHAT_BOTTOM_BAND_PX)
   })
 })

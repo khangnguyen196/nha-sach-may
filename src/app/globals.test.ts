@@ -99,9 +99,10 @@ describe('ô "Tính năng demo" (demo-note.tsx) trên surface-raised', () => {
 })
 
 describe('lớp vòng focus', () => {
-  const OLD = ['ring-ring/50', 'outline-ring/50']
+  // Mọi vòng / outline màu ring hoặc primary có độ đục riêng (ring-ring/50, focus-visible:ring-primary/40…) bỏ qua token
+  const OLD = /\b(ring|outline)-(ring|primary)\/\d+\b/g
 
-  it('không còn ring-ring/50 / outline-ring/50 trong src (dùng ring-focus-ring / outline-focus-ring)', () => {
+  it('không lớp (ring|outline)-(ring|primary)/N trong src (dùng ring-focus-ring / outline-focus-ring)', () => {
     const self = join(import.meta.dirname, 'globals.test.ts')
     const offenders = readdirSync(SRC, { withFileTypes: true, recursive: true })
       .filter((entry) => entry.isFile() && /\.(tsx?|css)$/.test(entry.name))
@@ -109,7 +110,7 @@ describe('lớp vòng focus', () => {
       .filter((file) => file !== self)
       .flatMap((file) => {
         const source = readFileSync(file, 'utf8')
-        return OLD.filter((name) => source.includes(name)).map((name) => `${relative(SRC, file)}: ${name}`)
+        return [...source.matchAll(OLD)].map(([name]) => `${relative(SRC, file)}: ${name}`)
       })
     expect(offenders).toEqual([])
   })

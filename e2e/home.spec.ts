@@ -35,7 +35,9 @@ test('thứ tự kệ: Nổi bật, Bán chạy (nếu có) → Mới về → S
     expect(count === 0 || count >= (name === 'Nổi bật' ? 4 : 6), name).toBe(true)
   }
   expect(await shelfBooks(page, 'Mới về').count()).toBeGreaterThan(0)
-  // Không sách nào lên hai kệ (homeShelves, features/books/utils.ts)
+  // Không sách nào lên hai kệ (homeShelves, features/books/utils.ts). Dữ liệu CI không có sách is_featured, Bán chạy ẩn,
+  // Mới về chỉ sách Việt / Ngoại văn chỉ sách Anh → phép kiểm này chỉ chặn hồi quy thô; loại trùng thật do Vitest
+  // homeShelves (utils.test.ts) kiểm
   const hrefs = (
     await Promise.all(
       ['Nổi bật', 'Bán chạy', 'Mới về', 'Sách ngoại văn'].map((name) =>
