@@ -266,3 +266,31 @@ export async function expectLockedUntilHydrated(
   await expect(page.locator(selector).first()).toBeEnabled()
   await expect(page.locator(selector).first()).toHaveAttribute('aria-disabled', 'false')
 }
+
+/**
+ * Số px vòng focus (`ringPx` mỗi phía quanh phần tử) bị cắt bởi tổ tiên có overflow khác visible, tính tới hết `<main>`:
+ * vùng hiển thị của tổ tiên là padding box (bỏ thanh cuộn), mỗi trục chỉ xét khi trục đó cắt. Trả số lớn nhất mỗi phía.
+ */
+export async function focusRingClip(element: Locator, ringPx: number) {
+  return element.evaluate((node, ring) => {
+    const box = node.getBoundingClientRect()
+    const outer = { top: box.top - ring, right: box.right + ring, bottom: box.bottom + ring, left: box.left - ring }
+    const clip = { top: 0, right: 0, bottom: 0, left: 0 }
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent)
+      const rect = parent.getBoundingClientRect()
+      const left = rect.left + parent.clientLeft
+      const top = rect.top + parent.clientTop
+      if (style.overflowX !== 'visible') {
+        clip.left = Math.max(clip.left, left - outer.left)
+        clip.right = Math.max(clip.right, outer.right - (left + parent.clientWidth))
+      }
+      if (style.overflowY !== 'visible') {
+        clip.top = Math.max(clip.top, top - outer.top)
+        clip.bottom = Math.max(clip.bottom, outer.bottom - (top + parent.clientHeight))
+      }
+      if (parent.tagName === 'MAIN') break
+    }
+    return clip
+  }, ringPx)
+}

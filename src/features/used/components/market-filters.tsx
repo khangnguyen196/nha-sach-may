@@ -68,8 +68,10 @@ function ChipGroup({ label, children }: { label: string; children: ReactNode }) 
       <span aria-hidden className="text-xs font-medium text-subtle md:w-20 md:shrink-0">
         {label}
       </span>
-      {/* Hàng chip cuộn ngang trên mobile (danh mục có thể nhiều) */}
-      <div className="-mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
+      {/* Hàng chip cuộn ngang trên mobile (danh mục có thể nhiều). Khung cuộn cắt mọi thứ ngoài vùng đệm: py-1 / -my-1
+          chừa chỗ cho vòng focus 3px trên / dưới mà chip không dời; từ md hàng tự xuống dòng nên không cần cuộn (không
+          cắt cạnh trái chip đầu) */}
+      <div className="-mx-4 -my-1 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0">
         <ul className="flex w-max gap-2 md:w-auto md:flex-wrap">{children}</ul>
       </div>
     </div>

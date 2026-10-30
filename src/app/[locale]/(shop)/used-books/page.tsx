@@ -52,7 +52,9 @@ function MarketSkeleton() {
     <div aria-hidden>
       <div className="mb-8 grid gap-4">
         {Array.from({ length: 2 }, (_, row) => (
-          <div key={row} className="flex gap-2">
+          // overflow-hidden: 4 viên w-24 (408px) rộng hơn cột ở màn 390px; ô grid overflow khác visible có min-width 0 →
+          // hàng co theo cột thay vì kéo trang rộng ra lúc đang stream
+          <div key={row} className="flex gap-2 overflow-hidden">
             {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="h-8 w-24 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
             ))}

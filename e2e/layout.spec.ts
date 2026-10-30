@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { ADD_TO_CART_SUBMIT, addToCartButton, vnd } from './cart'
-import { collectErrors, openPalette, waitForHydration, waitForSettled } from './helpers'
+import { collectErrors, focusRingClip, openPalette, waitForHydration, waitForSettled } from './helpers'
 
 // Playwright biên dịch spec sang CommonJS (không có import.meta): đọc fixture theo đường dẫn từ gốc repo
 const fixture: { slug: string; price: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
@@ -9,6 +9,8 @@ const sapiens = fixture.find((book) => book.slug === 'sapiens')
 if (!sapiens) throw new Error('e2e/fixtures/books.json thiếu sapiens')
 /** Dải đáy màn hình mà bong bóng chat tự ẩn khi khối [data-chat-avoid] chạm vào (BOTTOM_BAND_PX, chat-bubble.tsx) */
 const CHAT_BOTTOM_BAND_PX = 88
+/** Vòng focus của chip (`focus-visible:ring-3`) */
+const FOCUS_RING_PX = 3
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')
@@ -290,4 +292,42 @@ test.describe('trang sách trên điện thoại 390×844 (đánh giá 2026-10-3
     // thì bong bóng vẫn ẩn
     expect(bottom).toBeLessThan(innerHeight - CHAT_BOTTOM_BAND_PX)
   })
+})
+
+// Tắt JS thì phần Suspense nằm trong <div hidden> chờ $RC (không chạy) → khung chờ còn hiện, như lúc trang đang stream trên
+// mạng chậm. Hàng viên chip của khung chờ (4 × w-24 = 408px) từng kéo trang rộng 424px ở màn 390px (test Chrome 2026-10-30)
+test.describe('khung chờ chợ sách cũ ở 390×844, tắt JS', () => {
+  test.use({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } })
+
+  for (const path of ['/cho-sach-cu', '/en/used-books']) {
+    test(`khung chờ đang hiện và không tràn ngang: ${path}`, async ({ page }) => {
+      await page.goto(path)
+      await expect(page.getByTestId('market-count')).toBeHidden()
+      await expect(page.getByRole('main').locator('[aria-hidden="true"] .animate-pulse.rounded-full').first()).toBeVisible()
+      const { innerWidth, scrollWidth, viewport } = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }))
+      // Điện thoại (isMobile) tràn ngang thì nới layout viewport theo nội dung (thu nhỏ trang) → kiểm cả innerWidth
+      expect(innerWidth).toBe(390)
+      expect(scrollWidth).toBeLessThanOrEqual(viewport)
+    })
+  }
+})
+
+test('chợ sách cũ: vòng focus của chip đầu (Tab) không bị khung cuộn hàng chip cắt', async ({ page }) => {
+  // Khung overflow-x-auto (overflow-y thành auto theo) từng cắt mất cạnh trên / dưới vòng 3px, từ md cả cạnh trái
+  await page.goto('/cho-sach-cu')
+  await waitForSettled(page)
+  const chip = page.getByRole('main').getByRole('group').first().getByRole('link').first()
+  await expect(chip).toBeVisible()
+  // Đúng đường bàn phím (không gọi focus()): Tab từ đầu trang tới chip đầu
+  for (let step = 0; step < 40 && !(await chip.evaluate((element) => element === document.activeElement)); step++) {
+    await page.keyboard.press('Tab')
+  }
+  await expect(chip).toBeFocused()
+  expect(await chip.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
+  expect(await chip.evaluate((element) => element.closest('ul')?.parentElement?.scrollLeft)).toBe(0)
+  expect(await focusRingClip(chip, FOCUS_RING_PX)).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
 })
