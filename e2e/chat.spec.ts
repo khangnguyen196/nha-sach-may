@@ -148,6 +148,23 @@ test('AI trả 5 slug (1 slug lạ) → đúng 3 thẻ, không có slug lạ', a
   await expect(reply.locator('a[href="/sach/sach-khong-ton-tai"]')).toHaveCount(0)
 })
 
+test('thẻ sách: bìa tải ngay (eager), có ảnh thật, khung 48×72; icon sách nằm dưới ảnh', async ({ page }) => {
+  await page.goto('/')
+  const panel = await openChat(page)
+  const reply = await ask(panel, 'Gợi ý sách [mock:5-books]')
+  const cards = reply.getByTestId('chat-book-card')
+  await expect(cards).toHaveCount(3)
+  for (const card of await cards.all()) {
+    const img = card.locator('img')
+    await expect(img).toHaveAttribute('loading', 'eager')
+    await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0)
+    const box = await img.boundingBox()
+    expect(box && { width: Math.round(box.width), height: Math.round(box.height) }).toEqual({ width: 48, height: 72 })
+    // Ô không trống trơn khi ảnh đang tải / lỗi: icon cùng khung, ảnh phủ lên
+    await expect(card.locator('svg[aria-hidden]')).toHaveCount(1)
+  }
+})
+
 test('hỏi ở trang sách: chỉ gửi slug, server tự tra sách', async ({ page }) => {
   await page.goto('/sach/sapiens')
   const panel = await openChat(page)
