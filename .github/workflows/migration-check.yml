@@ -1,0 +1,188 @@
+# migration-check: migration mới (so với origin/main) chạy trên DB giống production phải ra đúng DB dựng từ schema.sql
+# mới, chạy lần 2 phải lỗi mà không đổi gì. DB = Supabase local trong Docker như e2e (không project cloud, không secret,
+# không đọc file env). Migration thật do chủ dự án chạy tay trong SQL Editor; job này chỉ kiểm trước.
+#   1. Tìm migration mới (thêm so với origin/main). Không có → qua (VD push lên main sau khi đã lên).
+#   2. Supabase local từ schema.sql của origin/main (bản sao supabase/ của HEAD, ghi đè schema.sql; seed như e2e).
+#   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql).
+#   4. Chạy migration (psql ON_ERROR_STOP) → exit 0; bảng vai "sau" giống "trước" từng chữ.
+#   5. Gọi /rest/v1/rpc/<hàm trigger> bằng khóa anon → lỗi quyền / không tìm thấy.
+#   6. Không còn khóa ngoại nào của public thiếu index.
+#   7. Dump A (pg_dump --schema-only public + private, trong container DB) + 4 truy vấn chính xác.
+#   8. Migration lần 2 → exit ≠ 0; dump + truy vấn chính xác giống A.
+#   9. Dựng lại từ schema.sql của HEAD → dump B (cùng cách).
+#  10. Chuẩn hóa A, B (scripts/ci/normalize-dump.sh) → diff rỗng; 4 truy vấn chính xác giống nhau.
+name: migration-check
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore: ['docs/**', '**/*.md']
+  workflow_dispatch:
+
+concurrency:
+  group: migration-check-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DB_CONTAINER: supabase_db_nha-sach-may
+  SUPABASE_EXCLUDE: imgproxy,postgres-meta,supavisor,edge-runtime
+
+jobs:
+  migration-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: find
+        name: 1. Migration mới so với origin/main
+        run: |
+          git rev-parse --verify origin/main
+          git diff --name-only --diff-filter=A origin/main...HEAD -- supabase/migrations/ > "$RUNNER_TEMP/added.txt"
+          { grep '\.sql$' "$RUNNER_TEMP/added.txt" || true; } | sort > "$RUNNER_TEMP/new-migrations.txt"
+          count=$(wc -l < "$RUNNER_TEMP/new-migrations.txt")
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -eq 0 ]; then
+            echo "không có migration mới"
+          else
+            cat "$RUNNER_TEMP/new-migrations.txt"
+          fi
+
+      # Ghim bản CLI như e2e → image Docker cố định
+      - if: ${{ steps.find.outputs.count != '0' }}
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 2. Supabase local từ schema.sql của origin/main
+        run: |
+          base="$RUNNER_TEMP/base"
+          mkdir -p "$base"
+          cp -r supabase "$base/supabase"
+          git show origin/main:supabase/schema.sql > "$base/supabase/schema.sql"
+          supabase start --workdir "$base" -x "$SUPABASE_EXCLUDE"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 3. Bảng vai × trạng thái trước migration
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-before.txt"
+          cat "$RUNNER_TEMP/visibility-before.txt"
+          diff -u scripts/ci/used-visibility.expected "$RUNNER_TEMP/visibility-before.txt"
+          # Chỉ ghi lại để so (không kiểm): trước migration anon còn quyền EXECUTE trên hàm trigger
+          echo "rpc trước migration: $(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 4. Chạy migration mới; bảng vai sau == trước
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          while read -r file; do
+            echo "::group::$file"
+            db_psql < "$file"
+            echo "::endgroup::"
+          done < "$RUNNER_TEMP/new-migrations.txt"
+          db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-after.txt"
+          diff -u "$RUNNER_TEMP/visibility-before.txt" "$RUNNER_TEMP/visibility-after.txt"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 5. Hàm trigger không gọi được qua /rest/v1/rpc bằng khóa anon
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          result="$(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
+          echo "$result"
+          if grep -qi 'trigger functions can only be called as triggers' <<< "$result"; then
+            echo "::error::anon vẫn gọi được hàm trigger (Postgres chỉ chặn ở bước chạy)"
+            exit 1
+          fi
+          case "${result%% *}" in
+            401 | 403 | 404) ;;
+            *) echo "::error::cần lỗi quyền / không tìm thấy (401, 403, 404)"; exit 1 ;;
+          esac
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 6. Khóa ngoại thiếu index (phải rỗng)
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          db_psql < scripts/ci/fk-without-index.sql > "$RUNNER_TEMP/fk.txt"
+          cat "$RUNNER_TEMP/fk.txt"
+          test ! -s "$RUNNER_TEMP/fk.txt"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 7. Dump A + truy vấn chính xác
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          db_dump > "$RUNNER_TEMP/dump-a.sql"
+          db_psql < scripts/ci/exact-checks.sql > "$RUNNER_TEMP/exact-a.txt"
+          wc -l "$RUNNER_TEMP/dump-a.sql"
+          cat "$RUNNER_TEMP/exact-a.txt"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 8. Migration lần 2 phải lỗi, không đổi gì
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          while read -r file; do
+            if db_psql < "$file"; then
+              echo "::error::$file chạy lần 2 không lỗi"
+              exit 1
+            fi
+            echo "$file: chạy lần 2 lỗi như mong đợi"
+          done < "$RUNNER_TEMP/new-migrations.txt"
+          db_dump > "$RUNNER_TEMP/dump-a2.sql"
+          db_psql < scripts/ci/exact-checks.sql > "$RUNNER_TEMP/exact-a2.txt"
+          diff -u <(bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-a.sql") \
+            <(bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-a2.sql")
+          diff -u "$RUNNER_TEMP/exact-a.txt" "$RUNNER_TEMP/exact-a2.txt"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 9. Dựng lại từ schema.sql của HEAD, dump B
+        run: |
+          source scripts/ci/migration-check-lib.sh
+          supabase stop --workdir "$RUNNER_TEMP/base" --no-backup
+          supabase start -x "$SUPABASE_EXCLUDE"
+          db_dump > "$RUNNER_TEMP/dump-b.sql"
+          db_psql < scripts/ci/exact-checks.sql > "$RUNNER_TEMP/exact-b.txt"
+          wc -l "$RUNNER_TEMP/dump-b.sql"
+          # DB mới cũng phải ra đúng bảng vai và không thiếu index khóa ngoại
+          db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-b.txt"
+          diff -u scripts/ci/used-visibility.expected "$RUNNER_TEMP/visibility-b.txt"
+          db_psql < scripts/ci/fk-without-index.sql > "$RUNNER_TEMP/fk-b.txt"
+          cat "$RUNNER_TEMP/fk-b.txt"
+          test ! -s "$RUNNER_TEMP/fk-b.txt"
+
+      - if: ${{ steps.find.outputs.count != '0' }}
+        name: 10. So dump A (origin/main + migration) với dump B (schema.sql mới)
+        run: |
+          bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-a.sql" > "$RUNNER_TEMP/dump-a.norm"
+          bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-b.sql" > "$RUNNER_TEMP/dump-b.norm"
+          wc -l "$RUNNER_TEMP/dump-a.norm" "$RUNNER_TEMP/dump-b.norm"
+          test -s "$RUNNER_TEMP/dump-a.norm"
+          diff -u "$RUNNER_TEMP/dump-a.norm" "$RUNNER_TEMP/dump-b.norm"
+          diff -u "$RUNNER_TEMP/exact-a.txt" "$RUNNER_TEMP/exact-b.txt"
+
+      - if: ${{ failure() && steps.find.outputs.count != '0' }}
+        name: Supabase logs (db, rest)
+        run: |
+          for service in db rest; do
+            echo "::group::$service"
+            docker logs --tail 200 "supabase_${service}_nha-sach-may" 2>&1 || true
+            echo "::endgroup::"
+          done
+
+      - if: ${{ always() && steps.find.outputs.count != '0' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-check
+          path: |
+            ${{ runner.temp }}/dump-*.sql
+            ${{ runner.temp }}/dump-*.norm
+            ${{ runner.temp }}/exact-*.txt
+            ${{ runner.temp }}/visibility-*.txt
+          retention-days: 7
+          if-no-files-found: ignore
