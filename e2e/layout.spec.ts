@@ -562,9 +562,10 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
           const { left, right, top, bottom, width, height } = element.getBoundingClientRect()
           return { left, right, top, bottom, width, height }
         }
-        // Nút / link đang hiện (có hộp) trừ logo; menu đang đóng nên mục trong menu không có hộp
+        // Nút / link đang hiện trừ logo. checkVisibility, không getClientRects: Chromium ẩn nội dung <details> đóng bằng
+        // content-visibility: hidden, mục trong menu đóng vẫn có thể có hộp
         const controls = [...header.querySelectorAll('a, button, summary')]
-          .filter((element) => element !== logo && element.getClientRects().length > 0)
+          .filter((element) => element !== logo && element.checkVisibility())
           .map((element) => ({ name: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? '', ...box(element) }))
         const textStyle = getComputedStyle(text)
         return {
@@ -665,6 +666,26 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
     await page.keyboard.press('Escape')
     await expectOpen(false)
     await expect(summary).toBeFocused()
+    expect(errors).toEqual([])
+  })
+
+  test('menu: focus rời menu bằng Tab → menu đóng, aria-expanded "false", focus không bị kéo về "⋯"', async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.goto('/')
+    await waitForHydration(page, 'header summary')
+    await waitForSettled(page)
+    const details = page.locator('header details')
+    const summary = details.locator('summary')
+    await page.getByRole('banner').locator('a[href="/"]').focus()
+    await tabTo(page, summary)
+    await page.keyboard.press('Enter')
+    await expect(details).toHaveAttribute('open', '')
+    await expect(summary).toHaveAttribute('aria-expanded', 'true')
+    await tabTo(page, details.locator('a, button').last())
+    await page.keyboard.press('Tab')
+    await expect(details).not.toHaveAttribute('open')
+    await expect(summary).toHaveAttribute('aria-expanded', 'false')
+    expect(await details.evaluate((node) => !node.contains(document.activeElement))).toBe(true)
     expect(errors).toEqual([])
   })
 
