@@ -682,6 +682,7 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
     await expect(details).toHaveAttribute('open', '')
     await expect(summary).toHaveAttribute('aria-expanded', 'true')
     await tabTo(page, details.locator('a, button').last())
+    // Dựa vào việc sau menu (phần tử cuối header) trên trang / còn phần tử nhận focus nên relatedTarget khác null; relatedTarget null thì menu giữ mở (more-menu.tsx).
     await page.keyboard.press('Tab')
     await expect(details).not.toHaveAttribute('open')
     await expect(summary).toHaveAttribute('aria-expanded', 'false')
