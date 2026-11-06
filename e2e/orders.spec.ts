@@ -26,6 +26,7 @@ import {
   collectErrors,
   collectErrorsAllow404,
   failServerActions,
+  FOCUS_RING_PX,
   focusRingClip,
   tabTo,
   waitForHydration,
@@ -118,7 +119,7 @@ test('bộ lọc trạng thái: vòng focus của chip đầu (Tab) không bị 
     await expect(chip).toBeVisible()
     await tabTo(page, chip)
     expect(await chip.evaluate((element) => element.closest('nav')?.scrollLeft), `${width}`).toBe(0)
-    expect(await focusRingClip(chip, 3), `${width}`).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+    expect(await focusRingClip(chip, FOCUS_RING_PX), `${width}`).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
   }
 })
 

@@ -267,6 +267,9 @@ export async function expectLockedUntilHydrated(
   await expect(page.locator(selector).first()).toHaveAttribute('aria-disabled', 'false')
 }
 
+/** Vòng focus của chip (`focus-visible:ring-3`) */
+export const FOCUS_RING_PX = 3
+
 /**
  * Số px vòng focus (`ringPx` mỗi phía quanh phần tử) bị cắt bởi tổ tiên có overflow khác visible, tính tới hết `<main>`:
  * vùng hiển thị của tổ tiên là padding box (bỏ thanh cuộn), mỗi trục chỉ xét khi trục đó cắt. Trả số lớn nhất mỗi phía.

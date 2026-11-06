@@ -1,7 +1,7 @@
 import { expect, test, type Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { ADD_TO_CART_SUBMIT, addToCartButton, vnd } from './cart'
-import { collectErrors, focusRingClip, openPalette, tabTo, waitForHydration, waitForSettled } from './helpers'
+import { collectErrors, FOCUS_RING_PX, focusRingClip, openPalette, tabTo, waitForHydration, waitForSettled } from './helpers'
 
 // Playwright biên dịch spec sang CommonJS (không có import.meta): đọc fixture theo đường dẫn từ gốc repo
 const fixture: { slug: string; price: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
@@ -9,8 +9,6 @@ const sapiens = fixture.find((book) => book.slug === 'sapiens')
 if (!sapiens) throw new Error('e2e/fixtures/books.json thiếu sapiens')
 /** Dải đáy màn hình mà bong bóng chat tự ẩn khi khối [data-chat-avoid] chạm vào (BOTTOM_BAND_PX, chat-bubble.tsx) */
 const CHAT_BOTTOM_BAND_PX = 88
-/** Vòng focus của chip (`focus-visible:ring-3`) */
-const FOCUS_RING_PX = 3
 
 test('header dính trên cùng khi cuộn', async ({ page }) => {
   await page.goto('/')
