@@ -94,6 +94,10 @@ migrationStatements.forEach(({ statements: list }, index) => {
  * `"<tên>" on <bảng>` của policy → vị trí migration drop nó (lần cuối): câu create policy đó ở migration trước không còn
  * trong schema.sql (policy đã gộp / thay). `gone`: policy schema.sql không được có = bị drop và không migration nào từ
  * lần drop cuối trở đi (kể cả chính migration đó) tạo lại cùng tên trên cùng bảng.
+ * Giới hạn đã biết, cả hai chỉ làm test đỏ nhầm (không xanh nhầm): (1) `drop policy if exists` (rồi create lại cùng tên):
+ * DROP_POLICY không bắt `if exists` → câu drop bị đòi có trong schema.sql; (2) create rồi drop trong cùng một migration:
+ * câu create tính là tạo lại (cùng vị trí) nên không vào `gone`, mà cũng không bị coi là drop về sau → bị đòi có trong
+ * schema.sql.
  */
 function policyDrops(list: { statements: string[] }[]) {
   const droppedAt = new Map<string, number>()
