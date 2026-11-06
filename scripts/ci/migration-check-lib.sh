@@ -17,8 +17,10 @@ db_dump() {
 }
 
 # Lỗi chạy lần 2 của migration được chấp nhận: dòng ERROR: của Postgres báo đối tượng đã có / không còn (stderr của psql
-# đọc từ stdin). Chỉ tính dòng ERROR:: NOTICE của `drop … if exists` ("does not exist, skipping") hay FATAL của lỗi kết
-# nối (database "…" does not exist) đi kèm một lỗi khác (lock timeout, mất kết nối) không được nhận nhầm
+# đọc từ stdin). Chỉ tính dòng ERROR: dạng "psql:<stdin>:N: ERROR:  …" (neo ở đầu dòng hoặc sau ": "; chữ dính liền
+# trước "ERROR:", VD "XERROR:" trong câu của NOTICE, thì không tính). NOTICE của `drop … if exists` ("does not exist,
+# skipping") hay FATAL của lỗi kết nối (database "…" does not exist) đi kèm một lỗi khác (lock timeout, mất kết nối)
+# không được nhận nhầm
 is_rerun_error() {
-  grep -qE 'ERROR: +.*(already exists|does not exist)'
+  grep -qE '(^|: )ERROR: +.*(already exists|does not exist)'
 }
