@@ -698,6 +698,7 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
       await page.goto('/')
       await expect(page.locator('html')).toHaveClass(new RegExp(theme))
       await waitForHydration(page, 'header summary')
+      await waitForSettled(page)
       const details = page.locator('header details')
       const summary = details.locator('summary')
       await page.getByRole('banner').locator('a[href="/"]').focus()
@@ -758,7 +759,7 @@ test.describe('header từ md giữ nguyên (de-sau-2)', () => {
 
   test('nút ngôn ngữ + sáng / tối hiện thẳng trên header, không có "⋯", nút header 36×36', async ({ page }) => {
     await page.goto('/')
-    // Suspense (LocaleSwitcher, CartBadge) thay phần tử sau hydrate: đo khi phần tử đang bị gỡ thì boundingBox() = null
+    // boundingBox() = null ở run 42256803087: nghi do phần tử bị Suspense (LocaleSwitcher, CartBadge) thay sau hydrate, chưa có trace xác nhận
     await waitForSettled(page)
     const banner = page.getByRole('banner')
     const locale = banner.getByRole('link', { name: /Xem bằng tiếng Anh/ })
