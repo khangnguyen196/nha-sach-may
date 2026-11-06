@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
 import {
+  anonClient,
   bookRow,
   cleanupE2eAdminData,
   coverExists,
@@ -127,7 +128,26 @@ test('đổi danh mục + gắn tác giả → danh mục mới có sách, danh 
   await expect(bookCard(page)).toHaveCount(0)
   await page.goto(`/sach/${book.slug}`)
   await expect(main(page).getByRole('link', { name: author.name })).toBeVisible()
+
+  // Trigger chạy với phiên admin (authenticated, đã thu EXECUTE của hàm trigger): gắn tác giả → book_authors_touch_book
+  // tính lại search_text (sách được update trước khi gắn tác giả); đổi tên tác giả → authors_touch_books
+  expect(await searchIds(author.name)).toContain(book.id)
+  const renamed = `${author.name} đổi tên`
+  expect(await searchIds(renamed)).not.toContain(book.id)
+  await page.goto(`/admin/tac-gia/${author.id}`)
+  await waitForHydration(page, 'main form button[type="submit"]')
+  await main(page).getByLabel('Tên', { exact: true }).fill(renamed)
+  await main(page).getByRole('button', { name: 'Lưu thay đổi' }).click()
+  await expect(main(page).getByRole('status').filter({ hasText: 'Đã lưu.' })).toBeVisible({ timeout: 15_000 })
+  expect(await searchIds(renamed)).toContain(book.id)
 })
+
+/** id sách khớp tìm kiếm (RPC search_books bằng khóa anon, như ô tìm kiếm của cửa hàng) */
+async function searchIds(q: string) {
+  const { data, error } = await anonClient().rpc('search_books', { q }).select('id')
+  if (error) throw new Error(`search_books: ${error.message}`)
+  return data.map((row) => row.id)
+}
 
 test('lỗi tại ô: giá gốc nhỏ hơn giá bán, slug trùng sách khác', async ({ page }) => {
   await openBookEditor(page, book.id)

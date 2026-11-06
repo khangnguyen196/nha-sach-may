@@ -738,6 +738,52 @@ test('chuyển khoản: thanh toán trước rồi giao → đúng một khoản
   expect((await sellerPayoutsOf(id))[0]).toMatchObject({ status: 'pending', paid_at: null })
 })
 
+test('(db-advisors) xem tin theo vai × trạng thái: khách và người mua chỉ thấy đang bán / đã bán, người bán thấy mọi tin của mình, admin thấy tất cả', async () => {
+  test.setTimeout(90_000)
+  // Một policy SELECT thay cho 2 policy cũ (migration 20261106120000_db_advisors.sql): kết quả phải y hệt bảng dưới
+  const statuses: ListingStatus[] = ['pending', 'approved', 'rejected', 'sold', 'withdrawn']
+  const price = 40_000
+  const address = await seedAddress(buyer.id, { isDefault: false })
+
+  /** Một tin của `owner` ở đúng `status`, đi đúng luồng RPC như người dùng thật */
+  async function listingIn(client: Client, owner: E2eUser, status: ListingStatus) {
+    const id = await createListing(client, [await uploadPhoto(client, owner)], price)
+    if (status === 'approved' || status === 'sold') await approve(id)
+    if (status === 'rejected') expect((await review(adminClient, id, 'pending', false, { reason: 'Ảnh mờ' })).error).toBeNull()
+    if (status === 'withdrawn') expect((await client.rpc('withdraw_used_listing', { p_id: id })).error).toBeNull()
+    if (status === 'sold') await placedOrder(placeUsedOrder(buyerClient, id, address, randomUUID(), price + SHIPPING_FEE))
+    const actual = (await usedListingRow(id))?.status
+    if (actual !== status) throw new Error(`tin ${id}: cần ${status}, đang ${actual}`)
+    return id
+  }
+
+  // Tuần tự: mỗi người tối đa 10 tin chờ duyệt, tạo song song dễ chạm trần
+  const labels = new Map<number, string>()
+  for (const status of statuses) {
+    labels.set(await listingIn(sellerClient, seller, status), `seller:${status}`)
+    labels.set(await listingIn(strangerClient, stranger, status), `other:${status}`)
+  }
+  const ids = [...labels.keys()]
+
+  async function visibleAs(client: Client) {
+    const { data, error } = await client.from('used_listings').select('id, status').in('id', ids)
+    if (error) throw new Error(`visibleAs: ${error.message}`)
+    return data.map((row) => labels.get(row.id) ?? `?:${row.id}`).sort()
+  }
+  const both = (list: ListingStatus[]) => list.flatMap((status) => [`seller:${status}`, `other:${status}`]).sort()
+  const publicOnly = both(['approved', 'sold'])
+
+  expect(await visibleAs(anon)).toEqual(publicOnly)
+  expect(await visibleAs(buyerClient)).toEqual(publicOnly)
+  expect(await visibleAs(sellerClient)).toEqual(
+    [...statuses.map((status) => `seller:${status}`), 'other:approved', 'other:sold'].sort(),
+  )
+  expect(await visibleAs(adminClient)).toEqual(both(statuses))
+
+  const sellerId = await anon.from('used_listings').select('seller_id').in('id', ids)
+  expect(sellerId.error?.message).toMatch(/permission denied/)
+})
+
 async function visibleRows(client: Client, payoutId: number) {
   const { data, error } = await client.from('seller_payouts').select('id').eq('id', payoutId)
   if (error) throw new Error(`visibleRows: ${error.message}`)
