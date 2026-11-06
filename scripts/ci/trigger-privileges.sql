@@ -5,6 +5,8 @@
 -- Cột public là pseudo-role PUBLIC: bắt trường hợp sót "from public" (anon vẫn có quyền qua PUBLIC).
 -- supabase_auth_admin là role GoTrue dùng để tạo user: nó chỉ có quyền qua PUBLIC, nên thu "from public" làm nó mất quyền
 -- (trigger vẫn chạy, xem trigger-still-fires.sql).
+-- Chỉ xét hàm security definer, như advisors; hàm trigger security invoker (VD set_updated_at) chạy bằng quyền người
+-- gọi, để nguyên quyền mặc định.
 
 select p.proname,
        has_function_privilege('anon', p.oid, 'execute'),

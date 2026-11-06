@@ -8,18 +8,27 @@
 #      trigger security definer của public đọc từ catalog (has_function_privilege, scripts/ci/trigger-privileges.sql;
 #      danh sách hàm lấy từ catalog): anon / authenticated / PUBLIC / service_role / supabase_auth_admin đều có quyền,
 #      không thì bước 5 không chứng minh được gì. Không gọi /rest/v1/rpc: PostgREST không đưa hàm trả về trigger vào
-#      schema cache nên ra 404 cả trước lẫn sau migration (run 42249871642).
+#      schema cache nên ra 404 cả trước lẫn sau migration (run 42249871642). Hai chế độ (check_privileges_before):
+#      chỉ khi chính migration 20261106120000_db_advisors là migration mới thì so trigger-privileges.before.expected
+#      (mọi vai t); main đã có migration này (mọi nhánh sau) thì DB "trước" đã thu quyền → kiểm bất biến mọi dòng =
+#      f|f|f|t|f (so before.expected sẽ đỏ nhầm ở mọi migration sau; không so after.expected vì nhánh thêm hàm trigger
+#      mới sửa after.expected trong khi DB "trước" chưa có hàm đó).
 #   4. Chạy migration (psql ON_ERROR_STOP) → exit 0; bảng vai "sau" giống "trước" từng chữ.
 #   5. Quyền EXECUTE sau migration: anon / authenticated / PUBLIC / supabase_auth_admin mất, service_role giữ (không thu
-#      quá tay). Trigger vẫn chạy khi role gây ra trigger không có EXECUTE (scripts/ci/trigger-still-fires.sql:
-#      supabase_auth_admin, role GoTrue dùng tạo user, insert auth.users → handle_new_user tạo profile, trong rollback).
-#      Trigger chợ sách cũ / đơn hàng dựa vào e2e trên DB dựng từ schema.sql (= DB B) và bước 10 (A trùng B).
+#      quá tay). Trigger vẫn chạy khi role gây ra trigger không có EXECUTE (run_trigger_still_fires: supabase_auth_admin,
+#      role GoTrue dùng tạo user, insert auth.users → handle_new_user tạo profile; không bao giờ dùng postgres, owner
+#      của hàm). Thăm dò M1 (supabase_admin + set local role, trong rollback) rồi M2 (đăng nhập thẳng
+#      supabase_auth_admin, commit rồi xóa), dùng cách đầu tiên thăm dò được, in cách đã dùng; đã chọn mà phép thử lỗi
+#      thì đỏ, không chuyển cách. Phép thử trực tiếp CHỈ cho handle_new_user (trigger trên auth.users, role GoTrue). 8
+#      hàm còn lại dựa vào: (i) quy tắc của Postgres (EXECUTE của hàm trigger chỉ kiểm lúc CREATE TRIGGER, không kiểm
+#      lúc trigger chạy), (ii) e2e trên DB dựng từ schema.sql (= DB B), (iii) bước 10 (A trùng B).
 #   6. Không còn khóa ngoại nào của public thiếu index.
 #   7. Dump A (pg_dump --schema-only public + private, trong container DB) + 4 truy vấn chính xác.
 #   8. Migration lần 2 → exit ≠ 0 với dòng ERROR: "already exists" / "does not exist"; dump + truy vấn chính xác giống A. Rồi
 #      tạo bảng dấu public.__ci_marker ở DB A.
 #   9. Dựng lại từ schema.sql của HEAD (không còn bảng dấu = DB mới) → dump B (cùng cách); bảng vai, khóa ngoại, quyền
-#      EXECUTE của hàm trigger và phép thử trigger vẫn chạy như DB A.
+#      EXECUTE của hàm trigger và phép thử trigger vẫn chạy như DB A (phép thử trực tiếp chỉ cho handle_new_user, như
+#      bước 5).
 #  10. Chuẩn hóa A, B (scripts/ci/normalize-dump.sh) → diff rỗng; 4 truy vấn chính xác giống nhau.
 name: migration-check
 
@@ -99,10 +108,8 @@ jobs:
           # "Trước t / sau f" (bước 5) mới chứng minh chính migration đã thu quyền
           db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-before.txt"
           cat "$RUNNER_TEMP/privileges-before.txt"
-          if ! diff -u scripts/ci/trigger-privileges.before.expected "$RUNNER_TEMP/privileges-before.txt"; then
-            echo "::error::quyền EXECUTE của hàm trigger trước migration khác trigger-privileges.before.expected: các vai chưa có quyền EXECUTE thì bước 5 không chứng minh được gì"
-            exit 1
-          fi
+          # before.expected chỉ dùng khi chính migration db_advisors là migration mới (xem check_privileges_before)
+          check_privileges_before "$RUNNER_TEMP/new-migrations.txt" "$RUNNER_TEMP/privileges-before.txt"
 
       - if: ${{ steps.find.outputs.count != '0' }}
         name: 4. Chạy migration mới; bảng vai sau == trước
@@ -123,7 +130,7 @@ jobs:
           db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-after.txt"
           cat "$RUNNER_TEMP/privileges-after.txt"
           diff -u scripts/ci/trigger-privileges.after.expected "$RUNNER_TEMP/privileges-after.txt"
-          db_psql < scripts/ci/trigger-still-fires.sql > "$RUNNER_TEMP/trigger-run-a.txt"
+          run_trigger_still_fires "$RUNNER_TEMP/trigger-run-a.txt"
           cat "$RUNNER_TEMP/trigger-run-a.txt"
           diff -u scripts/ci/trigger-still-fires.expected "$RUNNER_TEMP/trigger-run-a.txt"
 
@@ -193,7 +200,7 @@ jobs:
           db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-b.txt"
           cat "$RUNNER_TEMP/privileges-b.txt"
           diff -u scripts/ci/trigger-privileges.after.expected "$RUNNER_TEMP/privileges-b.txt"
-          db_psql < scripts/ci/trigger-still-fires.sql > "$RUNNER_TEMP/trigger-run-b.txt"
+          run_trigger_still_fires "$RUNNER_TEMP/trigger-run-b.txt"
           cat "$RUNNER_TEMP/trigger-run-b.txt"
           diff -u scripts/ci/trigger-still-fires.expected "$RUNNER_TEMP/trigger-run-b.txt"
 
@@ -227,5 +234,6 @@ jobs:
             ${{ runner.temp }}/visibility-*.txt
             ${{ runner.temp }}/privileges-*.txt
             ${{ runner.temp }}/trigger-run-*.txt
+            ${{ runner.temp }}/trigger-run-*.method
           retention-days: 7
           if-no-files-found: ignore
