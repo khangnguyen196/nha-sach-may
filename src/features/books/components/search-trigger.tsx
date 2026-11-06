@@ -41,6 +41,8 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
 
   useEffect(() => {
     openRef.current = open
+    // Đóng trước khi ô nhập nhận phím đã giữ: thôi giữ, không thì phím của trang bị chặn tới lần mở sau
+    if (!open) typedRef.current = null
   }, [open])
 
   function returnFocus() {
@@ -67,6 +69,9 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
         const inPalette = active instanceof Element && active.closest('[cmdk-root]')
         if (!openRef.current && !inPalette) returnTo.current = active instanceof HTMLElement ? active : null
         typedRef.current = openRef.current || inPalette || isEditable(active) ? null : ''
+        // Lật ngay, không chờ effect: hai lần Ctrl K trong cùng một lượt (React gộp, trạng thái mở không đổi → effect
+        // không chạy) thì lần sau là lần đóng. Effect [open] vẫn đặt lại giá trị thật sau mỗi lần render.
+        openRef.current = !openRef.current
         setMounted(true)
         setOpen((current) => !current)
       }
