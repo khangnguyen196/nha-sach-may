@@ -70,7 +70,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
         if (!openRef.current && !inPalette) returnTo.current = active instanceof HTMLElement ? active : null
         typedRef.current = openRef.current || inPalette || isEditable(active) ? null : ''
         // Lật ngay, không chờ effect: hai lần Ctrl K trong cùng một lượt (React gộp, trạng thái mở không đổi → effect
-        // không chạy) thì lần sau là lần đóng. Effect [open] vẫn đặt lại giá trị thật sau mỗi lần render.
+        // không chạy) thì lần sau là lần đóng. Effect [open] vẫn đặt lại giá trị thật mỗi khi open đổi.
         openRef.current = !openRef.current
         setMounted(true)
         setOpen((current) => !current)
