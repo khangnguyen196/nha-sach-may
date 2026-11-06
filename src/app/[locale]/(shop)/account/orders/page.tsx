@@ -114,7 +114,9 @@ async function StatusFilters({ current }: { current: OrderListParams['status'] }
   const filters = [undefined, ...ORDER_FILTERS]
 
   return (
-    <nav aria-label={t('filtersLabel')} className="-mx-4 mt-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    // Khung cuộn cắt mọi thứ ngoài vùng đệm: py-1 (bù mt-5 / -mb-1) và từ sm px-1 (bù -mx-1) chừa chỗ cho vòng focus
+    // 3px trên / dưới / trái mà chip không dời (như hàng chip chợ sách cũ, market-filters.tsx)
+    <nav aria-label={t('filtersLabel')} className="-mx-4 mt-5 -mb-1 overflow-x-auto px-4 py-1 sm:-mx-1 sm:px-1">
       <ul className="flex w-max gap-2">
         {filters.map((status) => {
           const active = status === current

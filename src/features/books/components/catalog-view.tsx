@@ -117,7 +117,9 @@ export async function CatalogView({ params, context, base, result, subcategories
   return (
     <CatalogPending stateKey={JSON.stringify(params)} loadingLabel={t('loading')}>
       {subcategories && subcategories.length > 0 && (
-        <nav aria-label={t('subcategories')} className="-mx-4 mb-6 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+        // Khung cuộn cắt mọi thứ ngoài vùng đệm: py-1 (bù -mt-1 / mb-5) chừa chỗ cho vòng focus 3px trên / dưới mà
+        // chip không dời (như hàng chip chợ sách cũ, market-filters.tsx)
+        <nav aria-label={t('subcategories')} className="-mx-4 -mt-1 mb-5 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6">
           <ul className="flex w-max gap-2">
             <li>
               <Chip href={href({ cat: undefined })} active={!params.cat}>
