@@ -222,7 +222,9 @@ test('palette: Ctrl K rồi gõ ngay khi chunk palette còn đang tải → khô
   await page.route(CHUNKS, slowChunk)
 
   // Ô tìm kiếm của trang đang focus: phím thuộc về ô đó, palette mở ra với ô trống
-  const pageInput = page.getByRole('main').locator('input[name="q"]')
+  // CSS theo id, không theo role: palette (Radix Dialog) mở thì mọi phần tử ngoài dialog mang aria-hidden → rời cây
+  // trợ năng, getByRole('main') không còn khớp
+  const pageInput = page.locator('#main input[name="q"]')
   await pageInput.focus()
   await page.keyboard.press('ControlOrMeta+k')
   await page.keyboard.type('abc', { delay: 30 })
