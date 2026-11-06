@@ -547,6 +547,8 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
   }) => {
     const errors = collectErrors(page)
     await page.goto('/')
+    // Đọc khung một lần bằng evaluate: chờ Suspense của header thay xong phần tử
+    await waitForSettled(page)
     const banner = page.getByRole('banner')
     for (const width of [320, 360, 390, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -639,7 +641,7 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
     await expectOpen(true)
     await expect(items).toHaveCount(2)
     for (const item of await items.all()) {
-      expect((await item.boundingBox())?.height).toBeGreaterThanOrEqual(HEADER_ICON_PX)
+      await expect.poll(async () => (await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(HEADER_ICON_PX)
     }
     await summary.tap()
     await expectOpen(false)
@@ -756,6 +758,8 @@ test.describe('header từ md giữ nguyên (de-sau-2)', () => {
 
   test('nút ngôn ngữ + sáng / tối hiện thẳng trên header, không có "⋯", nút header 36×36', async ({ page }) => {
     await page.goto('/')
+    // Suspense (LocaleSwitcher, CartBadge) thay phần tử sau hydrate: đo khi phần tử đang bị gỡ thì boundingBox() = null
+    await waitForSettled(page)
     const banner = page.getByRole('banner')
     const locale = banner.getByRole('link', { name: /Xem bằng tiếng Anh/ })
     const theme = banner.getByRole('button', { name: 'Chuyển sang giao diện sáng' })
@@ -764,7 +768,7 @@ test.describe('header từ md giữ nguyên (de-sau-2)', () => {
     await expect(page.locator('header summary')).toBeHidden()
     const cart = banner.getByRole('link', { name: /Giỏ hàng/ })
     for (const control of [locale, theme, cart]) {
-      expect(await control.boundingBox()).toMatchObject({ width: 36, height: 36 })
+      await expect.poll(() => control.boundingBox()).toMatchObject({ width: 36, height: 36 })
     }
   })
 })
