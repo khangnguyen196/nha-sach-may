@@ -294,3 +294,15 @@ export async function focusRingClip(element: Locator, ringPx: number) {
     return clip
   }, ringPx)
 }
+
+/**
+ * Đi đúng đường bàn phím (không gọi focus()): Tab từ phần tử đang focus tới `element`, tối đa `maxSteps` lần; kiểm phần tử
+ * được focus và khớp `:focus-visible` (vòng focus đang vẽ).
+ */
+export async function tabTo(page: Page, element: Locator, maxSteps = 40) {
+  for (let step = 0; step < maxSteps && !(await element.evaluate((node) => node === document.activeElement)); step++) {
+    await page.keyboard.press('Tab')
+  }
+  await expect(element).toBeFocused()
+  expect(await element.evaluate((node) => node.matches(':focus-visible'))).toBe(true)
+}

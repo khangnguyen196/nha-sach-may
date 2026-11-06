@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { ADD_TO_CART_SUBMIT, addToCartButton, vnd } from './cart'
-import { collectErrors, focusRingClip, openPalette, waitForHydration, waitForSettled } from './helpers'
+import { collectErrors, focusRingClip, openPalette, tabTo, waitForHydration, waitForSettled } from './helpers'
 
 // Playwright biên dịch spec sang CommonJS (không có import.meta): đọc fixture theo đường dẫn từ gốc repo
 const fixture: { slug: string; price: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
@@ -205,6 +205,62 @@ test('palette: từ khóa vô nghĩa → trạng thái rỗng; Esc đóng', asyn
   expect(errors).toEqual([])
 })
 
+test('palette: Ctrl K rồi gõ ngay khi chunk palette còn đang tải → không mất phím nào; đang gõ ô khác thì phím ở lại ô đó', async ({
+  page,
+}) => {
+  // Chunk palette chỉ tải trước khi rê chuột / focus nút: Ctrl K ngay sau hydrate từng mất cả 7/7 phím (production
+  // 2026-11-06, 30 ms / phím). Chunk tải lười = mọi chunk xin sau khi trang đã ổn định (như expectLazyChunkError)
+  const SEARCH_TRIGGER = 'header button[aria-haspopup="dialog"]'
+  await page.goto('/tim-kiem')
+  await waitForHydration(page, SEARCH_TRIGGER)
+  await waitForSettled(page)
+  const CHUNKS = '**/_next/static/chunks/**'
+  let delayed = 0
+  const slowChunk = async (route: Route) => {
+    delayed += 1
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await route.continue()
+  }
+  await page.route(CHUNKS, slowChunk)
+
+  // Ô tìm kiếm của trang đang focus: phím thuộc về ô đó, palette mở ra với ô trống
+  const pageInput = page.getByRole('main').locator('input[name="q"]')
+  await pageInput.focus()
+  await page.keyboard.press('ControlOrMeta+k')
+  await page.keyboard.type('abc', { delay: 30 })
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible({ timeout: 10_000 })
+  expect(delayed).toBeGreaterThan(0)
+  await expect(dialog.getByRole('combobox')).toHaveValue('')
+  await expect(pageInput).toHaveValue('abc')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(pageInput).toBeFocused()
+
+  // Logo đang focus (không phải nút tìm kiếm: focus nút tải trước chunk): phím giữ lại rồi vào ô của palette
+  // Tải lại để chunk palette chưa có trong trang (route bật thì Playwright tắt bộ nhớ đệm HTTP → chunk xin lại)
+  await page.unroute(CHUNKS, slowChunk)
+  await page.reload()
+  await waitForHydration(page, SEARCH_TRIGGER)
+  await waitForSettled(page)
+  delayed = 0
+  await page.route(CHUNKS, slowChunk)
+  const logo = page.getByRole('banner').locator('a[href="/"]')
+  await logo.focus()
+  await page.keyboard.press('ControlOrMeta+k')
+  await page.keyboard.type('sapiens', { delay: 30 })
+  await expect(dialog).toBeVisible({ timeout: 10_000 })
+  expect(delayed).toBeGreaterThan(0)
+  await expect(dialog.getByRole('combobox')).toHaveValue('sapiens')
+  await expect(dialog.getByRole('combobox')).toBeFocused()
+  // Đóng vẫn xóa chữ, focus về logo
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(logo).toBeFocused()
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog.getByRole('combobox')).toHaveValue('')
+})
+
 test('/api/search: từ khóa quá ngắn → 400 INVALID_INPUT; hợp lệ → cache CDN', async ({ request }) => {
   const invalid = await request.get('/api/search?q=a')
   expect(invalid.status()).toBe(400)
@@ -316,6 +372,64 @@ test.describe('khung chờ chợ sách cũ ở 390×844, tắt JS', () => {
   }
 })
 
+// Khung chờ dưới md từng thiếu nhãn nhóm (text-xs) của 2 hàng chip + dòng đếm thấp hơn 1lh → thấp hơn bộ lọc thật ~54px,
+// trang nhảy khi phần stream thay vào (đo bản build local 4c98b82: 80 vs 134,4px)
+test.describe('khung chờ chợ sách cũ cao bằng bộ lọc thật ở 390×844', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  type Edges = { filters: { top: number; height: number }; gridTop: number }
+  // Đầu lưới đo từ đỉnh khối bộ lọc: bản tắt JS có thêm dải <noscript> phía trên nên vị trí tuyệt đối khác nhau
+  const gridOffset = ({ filters, gridTop }: Edges) => gridTop - filters.top
+
+  for (const path of ['/cho-sach-cu', '/en/used-books']) {
+    test(`chênh ≤ 2px, không tràn ngang: ${path}`, async ({ page, browser, baseURL, isMobile, deviceScaleFactor }) => {
+      await page.goto(path)
+      await waitForSettled(page)
+      // Bộ lọc thật: MarketFilters ngay trước dòng đếm, lưới ngay sau
+      const actual: Edges = await page
+        .getByRole('main')
+        .getByTestId('market-count')
+        .evaluate((count) => {
+          const filters = count.previousElementSibling?.getBoundingClientRect()
+          const grid = count.nextElementSibling?.getBoundingClientRect()
+          if (!filters || !grid) throw new Error('thiếu khối bộ lọc / lưới quanh dòng đếm')
+          return { filters: { top: filters.top, height: filters.height }, gridTop: grid.top }
+        })
+
+      const context = await browser.newContext({
+        baseURL,
+        javaScriptEnabled: false,
+        viewport: { width: 390, height: 844 },
+        isMobile,
+        deviceScaleFactor,
+      })
+      try {
+        const noJs = await context.newPage()
+        await noJs.goto(path)
+        const skeleton = noJs.getByRole('main').locator('[aria-hidden="true"]:has(> .grid .animate-pulse.rounded-full)')
+        await expect(skeleton).toBeVisible()
+        // Con của khung chờ: khối viên chip, dòng đếm, lưới
+        const pending: Edges = await skeleton.evaluate((root) => {
+          const filters = root.children[0]?.getBoundingClientRect()
+          const grid = root.children[2]?.getBoundingClientRect()
+          if (!filters || !grid) throw new Error('khung chờ thiếu khối viên chip / lưới')
+          return { filters: { top: filters.top, height: filters.height }, gridTop: grid.top }
+        })
+        const detail = JSON.stringify({ pending, actual })
+        expect(Math.abs(pending.filters.height - actual.filters.height), detail).toBeLessThanOrEqual(2)
+        expect(Math.abs(gridOffset(pending) - gridOffset(actual)), detail).toBeLessThanOrEqual(2)
+        const { scrollWidth, viewport } = await noJs.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          viewport: document.documentElement.clientWidth,
+        }))
+        expect(scrollWidth).toBeLessThanOrEqual(viewport)
+      } finally {
+        await context.close()
+      }
+    })
+  }
+})
+
 test('chợ sách cũ: vòng focus của chip đầu (Tab) không bị khung cuộn hàng chip cắt', async ({ page }) => {
   // Khung overflow-x-auto (overflow-y thành auto theo) từng cắt mất cạnh trên / dưới vòng 3px, từ md cả cạnh trái
   await page.goto('/cho-sach-cu')
@@ -330,4 +444,18 @@ test('chợ sách cũ: vòng focus của chip đầu (Tab) không bị khung cu�
   expect(await chip.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
   expect(await chip.evaluate((element) => element.closest('ul')?.parentElement?.scrollLeft)).toBe(0)
   expect(await focusRingClip(chip, FOCUS_RING_PX)).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+})
+
+test('danh mục cha: vòng focus của chip danh mục con đầu (Tab) không bị khung cuộn cắt, ở 390 và 1280', async ({ page }) => {
+  // Khung overflow-x-auto (overflow-y thành auto theo) từng cắt cạnh trên / dưới vòng 3px (đo 3 / 3px ở cả hai bề rộng)
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/danh-muc/van-hoc')
+    await waitForSettled(page)
+    const chip = page.getByRole('main').getByRole('navigation', { name: 'Danh mục con' }).getByRole('link').first()
+    await expect(chip).toBeVisible()
+    await tabTo(page, chip)
+    expect(await chip.evaluate((element) => element.closest('nav')?.scrollLeft), `${width}`).toBe(0)
+    expect(await focusRingClip(chip, FOCUS_RING_PX), `${width}`).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+  }
 })

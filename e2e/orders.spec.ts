@@ -22,7 +22,15 @@ import {
   type ProjectUsers,
 } from './auth'
 import { vnd } from './cart'
-import { collectErrors, collectErrorsAllow404, failServerActions, waitForHydration } from './helpers'
+import {
+  collectErrors,
+  collectErrorsAllow404,
+  failServerActions,
+  focusRingClip,
+  tabTo,
+  waitForHydration,
+  waitForSettled,
+} from './helpers'
 
 // Đơn của user "orders" riêng cho mỗi project (checkout.spec xóa mọi đơn của user checkout sau mỗi test). Đơn tạo
 // bằng RPC place_order với phiên của chính user đó (nhanh, không phụ thuộc trang checkout), trừ test hủy đơn đặt qua
@@ -98,6 +106,20 @@ test('trang tài khoản có thẻ "Đơn hàng của tôi"', async ({ page }) =
   await page.goto('/tai-khoan')
   await main(page).getByRole('link', { name: /Đơn hàng của tôi/ }).click()
   await expect(page).toHaveURL(/\/tai-khoan\/don-hang$/)
+})
+
+test('bộ lọc trạng thái: vòng focus của chip đầu (Tab) không bị khung cuộn cắt, ở 390 và 1280', async ({ page }) => {
+  // Khung overflow-x-auto từng cắt cạnh trên / dưới vòng 3px (`focus-visible:ring-3`), từ sm cả cạnh trái
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/tai-khoan/don-hang')
+    await waitForSettled(page)
+    const chip = main(page).getByRole('navigation', { name: 'Lọc theo trạng thái' }).getByRole('link').first()
+    await expect(chip).toBeVisible()
+    await tabTo(page, chip)
+    expect(await chip.evaluate((element) => element.closest('nav')?.scrollLeft), `${width}`).toBe(0)
+    expect(await focusRingClip(chip, 3), `${width}`).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
+  }
 })
 
 test('12 đơn: phân trang 10 + 2, mới nhất trước, lọc "Đã hủy", trang vượt quá → 404', async ({
