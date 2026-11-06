@@ -1,5 +1,7 @@
 -- migration-check: 4 truy vấn chính xác bổ sung cho pg_dump đã chuẩn hóa (dump sắp xếp dòng nên không thấy thứ tự /
 -- vị trí; trigger trên auth.users không nằm trong dump public / private). Chạy bằng psql -q -A -t.
+-- Truy vấn 1 (policy used_listings) và 3 (index 5 bảng) gắn với đợt db-advisors: dump đã phủ public / private nói chung,
+-- nhưng migration sau đụng bảng / schema khác (auth, storage…) thì phải thêm truy vấn cho chỗ đó (dump không thấy).
 
 -- 1. Policy của used_listings
 select 'policy', policyname, permissive, roles::text, cmd, qual, coalesce(with_check, '')

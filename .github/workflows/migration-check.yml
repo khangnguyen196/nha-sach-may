@@ -1,15 +1,19 @@
 # migration-check: migration mới (so với origin/main) chạy trên DB giống production phải ra đúng DB dựng từ schema.sql
 # mới, chạy lần 2 phải lỗi mà không đổi gì. DB = Supabase local trong Docker như e2e (không project cloud, không secret,
 # không đọc file env). Migration thật do chủ dự án chạy tay trong SQL Editor; job này chỉ kiểm trước.
-#   1. Tìm migration mới (thêm so với origin/main). Không có → qua (VD push lên main sau khi đã lên).
-#   2. Supabase local từ schema.sql của origin/main (bản sao supabase/ của HEAD, ghi đè schema.sql; seed như e2e).
-#   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql).
+#   1. Tìm migration mới (thêm so với origin/main). Không có → qua (VD push lên main sau khi đã lên). Có → nhánh phải
+#      chứa đỉnh origin/main (không thì DB "trước" thiếu thay đổi của main mà schema.sql của nhánh cũng không có).
+#   2. Supabase local từ toàn bộ supabase/ của origin/main (schema.sql, seed, config.toml như e2e của main).
+#   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql); anon gọi hàm trigger qua
+#      /rest/v1/rpc phải tới được Postgres (lỗi "trigger functions can only be called as triggers"), không thì bước 5
+#      không chứng minh được gì.
 #   4. Chạy migration (psql ON_ERROR_STOP) → exit 0; bảng vai "sau" giống "trước" từng chữ.
 #   5. Gọi /rest/v1/rpc/<hàm trigger> bằng khóa anon → lỗi quyền / không tìm thấy.
 #   6. Không còn khóa ngoại nào của public thiếu index.
 #   7. Dump A (pg_dump --schema-only public + private, trong container DB) + 4 truy vấn chính xác.
-#   8. Migration lần 2 → exit ≠ 0; dump + truy vấn chính xác giống A.
-#   9. Dựng lại từ schema.sql của HEAD → dump B (cùng cách).
+#   8. Migration lần 2 → exit ≠ 0 với lỗi "already exists" / "does not exist"; dump + truy vấn chính xác giống A. Rồi
+#      tạo bảng dấu public.__ci_marker ở DB A.
+#   9. Dựng lại từ schema.sql của HEAD (không còn bảng dấu = DB mới) → dump B (cùng cách).
 #  10. Chuẩn hóa A, B (scripts/ci/normalize-dump.sh) → diff rỗng; 4 truy vấn chính xác giống nhau.
 name: migration-check
 
@@ -18,6 +22,9 @@ on:
     branches: ['**']
     paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: migration-check-${{ github.ref }}
@@ -43,15 +50,20 @@ jobs:
       - id: find
         name: 1. Migration mới so với origin/main
         run: |
-          git rev-parse --verify origin/main
+          echo "origin/main: $(git rev-parse --verify origin/main)"
           git diff --name-only --diff-filter=A origin/main...HEAD -- supabase/migrations/ > "$RUNNER_TEMP/added.txt"
           { grep '\.sql$' "$RUNNER_TEMP/added.txt" || true; } | sort > "$RUNNER_TEMP/new-migrations.txt"
           count=$(wc -l < "$RUNNER_TEMP/new-migrations.txt")
           echo "count=$count" >> "$GITHUB_OUTPUT"
           if [ "$count" -eq 0 ]; then
             echo "không có migration mới"
-          else
-            cat "$RUNNER_TEMP/new-migrations.txt"
+            exit 0
+          fi
+          cat "$RUNNER_TEMP/new-migrations.txt"
+          echo "merge-base: $(git merge-base origin/main HEAD)"
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::nhánh chưa có đỉnh origin/main, merge origin/main vào nhánh trước"
+            exit 1
           fi
 
       # Ghim bản CLI như e2e → image Docker cố định
@@ -61,12 +73,12 @@ jobs:
           version: 2.121.0
 
       - if: ${{ steps.find.outputs.count != '0' }}
-        name: 2. Supabase local từ schema.sql của origin/main
+        name: 2. Supabase local từ toàn bộ supabase/ của origin/main
         run: |
           base="$RUNNER_TEMP/base"
           mkdir -p "$base"
-          cp -r supabase "$base/supabase"
-          git show origin/main:supabase/schema.sql > "$base/supabase/schema.sql"
+          # Toàn bộ supabase/ của origin/main (không chép từ HEAD): seed / config.toml cũng là bản của main
+          git archive origin/main supabase | tar -x -C "$base"
           supabase start --workdir "$base" -x "$SUPABASE_EXCLUDE"
 
       - if: ${{ steps.find.outputs.count != '0' }}
@@ -76,8 +88,14 @@ jobs:
           db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-before.txt"
           cat "$RUNNER_TEMP/visibility-before.txt"
           diff -u scripts/ci/used-visibility.expected "$RUNNER_TEMP/visibility-before.txt"
-          # Chỉ ghi lại để so (không kiểm): trước migration anon còn quyền EXECUTE trên hàm trigger
-          echo "rpc trước migration: $(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
+          # Trước migration anon còn quyền EXECUTE → PostgREST gọi tới hàm, Postgres từ chối lúc chạy. Không ra lỗi này
+          # thì bước 5 (sau migration không gọi được) không chứng minh migration đã thu quyền.
+          result="$(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
+          echo "rpc trước migration: $result"
+          if ! is_trigger_call_error <<< "$result"; then
+            echo "::error::trước migration anon không gọi được hàm trigger; bước 5 sẽ không chứng minh được gì"
+            exit 1
+          fi
 
       - if: ${{ steps.find.outputs.count != '0' }}
         name: 4. Chạy migration mới; bảng vai sau == trước
@@ -97,7 +115,7 @@ jobs:
           source scripts/ci/migration-check-lib.sh
           result="$(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
           echo "$result"
-          if grep -qi 'trigger functions can only be called as triggers' <<< "$result"; then
+          if is_trigger_call_error <<< "$result"; then
             echo "::error::anon vẫn gọi được hàm trigger (Postgres chỉ chặn ở bước chạy)"
             exit 1
           fi
@@ -128,8 +146,15 @@ jobs:
         run: |
           source scripts/ci/migration-check-lib.sh
           while read -r file; do
-            if db_psql < "$file"; then
+            err="$RUNNER_TEMP/rerun-stderr.txt"
+            if db_psql < "$file" 2> "$err"; then
               echo "::error::$file chạy lần 2 không lỗi"
+              exit 1
+            fi
+            cat "$err"
+            # Lỗi khác (mất kết nối, cú pháp, lock timeout…) không chứng minh migration chỉ chạy được một lần
+            if ! is_rerun_error < "$err"; then
+              echo "::error::$file chạy lần 2 lỗi nhưng không phải already exists / does not exist"
               exit 1
             fi
             echo "$file: chạy lần 2 lỗi như mong đợi"
@@ -139,6 +164,8 @@ jobs:
           diff -u <(bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-a.sql") \
             <(bash scripts/ci/normalize-dump.sh "$RUNNER_TEMP/dump-a2.sql")
           diff -u "$RUNNER_TEMP/exact-a.txt" "$RUNNER_TEMP/exact-a2.txt"
+          # Bảng dấu: bước 9 kiểm DB B không còn nó (DB B dựng mới, không dùng lại dữ liệu của DB A)
+          db_psql -c 'create table public.__ci_marker ()'
 
       - if: ${{ steps.find.outputs.count != '0' }}
         name: 9. Dựng lại từ schema.sql của HEAD, dump B
@@ -146,6 +173,11 @@ jobs:
           source scripts/ci/migration-check-lib.sh
           supabase stop --workdir "$RUNNER_TEMP/base" --no-backup
           supabase start -x "$SUPABASE_EXCLUDE"
+          marker="$(db_psql -c "select to_regclass('public.__ci_marker') is null")"
+          if [ "$marker" != "t" ]; then
+            echo "::error::DB B còn dữ liệu của DB A (bảng dấu public.__ci_marker vẫn có)"
+            exit 1
+          fi
           db_dump > "$RUNNER_TEMP/dump-b.sql"
           db_psql < scripts/ci/exact-checks.sql > "$RUNNER_TEMP/exact-b.txt"
           wc -l "$RUNNER_TEMP/dump-b.sql"
