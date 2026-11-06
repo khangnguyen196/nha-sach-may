@@ -50,7 +50,9 @@ jobs:
       - id: find
         name: 1. Migration mới so với origin/main
         run: |
-          echo "origin/main: $(git rev-parse --verify origin/main)"
+          # Gán riêng: lỗi trong $() làm tham số của echo không dừng bước (bash -e chỉ dừng ở lệnh gán)
+          main_sha=$(git rev-parse --verify origin/main)
+          echo "origin/main: $main_sha"
           git diff --name-only --diff-filter=A origin/main...HEAD -- supabase/migrations/ > "$RUNNER_TEMP/added.txt"
           { grep '\.sql$' "$RUNNER_TEMP/added.txt" || true; } | sort > "$RUNNER_TEMP/new-migrations.txt"
           count=$(wc -l < "$RUNNER_TEMP/new-migrations.txt")
