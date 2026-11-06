@@ -298,6 +298,7 @@ function Reply({
 }
 
 function BookCard({ book, onNavigate }: { book: ChatBookCard; onNavigate: () => void }) {
+  const [coverLoaded, setCoverLoaded] = useState(false)
   return (
     <Link
       href={{ pathname: '/books/[slug]', params: { slug: book.slug } }}
@@ -311,7 +312,16 @@ function BookCard({ book, onNavigate }: { book: ChatBookCard; onNavigate: () => 
         {book.coverUrl && (
           // Tên sách hiện ngay cạnh trong cùng link → alt rỗng (CLAUDE.md → Accessibility).
           // eager: thẻ vừa hiện trong câu trả lời, lazy trong khung cuộn chỉ bắt đầu tải khi IntersectionObserver báo
-          <Image src={book.coverUrl} alt="" fill sizes="48px" loading="eager" className="object-cover" />
+          // Nền chỉ sau khi tải xong: bìa WebP trong suốt không lộ icon; nền đặt sẵn thì che icon cả lúc đang tải / lỗi
+          <Image
+            src={book.coverUrl}
+            alt=""
+            fill
+            sizes="48px"
+            loading="eager"
+            onLoad={() => setCoverLoaded(true)}
+            className={cn('object-cover', coverLoaded && 'bg-surface-raised')}
+          />
         )}
       </span>
       <span className="min-w-0 flex-1">
