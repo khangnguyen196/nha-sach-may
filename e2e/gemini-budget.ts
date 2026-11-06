@@ -24,8 +24,8 @@ export const WARNING_SPEC_CALLS: Readonly<Record<string, number>> = {
  * hại / bị cooldown / vượt lượt của khách không cộng nhưng vẫn tính cho chắc) và mọi lời gọi consume_chat_quota trực tiếp.
  */
 export const CHAT_SPEC_CALLS: Readonly<Record<string, number>> = {
-  // 15 ask() + vòng lặp 10 câu (hết lượt của khách) + 1 lần bấm chip
-  'chat.spec.ts': 26,
+  // 16 ask() + vòng lặp 10 câu (hết lượt của khách) + 1 lần bấm chip
+  'chat.spec.ts': 27,
   'chat-account.spec.ts': 1,
   // askAs() 3 lần ((a) B, (b) A, (c)), mỗi lần một ask()
   'prefs-chat-account.spec.ts': 3,
