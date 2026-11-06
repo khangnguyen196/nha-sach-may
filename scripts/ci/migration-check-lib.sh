@@ -27,9 +27,11 @@ is_local_url() {
   [[ "$1" =~ ^https?://(127\.0\.0\.1|localhost)(:[0-9]+)?(/.*)?$ ]]
 }
 
-# Lỗi chạy lần 2 của migration được chấp nhận: đối tượng đã có / không còn (stderr của psql đọc từ stdin)
+# Lỗi chạy lần 2 của migration được chấp nhận: dòng ERROR: của Postgres báo đối tượng đã có / không còn (stderr của psql
+# đọc từ stdin). Chỉ tính dòng ERROR:: NOTICE của `drop … if exists` ("does not exist, skipping") hay FATAL của lỗi kết
+# nối (database "…" does not exist) đi kèm một lỗi khác (lock timeout, mất kết nối) không được nhận nhầm
 is_rerun_error() {
-  grep -qE 'already exists|does not exist'
+  grep -qE 'ERROR: +.*(already exists|does not exist)'
 }
 
 # Kết quả call_rpc_as_anon (đọc từ stdin) là lỗi của Postgres khi chạy hàm trigger: PostgREST đã gọi tới hàm, tức anon
