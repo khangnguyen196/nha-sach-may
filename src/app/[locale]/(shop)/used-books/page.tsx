@@ -47,21 +47,32 @@ export default async function UsedMarketPage({ searchParams }: Props) {
   )
 }
 
+/**
+ * Cùng khung với MarketFilters (ChipGroup: nhãn text-xs trên hàng chip dưới md, cạnh hàng chip từ md) + dòng đếm text-sm:
+ * chiều cao theo line-height thật (`h-[1lh]`) → trang không nhảy khi bộ lọc thật thay vào (dưới md từng thấp hơn ~54px)
+ */
 function MarketSkeleton() {
   return (
     <div aria-hidden>
       <div className="mb-8 grid gap-4">
         {Array.from({ length: 2 }, (_, row) => (
-          // overflow-hidden: 4 viên w-24 (408px) rộng hơn cột ở màn 390px; ô grid overflow khác visible có min-width 0 →
-          // hàng co theo cột thay vì kéo trang rộng ra lúc đang stream
-          <div key={row} className="flex gap-2 overflow-hidden">
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="h-8 w-24 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
-            ))}
+          <div key={row} className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
+            <div className="flex h-[1lh] items-center text-xs md:w-20 md:shrink-0">
+              <div className="h-3 w-16 animate-pulse rounded-sm bg-surface-raised motion-reduce:animate-none" />
+            </div>
+            {/* overflow-hidden: 4 viên w-24 (408px) rộng hơn cột ở màn 390px → hàng co theo cột thay vì kéo trang rộng ra
+                lúc đang stream */}
+            <div className="flex gap-2 overflow-hidden">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="h-8 w-24 animate-pulse rounded-full bg-surface-raised motion-reduce:animate-none" />
+              ))}
+            </div>
           </div>
         ))}
       </div>
-      <div className="mb-6 h-5 w-24 animate-pulse rounded-sm bg-surface-raised motion-reduce:animate-none" />
+      <div className="mb-6 flex h-[1lh] items-center text-sm">
+        <div className="h-3.5 w-24 animate-pulse rounded-sm bg-surface-raised motion-reduce:animate-none" />
+      </div>
       <MarketGridSkeleton />
     </div>
   )
