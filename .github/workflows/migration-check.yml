@@ -11,7 +11,7 @@
 #   5. Gọi /rest/v1/rpc/<hàm trigger> bằng khóa anon → lỗi quyền / không tìm thấy.
 #   6. Không còn khóa ngoại nào của public thiếu index.
 #   7. Dump A (pg_dump --schema-only public + private, trong container DB) + 4 truy vấn chính xác.
-#   8. Migration lần 2 → exit ≠ 0 với lỗi "already exists" / "does not exist"; dump + truy vấn chính xác giống A. Rồi
+#   8. Migration lần 2 → exit ≠ 0 với dòng ERROR: "already exists" / "does not exist"; dump + truy vấn chính xác giống A. Rồi
 #      tạo bảng dấu public.__ci_marker ở DB A.
 #   9. Dựng lại từ schema.sql của HEAD (không còn bảng dấu = DB mới) → dump B (cùng cách).
 #  10. Chuẩn hóa A, B (scripts/ci/normalize-dump.sh) → diff rỗng; 4 truy vấn chính xác giống nhau.
@@ -156,7 +156,7 @@ jobs:
             cat "$err"
             # Lỗi khác (mất kết nối, cú pháp, lock timeout…) không chứng minh migration chỉ chạy được một lần
             if ! is_rerun_error < "$err"; then
-              echo "::error::$file chạy lần 2 lỗi nhưng không phải already exists / does not exist"
+              echo "::error::$file chạy lần 2 lỗi nhưng không có dòng ERROR: already exists / does not exist"
               exit 1
             fi
             echo "$file: chạy lần 2 lỗi như mong đợi"
