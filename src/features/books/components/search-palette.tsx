@@ -34,9 +34,11 @@ type Props = {
   onOpenChange: (open: boolean) => void
   /** Đóng không phải do chọn kết quả (Esc, bấm ra ngoài, Ctrl K lần nữa) → trả focus về chỗ đã mở palette */
   returnFocus: () => void
+  /** Phím đã gõ sau khi mở mà ô nhập chưa có focus (chunk palette còn đang tải, search-trigger giữ lại) */
+  takeTyped: () => string
 }
 
-export default function SearchPalette({ open, onOpenChange, returnFocus }: Props) {
+export default function SearchPalette({ open, onOpenChange, returnFocus, takeTyped }: Props) {
   const t = useTranslations('search')
   const router = useRouter()
   const [input, setInput] = useState('')
@@ -129,7 +131,15 @@ export default function SearchPalette({ open, onOpenChange, returnFocus }: Props
       }}
     >
       <Command shouldFilter={false} loop className="rounded-none! p-0">
-        <CommandInput value={input} onValueChange={setInput} placeholder={t('placeholder')} />
+        <CommandInput
+          value={input}
+          onValueChange={setInput}
+          onFocus={() => {
+            const typed = takeTyped()
+            if (typed) setInput((current) => current + typed)
+          }}
+          placeholder={t('placeholder')}
+        />
         <CommandList className="max-h-[min(28rem,70dvh)] p-1">
           {q === null && <p className="px-3 py-6 text-sm text-muted-foreground">{t('hint')}</p>}
 

@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { LazyBoundary, type LazyErrorLabels } from '@/components/lazy-boundary'
 
 // Palette (cmdk + dialog) chỉ tải khi mở lần đầu; rê chuột / focus vào nút thì tải trước
@@ -10,6 +10,8 @@ const SearchPalette = dynamic(loadPalette, { ssr: false })
 
 const subscribeNothing = () => () => {}
 const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.userAgent)
+const isEditable = (target: EventTarget | null) =>
+  target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
 
 type Labels = { placeholder: string; open: string }
 
@@ -31,6 +33,9 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
   const openRef = useRef(false)
   // Chunk palette tải lỗi (LazyBoundary): khối lỗi đang hiện → nút / Ctrl K không mở lại, chỉ Đóng / Tải lại
   const failedRef = useRef(false)
+  // Phím gõ sau khi mở mà ô nhập của palette chưa có focus (chunk còn đang tải): giữ lại, chuyển vào ô khi ô nhận focus.
+  // null = không giữ (palette đóng, ô đã nhận phím, hoặc lúc mở đang gõ trong ô nhập khác: phím thuộc về ô đó)
+  const typedRef = useRef<string | null>(null)
   // Server không biết hệ điều hành → render "Ctrl" rồi đổi sau hydration, không lệch markup
   const isApple = useSyncExternalStore(subscribeNothing, isApplePlatform, () => false)
 
@@ -44,6 +49,13 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
     if (target?.isConnected && target !== document.body) target.focus({ preventScroll: true })
   }
 
+  // Ô nhập của palette nhận focus → lấy các phím đã giữ, thôi giữ
+  const takeTyped = useCallback(() => {
+    const typed = typedRef.current ?? ''
+    typedRef.current = null
+    return typed
+  }, [])
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
@@ -52,15 +64,35 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
         // Đang mở (phím tắt này sẽ đóng) thì giữ chỗ đã lưu lúc mở. Vừa đóng mà hiệu ứng đóng chưa xong (focus còn ở ô
         // nhập của palette, sắp bị gỡ) cũng giữ chỗ cũ.
         const active = document.activeElement
-        if (!openRef.current && !(active instanceof Element && active.closest('[cmdk-root]'))) {
-          returnTo.current = active instanceof HTMLElement ? active : null
-        }
+        const inPalette = active instanceof Element && active.closest('[cmdk-root]')
+        if (!openRef.current && !inPalette) returnTo.current = active instanceof HTMLElement ? active : null
+        typedRef.current = openRef.current || inPalette || isEditable(active) ? null : ''
         setMounted(true)
         setOpen((current) => !current)
       }
     }
+    // Pha capture: chặn trước khi phím tới phần tử đang focus (Space trên nút / link, cuộn trang)
+    function holdTyped(event: KeyboardEvent) {
+      const typed = typedRef.current
+      if (typed === null || event.ctrlKey || event.metaKey || event.altKey || isEditable(event.target)) return
+      if (event.key === 'Escape') {
+        typedRef.current = null
+        setOpen(false)
+      } else if (event.key === 'Backspace') {
+        typedRef.current = typed.slice(0, -1)
+      } else if (event.key.length === 1) {
+        typedRef.current = typed + event.key
+      } else {
+        return
+      }
+      event.preventDefault()
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener('keydown', holdTyped, true)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keydown', holdTyped, true)
+    }
   }, [])
 
   return (
@@ -72,6 +104,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
         onClick={(event) => {
           if (failedRef.current) return
           returnTo.current = event.currentTarget
+          typedRef.current = ''
           setMounted(true)
           setOpen(true)
         }}
@@ -95,6 +128,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
           labels={lazyError}
           onError={() => {
             failedRef.current = true
+            typedRef.current = null
             setOpen(false)
           }}
           onDismiss={() => {
@@ -104,7 +138,7 @@ export function SearchTrigger({ labels, lazyError, icon }: Props) {
             returnFocus()
           }}
         >
-          <SearchPalette open={open} onOpenChange={setOpen} returnFocus={returnFocus} />
+          <SearchPalette open={open} onOpenChange={setOpen} returnFocus={returnFocus} takeTyped={takeTyped} />
         </LazyBoundary>
       )}
     </>
