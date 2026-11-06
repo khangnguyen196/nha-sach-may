@@ -90,15 +90,22 @@ migrationStatements.forEach(({ statements: list }, index) => {
   }
 })
 
-// `"<tên>" on <bảng>` của policy → vị trí migration drop nó: câu create policy đó ở migration trước không còn trong
-// schema.sql (policy đã gộp / thay)
-const policyDroppedAt = new Map<string, number>()
-migrationStatements.forEach(({ statements: list }, index) => {
-  for (const statement of list) {
-    const policy = DROP_POLICY.exec(statement)
-    if (policy) policyDroppedAt.set(`${policy[1]} on ${policy[2]}`, index)
-  }
-})
+/**
+ * `"<tên>" on <bảng>` của policy → vị trí migration drop nó (lần cuối): câu create policy đó ở migration trước không còn
+ * trong schema.sql (policy đã gộp / thay). `gone`: policy schema.sql không được có.
+ */
+function policyDrops(list: { statements: string[] }[]) {
+  const droppedAt = new Map<string, number>()
+  list.forEach(({ statements: items }, index) => {
+    for (const statement of items) {
+      const policy = DROP_POLICY.exec(statement)
+      if (policy) droppedAt.set(`${policy[1]} on ${policy[2]}`, index)
+    }
+  })
+  return { droppedAt, gone: new Set(droppedAt.keys()) }
+}
+
+const { droppedAt: policyDroppedAt, gone: policiesGone } = policyDrops(migrationStatements)
 
 function droppedLater(statement: string, index: number) {
   for (const [signature, at] of droppedAt) {
@@ -124,7 +131,10 @@ describe('schema.sql chứa mọi migration', () => {
       }
       const droppedPolicy = DROP_POLICY.exec(statement)
       if (droppedPolicy) {
-        expect(schemaText, statement).not.toContain(`create policy ${droppedPolicy[1]} on ${droppedPolicy[2]} `)
+        // Tạo lại cùng tên ở migration này hoặc sau → câu create đó được kiểm như mọi câu khác
+        if (policiesGone.has(`${droppedPolicy[1]} on ${droppedPolicy[2]}`)) {
+          expect(schemaText, statement).not.toContain(`create policy ${droppedPolicy[1]} on ${droppedPolicy[2]} `)
+        }
         continue
       }
       if (droppedLater(statement, index)) continue
@@ -138,6 +148,44 @@ describe('schema.sql chứa mọi migration', () => {
       // `if not exists` chỉ cần khi chạy lại trên DB cũ
       expect(schemaText, statement).toContain(statement.replace(' if not exists', ''))
     }
+  })
+
+  describe('drop policy: bỏ hẳn hay tạo lại cùng tên', () => {
+    const create = (name: string) => `create policy "${name}" on public.t for select to anon using (true)`
+    const drop = (name: string) => `drop policy "${name}" on public.t`
+
+    it('drop không tạo lại → schema.sql không được có', () => {
+      const { gone } = policyDrops([{ statements: [create('a'), create('b')] }, { statements: [drop('a')] }])
+      expect([...gone]).toEqual(['"a" on public.t'])
+    })
+
+    it('drop rồi create cùng tên trong cùng migration → không coi là bỏ hẳn', () => {
+      const { gone, droppedAt } = policyDrops([{ statements: [create('a')] }, { statements: [drop('a'), create('a')] }])
+      expect([...gone]).toEqual([])
+      expect(droppedAt.get('"a" on public.t')).toBe(1)
+    })
+
+    it('drop rồi create cùng tên ở migration sau → không coi là bỏ hẳn', () => {
+      const { gone } = policyDrops([{ statements: [create('a')] }, { statements: [drop('a')] }, { statements: [create('a')] }])
+      expect([...gone]).toEqual([])
+    })
+
+    it('tạo lại rồi drop lần nữa → bỏ hẳn', () => {
+      const { gone } = policyDrops([
+        { statements: [create('a')] },
+        { statements: [drop('a'), create('a')] },
+        { statements: [drop('a')] },
+      ])
+      expect([...gone]).toEqual(['"a" on public.t'])
+    })
+
+    it('create cùng tên ở bảng khác không tính là tạo lại', () => {
+      const { gone } = policyDrops([
+        { statements: [create('a')] },
+        { statements: [drop('a'), 'create policy "a" on public.u for select to anon using (true)'] },
+      ])
+      expect([...gone]).toEqual(['"a" on public.t'])
+    })
   })
 
   it('bucket book-covers chỉ nhận webp ≤ 1MB', () => {
