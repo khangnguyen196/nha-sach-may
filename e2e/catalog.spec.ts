@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { collectErrors, openPalette, waitForHydration, waitForSettled } from './helpers'
+import { collectErrors, openMoreMenu, openPalette, waitForHydration, waitForSettled } from './helpers'
 
 // Không phụ thuộc một cuốn cụ thể: lấy sách từ lưới rồi đi tiếp. Chỉ giả định danh mục "Văn học" có sách
 // ở ít nhất hai danh mục con, và mọi sách có ISBN-13 bắt đầu bằng 978/979 (như layout.spec).
@@ -202,6 +202,7 @@ test('đổi ngôn ngữ trên trang sách → /en/books/<cùng slug>, mô tả 
 
   const viDescription = page.getByRole('region', { name: 'Giới thiệu sách' }).locator('p').first()
   const text = ((await viDescription.textContent()) ?? '').trim()
+  await openMoreMenu(page)
   await page.getByRole('link', { name: /Xem bằng tiếng Anh/ }).click()
 
   await expect(page).toHaveURL(new RegExp(`/en/books/${slug}$`))
