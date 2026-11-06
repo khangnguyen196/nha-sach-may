@@ -229,6 +229,7 @@ test('palette: Ctrl K rồi gõ ngay khi chunk palette còn đang tải → khô
   await page.keyboard.press('ControlOrMeta+k')
   await page.keyboard.type('abc', { delay: 30 })
   const dialog = page.getByRole('dialog')
+  // 10 s: chunk palette cố ý chậm 1,5 s mỗi file
   await expect(dialog).toBeVisible({ timeout: 10_000 })
   expect(delayed).toBeGreaterThan(0)
   await expect(dialog.getByRole('combobox')).toHaveValue('')
@@ -239,7 +240,8 @@ test('palette: Ctrl K rồi gõ ngay khi chunk palette còn đang tải → khô
 
   // Logo đang focus (không phải nút tìm kiếm: focus nút tải trước chunk): phím giữ lại rồi vào ô của palette
   // Tải lại để chunk palette chưa có trong trang (route bật thì Playwright tắt bộ nhớ đệm HTTP → chunk xin lại)
-  await page.unroute(CHUNKS, slowChunk)
+  // unrouteAll 'ignoreErrors': handler cũ đang chờ 1,5 s thì route.continue() của nó trên request đã hủy (reload) không ném lỗi
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
   await page.reload()
   await waitForHydration(page, SEARCH_TRIGGER)
   await waitForSettled(page)
@@ -259,6 +261,47 @@ test('palette: Ctrl K rồi gõ ngay khi chunk palette còn đang tải → khô
   await expect(logo).toBeFocused()
   await page.keyboard.press('ControlOrMeta+k')
   await expect(dialog.getByRole('combobox')).toHaveValue('')
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
+})
+
+test('palette: Ctrl K mở rồi đóng ngay khi ô nhập chưa nhận focus → không còn giữ phím của trang', async ({ page }) => {
+  // Hai lần Ctrl K trong cùng một lượt xử lý (React gộp thành một lần render, trạng thái mở cuối cùng vẫn là đóng) từng
+  // để bộ giữ phím bật: mọi phím in được của trang bị chặn (Space không cuộn, không bấm nút) tới lần mở sau
+  const SEARCH_TRIGGER = 'header button[aria-haspopup="dialog"]'
+  await page.goto('/')
+  await waitForHydration(page, SEARCH_TRIGGER)
+  await waitForSettled(page)
+  const CHUNKS = '**/_next/static/chunks/**'
+  await page.route(CHUNKS, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await route.continue()
+  })
+
+  await page.evaluate(() => {
+    for (let index = 0; index < 2; index += 1) {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }))
+    }
+  })
+  const dialog = page.getByRole('dialog')
+  // Chunk cố ý chậm 1,5 s: chờ quá thời gian đó rồi mới kết luận palette vẫn đóng
+  await page.waitForTimeout(2_000)
+  await expect(dialog).toBeHidden()
+
+  // Phím không bị chặn ở pha capture: listener bubble của document thấy defaultPrevented = false
+  await page.evaluate(() => {
+    const seen: string[] = []
+    Reflect.set(window, '__keysPrevented', seen)
+    document.addEventListener('keydown', (event) => {
+      if (event.defaultPrevented) seen.push(event.key)
+    })
+  })
+  await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+  await page.keyboard.press('a')
+  await page.keyboard.press('Space')
+  expect(await page.evaluate(() => Reflect.get(window, '__keysPrevented'))).toEqual([])
+  // Space ở body cuộn trang như thường
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
 })
 
 test('/api/search: từ khóa quá ngắn → 400 INVALID_INPUT; hợp lệ → cache CDN', async ({ request }) => {
