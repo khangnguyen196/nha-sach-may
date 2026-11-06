@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest'
 const dir = import.meta.dirname
 const normalize = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
 
-/** Tách câu lệnh theo `;`, bỏ qua `;` nằm trong thân hàm `$$ … $$` */
-function statements(sql: string) {
+/** Tách câu lệnh theo `;`, bỏ qua `;` nằm trong thân hàm `$$ … $$` (giữ cả begin / commit) */
+function allStatements(sql: string) {
   const text = sql.replace(/--[^\n]*/g, '')
   const out: string[] = []
   let start = 0
@@ -22,7 +22,11 @@ function statements(sql: string) {
       start = i + 1
     }
   }
-  return out.filter((statement) => statement && statement !== 'begin' && statement !== 'commit')
+  return out.filter((statement) => statement)
+}
+
+function statements(sql: string) {
+  return allStatements(sql).filter((statement) => statement !== 'begin' && statement !== 'commit')
 }
 
 const schemaSql = readFileSync(join(dir, 'schema.sql'), 'utf8')
@@ -43,6 +47,8 @@ const UPGRADE_ONLY = new Set([
   "update storage.buckets set allowed_mime_types = array['image/webp'], file_size_limit = 1048576 where id = 'book-covers'",
   // PostgREST nạp lại cache schema sau khi đổi chữ ký hàm; DB mới không cần
   "notify pgrst, 'reload schema'",
+  // Chỉ giới hạn thời gian chờ khóa khi chạy migration trên DB đang có người dùng
+  "set local lock_timeout = '5s'",
 ])
 
 /** Câu lệnh bị migration sau ghi đè (cùng hàm, cùng quyền cột trên một bảng) → chỉ bản cuối phải có trong schema.sql */
@@ -68,6 +74,9 @@ for (const { file, statements: list } of migrationStatements) {
   }
 }
 
+/** `drop policy "<tên>" on <bảng>` (không if exists) → policy bị bỏ hẳn (gộp / thay bằng policy khác) */
+const DROP_POLICY = /^drop policy ("[^"]+") on ([\w.]+)$/
+
 /** `drop function [if exists] <tên>(<kiểu tham số>)` → chữ ký hàm bị bỏ (đổi tham số) */
 const DROP_FUNCTION = /^drop function (?:if exists )?([\w.]+\([^)]*\))$/
 
@@ -81,9 +90,22 @@ migrationStatements.forEach(({ statements: list }, index) => {
   }
 })
 
+// `"<tên>" on <bảng>` của policy → vị trí migration drop nó: câu create policy đó ở migration trước không còn trong
+// schema.sql (policy đã gộp / thay)
+const policyDroppedAt = new Map<string, number>()
+migrationStatements.forEach(({ statements: list }, index) => {
+  for (const statement of list) {
+    const policy = DROP_POLICY.exec(statement)
+    if (policy) policyDroppedAt.set(`${policy[1]} on ${policy[2]}`, index)
+  }
+})
+
 function droppedLater(statement: string, index: number) {
   for (const [signature, at] of droppedAt) {
     if (at > index && statement.includes(`function ${signature}`)) return true
+  }
+  for (const [policy, at] of policyDroppedAt) {
+    if (at > index && statement.startsWith(`create policy ${policy} `)) return true
   }
   return false
 }
@@ -98,6 +120,11 @@ describe('schema.sql chứa mọi migration', () => {
       const dropped = DROP_FUNCTION.exec(statement)?.[1]
       if (dropped) {
         expect(schemaText, statement).not.toContain(`function ${dropped}`)
+        continue
+      }
+      const droppedPolicy = DROP_POLICY.exec(statement)
+      if (droppedPolicy) {
+        expect(schemaText, statement).not.toContain(`create policy ${droppedPolicy[1]} on ${droppedPolicy[2]} `)
         continue
       }
       if (droppedLater(statement, index)) continue
@@ -216,5 +243,61 @@ describe('gợi ý mã giảm giá + mã lỗi theo lý do (ux-messages)', () =>
     for (const code of ['order_already_cancelled', 'order_delivered', 'order_in_progress', 'order_paid']) {
       expect(body.indexOf(`raise exception '${code}'`)).toBeGreaterThan(notFound)
     }
+  })
+})
+
+// db-advisors (2026-11-06): migration chủ dự án chạy tay trong SQL Editor phải là một transaction chạy một lần, chỉ đổi
+// cấu trúc; schema.sql giữ các điều advisors đã dọn để không tái phát
+describe('db-advisors', () => {
+  const file = '20261106120000_db_advisors.sql'
+  const migration = allStatements(readFileSync(join(dir, 'migrations', file), 'utf8'))
+
+  it('migration: begin → lock_timeout → … → notify pgrst → commit', () => {
+    expect(migration[0]).toBe('begin')
+    expect(migration[1]).toBe("set local lock_timeout = '5s'")
+    expect(migration.at(-2)).toBe("notify pgrst, 'reload schema'")
+    expect(migration.at(-1)).toBe('commit')
+    expect(migration.filter((statement) => statement === 'begin' || statement === 'commit')).toHaveLength(2)
+  })
+
+  it('migration: chạy lần 2 phải lỗi (không if exists / if not exists), không concurrently, không đổi dữ liệu', () => {
+    for (const statement of migration) {
+      expect(statement).not.toMatch(/\bif (not )?exists\b/)
+      expect(statement).not.toMatch(/\bconcurrently\b/)
+      expect(statement).not.toMatch(/^(insert|update|delete|truncate|merge|copy)\b/)
+    }
+  })
+
+  /** Hàm public `returns trigger … security definer` trong schema.sql */
+  const triggerFunctions = schema.flatMap((statement) => {
+    const name = /^create or replace function (public\.\w+)\(\) returns trigger /.exec(statement)?.[1]
+    const header = statement.slice(0, statement.indexOf(' as $$'))
+    return name && header.includes(' security definer ') ? [name] : []
+  })
+
+  it('mọi hàm trigger security definer của public đều bị thu EXECUTE (schema.sql)', () => {
+    expect(triggerFunctions.length).toBeGreaterThanOrEqual(9)
+    for (const name of triggerFunctions) {
+      expect(schema, name).toContain(`revoke execute on function ${name}() from public, anon, authenticated`)
+      expect(schemaText, name).not.toMatch(new RegExp(`grant execute on function ${name.replace('.', '\\.')}\\(\\)`))
+    }
+  })
+
+  it('migration thu EXECUTE đúng 9 hàm trigger, không đụng RPC / is_admin', () => {
+    const revoked = migration.flatMap((statement) => {
+      const name = /^revoke execute on function (public\.\w+)\(\) from public, anon, authenticated$/.exec(statement)?.[1]
+      return name ? [name] : []
+    })
+    expect(revoked).toHaveLength(9)
+    expect(new Set(revoked)).toEqual(new Set(triggerFunctions))
+    expect(migration.filter((statement) => statement.startsWith('revoke ') || statement.startsWith('grant '))).toHaveLength(9)
+  })
+
+  it('used_listings chỉ còn đúng 1 policy SELECT, cho anon + authenticated', () => {
+    const policies = schema.filter((statement) => /^create policy "[^"]+" on public\.used_listings /.test(statement))
+    const select = policies.filter((statement) => / for (select|all) /.test(statement))
+    expect(select).toEqual([
+      "create policy \"used_listings_select\" on public.used_listings for select to anon, authenticated using (status in ('approved', 'sold') or seller_id = (select auth.uid()) or (select public.is_admin()))",
+    ])
   })
 })

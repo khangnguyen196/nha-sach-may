@@ -131,6 +131,11 @@ begin
   return new;
 end;
 $$;
+-- Hàm trigger không cần ai gọi trực tiếp: thu EXECUTE của public / anon / authenticated (Supabase cấp sẵn cho hàm
+-- mới trong public) → không gọi qua /rest/v1/rpc được. Trigger vẫn chạy với mọi role vì Postgres chỉ kiểm EXECUTE
+-- của hàm trigger lúc CREATE TRIGGER (chạy bằng owner), không kiểm lúc trigger chạy. Vitest supabase/migrations.test.ts
+-- bắt mọi hàm trigger security definer mới của public phải có dòng này.
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -304,6 +309,8 @@ begin
   return null;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.book_authors_touch_book() from public, anon, authenticated;
 
 create trigger book_authors_refresh after insert or update or delete on public.book_authors
   for each row execute function public.book_authors_touch_book();
@@ -317,6 +324,8 @@ begin
   return null;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.authors_touch_books() from public, anon, authenticated;
 
 create trigger authors_name_refresh after update of name on public.authors
   for each row when (old.name is distinct from new.name)
@@ -368,6 +377,9 @@ create table public.cart_items (
   updated_at  timestamptz not null default now(),
   primary key (user_id, book_id)
 );
+
+-- Khóa chính (user_id, book_id) không phục vụ khóa ngoại book_id: xóa sách không phải quét cả bảng
+create index cart_items_book_id_idx on public.cart_items (book_id);
 
 create trigger cart_items_updated_at before update on public.cart_items
   for each row execute function public.set_updated_at();
@@ -495,6 +507,7 @@ create table public.orders (
 
 create index orders_user_idx   on public.orders (user_id, created_at desc);
 create index orders_status_idx on public.orders (status);
+create index orders_voucher_id_idx on public.orders (voucher_id);
 -- Chốt cuối ở mức DB: một key chỉ gắn với một đơn của mỗi user (key null không bị ràng buộc)
 create unique index orders_user_idempotency_key on public.orders (user_id, idempotency_key);
 
@@ -574,6 +587,8 @@ begin
   return new;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.handle_order_status_change() from public, anon, authenticated;
 
 create trigger orders_status_change before update of status on public.orders
   for each row execute function public.handle_order_status_change();
@@ -1004,6 +1019,7 @@ create table public.reviews (
 );
 
 create index reviews_book_idx on public.reviews (book_id, created_at desc);
+create index reviews_user_id_idx on public.reviews (user_id);
 
 create trigger reviews_updated_at before update on public.reviews
   for each row execute function public.set_updated_at();
@@ -1016,6 +1032,8 @@ begin
   return new;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.reviews_set_display_name() from public, anon, authenticated;
 
 create trigger reviews_display_name before insert on public.reviews
   for each row execute function public.reviews_set_display_name();
@@ -1033,6 +1051,8 @@ begin
   return null;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.refresh_book_rating() from public, anon, authenticated;
 
 create trigger reviews_refresh_rating after insert or update or delete on public.reviews
   for each row execute function public.refresh_book_rating();
@@ -1482,6 +1502,8 @@ begin
   return new;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.used_listings_set_seller_name() from public, anon, authenticated;
 
 -- Lúc đăng và lúc người bán sửa (update_used_listing ghi các cột này); admin duyệt / đơn đổi trạng thái không đụng tới
 create trigger used_listings_seller_name before insert or update of condition, price, description, photos
@@ -1537,6 +1559,8 @@ begin
   return new;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.used_listings_status_change() from public, anon, authenticated;
 
 create trigger used_listings_status_change before update of status on public.used_listings
   for each row execute function public.used_listings_status_change();
@@ -1599,6 +1623,7 @@ comment on table public.seller_payouts is 'Sổ tiền mô phỏng: chỉ số t
 
 create index seller_payouts_seller_idx on public.seller_payouts (seller_id, created_at desc);
 create index seller_payouts_status_idx on public.seller_payouts (status, created_at);
+create index seller_payouts_listing_id_idx on public.seller_payouts (listing_id);
 
 -- Đơn có tin sách cũ: hủy → tin về approved; lần đầu đạt đã giao + đã thanh toán → khoản chờ trả người bán
 -- (giá bán lúc đặt − phí sàn chụp ở tin). AFTER: lúc này đơn đã thành cancelled nên chốt chặn sold → approved qua được.
@@ -1625,6 +1650,8 @@ begin
   return null;
 end;
 $$;
+-- Hàm trigger: thu EXECUTE (xem handle_new_user)
+revoke execute on function public.handle_used_order_change() from public, anon, authenticated;
 
 create trigger orders_used_market after update of status, payment_status on public.orders
   for each row execute function public.handle_used_order_change();
@@ -1633,12 +1660,11 @@ create trigger orders_used_market after update of status, payment_status on publ
 alter table public.used_listings  enable row level security;
 alter table public.seller_payouts enable row level security;
 
-create policy "used_listings_public_read" on public.used_listings
-  for select to anon, authenticated using (status in ('approved', 'sold'));
-
-create policy "used_listings_select_own_or_admin" on public.used_listings
-  for select to authenticated
-  using (seller_id = (select auth.uid()) or (select public.is_admin()));
+-- Một policy SELECT (hai policy permissive cùng role gộp bằng OR nhưng Postgres phải chạy cả hai): khách thấy tin đang
+-- bán / đã bán (anon: auth.uid() null, is_admin() false); thành viên thấy thêm tin của mình; admin thấy tất cả
+create policy "used_listings_select" on public.used_listings
+  for select to anon, authenticated
+  using (status in ('approved', 'sold') or seller_id = (select auth.uid()) or (select public.is_admin()));
 
 -- revoke all = bỏ insert / update / delete và quyền select cả bảng; chỉ cấp lại select theo cột
 revoke all on table public.used_listings from anon, authenticated;
@@ -2410,6 +2436,11 @@ create unique index user_blocks_category_unique  on public.user_blocks (user_id,
 create unique index user_blocks_author_unique    on public.user_blocks (user_id, author_id)    where kind = 'author';
 create unique index user_blocks_publisher_unique on public.user_blocks (user_id, publisher_id) where kind = 'publisher';
 create unique index user_blocks_warning_unique   on public.user_blocks (user_id, warning)      where kind = 'warning';
+-- Index cho khóa ngoại (xóa danh mục / tác giả / NXB). Mỗi dòng chỉ có giá trị ở đúng một cột đích theo kind, cột còn
+-- lại null → index một phần bỏ dòng null; câu xóa của khóa ngoại (<cột> = $1) suy ra <cột> is not null nên vẫn dùng được.
+create index user_blocks_category_id_idx on public.user_blocks (category_id) where category_id is not null;
+create index user_blocks_author_id_idx on public.user_blocks (author_id) where author_id is not null;
+create index user_blocks_publisher_id_idx on public.user_blocks (publisher_id) where publisher_id is not null;
 
 -- ≤ user_blocks_limit() mục / tài khoản. Khóa theo user_id trước khi đếm: hai lần thêm song song không cùng vượt.
 create or replace function private.user_blocks_check_limit()
