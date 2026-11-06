@@ -116,3 +116,27 @@ describe('lớp vòng focus', () => {
     expect(offenders).toEqual([])
   })
 })
+
+describe('nút chính (button.tsx, variant default): khoảng hở màu nền giữa nút và vòng focus', () => {
+  // Giao diện sáng: vòng focus-ring = primary 100% = đúng màu nền nút → trông như nút to thêm 3px. Khoảng hở màu
+  // background tách vòng khỏi nút; vòng đứng trên khoảng hở đó nên tương phản cần là vòng / background (kiểm ở trên).
+  const source = readFileSync(join(SRC, 'components/ui/button.tsx'), 'utf8')
+  // Chỉ khối `variant: { … }` (khối `size` cũng có khóa default)
+  const block = source.slice(source.indexOf('variant: {'), source.indexOf('size: {'))
+  const variants = Object.fromEntries(
+    [...block.matchAll(/^\s+(\w+):\s*"([^"]*)",?$/gm)].map(([, name = '', classes = '']) => [name, classes]),
+  )
+
+  it('default có ring-offset-2 bằng token background', () => {
+    expect(variants.default?.split(' ')).toEqual(
+      expect.arrayContaining(['focus-visible:ring-offset-2', 'focus-visible:ring-offset-background']),
+    )
+  })
+
+  it('các variant khác không đổi (không ring-offset)', () => {
+    for (const name of ['outline', 'secondary', 'ghost', 'destructive', 'link']) {
+      expect(variants[name], name).toBeDefined()
+      expect(variants[name], name).not.toContain('ring-offset')
+    }
+  })
+})
