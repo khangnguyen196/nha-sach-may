@@ -4,16 +4,22 @@
 #   1. Tìm migration mới (thêm so với origin/main). Không có → qua (VD push lên main sau khi đã lên). Có → nhánh phải
 #      chứa đỉnh origin/main (không thì DB "trước" thiếu thay đổi của main mà schema.sql của nhánh cũng không có).
 #   2. Supabase local từ toàn bộ supabase/ của origin/main (schema.sql, seed, config.toml như e2e của main).
-#   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql); anon gọi hàm trigger qua
-#      /rest/v1/rpc phải tới được Postgres (lỗi "trigger functions can only be called as triggers"), không thì bước 5
-#      không chứng minh được gì.
+#   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql); quyền EXECUTE của mọi hàm
+#      trigger security definer của public đọc từ catalog (has_function_privilege, scripts/ci/trigger-privileges.sql;
+#      danh sách hàm lấy từ catalog): anon / authenticated / PUBLIC / service_role / supabase_auth_admin đều có quyền,
+#      không thì bước 5 không chứng minh được gì. Không gọi /rest/v1/rpc: PostgREST không đưa hàm trả về trigger vào
+#      schema cache nên ra 404 cả trước lẫn sau migration (run 42249871642).
 #   4. Chạy migration (psql ON_ERROR_STOP) → exit 0; bảng vai "sau" giống "trước" từng chữ.
-#   5. Gọi /rest/v1/rpc/<hàm trigger> bằng khóa anon → lỗi quyền / không tìm thấy.
+#   5. Quyền EXECUTE sau migration: anon / authenticated / PUBLIC / supabase_auth_admin mất, service_role giữ (không thu
+#      quá tay). Trigger vẫn chạy khi role gây ra trigger không có EXECUTE (scripts/ci/trigger-still-fires.sql:
+#      supabase_auth_admin, role GoTrue dùng tạo user, insert auth.users → handle_new_user tạo profile, trong rollback).
+#      Trigger chợ sách cũ / đơn hàng dựa vào e2e trên DB dựng từ schema.sql (= DB B) và bước 10 (A trùng B).
 #   6. Không còn khóa ngoại nào của public thiếu index.
 #   7. Dump A (pg_dump --schema-only public + private, trong container DB) + 4 truy vấn chính xác.
 #   8. Migration lần 2 → exit ≠ 0 với dòng ERROR: "already exists" / "does not exist"; dump + truy vấn chính xác giống A. Rồi
 #      tạo bảng dấu public.__ci_marker ở DB A.
-#   9. Dựng lại từ schema.sql của HEAD (không còn bảng dấu = DB mới) → dump B (cùng cách).
+#   9. Dựng lại từ schema.sql của HEAD (không còn bảng dấu = DB mới) → dump B (cùng cách); bảng vai, khóa ngoại, quyền
+#      EXECUTE của hàm trigger và phép thử trigger vẫn chạy như DB A.
 #  10. Chuẩn hóa A, B (scripts/ci/normalize-dump.sh) → diff rỗng; 4 truy vấn chính xác giống nhau.
 name: migration-check
 
@@ -90,12 +96,11 @@ jobs:
           db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-before.txt"
           cat "$RUNNER_TEMP/visibility-before.txt"
           diff -u scripts/ci/used-visibility.expected "$RUNNER_TEMP/visibility-before.txt"
-          # Trước migration anon còn quyền EXECUTE → PostgREST gọi tới hàm, Postgres từ chối lúc chạy. Không ra lỗi này
-          # thì bước 5 (sau migration không gọi được) không chứng minh migration đã thu quyền.
-          result="$(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
-          echo "rpc trước migration: $result"
-          if ! is_trigger_call_error <<< "$result"; then
-            echo "::error::trước migration anon không gọi được hàm trigger; bước 5 sẽ không chứng minh được gì"
+          # "Trước t / sau f" (bước 5) mới chứng minh chính migration đã thu quyền
+          db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-before.txt"
+          cat "$RUNNER_TEMP/privileges-before.txt"
+          if ! diff -u scripts/ci/trigger-privileges.before.expected "$RUNNER_TEMP/privileges-before.txt"; then
+            echo "::error::quyền EXECUTE của hàm trigger trước migration khác trigger-privileges.before.expected: các vai chưa có quyền EXECUTE thì bước 5 không chứng minh được gì"
             exit 1
           fi
 
@@ -112,19 +117,15 @@ jobs:
           diff -u "$RUNNER_TEMP/visibility-before.txt" "$RUNNER_TEMP/visibility-after.txt"
 
       - if: ${{ steps.find.outputs.count != '0' }}
-        name: 5. Hàm trigger không gọi được qua /rest/v1/rpc bằng khóa anon
+        name: 5. Quyền EXECUTE của hàm trigger sau migration + trigger vẫn chạy
         run: |
           source scripts/ci/migration-check-lib.sh
-          result="$(call_rpc_as_anon "$RUNNER_TEMP/base" handle_new_user)"
-          echo "$result"
-          if is_trigger_call_error <<< "$result"; then
-            echo "::error::anon vẫn gọi được hàm trigger (Postgres chỉ chặn ở bước chạy)"
-            exit 1
-          fi
-          case "${result%% *}" in
-            401 | 403 | 404) ;;
-            *) echo "::error::cần lỗi quyền / không tìm thấy (401, 403, 404)"; exit 1 ;;
-          esac
+          db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-after.txt"
+          cat "$RUNNER_TEMP/privileges-after.txt"
+          diff -u scripts/ci/trigger-privileges.after.expected "$RUNNER_TEMP/privileges-after.txt"
+          db_psql < scripts/ci/trigger-still-fires.sql > "$RUNNER_TEMP/trigger-run-a.txt"
+          cat "$RUNNER_TEMP/trigger-run-a.txt"
+          diff -u scripts/ci/trigger-still-fires.expected "$RUNNER_TEMP/trigger-run-a.txt"
 
       - if: ${{ steps.find.outputs.count != '0' }}
         name: 6. Khóa ngoại thiếu index (phải rỗng)
@@ -189,6 +190,12 @@ jobs:
           db_psql < scripts/ci/fk-without-index.sql > "$RUNNER_TEMP/fk-b.txt"
           cat "$RUNNER_TEMP/fk-b.txt"
           test ! -s "$RUNNER_TEMP/fk-b.txt"
+          db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-b.txt"
+          cat "$RUNNER_TEMP/privileges-b.txt"
+          diff -u scripts/ci/trigger-privileges.after.expected "$RUNNER_TEMP/privileges-b.txt"
+          db_psql < scripts/ci/trigger-still-fires.sql > "$RUNNER_TEMP/trigger-run-b.txt"
+          cat "$RUNNER_TEMP/trigger-run-b.txt"
+          diff -u scripts/ci/trigger-still-fires.expected "$RUNNER_TEMP/trigger-run-b.txt"
 
       - if: ${{ steps.find.outputs.count != '0' }}
         name: 10. So dump A (origin/main + migration) với dump B (schema.sql mới)
@@ -218,5 +225,7 @@ jobs:
             ${{ runner.temp }}/dump-*.norm
             ${{ runner.temp }}/exact-*.txt
             ${{ runner.temp }}/visibility-*.txt
+            ${{ runner.temp }}/privileges-*.txt
+            ${{ runner.temp }}/trigger-run-*.txt
           retention-days: 7
           if-no-files-found: ignore

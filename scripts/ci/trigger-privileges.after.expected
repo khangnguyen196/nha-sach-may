@@ -1,0 +1,9 @@
+authors_touch_books|f|f|f|t|f
+book_authors_touch_book|f|f|f|t|f
+handle_new_user|f|f|f|t|f
+handle_order_status_change|f|f|f|t|f
+handle_used_order_change|f|f|f|t|f
+refresh_book_rating|f|f|f|t|f
+reviews_set_display_name|f|f|f|t|f
+used_listings_set_seller_name|f|f|f|t|f
+used_listings_status_change|f|f|f|t|f
