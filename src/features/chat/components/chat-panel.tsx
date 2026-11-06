@@ -306,11 +306,12 @@ function BookCard({ book, onNavigate }: { book: ChatBookCard; onNavigate: () => 
       className="flex gap-3 rounded-lg border p-2 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-3 focus-visible:ring-focus-ring"
     >
       <span className="relative h-18 w-12 shrink-0 overflow-hidden rounded-cover bg-surface-raised">
-        {book.coverUrl ? (
-          // Tên sách hiện ngay cạnh trong cùng link → alt rỗng (CLAUDE.md → Accessibility)
-          <Image src={book.coverUrl} alt="" fill sizes="48px" className="object-cover" />
-        ) : (
-          <BookIcon aria-hidden className="absolute inset-0 m-auto size-5 text-subtle" />
+        {/* Icon luôn nằm dưới ảnh: ô không trống trơn khi ảnh đang tải (tối ưu ảnh lần đầu trên Vercel) hay tải lỗi */}
+        <BookIcon aria-hidden className="absolute inset-0 m-auto size-5 text-subtle" />
+        {book.coverUrl && (
+          // Tên sách hiện ngay cạnh trong cùng link → alt rỗng (CLAUDE.md → Accessibility).
+          // eager: thẻ vừa hiện trong câu trả lời, lazy trong khung cuộn chỉ bắt đầu tải khi IntersectionObserver báo
+          <Image src={book.coverUrl} alt="" fill sizes="48px" loading="eager" className="object-cover" />
         )}
       </span>
       <span className="min-w-0 flex-1">
