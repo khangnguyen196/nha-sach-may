@@ -14,17 +14,18 @@ type Props = {
   labels: { toLight: string; toDark: string }
   icons: { sun: ReactNode; moon: ReactNode }
   /** icon: nút 36px trên header từ md; menu: mục có chữ trong menu "⋯" dưới md (MoreMenu) */
-  variant?: 'icon' | 'menu'
+  variant: 'icon' | 'menu'
 }
 
-export function ThemeToggle({ labels, icons, variant = 'icon' }: Props) {
+export function ThemeToggle({ labels, icons, variant }: Props) {
   const { resolvedTheme, setTheme } = useTheme()
   const label = variant === 'menu' ? '' : 'sr-only '
 
   return (
     <Button
       variant="ghost"
-      size="icon-lg"
+      // Mục menu: cỡ mặc định của Button + MENU_ITEM_CLASS (Button gộp bằng cn); icon-lg chỉ cho nút 36px
+      size={variant === 'menu' ? 'default' : 'icon-lg'}
       className={variant === 'menu' ? MENU_ITEM_CLASS : undefined}
       onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
     >

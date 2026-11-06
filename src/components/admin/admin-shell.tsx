@@ -47,6 +47,7 @@ export async function AdminShell({ children }: { children: ReactNode }) {
     <ThemeToggle
       labels={{ toLight: tLayout('toLightTheme'), toDark: tLayout('toDarkTheme') }}
       icons={{ sun: <SunIcon aria-hidden />, moon: <MoonIcon aria-hidden /> }}
+      variant="icon"
     />
   )
 

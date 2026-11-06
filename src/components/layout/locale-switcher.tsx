@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { getPathname, usePathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { cn } from '@/lib/utils'
 import { currentHref, type Params, type Query } from './locale-href'
 import { MENU_ITEM_CLASS } from './more-menu'
 
@@ -87,6 +88,7 @@ function LocaleLink({ labels, variant, params, query }: Props & { params: Params
 }
 
 const ICON = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })
+const MENU_ITEM = cn(buttonVariants({ variant: 'ghost' }), MENU_ITEM_CLASS)
 
 function LocaleAnchor({ labels, variant, href }: Props & { href: (target: Locale) => string }) {
   const locale = useLocale()
@@ -100,7 +102,7 @@ function LocaleAnchor({ labels, variant, href }: Props & { href: (target: Locale
       // Link fallback bị inline script sửa href trước hydrate (PATCH_QUERY)
       suppressHydrationWarning
       hrefLang={target}
-      className={variant === 'menu' ? MENU_ITEM_CLASS : ICON}
+      className={variant === 'menu' ? MENU_ITEM : ICON}
     >
       {variant === 'menu' ? (
         <>

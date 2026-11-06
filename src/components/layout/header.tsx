@@ -62,6 +62,7 @@ export async function Header() {
  */
 function SiteName({ name }: { name: string }) {
   const cut = name.lastIndexOf(' ')
+  if (cut < 0) return <span className="font-serif text-base font-semibold whitespace-nowrap sm:text-lg">{name}</span>
   return (
     <span className="font-serif text-base font-semibold whitespace-nowrap max-[374px]:text-sm max-[374px]:leading-tight sm:text-lg">
       {name.slice(0, cut)} <span className="max-[374px]:block">{name.slice(cut + 1)}</span>
