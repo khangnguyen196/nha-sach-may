@@ -92,7 +92,8 @@ migrationStatements.forEach(({ statements: list }, index) => {
 
 /**
  * `"<tên>" on <bảng>` của policy → vị trí migration drop nó (lần cuối): câu create policy đó ở migration trước không còn
- * trong schema.sql (policy đã gộp / thay). `gone`: policy schema.sql không được có.
+ * trong schema.sql (policy đã gộp / thay). `gone`: policy schema.sql không được có = bị drop và không migration nào từ
+ * lần drop cuối trở đi (kể cả chính migration đó) tạo lại cùng tên trên cùng bảng.
  */
 function policyDrops(list: { statements: string[] }[]) {
   const droppedAt = new Map<string, number>()
@@ -102,7 +103,15 @@ function policyDrops(list: { statements: string[] }[]) {
       if (policy) droppedAt.set(`${policy[1]} on ${policy[2]}`, index)
     }
   })
-  return { droppedAt, gone: new Set(droppedAt.keys()) }
+  const gone = new Set(droppedAt.keys())
+  list.forEach(({ statements: items }, index) => {
+    for (const statement of items) {
+      for (const [policy, at] of droppedAt) {
+        if (index >= at && statement.startsWith(`create policy ${policy} `)) gone.delete(policy)
+      }
+    }
+  })
+  return { droppedAt, gone }
 }
 
 const { droppedAt: policyDroppedAt, gone: policiesGone } = policyDrops(migrationStatements)
