@@ -13,7 +13,8 @@ const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
 // overflow-x-auto cũng cắt theo chiều dọc → đệm trong cho bìa nghiêng + phóng to + ánh cam + vòng focus (globals.css,
 // book-tilt): pt-10 kèm -mt-4 (thẻ lúc nghỉ đứng đúng chỗ cũ, dải 16px trên chồng lên dòng tiêu đề, dòng đó relative z-10
 // nên link / nút vẫn bấm được). Đệm ngang 8px (xl:-mx-8 xl:px-8) chỉ từ xl: dưới xl kệ -mx-6 đã chạm mép màn hình, nới
-// thêm là tràn ngang trang → dưới xl mép ngoài ánh cam của thẻ đầu / cuối có thể bị cắt ~3px (bìa, vòng focus không bị cắt)
+// thêm là tràn ngang trang → từ sm tới dưới xl mép ngoài ánh cam của thẻ đầu / cuối bị cắt khoảng 3–5px, dưới sm cắt tới
+// khoảng 10px (trước đợt ~7px); bìa, vòng focus không bị cắt, chấp nhận
 const LIST_CLASS =
   'relative -mx-4 -mt-4 pt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 xl:-mx-8 xl:scroll-px-8 xl:px-8'
 

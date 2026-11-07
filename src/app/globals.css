@@ -195,8 +195,8 @@
  *   z-index 1 khi nghiêng → bìa phóng to nằm trên thẻ bên cạnh. Ô mờ BlockedVeil (absolute, đứng sau link) vẫn đè link
  *   lúc nghỉ; thẻ bị che không hover / focus được (link visibility: hidden).
  * - Kệ (shelf.tsx): -mt-4 pt-10 đủ chỗ phía trên cho bìa phóng to + ánh cam; đệm ngang 8px chỉ từ xl (dưới xl kệ đã chạm
- *   mép màn hình, đệm thêm là tràn ngang) → dưới xl mép ngoài ánh cam của thẻ đầu / cuối kệ có thể bị cắt ~3px (bìa
- *   và vòng focus không bị cắt).
+ *   mép màn hình, đệm thêm là tràn ngang) → từ sm tới dưới xl mép ngoài ánh cam của thẻ đầu / cuối kệ bị cắt khoảng
+ *   3–5px, dưới sm cắt tới khoảng 10px (trước đợt ~7px); bìa và vòng focus không bị cắt, chấp nhận.
  * Lớp utilities đứng sau components: không đặt transition-* / shadow-* / transform-* / z-* của Tailwind lên link / khung bìa.
  */
 @layer components {
