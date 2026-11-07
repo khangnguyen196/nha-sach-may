@@ -7,8 +7,8 @@
 #   3. Bảng vai × trạng thái của used_listings ("trước", scripts/ci/used-visibility.sql); quyền EXECUTE của mọi hàm
 #      trigger security definer của public đọc từ catalog (has_function_privilege, scripts/ci/trigger-privileges.sql;
 #      danh sách hàm lấy từ catalog): anon / authenticated / PUBLIC / service_role / supabase_auth_admin đều có quyền,
-#      không thì bước 5 không chứng minh được gì. Không gọi /rest/v1/rpc: PostgREST không đưa hàm trả về trigger vào
-#      schema cache nên ra 404 cả trước lẫn sau migration (run 42249871642). Hai chế độ (check_privileges_before):
+#      (chế độ so before.expected, xem bên dưới), không thì bước 5 không chứng minh được gì. Không gọi /rest/v1/rpc:
+#      PostgREST không đưa hàm trả về trigger vào schema cache nên ra 404 cả trước lẫn sau migration (run 42249871642). Hai chế độ (check_privileges_before):
 #      chỉ khi chính migration 20261106120000_db_advisors là migration mới thì so trigger-privileges.before.expected
 #      (mọi vai t); main đã có migration này (mọi nhánh sau) thì DB "trước" đã thu quyền → kiểm bất biến mọi dòng =
 #      f|f|f|t|f (so before.expected sẽ đỏ nhầm ở mọi migration sau; không so after.expected vì nhánh thêm hàm trigger
@@ -105,7 +105,7 @@ jobs:
           db_psql < scripts/ci/used-visibility.sql > "$RUNNER_TEMP/visibility-before.txt"
           cat "$RUNNER_TEMP/visibility-before.txt"
           diff -u scripts/ci/used-visibility.expected "$RUNNER_TEMP/visibility-before.txt"
-          # "Trước t / sau f" (bước 5) mới chứng minh chính migration đã thu quyền
+          # Chế độ so before.expected: trước t / sau f (bước 5) mới chứng minh chính migration đã thu quyền
           db_psql < scripts/ci/trigger-privileges.sql > "$RUNNER_TEMP/privileges-before.txt"
           cat "$RUNNER_TEMP/privileges-before.txt"
           # before.expected chỉ dùng khi chính migration db_advisors là migration mới (xem check_privileges_before)
