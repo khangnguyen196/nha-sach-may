@@ -257,6 +257,8 @@ test('(h) desktop 1280 trang chủ: danh sách kệ (-mt-4) không đè "Xem t�
   isMobile,
 }) => {
   test.skip(isMobile, 'Nút kệ chỉ hiện từ md')
+  // Giảm chuyển động: ShelfNav cuộn tức thì (behavior auto) → đọc scrollLeft ngay sau mỗi lần bấm, không chờ cuộn mượt
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/')
   await waitForSettled(page)
@@ -269,33 +271,39 @@ test('(h) desktop 1280 trang chủ: danh sách kệ (-mt-4) không đè "Xem t�
   const previous = section.getByRole('button', { name: 'Cuộn kệ sang trái' })
   const next = section.getByRole('button', { name: 'Cuộn kệ sang phải' })
   await expect(next).toBeVisible()
+  // elementFromPoint / mouse.click chỉ thấy phần đang trong khung nhìn
+  await section.scrollIntoViewIfNeeded()
   const listTop = (await list.boundingBox())?.y
   if (listTop === undefined) throw new Error('Thiếu hộp của danh sách kệ')
+  const scrollLeft = () => list.evaluate((element) => element.scrollLeft)
 
-  /** Giữa ngang, đáy − 2px của phần tử; phải nằm trong dải danh sách kệ chồng lên dòng tiêu đề (không thì test không thử gì) */
-  const bottomPoint = async (target: Locator, label: string) => {
+  /**
+   * Giữa ngang, đáy − 2px của phần tử: phải nằm trong dải danh sách kệ chồng lên dòng tiêu đề (không thì test không thử
+   * gì) và phần tử trên cùng tại đó là chính nó (hoặc con). Nút đang disabled có pointer-events: none (Button) → chỉ thử
+   * nút đang bấm được.
+   */
+  const bottomPointOnTop = async (target: Locator, label: string) => {
     const box = await target.boundingBox()
     if (!box) throw new Error(`Thiếu hộp của ${label}`)
     const point = { x: box.x + box.width / 2, y: box.y + box.height - 2 }
     expect(point.y, `${label}: điểm nằm trong dải danh sách kệ`).toBeGreaterThan(listTop)
-    return point
-  }
-  for (const [label, target] of [
-    ['Xem tất cả', seeAll],
-    ['nút trước', previous],
-    ['nút sau', next],
-  ] as const) {
-    const point = await bottomPoint(target, label)
     const onTop = await target.evaluate((element, { x, y }) => {
       const top = document.elementFromPoint(x, y)
       return top !== null && element.contains(top)
     }, point)
-    expect(onTop, label).toBe(true)
+    expect(onTop, `${label}: nằm trên danh sách kệ`).toBe(true)
+    return point
   }
 
-  const point = await bottomPoint(next, 'nút sau')
-  await page.mouse.click(point.x, point.y)
-  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
+  await bottomPointOnTop(seeAll, 'Xem tất cả')
+  const nextPoint = await bottomPointOnTop(next, 'nút sau')
+  await page.mouse.click(nextPoint.x, nextPoint.y)
+  await expect.poll(scrollLeft).toBeGreaterThan(0)
+  await expect(previous).toBeEnabled()
+  const scrolled = await scrollLeft()
+  const previousPoint = await bottomPointOnTop(previous, 'nút trước')
+  await page.mouse.click(previousPoint.x, previousPoint.y)
+  await expect.poll(scrollLeft).toBeLessThan(scrolled)
 })
 
 test('(f) điện thoại: chạm thẻ → nhả tay bìa về none (không giữ nghiêng)', async ({ page, isMobile }) => {
