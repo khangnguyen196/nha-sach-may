@@ -1,4 +1,4 @@
-import { MoonIcon, SearchIcon, SunIcon } from 'lucide-react'
+import { EllipsisIcon, MoonIcon, SearchIcon, SunIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { getLazyErrorLabels } from '@/components/lazy-error-labels'
 import { SearchTrigger } from '@/features/books/components/search-trigger'
@@ -6,6 +6,7 @@ import { CartLink } from '@/features/cart/components/cart-link'
 import { Link } from '@/i18n/navigation'
 import { AccountLink } from './account-link'
 import { LocaleSwitcher } from './locale-switcher'
+import { MoreMenu } from './more-menu'
 import { ThemeToggle } from './theme-toggle'
 
 export async function Header() {
@@ -14,6 +15,9 @@ export async function Header() {
     getTranslations('common'),
     getLazyErrorLabels(),
   ])
+  const localeLabels = { short: t('switchLocaleShort'), full: t('switchLocale') }
+  const themeLabels = { toLight: t('toLightTheme'), toDark: t('toDarkTheme') }
+  const themeIcons = { sun: <SunIcon aria-hidden />, moon: <MoonIcon aria-hidden /> }
 
   return (
     <header className="sticky top-0 z-40 h-16 border-b bg-background/80 backdrop-blur">
@@ -23,8 +27,7 @@ export async function Header() {
           className="flex shrink-0 items-center gap-2 rounded-sm text-foreground outline-none focus-visible:ring-3 focus-visible:ring-focus-ring"
         >
           <LogoMark />
-          {/* Màn < 375px không đủ chỗ cho chữ cạnh 5 nút → chỉ còn biểu tượng, tên vẫn đọc được bằng trình đọc màn hình */}
-          <span className="font-serif text-base font-semibold max-[374px]:sr-only sm:text-lg">{tCommon('siteName')}</span>
+          <SiteName name={tCommon('siteName')} />
         </Link>
 
         <div className="flex flex-1 justify-end md:justify-center md:px-6">
@@ -36,16 +39,34 @@ export async function Header() {
         </div>
 
         <div className="flex items-center sm:gap-0.5">
-          <LocaleSwitcher labels={{ short: t('switchLocaleShort'), full: t('switchLocale') }} />
-          <ThemeToggle
-            labels={{ toLight: t('toLightTheme'), toDark: t('toDarkTheme') }}
-            icons={{ sun: <SunIcon aria-hidden />, moon: <MoonIcon aria-hidden /> }}
-          />
+          {/* Từ md: hai nút riêng như cũ. Dưới md: gộp vào menu "⋯" để mọi nút còn lại đủ 44px (de-sau-2) */}
+          <div className="hidden items-center gap-0.5 md:flex">
+            <LocaleSwitcher labels={localeLabels} variant="icon" />
+            <ThemeToggle labels={themeLabels} icons={themeIcons} variant="icon" />
+          </div>
           <CartLink />
           <AccountLink />
+          <MoreMenu label={t('moreOptions')} icon={<EllipsisIcon aria-hidden />}>
+            <LocaleSwitcher labels={localeLabels} variant="menu" />
+            <ThemeToggle labels={themeLabels} icons={themeIcons} variant="menu" />
+          </MoreMenu>
         </div>
       </div>
     </header>
+  )
+}
+
+/**
+ * Tên luôn hiện. Màn < 375px không đủ một dòng cạnh 4 nút 44px → hai dòng ("Nhà Sách" / "Mây", chữ 14px), không cắt,
+ * không ẩn. Tách ở khoảng trắng cuối để chỗ xuống dòng cố định, không phụ thuộc bề rộng font.
+ */
+function SiteName({ name }: { name: string }) {
+  const cut = name.lastIndexOf(' ')
+  if (cut < 0) return <span className="font-serif text-base font-semibold whitespace-nowrap sm:text-lg">{name}</span>
+  return (
+    <span className="font-serif text-base font-semibold whitespace-nowrap max-[374px]:text-sm max-[374px]:leading-tight sm:text-lg">
+      {name.slice(0, cut)} <span className="max-[374px]:block">{name.slice(cut + 1)}</span>
+    </span>
   )
 }
 

@@ -1,7 +1,17 @@
-import { expect, test, type Route } from '@playwright/test'
+import { expect, test, type Locator, type Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { ADD_TO_CART_SUBMIT, addToCartButton, vnd } from './cart'
-import { collectErrors, FOCUS_RING_PX, focusRingClip, openPalette, tabTo, waitForHydration, waitForSettled } from './helpers'
+import {
+  collectErrors,
+  FOCUS_RING_PX,
+  focusRingClip,
+  localeLinkSelector,
+  openMoreMenu,
+  openPalette,
+  tabTo,
+  waitForHydration,
+  waitForSettled,
+} from './helpers'
 
 // Playwright biên dịch spec sang CommonJS (không có import.meta): đọc fixture theo đường dẫn từ gốc repo
 const fixture: { slug: string; price: number }[] = JSON.parse(readFileSync('e2e/fixtures/books.json', 'utf8'))
@@ -46,6 +56,7 @@ test('đổi theme → class trên <html> đổi', async ({ page }) => {
   const html = page.locator('html')
   await expect(html).toHaveClass(/dark/)
 
+  await openMoreMenu(page)
   await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
   await expect(html).toHaveClass(/light/)
   await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click()
@@ -59,6 +70,8 @@ test('bấm đổi ngôn ngữ trước khi hydrate (JS chưa tải) vẫn giữ
     route.request().resourceType() === 'script' ? route.abort() : route.continue(),
   )
   await page.goto('/sach?page=2&sort=price-asc')
+  // Dưới md link nằm trong menu "⋯": <details> mở được không cần JS
+  await openMoreMenu(page)
   const link = page.getByRole('link', { name: /Xem bằng tiếng Anh/ })
   await expect(link).toHaveAttribute('href', '/en/books?page=2&sort=price-asc')
   await link.click()
@@ -67,22 +80,26 @@ test('bấm đổi ngôn ngữ trước khi hydrate (JS chưa tải) vẫn giữ
 
 test('trang không có query: link đổi ngôn ngữ không có dấu ? thừa (trước và sau hydrate)', async ({ page }) => {
   await page.goto('/')
+  await openMoreMenu(page)
   const link = page.getByRole('link', { name: /Xem bằng tiếng Anh/ })
   await expect(link).toHaveAttribute('href', '/en')
-  await waitForHydration(page, 'header a[hreflang]')
+  await waitForHydration(page, localeLinkSelector(page))
   await expect(link).toHaveAttribute('href', '/en')
   await page.goto('/dang-nhap')
+  await openMoreMenu(page)
   await expect(page.getByRole('link', { name: /Xem bằng tiếng Anh/ })).toHaveAttribute('href', '/en/login')
 })
 
 test('đổi ngôn ngữ giữ nguyên query', async ({ page }) => {
   await page.goto('/?x=1')
+  await openMoreMenu(page)
   // Link trong HTML tĩnh (cả fallback Suspense lúc trang chưa stream xong) đã có query trước khi bấm
   await expect(page.getByRole('link', { name: /Xem bằng tiếng Anh/ })).toHaveAttribute('href', '/en?x=1')
   await page.getByRole('link', { name: /Xem bằng tiếng Anh/ }).click()
   await expect(page).toHaveURL(/\/en\?x=1$/)
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
+  await openMoreMenu(page)
   await expect(page.getByRole('link', { name: /View in Vietnamese/ })).toHaveAttribute('href', '/?x=1')
   await page.getByRole('link', { name: /View in Vietnamese/ }).click()
   await expect(page).toHaveURL(/\/\?x=1$/)
@@ -501,4 +518,258 @@ test('danh mục cha: vòng focus của chip danh mục con đầu (Tab) không 
     expect(await chip.evaluate((element) => element.closest('nav')?.scrollLeft), `${width}`).toBe(0)
     expect(await focusRingClip(chip, FOCUS_RING_PX), `${width}`).toEqual({ top: 0, right: 0, bottom: 0, left: 0 })
   }
+})
+
+// de-sau-2 (chủ dự án chọn (e) 2026-11-06): dưới md ngôn ngữ + sáng / tối gộp vào menu "⋯" (<details>), mọi nút icon
+// header 44×44, logo luôn có chữ (hai dòng ở màn < 375px). Từ md giữ nguyên hai nút 36px.
+const HEADER_ICON_PX = 44
+const LOGO_GAP_PX = 4
+
+/**
+ * Vòng focus đang vẽ: một box-shadow có độ loang > 0 (ring-3) hoặc outline. Chờ vì nút có transition-all: ngay lúc focus
+ * box-shadow còn là các lớp 0px trong suốt.
+ */
+const expectFocusRing = (element: Locator) =>
+  expect
+    .poll(() =>
+      element.evaluate((node) => {
+        const style = getComputedStyle(node)
+        return /0px 0px 0px [1-9]\d*(\.\d+)?px/.test(style.boxShadow) || (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0)
+      }),
+    )
+    .toBe(true)
+
+test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
+
+  test('320 / 360 / 390 / 430: một hàng cao 64, không tràn ngang, logo có chữ, nút icon ≥ 44×44, ngôn ngữ + sáng / tối chỉ trong menu', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page)
+    await page.goto('/')
+    // Đọc khung một lần bằng evaluate: chờ Suspense của header thay xong phần tử
+    await waitForSettled(page)
+    const banner = page.getByRole('banner')
+    for (const width of [320, 360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.evaluate(async () => {
+        await document.fonts.ready
+      })
+      const layout = await page.evaluate(() => {
+        const header = document.querySelector('header')
+        const logo = header?.querySelector('a[href="/"]')
+        const text = logo?.querySelector(':scope > span')
+        if (!header || !logo || !(text instanceof HTMLElement)) throw new Error('thiếu header / logo / chữ logo')
+        const box = (element: Element) => {
+          const { left, right, top, bottom, width, height } = element.getBoundingClientRect()
+          return { left, right, top, bottom, width, height }
+        }
+        // Nút / link đang hiện trừ logo. checkVisibility, không getClientRects: Chromium ẩn nội dung <details> đóng bằng
+        // content-visibility: hidden, mục trong menu đóng vẫn có thể có hộp
+        const controls = [...header.querySelectorAll('a, button, summary')]
+          .filter((element) => element !== logo && element.checkVisibility())
+          .map((element) => ({ name: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? '', ...box(element) }))
+        const textStyle = getComputedStyle(text)
+        return {
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          header: box(header),
+          logo: box(logo),
+          text: {
+            ...box(text),
+            scrollWidth: text.scrollWidth,
+            clientWidth: text.clientWidth,
+            position: textStyle.position,
+            fontSize: parseFloat(textStyle.fontSize),
+          },
+          controls,
+        }
+      })
+      const at = `${width}px`
+      expect(layout.scrollWidth, at).toBeLessThanOrEqual(layout.clientWidth)
+      expect(layout.header.height, at).toBe(64)
+      // Tìm kiếm, giỏ, tài khoản, "⋯": không còn nút ngôn ngữ / sáng tối ngoài menu
+      expect(layout.controls.map((control) => control.name), at).toHaveLength(4)
+      for (const control of layout.controls) {
+        expect(control.width, `${at} ${control.name}`).toBeGreaterThanOrEqual(HEADER_ICON_PX)
+        expect(control.height, `${at} ${control.name}`).toBeGreaterThanOrEqual(HEADER_ICON_PX)
+        // Một hàng: mọi nút nằm trọn trong chiều cao header
+        expect(control.top, `${at} ${control.name}`).toBeGreaterThanOrEqual(layout.header.top)
+        expect(control.bottom, `${at} ${control.name}`).toBeLessThanOrEqual(layout.header.bottom)
+      }
+      // Không chồng nhau: logo → từng nút từ trái sang phải; logo chừa ≥ 4px
+      let previousRight = layout.logo.right + LOGO_GAP_PX
+      for (const control of [...layout.controls].sort((a, b) => a.left - b.left)) {
+        expect(control.left, `${at} ${control.name}`).toBeGreaterThanOrEqual(previousRight)
+        previousRight = control.right
+      }
+      expect(layout.logo.top, at).toBeGreaterThanOrEqual(layout.header.top)
+      expect(layout.logo.bottom, at).toBeLessThanOrEqual(layout.header.bottom)
+      // Chữ logo hiện thật: không sr-only (absolute 1px), không bị cắt, chữ ≥ 12px
+      expect(layout.text.position, at).not.toBe('absolute')
+      expect(layout.text.height, at).toBeGreaterThan(1)
+      expect(layout.text.width, at).toBeGreaterThan(1)
+      expect(layout.text.scrollWidth, at).toBeLessThanOrEqual(layout.text.clientWidth)
+      expect(layout.text.fontSize, at).toBeGreaterThanOrEqual(12)
+      await expect(banner.getByRole('link', { name: /Xem bằng tiếng Anh/ }), at).toHaveCount(0)
+      await expect(banner.getByRole('button', { name: /Chuyển sang giao diện/ }), at).toHaveCount(0)
+      await expect(banner.getByRole('link', { name: 'Nhà Sách Mây' }), at).toBeVisible()
+    }
+    expect(errors).toEqual([])
+  })
+
+  test('menu: chạm mở / đóng, bấm ra ngoài đóng, Enter / Space mở, Esc đóng + focus về "⋯", aria-expanded đúng, mục cao ≥ 44', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page)
+    await page.goto('/')
+    // Esc / bấm ra ngoài / aria-expanded cần JS của MoreMenu
+    await waitForHydration(page, 'header summary')
+    await waitForSettled(page)
+    const details = page.locator('header details')
+    const summary = details.locator('summary')
+    const items = details.locator('a, button')
+    const expectOpen = async (open: boolean) => {
+      if (open) await expect(details).toHaveAttribute('open', '')
+      else await expect(details).not.toHaveAttribute('open')
+      await expect(summary).toHaveAttribute('aria-expanded', String(open))
+    }
+
+    await expect(summary).toHaveAccessibleName('Tùy chọn khác')
+    await expectOpen(false)
+    await summary.tap()
+    await expectOpen(true)
+    await expect(items).toHaveCount(2)
+    for (const item of await items.all()) {
+      await expect.poll(async () => (await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(HEADER_ICON_PX)
+    }
+    await summary.tap()
+    await expectOpen(false)
+
+    // Lề trái 16px của trang: không có phần tử bấm được
+    await summary.tap()
+    await expectOpen(true)
+    await page.touchscreen.tap(4, 400)
+    await expectOpen(false)
+
+    // Chạm đặt điểm bắt đầu Tab ở chỗ chạm → đặt lại về logo (link ngay trước cụm nút)
+    await page.getByRole('banner').locator('a[href="/"]').focus()
+    await tabTo(page, summary)
+    await page.keyboard.press('Enter')
+    await expectOpen(true)
+    await tabTo(page, items.first())
+    await page.keyboard.press('Escape')
+    await expectOpen(false)
+    await expect(summary).toBeFocused()
+
+    await page.keyboard.press('Space')
+    await expectOpen(true)
+    await tabTo(page, items.last())
+    await page.keyboard.press('Escape')
+    await expectOpen(false)
+    await expect(summary).toBeFocused()
+    expect(errors).toEqual([])
+  })
+
+  test('menu: focus rời menu bằng Tab → menu đóng, aria-expanded "false", focus không bị kéo về "⋯"', async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.goto('/')
+    await waitForHydration(page, 'header summary')
+    await waitForSettled(page)
+    const details = page.locator('header details')
+    const summary = details.locator('summary')
+    await page.getByRole('banner').locator('a[href="/"]').focus()
+    await tabTo(page, summary)
+    await page.keyboard.press('Enter')
+    await expect(details).toHaveAttribute('open', '')
+    await expect(summary).toHaveAttribute('aria-expanded', 'true')
+    await tabTo(page, details.locator('a, button').last())
+    // Dựa vào việc sau menu (phần tử cuối header) trên trang / còn phần tử nhận focus nên relatedTarget khác null; relatedTarget null thì menu giữ mở (more-menu.tsx).
+    await page.keyboard.press('Tab')
+    await expect(details).not.toHaveAttribute('open')
+    await expect(summary).toHaveAttribute('aria-expanded', 'false')
+    expect(await details.evaluate((node) => !node.contains(document.activeElement))).toBe(true)
+    expect(errors).toEqual([])
+  })
+
+  for (const theme of ['dark', 'light']) {
+    test(`vòng focus của "⋯" và mục trong menu (${theme})`, async ({ page }) => {
+      await page.addInitScript((value) => localStorage.setItem('theme', value), theme)
+      await page.goto('/')
+      await expect(page.locator('html')).toHaveClass(new RegExp(theme))
+      await waitForHydration(page, 'header summary')
+      await waitForSettled(page)
+      const details = page.locator('header details')
+      const summary = details.locator('summary')
+      await page.getByRole('banner').locator('a[href="/"]').focus()
+      await tabTo(page, summary)
+      await expectFocusRing(summary)
+      await page.keyboard.press('Enter')
+      await expect(details).toHaveAttribute('open', '')
+      for (const item of await details.locator('a, button').all()) {
+        await tabTo(page, item)
+        await expectFocusRing(item)
+      }
+    })
+  }
+
+  test('đổi ngôn ngữ từ menu: /sach?page=2&sort=price-asc ↔ /en/books?page=2&sort=price-asc', async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.goto('/sach?page=2&sort=price-asc')
+    await waitForHydration(page, localeLinkSelector(page))
+    await openMoreMenu(page)
+    await page.getByRole('link', { name: /Xem bằng tiếng Anh/ }).click()
+    await expect(page).toHaveURL(/\/en\/books\?page=2&sort=price-asc$/)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+
+    await waitForHydration(page, localeLinkSelector(page))
+    await openMoreMenu(page)
+    await page.getByRole('link', { name: /View in Vietnamese/ }).click()
+    await expect(page).toHaveURL(/\/sach\?page=2&sort=price-asc$/)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
+    expect(errors).toEqual([])
+  })
+
+  test('đổi ngôn ngữ từ menu ở trang sách → /en/books/<cùng slug>', async ({ page }) => {
+    await page.goto('/sach/sapiens')
+    await waitForHydration(page, localeLinkSelector(page))
+    await openMoreMenu(page)
+    await page.getByRole('link', { name: /Xem bằng tiếng Anh/ }).click()
+    await expect(page).toHaveURL(/\/en\/books\/sapiens$/)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  })
+
+  test('đổi sáng / tối từ menu: class trên <html> đổi dark ↔ light', async ({ page }) => {
+    const errors = collectErrors(page)
+    await page.goto('/')
+    const html = page.locator('html')
+    await expect(html).toHaveClass(/dark/)
+    await waitForHydration(page, 'header details button')
+    await openMoreMenu(page)
+    await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
+    await expect(html).toHaveClass(/light/)
+    await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click()
+    await expect(html).toHaveClass(/dark/)
+    expect(errors).toEqual([])
+  })
+})
+
+test.describe('header từ md giữ nguyên (de-sau-2)', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  test('nút ngôn ngữ + sáng / tối hiện thẳng trên header, không có "⋯", nút header 36×36', async ({ page }) => {
+    await page.goto('/')
+    // boundingBox() = null ở run 42256803087: nghi do phần tử bị Suspense (LocaleSwitcher, CartBadge) thay sau hydrate, chưa có trace xác nhận
+    await waitForSettled(page)
+    const banner = page.getByRole('banner')
+    const locale = banner.getByRole('link', { name: /Xem bằng tiếng Anh/ })
+    const theme = banner.getByRole('button', { name: 'Chuyển sang giao diện sáng' })
+    await expect(locale).toBeVisible()
+    await expect(theme).toBeVisible()
+    await expect(page.locator('header summary')).toBeHidden()
+    const cart = banner.getByRole('link', { name: /Giỏ hàng/ })
+    for (const control of [locale, theme, cart]) {
+      await expect.poll(() => control.boundingBox()).toMatchObject({ width: 36, height: 36 })
+    }
+  })
 })

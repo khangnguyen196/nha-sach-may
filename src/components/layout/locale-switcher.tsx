@@ -6,9 +6,14 @@ import { Suspense } from 'react'
 import { buttonVariants } from '@/components/ui/button'
 import { getPathname, usePathname } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { cn } from '@/lib/utils'
 import { currentHref, type Params, type Query } from './locale-href'
+import { MENU_ITEM_CLASS } from './more-menu'
 
 type Labels = { short: string; full: string }
+/** icon: nút 36px trên header từ md; menu: mục có chữ trong menu "⋯" dưới md (MoreMenu) */
+type Variant = 'icon' | 'menu'
+type Props = { labels: Labels; variant: Variant }
 
 /**
  * Chuyển sang ngôn ngữ còn lại, giữ nguyên trang, params và query. Hai lớp Suspense:
@@ -20,17 +25,21 @@ type Labels = { short: string; full: string }
  * Cả hai fallback là link trong HTML tĩnh, bấm được trước khi hydrate / stream xong → inline script ngay sau link gắn
  * query hiện tại (location.search) vào href, không thì đổi ngôn ngữ sớm mất ?page=, ?q=…
  */
-export function LocaleSwitcher({ labels }: { labels: Labels }) {
+export function LocaleSwitcher({ labels, variant }: Props) {
   return (
     <Suspense
       fallback={
         <>
-          <LocaleAnchor labels={labels} href={(target) => getPathname({ href: '/', locale: target })} />
+          <LocaleAnchor
+            labels={labels}
+            variant={variant}
+            href={(target) => getPathname({ href: '/', locale: target })}
+          />
           <script dangerouslySetInnerHTML={{ __html: PATCH_HOME_QUERY }} />
         </>
       }
     >
-      <LocaleLinkWithParams labels={labels} />
+      <LocaleLinkWithParams labels={labels} variant={variant} />
     </Suspense>
   )
 }
@@ -43,41 +52,45 @@ const PATCH_QUERY = `(()=>{const a=document.currentScript?.previousElementSiblin
 const HOME_PATHS = JSON.stringify(routing.locales.map((locale) => getPathname({ href: '/', locale })))
 const PATCH_HOME_QUERY = `(()=>{const a=document.currentScript?.previousElementSibling;if(a instanceof HTMLAnchorElement&&location.search&&${HOME_PATHS}.includes(location.pathname))a.search=location.search})()`
 
-function LocaleLinkWithParams({ labels }: { labels: Labels }) {
+function LocaleLinkWithParams({ labels, variant }: Props) {
   const params = useParams()
   return (
     <Suspense
       fallback={
         <>
-          <LocaleLink labels={labels} params={params} />
+          <LocaleLink labels={labels} variant={variant} params={params} />
           <script dangerouslySetInnerHTML={{ __html: PATCH_QUERY }} />
         </>
       }
     >
-      <LocaleLinkWithQuery labels={labels} params={params} />
+      <LocaleLinkWithQuery labels={labels} variant={variant} params={params} />
     </Suspense>
   )
 }
 
-function LocaleLinkWithQuery({ labels, params }: { labels: Labels; params: Params }) {
+function LocaleLinkWithQuery({ labels, variant, params }: Props & { params: Params }) {
   const searchParams = useSearchParams()
   const query: Query = {}
   for (const key of new Set(searchParams.keys())) query[key] = searchParams.getAll(key)
-  return <LocaleLink labels={labels} params={params} query={query} />
+  return <LocaleLink labels={labels} variant={variant} params={params} query={query} />
 }
 
-function LocaleLink({ labels, params, query }: { labels: Labels; params: Params; query?: Query }) {
+function LocaleLink({ labels, variant, params, query }: Props & { params: Params; query?: Query }) {
   const pathname = usePathname()
   const { slug, id, code } = params
   return (
     <LocaleAnchor
       labels={labels}
+      variant={variant}
       href={(target) => getPathname({ href: currentHref(pathname, { slug, id, code }, query), locale: target })}
     />
   )
 }
 
-function LocaleAnchor({ labels, href }: { labels: Labels; href: (target: Locale) => string }) {
+const ICON = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })
+const MENU_ITEM = cn(buttonVariants({ variant: 'ghost' }), MENU_ITEM_CLASS)
+
+function LocaleAnchor({ labels, variant, href }: Props & { href: (target: Locale) => string }) {
   const locale = useLocale()
   const target = routing.locales.find((l) => l !== locale) ?? routing.defaultLocale
   return (
@@ -89,10 +102,21 @@ function LocaleAnchor({ labels, href }: { labels: Labels; href: (target: Locale)
       // Link fallback bị inline script sửa href trước hydrate (PATCH_QUERY)
       suppressHydrationWarning
       hrefLang={target}
-      className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-xs font-semibold' })}
+      className={variant === 'menu' ? MENU_ITEM : ICON}
     >
-      {labels.short}
-      <span className="sr-only"> – {labels.full}</span>
+      {variant === 'menu' ? (
+        <>
+          <span aria-hidden className="w-4 text-center text-xs font-semibold">
+            {labels.short}
+          </span>
+          {labels.full}
+        </>
+      ) : (
+        <>
+          {labels.short}
+          <span className="sr-only"> – {labels.full}</span>
+        </>
+      )}
     </a>
   )
 }

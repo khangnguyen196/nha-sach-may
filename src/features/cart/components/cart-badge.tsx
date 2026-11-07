@@ -38,7 +38,7 @@ export function CartBadge({ labels, session, icon }: Props) {
   return (
     <Link
       href="/cart"
-      className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'relative text-muted-foreground' })}
+      className={buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'relative text-muted-foreground max-md:size-11' })}
     >
       {icon}
       <span className="sr-only">{label}</span>

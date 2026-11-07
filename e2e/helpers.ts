@@ -309,3 +309,20 @@ export async function tabTo(page: Page, element: Locator, maxSteps = 40) {
   await expect(element).toBeFocused()
   expect(await element.evaluate((node) => node.matches(':focus-visible'))).toBe(true)
 }
+
+/** Dưới md (768px) đổi ngôn ngữ + sáng / tối nằm trong menu "⋯" (`<details>`) của header */
+const isNarrow = (page: Page) => (page.viewportSize()?.width ?? 0) < 768
+
+/** Mở menu "⋯" của header nếu đang ở khổ < 768 (từ md hai nút nằm thẳng trên header). Details mở được cả khi chưa có JS. */
+export async function openMoreMenu(page: Page) {
+  if (!isNarrow(page)) return
+  const details = page.locator('header details')
+  if ((await details.getAttribute('open')) === null) await details.locator('summary').click()
+  await expect(details).toHaveAttribute('open', '')
+}
+
+/**
+ * Bộ chọn link đổi ngôn ngữ đang dùng ở khổ hiện tại, cho waitForHydration (lấy phần tử khớp ĐẦU TIÊN kể cả bản ẩn):
+ * header có hai bản, bản từ md (ẩn dưới md) đứng trước bản trong menu "⋯".
+ */
+export const localeLinkSelector = (page: Page) => (isNarrow(page) ? 'header details a[hreflang]' : 'header a[hreflang]')

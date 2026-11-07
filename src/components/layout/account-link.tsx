@@ -9,7 +9,8 @@ import { Link } from '@/i18n/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 
-const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-muted-foreground' })
+// Dưới md: vùng bấm 44px (menu "⋯" gom ngôn ngữ + sáng / tối cho đủ chỗ), từ md giữ 36px
+const iconLink = buttonVariants({ variant: 'ghost', size: 'icon-lg', className: 'text-muted-foreground max-md:size-11' })
 
 /**
  * Icon tài khoản ở header. Phần đọc phiên (cookies) nằm trong Suspense → header vẫn prerender, 0 JS client.
