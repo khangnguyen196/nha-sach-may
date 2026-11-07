@@ -10,7 +10,8 @@ import { ShelfNav } from './shelf-nav'
 const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
 // relative: phần tử absolute bên trong (sr-only của BookCard) lấy danh sách làm containing block nên bị vùng cuộn
 // cắt; thiếu nó thì chúng nằm ngoài lề phải, kéo document rộng ra (~1456px ở trang sách) và mobile tự thu nhỏ trang.
-// pt-6 (không phải mt-6): overflow-x-auto cũng cắt theo chiều dọc → đệm trong cho bìa nghiêng + ánh cam + vòng focus
+// pt-6 (không phải mt-6): overflow-x-auto cũng cắt theo chiều dọc → đệm trong cho bìa nghiêng + ánh cam + vòng focus,
+// không cắt từ sm; dưới 640px px-4 có thể cắt nhẹ mép ngoài ánh cam của thẻ đầu (chỉ khi cửa sổ máy tính hẹp)
 const LIST_CLASS = 'relative -mx-4 pt-6 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6'
 
 type Props = {

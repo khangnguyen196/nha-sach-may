@@ -187,8 +187,10 @@
  * - perspective() nằm trong transform của bìa (không đặt trên link: link bọc cả chữ, điểm nhìn lệch xuống dưới);
  *   gốc ở giữa đáy nên đỉnh bìa hạ xuống ~1.5px chứ không nhô lên → ánh cam (--glow, 24px) vừa trong pt-6 của kệ.
  * - Máy tính: hover + focus-visible. Điện thoại: chỉ :active, nhẹ hơn, nhả tay là về (không giữ nghiêng sau khi chạm).
- * - Giảm chuyển động: không nghiêng, không di chuyển, chỉ đổi bóng. Bóng = shadow-lg của Tailwind + --glow
- *   (--glow sáng là `none`, không ghép vào danh sách bóng được → giao diện sáng có quy tắc riêng, chỉ shadow-lg).
+ * - Giảm chuyển động: không nghiêng, không di chuyển, chỉ đổi bóng. Bóng = shadow-lg + shadow-glow (token của @theme,
+ *   trỏ về --glow). --glow sáng là `none`, không ghép vào danh sách bóng được → giao diện sáng có quy tắc riêng, chỉ shadow-lg.
+ * - Kệ: pt-6 đủ cho ánh cam từ sm; dưới 640px px-4 của vùng cuộn có thể cắt nhẹ mép ngoài ánh cam của thẻ đầu
+ *   (chỉ khi cửa sổ máy tính hẹp; điện thoại không hover).
  * Lớp utilities đứng sau components: không đặt transition-* / shadow-* / transform-* của Tailwind lên khung bìa.
  */
 @layer components {
@@ -201,7 +203,7 @@
 
   @media (hover: hover) and (pointer: fine) {
     .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
-      box-shadow: --theme(--shadow-lg), var(--glow);
+      box-shadow: --theme(--shadow-lg), --theme(--shadow-glow);
       transition-duration: 240ms;
     }
     .light .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
