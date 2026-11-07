@@ -290,9 +290,9 @@ Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-r
 **Không gian & hình khối**
 - Spacing theo bội số của 4px. Section cách nhau 64–96px trên desktop, 40–56px trên mobile.
 - Radius: 6px (input, badge), 10px (card), 14px (modal, sheet). Ảnh bìa radius 4px.
-- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Ở dark mode, bìa sách khi hover có glow nhẹ (`shadow-glow`: `primary` ở opacity rất thấp, light mode không có).
+- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Bìa thẻ danh sách khi hover / `:focus-visible` có bóng `shadow-lg` + `shadow-glow` (`primary` ở opacity rất thấp, qua `--glow`) trong `.book-tilt` (giao diện sáng chỉ `shadow-lg`); đây là ngoại lệ duy nhất của "không dùng shadow nặng".
 
-**Chuyển động**: 150–250ms, `ease-out`. Thẻ sách ở danh sách (BookCard, thẻ chợ sách cũ) không nâng cả thẻ: bìa nghiêng 3D nhẹ (class `book-tilt` trên link, `book-tilt-cover` trên khung bìa, định nghĩa trong `globals.css`), máy tính khi hover + `:focus-visible`, điện thoại chỉ thoáng qua lúc `:active`; `prefers-reduced-motion` chỉ đổi bóng (shadow-lg + `--glow`). Kệ dùng `pt-6` (không `mt-6`) để vùng cuộn không cắt bìa nghiêng, ánh cam, vòng focus. Trang chuyển mượt, không bounce. Tắt hết khi `prefers-reduced-motion`.
+**Chuyển động**: 150–250ms, `ease-out`. Thẻ sách ở danh sách (BookCard, thẻ chợ sách cũ) không nâng cả thẻ: bìa nghiêng 3D nhẹ (class `book-tilt` trên link, `book-tilt-cover` trên khung bìa, định nghĩa trong `globals.css`), máy tính khi hover + `:focus-visible`, điện thoại chỉ thoáng qua lúc `:active`. Kệ dùng `pt-6` (không `mt-6`) để vùng cuộn không cắt bìa nghiêng, ánh cam, vòng focus: không cắt từ `sm`; dưới 640px vùng cuộn có thể cắt nhẹ mép ngoài ánh cam của thẻ đầu (chỉ khi cửa sổ máy tính hẹp). Trang chuyển mượt, không bounce. Tắt mọi chuyển động (transform, transition) khi `prefers-reduced-motion`; riêng bìa thẻ sách vẫn đổi bóng.
 
 **Thành phần chính**
 - **Safe-area**: chỉ thành phần `fixed` sát cạnh màn hình (bong bóng / tấm chat) dùng `env(safe-area-inset-*)`, kèm `max()` với khoảng cách token (VD `bottom-[max(1rem,env(safe-area-inset-bottom))]`). Không đổi `viewport-fit` của cả site.

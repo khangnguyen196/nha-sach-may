@@ -83,8 +83,8 @@ test('(d) desktop 390 / 1280: đang rê chuột thẻ, trang không tràn ngang 
   test.skip(isMobile, 'Hover chỉ có ở máy tính; khổ 390 đặt bằng setViewportSize')
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 844 })
-    // /cho-sach-cu: lưới tin của project này có thể rỗng (tin chỉ do spec *-account tạo, chạy song song) → chỉ đo trang
-    // khi có thẻ để rê chuột; đo không tràn vẫn chạy ở mọi lượt
+    // /cho-sach-cu: lưới tin dùng chung DB của mọi project (tin do spec *-account tạo, chạy song song) nên có thể
+    // rỗng → chỉ đo trang khi có thẻ để rê chuột; đo không tràn vẫn chạy ở mọi lượt
     for (const path of ['/', '/sach', '/cho-sach-cu']) {
       await page.goto(path)
       await waitForSettled(page)
@@ -208,6 +208,8 @@ test('(f) điện thoại: chạm thẻ → nhả tay bìa về none (không gi�
   const card = grid.first()
   const cover = coverOf(card)
   expect(await transformOf(cover)).toBe('none')
+  // Giới hạn: tap() nhả ngay và Chromium chạy ẩn không bật :active bằng chạm giả lập → test chỉ chứng minh không giữ
+  // nghiêng sau khi nhả; nghiêng lúc :active đã kiểm tay (D:/Bán sách-backup/sach-nghieng-3d/sau/active-check.txt)
   await card.tap()
   await expect.poll(() => transformOf(cover)).toBe('none')
   await settleCover(cover)

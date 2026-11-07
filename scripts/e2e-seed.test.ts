@@ -325,9 +325,9 @@ describe('e2e/fixtures/books.json', () => {
   })
 
   it('book-tilt.spec: lưới /sach ≥ 2 thẻ, kệ đầu trang chủ (Mới về) ≥ 2 thẻ; book-tilt-account.spec dùng đúng sách / danh mục của prefs-blocks-account', () => {
-    // book-tilt.spec focus bằng bàn phím: focus thẻ thứ 2 rồi Shift+Tab về thẻ đầu, ở lưới /sach và kệ đầu trang chủ (dữ
-    // liệu CI không có Nổi bật / Bán chạy → kệ đầu là Mới về, chỉ sách tiếng Việt). Bất biến của danh mục / tác giả chặn:
-    // test prefs-blocks-account.spec ở trên
+    // book-tilt.spec focus bằng bàn phím: focus thẻ thứ 2 rồi Shift+Tab về thẻ đầu, ở lưới /sach và kệ đầu tiên của trang
+    // chủ (spec lấy ul đầu tiên, không phụ thuộc tên kệ). Bất biến của danh mục / tác giả chặn: test
+    // prefs-blocks-account.spec ở trên
     expect(books.length).toBeGreaterThanOrEqual(2)
     expect(books.filter((b) => b.language === 'vi').length).toBeGreaterThanOrEqual(2)
     const spec = read('../e2e/book-tilt-account.spec.ts')
