@@ -5,7 +5,8 @@ import { collectErrors, FOCUS_RING_PX, waitForHydration, waitForSettled } from '
 // Máy tính (hover: hover, pointer: fine): hover + focus-visible thì bìa nghiêng + phóng to (đợt sach-nghieng-3d-2) + bóng,
 // link nổi lên trên thẻ bên cạnh; giảm chuyển động chỉ đổi bóng.
 // Điện thoại (hover: none): chỉ :active, nhả tay là về. Giả định dữ liệu (lưới /sach ≥ 2 thẻ, kệ đầu trang chủ ≥ 2 thẻ):
-// scripts/e2e-seed.test.ts (book-tilt).
+// scripts/e2e-seed.test.ts (book-tilt); (h) dựa vào kệ "Mới về" luôn tràn + có "Xem tất cả": bất biến kệ "Mới về" ở
+// scripts/e2e-seed.test.ts (home.spec, book-tilt (h)).
 
 const cards = (scope: Locator) => scope.locator('[data-book-slot] > a.book-tilt')
 const coverOf = (card: Locator) => card.locator('.book-tilt-cover')
@@ -249,6 +250,10 @@ test('(g) desktop 1280 /sach: bìa đang nghiêng nằm trên thẻ bên cạnh 
 
   await first.hover()
   await expectTiltedAndScaled(coverOf(first), 'hover thẻ 1')
+  // Bìa thẻ 1 (đã phóng to xong) phải thật sự lấn qua P, không thì hai bìa không chồng nhau và bước dưới không thử gì
+  const grownBox = await coverOf(first).boundingBox()
+  if (!grownBox) throw new Error('Thiếu hộp bìa thẻ 1 lúc hover')
+  expect(grownBox.x + grownBox.width, 'rê chuột thẻ 1: mép phải bìa thẻ 1 vượt qua điểm P').toBeGreaterThan(point.x)
   expect(await hit(), 'rê chuột thẻ 1: bìa thẻ 1 đè lên mép trái bìa thẻ 2').toEqual({ card: 0, inCover: true })
 })
 
@@ -263,8 +268,8 @@ test('(h) desktop 1280 trang chủ: danh sách kệ (-mt-4) không đè "Xem t�
   await page.goto('/')
   await waitForSettled(page)
   // Kệ "Mới về" thay cho kệ đầu: luôn có "Xem tất cả" và luôn tràn (nút trước / sau hiện) → không có nhánh "nếu có";
-  // bất biến ở scripts/e2e-seed.test.ts (home.spec). Mọi kệ dùng chung LIST_CLASS / ShelfHeading (shelf.tsx)
-  const section = page.getByRole('region', { name: 'Mới về', exact: true })
+  // bất biến ở scripts/e2e-seed.test.ts (home.spec, book-tilt (h)). Mọi kệ dùng chung LIST_CLASS / ShelfHeading (shelf.tsx)
+  const section = page.getByRole('main').getByRole('region', { name: 'Mới về', exact: true })
   const list = section.locator('ul[id$="-list"]')
   await waitForHydration(page, '#new-arrivals-list')
   const seeAll = section.getByRole('link', { name: 'Xem tất cả', exact: true })

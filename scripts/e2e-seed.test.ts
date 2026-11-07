@@ -58,7 +58,7 @@ describe('e2e/fixtures/books.json', () => {
     expect(inStock(['truyen-ngan-tan-van', 'tieu-thuyet', 'tho']).length).toBeGreaterThanOrEqual(3)
   })
 
-  it('kệ "Mới về" (sách tiếng Việt) tràn kệ, có sách tiếng Anh cho kệ / bộ lọc ngoại văn (home.spec)', () => {
+  it('kệ "Mới về" (sách tiếng Việt) tràn kệ, có sách tiếng Anh cho kệ / bộ lọc ngoại văn (home.spec, book-tilt (h))', () => {
     expect(books.filter((b) => b.language === 'vi').length).toBeGreaterThan(SHELF_SIZE)
     expect(books.filter((b) => b.language === 'en').length).toBeGreaterThan(0)
   })
