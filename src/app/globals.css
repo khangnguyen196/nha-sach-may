@@ -183,18 +183,27 @@
 
 /*
  * Nghiêng bìa sách ở thẻ danh sách (BookCard, thẻ chợ sách cũ): .book-tilt trên link thẻ, .book-tilt-cover trên khung bìa.
- * Như nhấc cuốn sách khỏi kệ để xem bìa: đáy nhấc lên, đầu ngả ra sau, mép phải xoay về phía người xem.
+ * Như nhấc cuốn sách khỏi kệ để xem bìa: đáy nhấc lên, đầu ngả ra sau, mép phải xoay về phía người xem, bìa to thêm 5%.
  * - perspective() nằm trong transform của bìa (không đặt trên link: link bọc cả chữ, điểm nhìn lệch xuống dưới);
- *   gốc ở giữa đáy nên đỉnh bìa hạ xuống ~1.5px chứ không nhô lên → ánh cam (--glow, 24px) vừa trong pt-6 của kệ.
- * - Máy tính: hover + focus-visible. Điện thoại: chỉ :active, nhẹ hơn, nhả tay là về (không giữ nghiêng sau khi chạm).
- * - Giảm chuyển động: không nghiêng, không di chuyển, chỉ đổi bóng.
+ *   gốc ở giữa đáy nên phần phóng to dồn lên trên và sang hai bên, đáy bìa gần như đứng yên (không đè tên sách).
+ * - Máy tính: hover + focus-visible. Điện thoại: chỉ :active, nửa góc, cùng mức phóng to, nhả tay là về (không giữ
+ *   nghiêng sau khi chạm).
+ * - Giảm chuyển động: không nghiêng, không di chuyển, không phóng to, chỉ đổi bóng.
  * - Bóng: shadow-lg + shadow-glow (token của @theme, trỏ về --glow). --glow sáng là `none`, không ghép vào danh sách bóng
  *   được → giao diện sáng có quy tắc riêng, chỉ shadow-lg.
- * - Kệ: pt-6 đủ cho ánh cam từ sm; dưới 640px px-4 của vùng cuộn có thể cắt nhẹ mép ngoài ánh cam của thẻ đầu
- *   (chỉ khi cửa sổ máy tính hẹp; điện thoại không hover).
- * Lớp utilities đứng sau components: không đặt transition-* / shadow-* / transform-* của Tailwind lên khung bìa.
+ * - Xếp chồng: link luôn position: relative (luôn, không chỉ lúc nghiêng: sr-only absolute bên trong giữ cùng khung chứa),
+ *   z-index 1 khi nghiêng → bìa phóng to nằm trên thẻ bên cạnh. Ô mờ BlockedVeil (absolute, đứng sau link) vẫn đè link
+ *   lúc nghỉ; thẻ bị che không hover / focus được (link visibility: hidden).
+ * - Kệ (shelf.tsx): -mt-4 pt-10 đủ chỗ phía trên cho bìa phóng to + ánh cam; đệm ngang 8px chỉ từ xl (dưới xl kệ đã chạm
+ *   mép màn hình, đệm thêm là tràn ngang) → dưới xl mép ngoài ánh cam của thẻ đầu / cuối kệ có thể bị cắt ~3px (bìa
+ *   và vòng focus không bị cắt).
+ * Lớp utilities đứng sau components: không đặt transition-* / shadow-* / transform-* / z-* của Tailwind lên link / khung bìa.
  */
 @layer components {
+  .book-tilt {
+    position: relative;
+  }
+
   .book-tilt-cover {
     transform-origin: 50% 100%;
     transition:
@@ -203,6 +212,9 @@
   }
 
   @media (hover: hover) and (pointer: fine) {
+    .book-tilt:is(:hover, :focus-visible) {
+      z-index: 1;
+    }
     .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
       box-shadow: --theme(--shadow-lg), --theme(--shadow-glow);
       transition-duration: 240ms;
@@ -214,13 +226,19 @@
 
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
     .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
-      transform: perspective(800px) translateY(-4px) rotateX(6deg) rotateY(-6deg);
+      transform: perspective(800px) translateY(-4px) rotateX(6deg) rotateY(-6deg) scale(1.05);
+    }
+  }
+
+  @media (hover: none) {
+    .book-tilt:active {
+      z-index: 1;
     }
   }
 
   @media (hover: none) and (prefers-reduced-motion: no-preference) {
     .book-tilt:active .book-tilt-cover {
-      transform: perspective(800px) translateY(-2px) rotateX(3deg) rotateY(-3deg);
+      transform: perspective(800px) translateY(-2px) rotateX(3deg) rotateY(-3deg) scale(1.05);
       transition-duration: 120ms;
     }
   }

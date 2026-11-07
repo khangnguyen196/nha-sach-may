@@ -10,9 +10,12 @@ import { ShelfNav } from './shelf-nav'
 const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
 // relative: phần tử absolute bên trong (sr-only của BookCard) lấy danh sách làm containing block nên bị vùng cuộn
 // cắt; thiếu nó thì chúng nằm ngoài lề phải, kéo document rộng ra (~1456px ở trang sách) và mobile tự thu nhỏ trang.
-// pt-6 (không phải mt-6): overflow-x-auto cũng cắt theo chiều dọc → đệm trong cho bìa nghiêng + ánh cam + vòng focus,
-// không cắt từ sm; dưới 640px px-4 có thể cắt nhẹ mép ngoài ánh cam của thẻ đầu (chỉ khi cửa sổ máy tính hẹp)
-const LIST_CLASS = 'relative -mx-4 pt-6 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6'
+// overflow-x-auto cũng cắt theo chiều dọc → đệm trong cho bìa nghiêng + phóng to + ánh cam + vòng focus (globals.css,
+// book-tilt): pt-10 kèm -mt-4 (thẻ lúc nghỉ đứng đúng chỗ cũ, dải 16px trên chồng lên dòng tiêu đề, dòng đó relative z-10
+// nên link / nút vẫn bấm được). Đệm ngang 8px (xl:-mx-8 xl:px-8) chỉ từ xl: dưới xl kệ -mx-6 đã chạm mép màn hình, nới
+// thêm là tràn ngang trang → dưới xl mép ngoài ánh cam của thẻ đầu / cuối có thể bị cắt ~3px (bìa, vòng focus không bị cắt)
+const LIST_CLASS =
+  'relative -mx-4 -mt-4 pt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 xl:-mx-8 xl:scroll-px-8 xl:px-8'
 
 type Props = {
   id: string
@@ -74,8 +77,9 @@ export function ShelfSkeleton({ id, title }: { id: string; title: string }) {
 
 function ShelfHeading({ id, title, children }: { id: string; title: string; children?: ReactNode }) {
   return (
-    // min-h = cỡ nút kệ: nút hiện sau khi hydrate không làm tiêu đề nhảy
-    <div className="flex min-h-8 items-center justify-between gap-4">
+    // min-h = cỡ nút kệ: nút hiện sau khi hydrate không làm tiêu đề nhảy. relative z-10: danh sách kệ (-mt-4) chồng lên nửa
+    // dưới dòng này, không có nó thì ul nhận cú bấm vào "Xem tất cả" / nút trước-sau
+    <div className="relative z-10 flex min-h-8 items-center justify-between gap-4">
       <h2 id={id} className="text-xl font-semibold">
         {title}
       </h2>
