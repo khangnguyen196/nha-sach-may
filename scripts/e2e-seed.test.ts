@@ -324,6 +324,16 @@ describe('e2e/fixtures/books.json', () => {
     for (const template of templates) expect(terms.every((term) => template.includes(term)), template).toBe(false)
   })
 
+  it('book-tilt.spec: lưới /sach ≥ 2 thẻ, kệ đầu trang chủ (Mới về) ≥ 2 thẻ; book-tilt-account.spec dùng đúng sách / danh mục của prefs-blocks-account', () => {
+    // book-tilt.spec focus bằng bàn phím: focus thẻ thứ 2 rồi Shift+Tab về thẻ đầu, ở lưới /sach và kệ đầu trang chủ (dữ
+    // liệu CI không có Nổi bật / Bán chạy → kệ đầu là Mới về, chỉ sách tiếng Việt). Bất biến của danh mục / tác giả chặn:
+    // test prefs-blocks-account.spec ở trên
+    expect(books.length).toBeGreaterThanOrEqual(2)
+    expect(books.filter((b) => b.language === 'vi').length).toBeGreaterThanOrEqual(2)
+    const spec = read('../e2e/book-tilt-account.spec.ts')
+    for (const slug of [PREFS_CATEGORY, PREFS_BY_AUTHOR]) expect(spec, slug).toContain(`'${slug}'`)
+  })
+
   it('mô tả ≤ 300 ký tự (repo public)', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
   })
