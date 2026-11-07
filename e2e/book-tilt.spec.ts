@@ -1,8 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { collectErrors, FOCUS_RING_PX, waitForSettled } from './helpers'
+import { collectErrors, FOCUS_RING_PX, waitForHydration, waitForSettled } from './helpers'
 
 // Nghiêng bìa sách (đợt sach-nghieng-3d): .book-tilt trên link thẻ, .book-tilt-cover trên khung bìa (src/app/globals.css).
-// Máy tính (hover: hover, pointer: fine): hover + focus-visible thì bìa nghiêng + bóng; giảm chuyển động chỉ đổi bóng.
+// Máy tính (hover: hover, pointer: fine): hover + focus-visible thì bìa nghiêng + phóng to (đợt sach-nghieng-3d-2) + bóng,
+// link nổi lên trên thẻ bên cạnh; giảm chuyển động chỉ đổi bóng.
 // Điện thoại (hover: none): chỉ :active, nhả tay là về. Giả định dữ liệu (lưới /sach ≥ 2 thẻ, kệ đầu trang chủ ≥ 2 thẻ):
 // scripts/e2e-seed.test.ts (book-tilt).
 
@@ -10,6 +11,34 @@ const cards = (scope: Locator) => scope.locator('[data-book-slot] > a.book-tilt'
 const coverOf = (card: Locator) => card.locator('.book-tilt-cover')
 const transformOf = (cover: Locator) => cover.evaluate((element) => getComputedStyle(element).transform)
 const shadowOf = (cover: Locator) => cover.evaluate((element) => getComputedStyle(element).boxShadow)
+/** Mức phóng to khi nghiêng: scale(…) cuối transform của .book-tilt-cover trong src/app/globals.css */
+const TILT_SCALE = 1.05
+
+/** 16 số của matrix3d(…) (thứ tự cột: m11 m12 m13 m14, m21 …); transform khác (none, matrix 2D) → lỗi */
+function matrix3d(transform: string) {
+  const values = /^matrix3d\((.*)\)$/
+    .exec(transform)?.[1]
+    ?.split(',')
+    .map((value) => Number.parseFloat(value))
+  if (!values || values.length !== 16 || values.some((value) => Number.isNaN(value))) {
+    throw new Error(`Không phải matrix3d: ${transform}`)
+  }
+  return values
+}
+
+/**
+ * Bìa đang nghiêng + phóng to: perspective() chỉ đổi hàng 4, phần 3×3 = xoay × scale → độ dài cột 1 (m11, m12, m13) là
+ * mức phóng to; m13 (rotateY) và m23 (rotateX) khác 0 rõ ràng là còn nghiêng.
+ */
+async function expectTiltedAndScaled(cover: Locator, label: string) {
+  await expect.poll(() => transformOf(cover), label).toMatch(/^matrix3d\(/)
+  await settleCover(cover)
+  const [m11 = 0, m12 = 0, m13 = 0, , , , m23 = 0] = matrix3d(await transformOf(cover))
+  expect(Math.hypot(m11, m12, m13), `${label}: scale`).toBeCloseTo(TILT_SCALE, 2)
+  expect(Math.abs(m13), `${label}: rotateY`).toBeGreaterThan(0.05)
+  expect(Math.abs(m23), `${label}: rotateX`).toBeGreaterThan(0.05)
+}
+
 /** Chỗ trống trên header (không thuộc thẻ sách nào): đưa chuột ra khỏi thẻ */
 const moveAway = (page: Page) => page.mouse.move(1, 1)
 
@@ -34,7 +63,7 @@ async function openGrid(page: Page) {
   return grid
 }
 
-test('(a) desktop /sach: rê chuột → bìa nghiêng 3D + có bóng; rời chuột → về none', async ({ page, isMobile }) => {
+test('(a) desktop /sach: rê chuột → bìa nghiêng 3D + phóng to + có bóng; rời chuột → về none', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Hover chỉ có ở máy tính; điện thoại: (f)')
   const errors = collectErrors(page)
   const grid = await openGrid(page)
@@ -43,7 +72,7 @@ test('(a) desktop /sach: rê chuột → bìa nghiêng 3D + có bóng; rời chu
   expect(await shadowOf(cover)).toBe('none')
 
   await grid.first().hover()
-  await expect.poll(() => transformOf(cover)).toMatch(/^matrix3d\(/)
+  await expectTiltedAndScaled(cover, 'hover')
   expect(await shadowOf(cover)).not.toBe('none')
 
   await moveAway(page)
@@ -71,12 +100,12 @@ test('(b) desktop, giảm chuyển động: hover / focus bàn phím chỉ đổ
   expect(await transformOf(cover)).toBe('none')
 })
 
-test('(c) desktop: focus bàn phím (focus-visible) → bìa nghiêng', async ({ page, isMobile }) => {
+test('(c) desktop: focus bàn phím (focus-visible) → bìa nghiêng + phóng to', async ({ page, isMobile }) => {
   test.skip(isMobile, 'focus-visible nghiêng chỉ ở máy tính (hover: hover)')
   const grid = await openGrid(page)
   await moveAway(page)
   await keyboardFocus(page, grid.first(), grid.nth(1))
-  await expect.poll(() => transformOf(coverOf(grid.first()))).toMatch(/^matrix3d\(/)
+  await expectTiltedAndScaled(coverOf(grid.first()), 'focus-visible')
 })
 
 test('(d) desktop 390 / 1280: đang rê chuột thẻ, trang không tràn ngang (/, /sach, /cho-sach-cu)', async ({ page, isMobile }) => {
@@ -188,6 +217,85 @@ test('(e) desktop 1280, kệ đầu trang chủ: bìa nghiêng + bóng + vòng f
   await expect.poll(() => transformOf(cover)).toBe('none')
   await keyboardFocus(page, card, shelfCards.nth(1))
   await expectInside('focus-visible')
+})
+
+test('(g) desktop 1280 /sach: bìa đang nghiêng nằm trên thẻ bên cạnh (chồng lấn thật: lưới không khoảng cách cột)', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Hover chỉ có ở máy tính')
+  await page.setViewportSize({ width: 1280, height: 900 })
+  const grid = await openGrid(page)
+  // Chỉ dựng tình huống: bỏ khoảng cách cột để bìa thẻ 1 phóng to chồng hẳn lên mép trái bìa thẻ 2 (cùng hàng ở 1280)
+  await page.addStyleTag({ content: 'main ul:has([data-book-slot]) { column-gap: 0 !important; }' })
+  const [first, second] = [grid.nth(0), grid.nth(1)]
+  const box = await coverOf(second).boundingBox()
+  const firstBox = await coverOf(first).boundingBox()
+  if (!box || !firstBox) throw new Error('Thiếu hộp bìa của thẻ 1 / 2')
+  expect(Math.abs(firstBox.y - box.y), 'thẻ 1 và 2 cùng hàng').toBeLessThan(1)
+  // Điểm P: mép trái bìa thẻ 2 + 2px, giữa chiều cao bìa
+  const point = { x: box.x + 2, y: box.y + box.height / 2 }
+  /** Thứ tự (trong main) của thẻ chứa phần tử trên cùng tại P, và phần tử đó có nằm trong khung bìa không */
+  const hit = () =>
+    page.evaluate(({ x, y }) => {
+      const element = document.elementFromPoint(x, y)
+      const link = element?.closest('[data-book-slot] > a.book-tilt')
+      const links = [...document.querySelectorAll('main [data-book-slot] > a.book-tilt')]
+      return { card: link ? links.indexOf(link) : -1, inCover: Boolean(element?.closest('.book-tilt-cover')) }
+    }, point)
+
+  await moveAway(page)
+  expect(await hit(), 'chưa rê chuột: P thuộc bìa thẻ 2').toEqual({ card: 1, inCover: true })
+
+  await first.hover()
+  await expectTiltedAndScaled(coverOf(first), 'hover thẻ 1')
+  expect(await hit(), 'rê chuột thẻ 1: bìa thẻ 1 đè lên mép trái bìa thẻ 2').toEqual({ card: 0, inCover: true })
+})
+
+test('(h) desktop 1280 trang chủ: danh sách kệ (-mt-4) không đè "Xem tất cả" / nút trước-sau, bấm được ở mép dưới', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Nút kệ chỉ hiện từ md')
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/')
+  await waitForSettled(page)
+  // Kệ "Mới về" thay cho kệ đầu: luôn có "Xem tất cả" và luôn tràn (nút trước / sau hiện) → không có nhánh "nếu có";
+  // bất biến ở scripts/e2e-seed.test.ts (home.spec). Mọi kệ dùng chung LIST_CLASS / ShelfHeading (shelf.tsx)
+  const section = page.getByRole('region', { name: 'Mới về', exact: true })
+  const list = section.locator('ul[id$="-list"]')
+  await waitForHydration(page, '#new-arrivals-list')
+  const seeAll = section.getByRole('link', { name: 'Xem tất cả', exact: true })
+  const previous = section.getByRole('button', { name: 'Cuộn kệ sang trái' })
+  const next = section.getByRole('button', { name: 'Cuộn kệ sang phải' })
+  await expect(next).toBeVisible()
+  const listTop = (await list.boundingBox())?.y
+  if (listTop === undefined) throw new Error('Thiếu hộp của danh sách kệ')
+
+  /** Giữa ngang, đáy − 2px của phần tử; phải nằm trong dải danh sách kệ chồng lên dòng tiêu đề (không thì test không thử gì) */
+  const bottomPoint = async (target: Locator, label: string) => {
+    const box = await target.boundingBox()
+    if (!box) throw new Error(`Thiếu hộp của ${label}`)
+    const point = { x: box.x + box.width / 2, y: box.y + box.height - 2 }
+    expect(point.y, `${label}: điểm nằm trong dải danh sách kệ`).toBeGreaterThan(listTop)
+    return point
+  }
+  for (const [label, target] of [
+    ['Xem tất cả', seeAll],
+    ['nút trước', previous],
+    ['nút sau', next],
+  ] as const) {
+    const point = await bottomPoint(target, label)
+    const onTop = await target.evaluate((element, { x, y }) => {
+      const top = document.elementFromPoint(x, y)
+      return top !== null && element.contains(top)
+    }, point)
+    expect(onTop, label).toBe(true)
+  }
+
+  const point = await bottomPoint(next, 'nút sau')
+  await page.mouse.click(point.x, point.y)
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
 })
 
 test('(f) điện thoại: chạm thẻ → nhả tay bìa về none (không giữ nghiêng)', async ({ page, isMobile }) => {
