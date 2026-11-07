@@ -324,9 +324,10 @@ describe('e2e/fixtures/books.json', () => {
     for (const template of templates) expect(terms.every((term) => template.includes(term)), template).toBe(false)
   })
 
-  it('book-tilt.spec: lưới /sach ≥ 2 thẻ, kệ đầu trang chủ (Mới về) ≥ 2 thẻ; book-tilt-account.spec dùng đúng sách / danh mục của prefs-blocks-account', () => {
+  it('book-tilt.spec: lưới /sach ≥ 2 thẻ, kệ đầu trang chủ ≥ 2 thẻ; book-tilt-account.spec dùng đúng sách / danh mục của prefs-blocks-account', () => {
     // book-tilt.spec focus bằng bàn phím: focus thẻ thứ 2 rồi Shift+Tab về thẻ đầu, ở lưới /sach và kệ đầu tiên của trang
-    // chủ (spec lấy ul đầu tiên, không phụ thuộc tên kệ). Bất biến của danh mục / tác giả chặn: test
+    // chủ (spec lấy ul đầu tiên, không phụ thuộc tên kệ). Trên CI kệ đầu thường là Mới về (không có sách Nổi bật, Bán chạy
+    // dưới 6 cuốn nên ẩn), Mới về chỉ có sách tiếng Việt → cần ≥ 2 sách vi. Bất biến của danh mục / tác giả chặn: test
     // prefs-blocks-account.spec ở trên
     expect(books.length).toBeGreaterThanOrEqual(2)
     expect(books.filter((b) => b.language === 'vi').length).toBeGreaterThanOrEqual(2)

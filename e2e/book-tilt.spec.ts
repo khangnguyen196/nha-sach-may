@@ -173,7 +173,7 @@ test('(e) desktop 1280, kệ đầu trang chủ: bìa nghiêng + bóng + vòng f
     await settleCover(cover)
     const { outer, clip, layers, scrollLeft } = await shelfEdges(card)
     expect(scrollLeft, label).toBe(0)
-    // shadow-lg 2 lớp + --glow (giao diện tối mặc định)
+    // shadow-lg 2 lớp + shadow-glow (--glow) (giao diện tối mặc định)
     expect(layers, label).toBe(3)
     expect(outer.top, `${label}: trên`).toBeGreaterThanOrEqual(clip.top)
     expect(outer.left, `${label}: trái`).toBeGreaterThanOrEqual(clip.left)
