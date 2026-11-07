@@ -181,6 +181,48 @@
   }
 }
 
+/*
+ * Nghiêng bìa sách ở thẻ danh sách (BookCard, thẻ chợ sách cũ): .book-tilt trên link thẻ, .book-tilt-cover trên khung bìa.
+ * Như nhấc cuốn sách khỏi kệ để xem bìa: đáy nhấc lên, đầu ngả ra sau, mép phải xoay về phía người xem.
+ * - perspective() nằm trong transform của bìa (không đặt trên link: link bọc cả chữ, điểm nhìn lệch xuống dưới);
+ *   gốc ở giữa đáy nên đỉnh bìa hạ xuống ~1.5px chứ không nhô lên → ánh cam (--glow, 24px) vừa trong pt-6 của kệ.
+ * - Máy tính: hover + focus-visible. Điện thoại: chỉ :active, nhẹ hơn, nhả tay là về (không giữ nghiêng sau khi chạm).
+ * - Giảm chuyển động: không nghiêng, không di chuyển, chỉ đổi bóng. Bóng = shadow-lg của Tailwind + --glow
+ *   (--glow sáng là `none`, không ghép vào danh sách bóng được → giao diện sáng có quy tắc riêng, chỉ shadow-lg).
+ * Lớp utilities đứng sau components: không đặt transition-* / shadow-* / transform-* của Tailwind lên khung bìa.
+ */
+@layer components {
+  .book-tilt-cover {
+    transform-origin: 50% 100%;
+    transition:
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
+      box-shadow: --theme(--shadow-lg), var(--glow);
+      transition-duration: 240ms;
+    }
+    .light .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
+      box-shadow: --theme(--shadow-lg);
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
+      transform: perspective(800px) translateY(-4px) rotateX(6deg) rotateY(-6deg);
+    }
+  }
+
+  @media (hover: none) and (prefers-reduced-motion: no-preference) {
+    .book-tilt:active .book-tilt-cover {
+      transform: perspective(800px) translateY(-2px) rotateX(3deg) rotateY(-3deg);
+      transition-duration: 120ms;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
