@@ -965,6 +965,8 @@
     "password": "Mật khẩu",
     "newPassword": "Mật khẩu mới",
     "passwordHint": "Ít nhất 8 ký tự.",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
     "fullName": "Họ và tên",
     "pending": "Đang xử lý…",
     "login": {

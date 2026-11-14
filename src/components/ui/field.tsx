@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils'
 // Không có 'use client' và không dùng hook → dùng được cả trong Server Component lẫn form client.
 // id suy từ `name` (+ `idPrefix` khi một trang có hai form trùng tên ô).
 
-const control =
+export const control =
   'h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 
-type FieldOwnProps = {
+export type FieldOwnProps = {
   name: string
   label: string
   error?: string
@@ -18,13 +18,13 @@ type FieldOwnProps = {
   labelAside?: ReactNode
 }
 
-function ids({ name, idPrefix, error, hint }: FieldOwnProps) {
+export function ids({ name, idPrefix, error, hint }: FieldOwnProps) {
   const id = `${idPrefix ?? 'field'}-${name}`
   const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(' ') || undefined
   return { id, describedBy }
 }
 
-function FieldShell({ field, id, children }: { field: FieldOwnProps; id: string; children: ReactNode }) {
+export function FieldShell({ field, id, children }: { field: FieldOwnProps; id: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
       <div className="flex items-baseline justify-between gap-3">

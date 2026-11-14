@@ -179,6 +179,11 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  /* Nút con mắt có sẵn của Edge: ô mật khẩu đã có nút hiện / ẩn riêng (PasswordField) */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
 }
 
 /*

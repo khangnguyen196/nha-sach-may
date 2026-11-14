@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { FormAlert, TextField } from '@/components/ui/field'
+import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import type { Result } from '@/lib/errors'
 import type { FormMessages } from '@/lib/form-messages'
@@ -13,6 +14,8 @@ type Labels = {
   email: string
   password: string
   passwordHint: string
+  showPassword: string
+  hidePassword: string
   submit: string
   pending: string
   checkInboxTitle: string
@@ -59,10 +62,10 @@ export function RegisterForm({ action, messages, labels }: Props) {
         required
         error={fieldError('email')}
       />
-      <TextField
+      <PasswordField
         name="password"
-        type="password"
         label={labels.password}
+        labels={{ show: labels.showPassword, hide: labels.hidePassword }}
         hint={labels.passwordHint}
         autoComplete="new-password"
         minLength={8}

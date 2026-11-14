@@ -383,6 +383,8 @@
     "password": "Password",
     "newPassword": "New password",
     "passwordHint": "At least 8 characters.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "fullName": "Full name",
     "pending": "Please wait…",
     "login": {

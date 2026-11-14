@@ -38,6 +38,8 @@ export default async function RegisterPage() {
           email: t('email'),
           password: t('password'),
           passwordHint: t('passwordHint'),
+          showPassword: t('showPassword'),
+          hidePassword: t('hidePassword'),
           submit: t('register.submit'),
           pending: t('pending'),
           checkInboxTitle: t('register.checkInboxTitle'),

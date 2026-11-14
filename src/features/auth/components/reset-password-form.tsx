@@ -1,7 +1,8 @@
 'use client'
 
 import { buttonVariants } from '@/components/ui/button'
-import { FormAlert, TextField } from '@/components/ui/field'
+import { FormAlert } from '@/components/ui/field'
+import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Link } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
@@ -12,6 +13,8 @@ import { Notice } from './notice'
 type Labels = {
   newPassword: string
   passwordHint: string
+  showPassword: string
+  hidePassword: string
   submit: string
   pending: string
   successTitle: string
@@ -46,10 +49,10 @@ export function ResetPasswordForm({ action, messages, labels }: Props) {
   return (
     <form {...formProps} noValidate className="grid gap-5">
       {formError && <FormAlert quiet={quietError}>{formError}</FormAlert>}
-      <TextField
+      <PasswordField
         name="password"
-        type="password"
         label={labels.newPassword}
+        labels={{ show: labels.showPassword, hide: labels.hidePassword }}
         hint={labels.passwordHint}
         autoComplete="new-password"
         minLength={8}

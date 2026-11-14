@@ -1,6 +1,7 @@
 'use client'
 
 import { FormAlert, TextField } from '@/components/ui/field'
+import { PasswordField } from '@/components/ui/password-field'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { Link } from '@/i18n/navigation'
 import type { Result } from '@/lib/errors'
@@ -9,7 +10,16 @@ import { useFormAction } from '@/lib/use-form-action'
 import { NextField } from './next-field'
 import { ResendConfirmation, type ResendLabels } from './resend-confirmation'
 
-type Labels = { email: string; password: string; submit: string; pending: string; forgot: string; noScript: string }
+type Labels = {
+  email: string
+  password: string
+  showPassword: string
+  hidePassword: string
+  submit: string
+  pending: string
+  forgot: string
+  noScript: string
+}
 
 type Props = {
   action: (prev: Result<null> | null, formData: FormData) => Promise<Result<null>>
@@ -38,10 +48,10 @@ export function LoginForm({ action, resend, messages, labels, resendLabels }: Pr
           required
           error={fieldError('email')}
         />
-        <TextField
+        <PasswordField
           name="password"
-          type="password"
           label={labels.password}
+          labels={{ show: labels.showPassword, hide: labels.hidePassword }}
           autoComplete="current-password"
           required
           error={fieldError('password')}

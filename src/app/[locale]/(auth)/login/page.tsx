@@ -33,6 +33,8 @@ export default async function LoginPage({ searchParams }: Props) {
     labels: {
       email: t('email'),
       password: t('password'),
+      showPassword: t('showPassword'),
+      hidePassword: t('hidePassword'),
       submit: t('login.submit'),
       pending: t('pending'),
       forgot: t('login.forgot'),

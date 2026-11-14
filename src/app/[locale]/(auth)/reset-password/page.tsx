@@ -57,6 +57,8 @@ async function ResetPasswordContent() {
         labels={{
           newPassword: t('newPassword'),
           passwordHint: t('passwordHint'),
+          showPassword: t('showPassword'),
+          hidePassword: t('hidePassword'),
           submit: t('reset.submit'),
           pending: t('pending'),
           successTitle: t('reset.successTitle'),
