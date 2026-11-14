@@ -57,8 +57,9 @@ export function PasswordField({ name, label, error, hint, idPrefix, labelAside, 
             onClick={() => setVisible((value) => !value)}
             className="absolute top-0 right-0 flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
           >
-            {/* Vẽ thẳng hình Eye / EyeOff của lucide (như chevron trong field.tsx): import lucide ở client leaf thêm
-                createLucideIcon + module icon vào bundle trang đăng nhập / đăng ký (CLAUDE.md → Hiệu năng) */}
+            {/* Vẽ thẳng hình Eye của lucide (như chevron trong field.tsx): import lucide ở client leaf thêm
+                createLucideIcon + module icon vào bundle trang đăng nhập / đăng ký (CLAUDE.md → Hiệu năng). Trạng thái
+                đang hiện = Eye + đường gạch, không dùng 3 path EyeOff để giữ trang đăng nhập / đăng ký ≤ +0,5KB */}
             <svg
               aria-hidden
               viewBox="0 0 24 24"
@@ -69,19 +70,9 @@ export function PasswordField({ name, label, error, hint, idPrefix, labelAside, 
               strokeLinejoin="round"
               className="size-5"
             >
-              {visible ? (
-                <>
-                  <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
-                  <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
-                  <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
-                  <path d="m2 2 20 20" />
-                </>
-              ) : (
-                <>
-                  <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                  <circle cx="12" cy="12" r="3" />
-                </>
-              )}
+              <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+              <circle cx="12" cy="12" r="3" />
+              {visible && <path d="m2 2 20 20" />}
             </svg>
           </button>
         )}
