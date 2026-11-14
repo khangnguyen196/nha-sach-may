@@ -103,7 +103,7 @@ for (const config of PAGES) {
     test('bấm nút: đổi type + aria, không gửi form', async ({ page }) => {
       const errors = collectErrors(page)
       const actions = countActions(page)
-      const { main, input, toggle } = await open(page, config)
+      const { main, input, toggle, button } = await open(page, config)
       const url = page.url()
 
       await expect(input).toHaveAttribute('type', 'password')
@@ -113,15 +113,15 @@ for (const config of PAGES) {
       await expect(toggle).toHaveAttribute('aria-controls', (await input.getAttribute('id')) ?? '')
       await input.fill(FAKE_PASSWORD)
 
-      await toggle.click()
-      const hide = main.getByRole('button', { name: config.hide, exact: true })
+      await button.click()
       await expect(input).toHaveAttribute('type', 'text')
-      await expect(hide).toHaveAccessibleName(config.hide)
+      await expect(button).toHaveAccessibleName(config.hide)
+      await expect(button).not.toHaveAttribute('aria-pressed')
       await expect(input).toHaveValue(FAKE_PASSWORD)
 
-      await hide.click()
+      await button.click()
       await expect(input).toHaveAttribute('type', 'password')
-      await expect(toggle).toHaveAccessibleName(config.show)
+      await expect(button).toHaveAccessibleName(config.show)
       await expect(input).toHaveValue(FAKE_PASSWORD)
 
       expect(page.url()).toBe(url)
@@ -214,6 +214,41 @@ for (const config of PAGES) {
         expect(errors).toEqual([])
       })
     }
+
+    test('bấm nút khi ô khác đang focus: không kéo focus vào ô mật khẩu', async ({ page }, testInfo) => {
+      const errors = collectErrors(page)
+      const actions = countActions(page)
+      const { main, input, button } = await open(page, config)
+      const email = main.getByLabel('Email', { exact: true })
+      const url = page.url()
+      await input.fill(FAKE_PASSWORD)
+      await email.focus()
+
+      const expectFocusOnEmail = async (type: 'text' | 'password', name: string) => {
+        await expect(input).toHaveAttribute('type', type)
+        await expect(button).toHaveAccessibleName(name)
+        await expect(email).toBeFocused()
+        await expect(input).not.toBeFocused()
+        await expect(input).toHaveValue(FAKE_PASSWORD)
+      }
+
+      // Chuột (click); chạm thật (tap) thêm ở project có hasTouch (mobile)
+      await button.click()
+      await expectFocusOnEmail('text', config.hide)
+      await button.click()
+      await expectFocusOnEmail('password', config.show)
+      if (testInfo.project.use.hasTouch) {
+        await button.tap()
+        await expectFocusOnEmail('text', config.hide)
+        await button.tap()
+        await expectFocusOnEmail('password', config.show)
+      }
+
+      expect(page.url()).toBe(url)
+      await expect(main.getByRole('alert')).toHaveCount(0)
+      expect(actions()).toBe(0)
+      expect(errors).toEqual([])
+    })
 
     for (const width of [320, 390]) {
       test(`màn ${width}px: không tràn ngang, nút nằm trọn trong ô, vùng bấm ≥ 44×44`, async ({ page }) => {
