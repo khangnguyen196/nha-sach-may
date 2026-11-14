@@ -21,8 +21,9 @@ export function PasswordField({ name, label, error, hint, idPrefix, labelAside, 
   const [visible, setVisible] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Gửi form khi đang hiện → về type password ngay, đồng bộ, trước khi trình duyệt / trình quản lý mật khẩu đọc ô và
-  // trước onSubmit của React (React nghe ở root, listener trên form chạy trước).
+  // Gửi form khi đang hiện → về type password ngay, đồng bộ, trước khi trình duyệt / trình quản lý mật khẩu đọc ô.
+  // Listener 'submit' pha capture trên form chạy TRƯỚC onSubmit của useFormAction (pha bubble, React nghe ở root);
+  // không được chuyển useFormAction sang onSubmitCapture (React capture ở root chạy trước listener này).
   useEffect(() => {
     const input = inputRef.current
     const form = input?.form

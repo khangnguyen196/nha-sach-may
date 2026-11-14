@@ -194,6 +194,7 @@ for (const config of PAGES) {
 }
 
 // Gõ mật khẩu trước khi hydrate (4G chậm): nút xuất hiện sau đó không xóa chữ, không lấy focus khỏi ô
+// Không dùng blockHydration (helpers.ts): helper đó abort chunk JS nên trang không bao giờ hydrate; test này giữ chunk rồi thả
 test('/dang-nhap: gõ mật khẩu trước hydrate → nút hiện sau, chữ và focus giữ nguyên', async ({ page }) => {
   const held: Route[] = []
   let released = false

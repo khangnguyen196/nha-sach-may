@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 export const control =
   'h-11 w-full rounded-md border border-input bg-surface px-3 text-base text-foreground transition-colors outline-none placeholder:text-subtle focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-destructive aria-invalid:ring-destructive/20'
 
-export type FieldOwnProps = {
+type FieldOwnProps = {
   name: string
   label: string
   error?: string
