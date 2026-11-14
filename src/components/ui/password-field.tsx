@@ -13,6 +13,10 @@ type Props = Omit<ComponentProps<typeof TextField>, 'type' | 'ref'> & {
 /**
  * Ô mật khẩu có nút hiện / ẩn. Ô không kiểm soát giá trị (chữ gõ trước hydrate giữ nguyên); `pr-12` có sẵn từ server
  * nên ô không đổi kích thước khi nút xuất hiện. Nút chỉ render sau hydrate: trước đó (hoặc tắt JS) bấm không làm gì.
+ * Không aria-pressed: nhãn đã đổi theo trạng thái, có cả hai thì trình đọc màn hình đọc "Ẩn mật khẩu, đã nhấn".
+ * Nút chặn mặc định của mousedown (chạm trên điện thoại cũng sinh mousedown) để ô đang gõ không mất focus: bàn phím ảo
+ * không đóng, con trỏ / vùng chọn giữ nguyên. Không chặn pointerdown: chặn nó không ngăn việc chuyển focus. Ô chưa focus
+ * thì bấm nút không kéo focus vào ô; bàn phím (Tab rồi Space / Enter) không qua mousedown nên focus vẫn ở nút.
  */
 export function PasswordField({ name, label, error, hint, idPrefix, labelAside, className, labels, ...props }: Props) {
   const field = { name, label, error, hint, idPrefix, labelAside }
@@ -52,9 +56,9 @@ export function PasswordField({ name, label, error, hint, idPrefix, labelAside, 
         {hydrated && (
           <button
             type="button"
-            aria-pressed={visible}
             aria-controls={id}
             aria-label={visible ? labels.hide : labels.show}
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => setVisible((value) => !value)}
             className="absolute top-0 right-0 flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring"
           >

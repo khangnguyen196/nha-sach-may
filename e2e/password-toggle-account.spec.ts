@@ -22,20 +22,21 @@ async function expectToggle(
   await expect(toggle).toBeVisible()
   await expect(input).toHaveAttribute('type', 'password')
   await expect(toggle).toHaveAttribute('type', 'button')
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle).not.toHaveAttribute('aria-pressed')
+  await expect(toggle).toHaveAccessibleName(show)
   await expect(toggle).toHaveAttribute('aria-controls', (await input.getAttribute('id')) ?? '')
 
   await input.fill(SHORT_PASSWORD)
   await toggle.click()
   await expect(input).toHaveAttribute('type', 'text')
-  await expect(main.getByRole('button', { name: hide, exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(main.getByRole('button', { name: hide, exact: true })).toHaveAccessibleName(hide)
 
   // Gửi khi đang hiện → ô về password
   await main.getByRole('button', { name: submit, exact: true }).click()
   await expect(input).toHaveAttribute('type', 'password')
   await expect(main.getByText(error, { exact: true })).toBeVisible()
   await expect(input).toHaveAttribute('type', 'password')
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle).toHaveAccessibleName(show)
 }
 
 test('đặt lại mật khẩu (vi + en): nút hiện / ẩn, gửi khi đang hiện → về password', async ({ page }, testInfo) => {

@@ -108,19 +108,20 @@ for (const config of PAGES) {
 
       await expect(input).toHaveAttribute('type', 'password')
       await expect(toggle).toHaveAttribute('type', 'button')
-      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      await expect(toggle).not.toHaveAttribute('aria-pressed')
+      await expect(toggle).toHaveAccessibleName(config.show)
       await expect(toggle).toHaveAttribute('aria-controls', (await input.getAttribute('id')) ?? '')
       await input.fill(FAKE_PASSWORD)
 
       await toggle.click()
       const hide = main.getByRole('button', { name: config.hide, exact: true })
       await expect(input).toHaveAttribute('type', 'text')
-      await expect(hide).toHaveAttribute('aria-pressed', 'true')
+      await expect(hide).toHaveAccessibleName(config.hide)
       await expect(input).toHaveValue(FAKE_PASSWORD)
 
       await hide.click()
       await expect(input).toHaveAttribute('type', 'password')
-      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      await expect(toggle).toHaveAccessibleName(config.show)
       await expect(input).toHaveValue(FAKE_PASSWORD)
 
       expect(page.url()).toBe(url)
@@ -139,13 +140,12 @@ for (const config of PAGES) {
       await expect(button).toBeFocused()
       await page.keyboard.press('Space')
       await expect(input).toHaveAttribute('type', 'text')
-      await expect(button).toHaveAttribute('aria-pressed', 'true')
       await expect(button).toHaveAccessibleName(config.hide)
       await expect(button).toBeFocused()
       await page.keyboard.press('Enter')
       await expect(input).toHaveAttribute('type', 'password')
-      await expect(button).toHaveAttribute('aria-pressed', 'false')
       await expect(button).toHaveAccessibleName(config.show)
+      await expect(button).toBeFocused()
 
       // Form trống: gửi chỉ ra lỗi kiểm tra dữ liệu ở server (không gọi Supabase Auth)
       await input.focus()
@@ -167,10 +167,53 @@ for (const config of PAGES) {
       await expect(input).toHaveAttribute('type', 'password')
       await expect(config.error(main)).toBeVisible()
       await expect(input).toHaveAttribute('type', 'password')
-      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
       await expect(toggle).toHaveAccessibleName(config.show)
       expect(errors).toEqual([])
     })
+
+    for (const { start, end } of [
+      { start: 4, end: 4 },
+      { start: 2, end: 6 },
+    ]) {
+      test(`bấm nút: ô giữ focus, giá trị và con trỏ / vùng chọn ${start}..${end}`, async ({ page }, testInfo) => {
+        const errors = collectErrors(page)
+        const actions = countActions(page)
+        const { main, input, button } = await open(page, config)
+        const url = page.url()
+        await input.fill(FAKE_PASSWORD)
+        await input.focus()
+        await input.evaluate(
+          (element: HTMLInputElement, range: { start: number; end: number }) => element.setSelectionRange(range.start, range.end),
+          { start, end },
+        )
+
+        const expectKept = async (type: 'text' | 'password', name: string) => {
+          await expect(input).toHaveAttribute('type', type)
+          await expect(button).toHaveAccessibleName(name)
+          await expect(input).toBeFocused()
+          await expect(input).toHaveValue(FAKE_PASSWORD)
+          const selection = await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])
+          expect(selection).toEqual([start, end])
+        }
+
+        // Chuột (click); chạm thật (tap) thêm ở project có hasTouch (mobile)
+        await button.click()
+        await expectKept('text', config.hide)
+        await button.click()
+        await expectKept('password', config.show)
+        if (testInfo.project.use.hasTouch) {
+          await button.tap()
+          await expectKept('text', config.hide)
+          await button.tap()
+          await expectKept('password', config.show)
+        }
+
+        expect(page.url()).toBe(url)
+        await expect(main.getByRole('alert')).toHaveCount(0)
+        expect(actions()).toBe(0)
+        expect(errors).toEqual([])
+      })
+    }
 
     for (const width of [320, 390]) {
       test(`màn ${width}px: không tràn ngang, nút nằm trọn trong ô, vùng bấm ≥ 44×44`, async ({ page }) => {
