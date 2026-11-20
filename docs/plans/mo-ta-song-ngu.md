@@ -42,3 +42,35 @@ Trong lúc chủ dự án chạy SQL dữ liệu: không mở / lưu form sửa 
 lưu form mở từ trước sẽ ghi đè bản dịch).
 
 Build (máy và CI) đọc catalog production: query trang sách chọn cột mới nên build lỗi tới khi bước 1 xong (đã xong 2026-11-20).
+
+## data-check (CI chạy thử file SQL dữ liệu, vòng 4a)
+
+Thay việc gửi Claude chat chạy thử: file SQL dữ liệu lưu ở `supabase/data/mo-ta-song-ngu/` (README ở đó),
+`.github/workflows/data-check.yml` (+ `scripts/ci/data-check.sh`, `data-check-lib.sql`, `data-check-text.mjs`) chạy
+thử trên Supabase local của CI. **Job đỏ thì không đưa file cho chủ dự án chạy.**
+
+- Quy ước tên: file GHI `vong-N-sach-*.sql`; file kiểm (chỉ đọc) `vong-N-kiem.sql`; file hoàn tác
+  `vong-N-hoan-tac.sql` (một file cho cả vòng N). Workflow tự nhận file theo tên, gom theo vòng (cùng thư mục + N).
+  Cột được ghi: vòng 3 `description_en, description_auto_translated`; vòng 4 thêm `description`; vòng khác khai báo
+  `-- data-check: cot-duoc-ghi = …` trong file ghi.
+- Chạy: tự động khi push nhánh khác main có đổi `supabase/data/**` (hoặc workflow / `schema.sql` / `seed*.sql`), mọi
+  file ghi; chạy tay: `gh workflow run data-check.yml --ref <nhánh> -f file=supabase/data/mo-ta-song-ngu/<file ghi>`
+  (chỉ file đó). Đọc kết quả: `gh run view <run>` (bảng tóm tắt ở Summary, chỉ id và số đếm).
+- Các bước: (d) chữ trong file (NFC, không ký tự ẩn / điều khiển / CR, `$mota$` đúng cặp, mỗi id một câu) → dựng
+  Supabase local từ `schema.sql` + seed của nhánh (lỗi hạ tầng như "port 54322 already in use" → thử lại tối đa 3 lần)
+  → lấy đúng các sách file nhắc tới từ production qua REST công khai (khóa publishable như build của `ci.yml`, che
+  trong log; không service role) → nạp giữ nguyên id → chế độ theo dữ liệu production:
+  - **CHƯA GHI** (mọi dòng `description_en` null + cờ false): (e) sửa 1 ký tự mô tả gốc → file phải lỗi P0001 (raise
+    của khối kiểm cả lô), 0 dòng đổi; (a) lần 1 số dòng đổi = số câu UPDATE; (c) cột ngoài danh sách được ghi giữ
+    nguyên md5, số dòng mọi bảng không đổi; (b) lần 2 = 0 dòng; (f) có hoàn tác: hoàn tác → về đúng bản chụp đầu →
+    ghi lại → lần 2 = 0.
+  - **ĐÃ GHI** (mọi dòng cờ true): (a) lần 1 = 0 dòng, (b) lần 2 = 0 dòng; có hoàn tác: hoàn tác → trạng thái trước
+    ghi (`description_en` null, cờ false) → (e) → ghi lại (= số câu) → khớp production → lần 2 = 0; không có hoàn tác
+    thì (e) (f) bỏ qua, ghi lý do.
+  - Lẫn lộn → đỏ, in id lệch. "Dòng đổi" đếm bằng so md5 từng dòng theo id, không tin command tag.
+- Giới hạn: dữ liệu production lấy qua REST công khai nên chỉ thấy sách `is_active` (sách ẩn → đỏ "thiếu"); anon đọc
+  được mọi cột của `books` (kiểm 2026-11-20) nên các cột kiểm là dữ liệu thật, trừ `category_id` / `publisher_id` (null:
+  DB local không có danh mục / NXB thật) và `search_text` (trigger tự sinh, không có tác giả). Vòng đã ghi mà sau đó
+  admin sửa một bản dịch (cờ về false) → chế độ lẫn lộn → đỏ ở mọi push đổi `schema.sql` / seed sau này. Sửa production
+  bằng tay giữa lúc job chạy và lúc chủ dự án chạy file: job không thấy (điều kiện md5 + khối kiểm cả lô trong file vẫn
+  chặn). Không có bước in log Docker của DB (log Postgres có thể chép nguyên câu SQL kèm mô tả).
