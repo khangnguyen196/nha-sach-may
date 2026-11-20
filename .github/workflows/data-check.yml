@@ -6,16 +6,20 @@
 #   vong-N-sach-*.sql   file GHI (UPDATE theo id, dollar-quote $mota$, khối do $$ … raise $$ kiểm cả lô trước commit)
 #   vong-N-kiem.sql     SELECT kiểm, chỉ đọc (chạy trước / sau trên production)
 #   vong-N-hoan-tac.sql file hoàn tác, một file cho cả vòng N
-# Workflow tự nhận file theo tên: thêm vòng mới không cần sửa workflow (trừ khi vòng mới ghi cột khác: khai báo
-# "-- data-check: cot-duoc-ghi = a, b" trong file ghi, xem scripts/ci/data-check.sh).
+# Workflow tự nhận file theo tên: thêm vòng mới không cần sửa workflow. *.sql khác tên, file kiểm / hoàn tác không có file
+# ghi cùng vòng, hoặc 0 file ghi → đỏ (cả push lẫn chạy tay). Thư mục khác mo-ta-song-ngu (hoặc vòng khác 3 / 4) khai báo
+# "-- data-check: cot-duoc-ghi = a, b" trong file ghi (xem scripts/ci/data-check.sh).
 #
-# Mỗi vòng (scripts/ci/data-check.sh): (d) chữ trong file (NFC, ký tự ẩn, $mota$) → lấy production → chế độ
-# CHƯA GHI (mọi dòng description_en null + cờ false) / ĐÃ GHI (mọi dòng cờ true), lẫn lộn → đỏ →
+# Mỗi vòng (scripts/ci/data-check.sh): (d) chữ trong file (NFC, ký tự ẩn, $mota$, khối do $$) → lấy production → chế độ
+# theo TỪNG FILE ghi: CHƯA GHI (mọi dòng của file description_en null + cờ false) / ĐÃ GHI (mọi dòng của file cờ true),
+# lẫn lộn trong một file → đỏ.
 #   CHƯA GHI: (e) sửa 1 ký tự mô tả gốc → file phải lỗi P0001, 0 dòng đổi; (a) lần 1 số dòng đổi = số câu UPDATE;
 #             (c) cột ngoài danh sách được ghi giữ nguyên md5, số dòng mọi bảng không đổi; (b) lần 2 = 0 dòng;
-#             (f) có hoàn tác: hoàn tác → về đúng bản chụp đầu → ghi lại → lần 2 = 0.
-#   ĐÃ GHI:   (a) lần 1 = 0 dòng; (b) lần 2 = 0 dòng; (f) có hoàn tác: hoàn tác → trạng thái trước ghi → (e) → ghi lại
-#             (= số câu) → khớp production → lần 2 = 0; không có hoàn tác thì (e) (f) bỏ qua (ghi lý do).
+#             (f) hoàn tác → về đúng bản chụp đầu → hoàn tác lần 2 = 0 dòng → ghi lại → lần 2 = 0.
+#   ĐÃ GHI:   (a) lần 1 = 0 dòng; (b) lần 2 = 0 dòng; (f) hoàn tác → trạng thái trước ghi → hoàn tác lần 2 = 0 → (e) →
+#             ghi lại (= số câu) → khớp bản chụp production đã nạp → lần 2 = 0.
+#   (f) (và (e) của ĐÃ GHI) chạy ở mức vòng: chỉ khi có file hoàn tác, kiểm đủ file ghi của vòng và mọi file cùng chế độ;
+#   không thì bỏ qua, ghi lý do (không đỏ). Vòng có file đã chạy production + file chưa chạy: mỗi file kiểm riêng.
 # "Dòng đổi" đếm bằng so md5 từng dòng theo id trước / sau (không tin command tag). Log chỉ có id, tên cột, số đếm.
 name: data-check
 
@@ -59,48 +63,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: files
-        name: 1. File ghi cần kiểm (gom theo vòng)
+      # Kiểm tên mọi *.sql dưới supabase/data/ + gom vòng (mỗi dòng của units.txt = một vòng). Tên sai, file kiểm / hoàn
+      # tác mồ côi, 0 file ghi → đỏ ở đây, cả push lẫn chạy tay
+      - name: 1. File ghi cần kiểm (gom theo vòng)
         env:
           # Qua env, không chèn thẳng vào script (chữ người nhập)
           INPUT_FILE: ${{ inputs.file }}
-        run: |
-          units="$RUNNER_TEMP/units.txt"
-          : > "$units"
-          if [ -n "$INPUT_FILE" ]; then
-            if ! [[ "$INPUT_FILE" =~ ^supabase/data/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*/vong-[0-9]+-sach-[A-Za-z0-9._-]+\.sql$ ]] \
-                || [[ "$INPUT_FILE" == *..* ]]; then
-              echo "::error::input file phải là supabase/data/…/vong-N-sach-*.sql"
-              exit 1
-            fi
-            if [ ! -f "$INPUT_FILE" ]; then
-              echo "::error::không có file $INPUT_FILE trên ref này"
-              exit 1
-            fi
-            echo "$INPUT_FILE" > "$units"
-          elif [ -d supabase/data ]; then
-            # Mỗi dòng = một vòng (cùng thư mục + cùng N), các file cách nhau bằng dấu cách (tên file không có dấu cách)
-            find supabase/data -type f -name 'vong-*-sach-*.sql' | sort \
-              | awk '{ dir = $0; sub(/\/[^\/]*$/, "", dir); name = $0; sub(/^.*\//, "", name);
-                       split(name, p, "-"); key = dir " " p[2];
-                       if (!(key in files)) order[++n] = key;
-                       files[key] = (key in files) ? files[key] " " $0 : $0 }
-                     END { for (i = 1; i <= n; i++) print files[order[i]] }' > "$units"
-          fi
-          count=$(wc -l < "$units")
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "$count vòng cần kiểm:"
-          cat "$units"
+        run: bash scripts/ci/data-check.sh --plan "$RUNNER_TEMP/units.txt" "$INPUT_FILE"
 
-      - if: ${{ steps.files.outputs.count != '0' }}
-        uses: supabase/setup-cli@v1
+      # Node như ci.yml / e2e.yml (data-check-text.mjs); không cài gói nào
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: supabase/setup-cli@v1
         with:
           version: 2.121.0
 
       # Dựng từ schema.sql + seed (config.toml) của nhánh, như e2e. Lỗi hạ tầng của Docker (VD "bind port 54322 already in
       # use", gặp ở migration-check) → dừng stack rồi thử lại, tối đa 3 lần
-      - if: ${{ steps.files.outputs.count != '0' }}
-        name: 2. Supabase local (schema.sql + seed của nhánh)
+      - name: 2. Supabase local (schema.sql + seed của nhánh)
         run: |
           for attempt in 1 2 3; do
             if supabase start -x "$SUPABASE_EXCLUDE"; then
@@ -115,25 +97,15 @@ jobs:
           exit 1
       # Không có bước in log Docker của DB khi lỗi (khác migration-check): log Postgres có thể chép nguyên câu SQL kèm mô tả
 
-      - if: ${{ steps.files.outputs.count != '0' }}
-        name: 3. Chạy thử từng vòng
+      - name: 3. Chạy thử từng vòng
         env:
-          # Chỉ 2 secret này (như build của ci.yml): URL + khóa publishable, được phép lộ ra client
+          # Chỉ 2 secret này (như build của ci.yml): URL + khóa publishable, được phép lộ ra client. data-check.sh tự từ
+          # chối khóa không phải publishable / anon
           SUPABASE_PROD_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_PROD_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -n "$SUPABASE_PROD_KEY" ]; then echo "::add-mask::$SUPABASE_PROD_KEY"; fi
           if [ -n "$SUPABASE_PROD_URL" ]; then echo "::add-mask::$SUPABASE_PROD_URL"; fi
-          # Chặn nhầm khóa bí mật: chỉ nhận khóa publishable hoặc JWT có role anon
-          case "$SUPABASE_PROD_KEY" in
-            sb_publishable_*) ;;
-            *.*.*)
-              payload=$(cut -d. -f2 <<< "$SUPABASE_PROD_KEY" | tr '_-' '/+')
-              while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="$payload="; done
-              role=$(base64 -d <<< "$payload" 2> /dev/null | jq -r '.role' 2> /dev/null || true)
-              if [ "$role" != "anon" ]; then echo "::error::khóa không phải anon / publishable"; exit 1; fi ;;
-            *) echo "::error::khóa không phải anon / publishable"; exit 1 ;;
-          esac
           export RESULTS="$RUNNER_TEMP/data-check-results.md"
           {
             echo '## data-check'
@@ -143,6 +115,7 @@ jobs:
           } > "$RESULTS"
           failed=0
           while read -r -a unit; do
+            # Một group cho cả vòng; data-check.sh không mở group con (GitHub không hỗ trợ group lồng nhau)
             echo "::group::${unit[*]}"
             # stdin = /dev/null: docker exec -i trong script không được nuốt các dòng còn lại của units.txt
             if ! bash scripts/ci/data-check.sh "${unit[@]}" < /dev/null; then

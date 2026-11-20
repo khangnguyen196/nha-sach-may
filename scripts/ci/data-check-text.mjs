@@ -1,34 +1,87 @@
 // data-check (d): kiểm chữ của file SQL dữ liệu (không cần DB). Dùng: node scripts/ci/data-check-text.mjs [--json <ra>] <file>...
-// Mọi chuỗi giữa $mota$…$mota$: NFC, không ký tự ẩn / điều khiển (trừ LF), không CR, không chứa $$ hay $mota$, không
-// khoảng trắng thừa đầu / cuối, không rỗng. Mỗi câu UPDATE có cùng số chuỗi (K ≥ 1) → số lần $mota$ = 2 × K × số câu
-// (vòng 3: K = 1); mỗi id đúng một câu (`where id = N`). Chỉ in id + loại lỗi, KHÔNG in nội dung (log CI công khai).
+// Mọi chuỗi giữa $mota$…$mota$: NFC, không ký tự ẩn (mọi \p{Cf}, \p{Zl}, \p{Zp}, \p{Zs} khác U+0020), không ký tự điều
+// khiển (\p{Cc}) trừ LF, không CR, không chứa $$ hay $mota$, không khoảng trắng thừa đầu / cuối, không rỗng. Phần code
+// ngoài chuỗi: không \p{Cf} / \p{Zl} / \p{Zp} (VD U+202E đảo chiều làm câu SQL đọc khác chạy). Mỗi câu UPDATE có cùng số
+// chuỗi (K ≥ 1) → số lần $mota$ = 2 × K × số câu (vòng 3: K = 1); mỗi id đúng một câu (`where id = N`). Khối
+// `do $$ … $$;` kiểm cả lô: tập id trong `id in (…)` = tập id các câu UPDATE của CHÍNH file, số so sánh (`<> N`, `!= N`,
+// `is distinct from N`) = số câu. Chỉ in id + loại lỗi, KHÔNG in nội dung (log CI công khai).
 // --json: ghi { "<file>": { "updates": n, "ids": [...] } } cho data-check.sh.
+// Ký tự đặc biệt chỉ viết dạng escape \u…: không để ký tự ẩn thật trong mã nguồn.
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const DELIMITER = '$mota$'
-const HIDDEN = new Map([
-  ['​', 'U+200B'],
-  ['‌', 'U+200C'],
-  ['‍', 'U+200D'],
-  ['﻿', 'U+FEFF'],
-  [' ', 'U+00A0'],
-  [' ', 'U+202F'],
-  ['⁠', 'U+2060'],
-])
-// C0 trừ LF (CR báo riêng), DEL, C1
-const CONTROL = /[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F-\u009F]/u
+const INVISIBLE = /[\p{Cf}\p{Zl}\p{Zp}]/u
+const SPACE_SEPARATOR = /\p{Zs}/u
+const CONTROL = /\p{Cc}/u
+
+function codePoint(char) {
+  return `U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`
+}
+
+// Mã các ký tự ẩn / điều khiển trong chuỗi mô tả (LF được phép, CR báo riêng)
+function hiddenInString(text) {
+  const found = new Set()
+  for (const char of text) {
+    if (char === '\n' || char === '\r') continue
+    if (INVISIBLE.test(char) || CONTROL.test(char) || (SPACE_SEPARATOR.test(char) && char !== ' ')) found.add(codePoint(char))
+  }
+  return [...found]
+}
+
+function hiddenInCode(text) {
+  const found = new Set()
+  for (const char of text) if (INVISIBLE.test(char)) found.add(codePoint(char))
+  return [...found]
+}
 
 function stringProblems(text) {
   const problems = []
   if (text.length === 0) problems.push('chuỗi rỗng')
   if (text !== text.normalize('NFC')) problems.push('không NFC')
-  for (const [char, name] of HIDDEN) if (text.includes(char)) problems.push(`ký tự ẩn ${name}`)
+  for (const name of hiddenInString(text)) problems.push(`ký tự ẩn / điều khiển ${name}`)
   if (text.includes('\r')) problems.push('có CR')
-  if (CONTROL.test(text)) problems.push('ký tự điều khiển')
   if (text.includes('$$')) problems.push('chứa $$')
   if (text.includes('$mota')) problems.push('chứa $mota')
   if (/^\s|\s$/u.test(text)) problems.push('khoảng trắng thừa đầu / cuối')
   return problems
+}
+
+// Khối `do $$ … $$;` (code đã thay chuỗi + bỏ comment): id trong `id in (…)` và số so sánh phải khớp file
+function doBlockProblems(code, ids) {
+  const errors = []
+  const blocks = [...code.matchAll(/\bdo\s+\$\$([\s\S]*?)\$\$\s*;/gi)].map((m) => m[1])
+  if (blocks.length === 0) return ['không có khối "do $$ … $$;" kiểm cả lô']
+  const expected = [...new Set(ids)].sort((a, b) => a - b).join(',')
+  let checked = 0
+  blocks.forEach((block, i) => {
+    const lists = [...block.matchAll(/\bid\s+in\s*\(([^)]*)\)/gi)].map((m) => m[1])
+    if (lists.length === 0) return
+    checked++
+    for (const list of lists) {
+      const tokens = list.split(',').map((token) => token.trim())
+      if (!tokens.every((token) => /^\d+$/.test(token))) {
+        errors.push(`khối do $$ thứ ${i + 1}: "id in (…)" có phần tử không phải số`)
+        continue
+      }
+      const numbers = tokens.map(Number)
+      if (new Set(numbers).size !== numbers.length) errors.push(`khối do $$ thứ ${i + 1}: "id in (…)" có id lặp`)
+      const got = [...new Set(numbers)].sort((a, b) => a - b).join(',')
+      if (got !== expected) {
+        const missing = ids.filter((id) => !numbers.includes(id))
+        const extra = numbers.filter((id) => !ids.includes(id))
+        errors.push(
+          `khối do $$ thứ ${i + 1}: id khác các câu UPDATE của file (thiếu: ${missing.join(', ') || 'không'}; thừa: ${extra.join(', ') || 'không'})`,
+        )
+      }
+    }
+    const comparisons = [...block.matchAll(/(?:<>|!=|\bis\s+distinct\s+from)\s*(\d+)/gi)].map((m) => Number(m[1]))
+    if (comparisons.length === 0) errors.push(`khối do $$ thứ ${i + 1}: không có so sánh "<> N" với số câu`)
+    for (const value of comparisons) {
+      if (value !== ids.length) errors.push(`khối do $$ thứ ${i + 1}: so với ${value}, file có ${ids.length} câu UPDATE`)
+    }
+  })
+  if (checked === 0) errors.push('không khối do $$ nào có "id in (…)"')
+  return errors
 }
 
 function checkSql(sql) {
@@ -39,6 +92,8 @@ function checkSql(sql) {
   }
   // Ngoài chuỗi: thay mỗi chuỗi bằng dấu giữ chỗ để tách câu không bị chữ trong mô tả đánh lừa, rồi bỏ comment `--`
   const strings = parts.filter((_, i) => i % 2 === 1)
+  const codeParts = parts.filter((_, i) => i % 2 === 0)
+  for (const name of hiddenInCode(codeParts.join(''))) errors.push(`ký tự ẩn ${name} ngoài chuỗi $mota$ (code / comment)`)
   const outside = parts.map((part, i) => (i % 2 === 1 ? `\u0000S${(i - 1) / 2}\u0000` : part)).join('')
   const code = outside.replace(/--[^\n]*/g, '')
   const starts = [...code.matchAll(/^\s*update\s/gim)].map((m) => m.index)
@@ -74,6 +129,7 @@ function checkSql(sql) {
   if (perStatement > 0 && delimiters !== 2 * perStatement * statements.length) {
     errors.push(`số lần $mota$ = ${delimiters}, cần 2 × ${perStatement} × ${statements.length}`)
   }
+  if (ids.length > 0) errors.push(...doBlockProblems(code, ids))
   return { errors, updates: statements.length, ids, perStatement, delimiters }
 }
 
