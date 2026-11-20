@@ -30,9 +30,9 @@ Chủ dự án duyệt 2026-11-20 (vòng 0: mẫu 10 cuốn, `D:/Bán sách-back
 3. Vòng 3: SQL sách Việt (`description_en` + cờ). Vòng 4: SQL sách ngoại văn (`description_en` ← bản Anh gốc,
    `description` ← bản dịch Việt + cờ). Dollar-quote `$mota$`, UPDATE theo id chỉ khi `description_en is null` (sách
    en kèm `language = 'en'`), NFC, 4 sách thiếu mô tả để trống; kiểm trên Postgres local 2 lần (lần 2 = 0 dòng đổi).
-   SELECT kiểm sau mỗi file. File vòng 3 (ngoài repo, `D:/Bán sách-backup/mo-ta-song-ngu/`): `vong-3-kiem.sql` →
-   `vong-3-sach-viet.sql` (67 cuốn, mỗi câu kèm `md5(description)` lúc đọc) → `vong-3-kiem.sql`; bảng dịch
-   `vong-3-ban-dich.md`, ảnh chụp trước `vong-3-truoc.json`. 4 sách Việt có mô tả gốc tiếng Anh (id 2, 3, 20, 171) chưa ghi.
+   SELECT kiểm sau mỗi file. File vòng 3 (ngoài repo, `D:/Bán sách-backup/mo-ta-song-ngu/`): `vong-3-kiem-v2.sql` →
+   `vong-3-sach-viet-v2.sql` (67 cuốn, mỗi câu kèm `md5(description)` lúc đọc, khối kiểm cả lô 67 trước commit) →
+   `vong-3-kiem-v2.sql`; bảng dịch `vong-3-ban-dich-v2.md` (bản v2 thay 3 file không hậu tố), ảnh chụp trước `vong-3-truoc.json`. 4 sách Việt có mô tả gốc tiếng Anh (id 2, 3, 20, 171) chưa ghi.
 4. Commit docs cuối đợt lên main → Vercel deploy mới, trang dựng lại từ dữ liệu mới (dữ liệu ghi ngoài app, không có
    `updateTag`; cache trang sách `cacheLife('hours')` nên tự hết hạn nếu sót) → kiểm production
    `/en/books/<sách Việt>` hiện mô tả Anh + "Automatically translated". Dự phòng: nếu Vercel không build (commit chỉ có
