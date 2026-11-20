@@ -66,3 +66,9 @@ thư viện, không đổi DB, ảnh chỉ là bìa sách.
 4. Bộ lọc "đang giảm giá" ở `/sach`: cần đổi DB (cột / chỉ mục so `original_price > price`), link thẻ Đang giảm giá
    khi đó trỏ thẳng vào bộ lọc.
 5. Bìa ô 2×2 tỉ lệ 3:4 cắt ~5% trên dưới bìa 2:3; chủ dự án quyết khi xem Preview (giữ theo mẫu A đã duyệt).
+6. e2e cho `global-error` ở giao diện tối (người đã chọn tối thấy trang lỗi gốc tối): hiện chỉ kiểm bằng tay.
+7. Log của `getShippingTermsOrNull` ở production: Next có thể làm mờ `message` của lỗi từ trong `'use cache'` → thử ép
+   lỗi trên Preview rồi xem Vercel Logs, thêm `digest` vào dòng log nếu cần. Lỗi hết giờ khi điền cache lúc build cũng
+   thành null: HTML tĩnh trang chủ thiếu thẻ ship mà build không báo (tới lần dựng lại kế tiếp).
+8. `StoreClock`: hai prop `faceClassName` / `lineClassName` có giá trị mặc định nhưng hiện chưa chỗ nào truyền khác;
+   giữ (reviewer vòng 2 gợi ý, chưa cần dọn).
