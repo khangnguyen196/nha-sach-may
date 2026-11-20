@@ -4,7 +4,7 @@ import { Shelf } from '@/features/books/components/shelf'
 import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
 import { visibleCategoryIds } from '@/features/books/utils'
 import { PromoRow } from '@/features/home/components/promo-row'
-import { getShippingTerms } from '@/features/home/queries'
+import { getShippingTermsOrNull } from '@/features/home/queries'
 import { ClockFace } from '@/features/store/components/clock-face'
 import { StoreClock } from '@/features/store/components/store-clock'
 import { Link, type Href } from '@/i18n/navigation'
@@ -38,7 +38,8 @@ export default async function HomePage() {
     getTranslations('common'),
     getLocale(),
     getCategories(),
-    getShippingTerms(),
+    // Lỗi → null: chỉ ẩn thẻ "Miễn phí giao hàng", trang chủ vẫn hiện
+    getShippingTermsOrNull(),
   ])
   const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
   const shelves = await getHomeShelves(
@@ -70,20 +71,18 @@ export default async function HomePage() {
       />
       {/* Trang chủ không có tiêu đề hiển thị (mở đầu bằng hàng thẻ khuyến mãi): h1 ẩn cho trình đọc màn hình / dàn ý */}
       <h1 className="sr-only">{t('title')}</h1>
-      <PromoRow
-        promo={shelves.promo}
-        shipping={shipping}
-        foreign={foreign}
-      />
+      <PromoRow promo={shelves.promo} shipping={shipping} foreign={foreign} />
       {/* Dải đồng hồ + CTA. Dưới sm: lưới 2 cột, mặt đồng hồ + nút ở hàng 1, dòng giờ ở hàng 2 đủ cả bề rộng (một dòng ở
           màn 320px, e2e store-clock); từ sm: một hàng. Khung của StoreClock là display: contents để mặt đồng hồ và dòng
-          giờ thành ô của lưới / hàng (StoreClock giữ nguyên, chỉ đổi cỡ mặt và lề bằng selector con) */}
+          giờ thành ô của lưới / hàng (cỡ mặt và vị trí dòng giờ qua faceClassName / lineClassName) */}
       <div
         data-testid="home-strip"
         className="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-3 border-y py-4 sm:flex sm:gap-4"
       >
         <StoreClock
-          className="contents [&_[data-testid=store-clock]]:col-span-2 [&_[data-testid=store-clock]]:row-start-2 [&_[data-testid=store-clock]]:mt-0 sm:[&_[data-testid=store-clock]]:flex-1 [&_[data-testid=store-clock-face]]:size-12 [&_[data-testid=store-clock-face]]:shrink-0"
+          className="contents"
+          faceClassName="size-12 shrink-0"
+          lineClassName="col-span-2 row-start-2 sm:flex-1"
           timeTemplate={t('clockTime', { time: placeholder('time') })}
           openLabel={t('storeOpen')}
           closedLabel={t('storeClosed')}

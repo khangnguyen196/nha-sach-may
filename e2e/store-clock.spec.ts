@@ -594,7 +594,7 @@ test.describe('tắt JavaScript', () => {
       await expect(face).toBeVisible()
       await expect(face.locator('[data-hand]')).toHaveCount(0)
       // Dải đồng hồ dưới hàng thẻ khuyến mãi (đợt trang-chu-khuyen-mai): trang chủ thu mặt về size-12 (48px) ở mọi khổ
-      // (page.tsx ghi đè size-28 / sm:size-36 của StoreClock; trước: 112px dưới sm, 144px từ sm)
+      // (page.tsx truyền faceClassName thay size-28 / sm:size-36 mặc định của StoreClock; trước: 112px dưới sm, 144px từ sm)
       const expected = 48
       const box = await face.boundingBox()
       if (!box) throw new Error('Không đo được mặt đồng hồ')

@@ -1,5 +1,6 @@
 import 'server-only'
 import { cacheLife } from 'next/cache'
+import { unstable_rethrow } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/public'
 
 export type ShippingTerms = {
@@ -33,4 +34,20 @@ export async function getShippingTerms(): Promise<ShippingTerms> {
   const { data, error } = await supabase.rpc('quote_items', { p_items: items }).single()
   if (error) throw new Error(`getShippingTerms (quote): ${error.message}`)
   return { freeShipFrom: data.free_ship_from, fee: data.shipping_fee > 0 ? data.shipping_fee : null }
+}
+
+/**
+ * getShippingTerms cho trang chủ: lỗi (query sách / RPC quote_items) → null = ẩn thẻ "Miễn phí giao hàng", không kéo cả
+ * trang chủ vào trang lỗi. Bắt lỗi ở NGOÀI 'use cache': bắt bên trong thì kết quả null được cache cả ngày. Lỗi lúc build
+ * → HTML tĩnh của trang chủ thiếu thẻ ship tới lần dựng lại kế tiếp (chấp nhận).
+ */
+export async function getShippingTermsOrNull(): Promise<ShippingTerms | null> {
+  try {
+    return await getShippingTerms()
+  } catch (error) {
+    // Đứng đầu catch: lỗi nội bộ của Next lúc prerender (dừng prerender ở dữ liệu động…) phải ném tiếp, không thành null
+    unstable_rethrow(error)
+    console.error('getShippingTermsOrNull:', error instanceof Error ? error.message.slice(0, 200) : 'unknown error')
+    return null
+  }
 }

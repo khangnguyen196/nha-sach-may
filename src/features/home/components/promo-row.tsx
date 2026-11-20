@@ -15,7 +15,8 @@ const EAGER_CARDS = 3
 
 type Props = {
   promo: { sale: BookCard[]; bestselling: BookCard[]; foreign: BookCard[] }
-  shipping: ShippingTerms
+  /** null: không đọc được điều kiện giao hàng (getShippingTermsOrNull) → không thẻ "Miễn phí giao hàng" */
+  shipping: ShippingTerms | null
   /** Kệ / danh mục "Sách ngoại văn" (tên đã dịch + link danh mục); không có nhánh này → không thẻ */
   foreign: { title: string; href: Href } | null
 }
@@ -47,7 +48,7 @@ export async function PromoRow({ promo, shipping, foreign }: Props) {
       ),
     })
   }
-  cards.push({ key: 'ship', render: () => <ShipCard id="promo-ship" terms={shipping} /> })
+  if (shipping) cards.push({ key: 'ship', render: () => <ShipCard id="promo-ship" terms={shipping} /> })
   if (promo.bestselling.length > 0) {
     cards.push({
       key: 'bestselling',
@@ -106,8 +107,9 @@ export async function PromoRow({ promo, shipping, foreign }: Props) {
           ))}
         </ul>
         {/* Nút của kệ (ShelfNav) đặt hai bên hàng thẻ như mẫu A: khung không nhận chuột, chỉ nút nhận; nút disabled giữ
-            pointer-events: none của Button */}
-        <div className="pointer-events-none absolute -inset-x-5 top-1/2 -translate-y-1/2 [&_button]:pointer-events-auto [&_button]:rounded-full [&_button]:border [&_button]:border-input [&_button]:bg-surface [&_button]:shadow-sm [&>div]:justify-between">
+            pointer-events: none của Button. Chỉ từ md (ShelfNav cũng chỉ hiện từ md): khung -inset-x-5 dưới md thò ra
+            ngoài màn hình */}
+        <div className="pointer-events-none absolute hidden md:block md:-inset-x-5 top-1/2 -translate-y-1/2 [&_button]:pointer-events-auto [&_button]:rounded-full [&_button]:border [&_button]:border-input [&_button]:bg-surface [&_button]:shadow-sm [&>div]:justify-between">
           <ShelfNav
             listId={LIST_ID}
             labels={{ previous: t('promoPrevious'), next: t('promoNext') }}

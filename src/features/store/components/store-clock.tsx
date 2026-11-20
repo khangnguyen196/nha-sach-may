@@ -60,7 +60,7 @@ const getServerReducedMotion = () => false
 // min-h giữ chỗ rỗng cao đúng 1 dòng.
 // Không dùng tabular-nums: Be Vietnam Pro tự host không có tnum (GSUB chỉ ccmp, dnom, frac, liga, locl, numr; đo
 // 2026-10-23) nên class không đổi gì. Dấu chấm và trạng thái giữ đứng yên bằng ô giờ rộng cố định (TimeCell).
-const lineClass = 'mt-3 min-h-[1lh] text-xs text-muted-foreground sm:text-sm'
+const lineClass = 'min-h-[1lh] text-xs text-muted-foreground sm:text-sm'
 
 // Ô giờ rộng bằng mẫu rộng nhất (clockCellSamples: mỗi chữ số một mẫu, vi 10, en 20 cả AM / PM): mẫu ẩn và giờ thật
 // xếp chồng trong một ô grid, chữ số trong ô được nhích nhưng mọi thứ sau ô đứng yên. Mẫu là phần tử rỗng, chữ ở
@@ -142,6 +142,8 @@ export function StoreClock({
   closedLabel,
   locale,
   className = '',
+  faceClassName = 'size-28 sm:size-36',
+  lineClassName = 'mt-3',
   children,
 }: {
   /** Câu đã dịch, giữ chỗ trống `{time}` */
@@ -150,9 +152,14 @@ export function StoreClock({
   closedLabel: string
   locale: Locale
   className?: string
+  /** Cỡ mặt đồng hồ (thay hẳn mặc định, không gộp) */
+  faceClassName?: string
+  /** Lề / vị trí dòng giờ (thay hẳn mặc định, không gộp) */
+  lineClassName?: string
   /** Mặt đồng hồ (ClockFace) */
   children: ReactNode
 }) {
+  const line = `${lineClass} ${lineClassName}`
   const reduced = useSyncExternalStore(subscribeReducedMotion, getReducedMotion, getServerReducedMotion)
   const tick = useSyncExternalStore(
     reduced ? subscribeMinute : subscribeSecond,
@@ -170,14 +177,14 @@ export function StoreClock({
     <div className={className}>
       <div
         data-testid="store-clock-face"
-        className="relative size-28 rounded-full border border-border bg-surface sm:size-36"
+        className={`relative rounded-full border border-border bg-surface ${faceClassName}`}
         aria-hidden="true"
       >
         {children}
         {now ? <ClockHands date={now} showSeconds={!reduced} /> : null}
       </div>
       {now ? (
-        <p className={lineClass} data-testid="store-clock">
+        <p className={line} data-testid="store-clock">
           <time dateTime={vnDateTimeAttr(now, !reduced)}>
             {before}
             <TimeCell now={now} locale={locale} withSeconds={!reduced} />
@@ -188,7 +195,7 @@ export function StoreClock({
           <span className="whitespace-nowrap">{isStoreOpen(now) ? openLabel : closedLabel}</span>
         </p>
       ) : (
-        <p aria-hidden="true" className={lineClass} data-testid="store-clock" />
+        <p aria-hidden="true" className={line} data-testid="store-clock" />
       )}
     </div>
   )
