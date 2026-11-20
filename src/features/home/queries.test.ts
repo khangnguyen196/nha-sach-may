@@ -10,6 +10,8 @@ const fake = vi.hoisted(() => ({
     data: { free_ship_from: 300_000, shipping_fee: 30_000 } as { free_ship_from: number; shipping_fee: number } | null,
     error: null as { message: string } | null,
   },
+  /** RPC ném thẳng (không trả { error }): lỗi nội bộ của Next đi qua đây */
+  quoteThrows: null as Error | null,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -24,7 +26,12 @@ vi.mock('@/lib/supabase/public', () => ({
     }
     return {
       from: () => books,
-      rpc: () => ({ single: async () => fake.quote }),
+      rpc: () => ({
+        single: async () => {
+          if (fake.quoteThrows) throw fake.quoteThrows
+          return fake.quote
+        },
+      }),
     }
   },
 }))
@@ -32,6 +39,7 @@ vi.mock('@/lib/supabase/public', () => ({
 afterEach(() => {
   fake.book = { data: { id: 5 }, error: null }
   fake.quote = { data: { free_ship_from: 300_000, shipping_fee: 30_000 }, error: null }
+  fake.quoteThrows = null
   vi.restoreAllMocks()
 })
 
@@ -52,5 +60,13 @@ describe('getShippingTermsOrNull', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     fake.book = { data: null, error: { message: 'timeout' } }
     await expect(getShippingTermsOrNull()).resolves.toBeNull()
+  })
+
+  it('lỗi nội bộ của Next (redirect…) → ném tiếp, không thành null, không ghi log', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const redirect = Object.assign(new Error('NEXT_REDIRECT'), { digest: 'NEXT_REDIRECT;replace;/x;307;' })
+    fake.quoteThrows = redirect
+    await expect(getShippingTermsOrNull()).rejects.toBe(redirect)
+    expect(log).not.toHaveBeenCalled()
   })
 })
