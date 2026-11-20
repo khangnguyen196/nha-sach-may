@@ -54,13 +54,14 @@ test('đổi theme → class trên <html> đổi', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
   const html = page.locator('html')
-  await expect(html).toHaveClass(/dark/)
+  // Sáng là mặc định từ đợt trang-chu-khuyen-mai (trước: tối) → bấm tối trước rồi về sáng
+  await expect(html).toHaveClass(/\blight\b/)
 
   await openMoreMenu(page)
-  await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
-  await expect(html).toHaveClass(/light/)
   await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click()
-  await expect(html).toHaveClass(/dark/)
+  await expect(html).toHaveClass(/\bdark\b/)
+  await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
+  await expect(html).toHaveClass(/\blight\b/)
   expect(errors).toEqual([])
 })
 
@@ -146,7 +147,8 @@ test('palette: mở bằng nút → Esc → focus về nút; Ctrl K → Esc → 
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
 
-  const cta = page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách', exact: true })
+  // Nút của dải đồng hồ (thẻ Đang giảm giá cũng có link cùng tên, cùng đích /sach)
+  const cta = page.getByTestId('home-strip').getByRole('link', { name: 'Xem tất cả sách', exact: true })
   await cta.focus()
   await page.keyboard.press('ControlOrMeta+k')
   await expect(dialog).toBeVisible()
@@ -192,7 +194,8 @@ test('palette: Esc rồi Ctrl K ngay (palette đang đóng dở) → lần đón
   // Listener Ctrl K gắn trong useEffect: chờ main thread rảnh (như openPalette)
   await waitForSettled(page)
   const dialog = page.getByRole('dialog')
-  const cta = page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách', exact: true })
+  // Nút của dải đồng hồ (thẻ Đang giảm giá cũng có link cùng tên, cùng đích /sach)
+  const cta = page.getByTestId('home-strip').getByRole('link', { name: 'Xem tất cả sách', exact: true })
   await cta.focus()
   await page.keyboard.press('ControlOrMeta+k')
   await expect(dialog.getByRole('combobox')).toBeFocused({ timeout: 10_000 })
@@ -739,17 +742,18 @@ test.describe('header điện thoại: menu "⋯" (de-sau-2)', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   })
 
-  test('đổi sáng / tối từ menu: class trên <html> đổi dark ↔ light', async ({ page }) => {
+  test('đổi sáng / tối từ menu: class trên <html> đổi light ↔ dark', async ({ page }) => {
     const errors = collectErrors(page)
     await page.goto('/')
     const html = page.locator('html')
-    await expect(html).toHaveClass(/dark/)
+    // Sáng là mặc định từ đợt trang-chu-khuyen-mai (trước: tối) → bấm tối trước rồi về sáng
+    await expect(html).toHaveClass(/\blight\b/)
     await waitForHydration(page, 'header details button')
     await openMoreMenu(page)
-    await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
-    await expect(html).toHaveClass(/light/)
     await page.getByRole('button', { name: 'Chuyển sang giao diện tối' }).click()
-    await expect(html).toHaveClass(/dark/)
+    await expect(html).toHaveClass(/\bdark\b/)
+    await page.getByRole('button', { name: 'Chuyển sang giao diện sáng' }).click()
+    await expect(html).toHaveClass(/\blight\b/)
     expect(errors).toEqual([])
   })
 })

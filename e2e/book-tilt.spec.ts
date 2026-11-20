@@ -189,9 +189,14 @@ test('(e) desktop 1280, kệ đầu trang chủ: bìa nghiêng + bóng + vòng f
   isMobile,
 }) => {
   test.skip(isMobile, 'Hover / focus-visible chỉ có ở máy tính')
+  // Giao diện tối: bóng có thêm ánh cam (--glow, lớp rộng nhất) → trường hợp dễ bị cắt nhất. Sáng là mặc định từ đợt
+  // trang-chu-khuyen-mai (bóng sáng chỉ shadow-lg, nằm trong vùng của ánh cam) nên phải chọn tối bằng localStorage
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'))
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/')
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/)
   await waitForSettled(page)
+  // Kệ đầu trang chủ (hàng thẻ khuyến mãi #promo-cards không phải kệ, không khớp `-list`)
   const list = page.getByRole('main').locator('ul[id$="-list"]').first()
   const shelfCards = cards(list)
   expect(await shelfCards.count()).toBeGreaterThanOrEqual(2)
@@ -203,7 +208,7 @@ test('(e) desktop 1280, kệ đầu trang chủ: bìa nghiêng + bóng + vòng f
     await settleCover(cover)
     const { outer, clip, layers, scrollLeft } = await shelfEdges(card)
     expect(scrollLeft, label).toBe(0)
-    // shadow-lg 2 lớp + shadow-glow (--glow) (giao diện tối mặc định)
+    // shadow-lg 2 lớp + shadow-glow (--glow) (giao diện tối)
     expect(layers, label).toBe(3)
     expect(outer.top, `${label}: trên`).toBeGreaterThanOrEqual(clip.top)
     expect(outer.left, `${label}: trái`).toBeGreaterThanOrEqual(clip.left)

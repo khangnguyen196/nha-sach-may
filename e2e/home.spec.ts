@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { collectErrors, waitForHydration } from './helpers'
 
-// Trang chủ (Phase 8): hero → kệ Nổi bật / Bán chạy (ẩn khi ít sách) → Mới về (sách tiếng Việt) → Sách ngoại văn →
+// Trang chủ (Phase 8, đợt trang-chu-khuyen-mai): hàng thẻ khuyến mãi (h2 ẩn "Ưu đãi", e2e/promo-row.spec.ts) + dải đồng
+// hồ / nút "Xem tất cả sách" → kệ Nổi bật / Bán chạy (ẩn khi ít sách) → Mới về (sách tiếng Việt) → Sách ngoại văn →
 // Danh mục. Không giả định sách cụ thể: lấy sách từ kệ rồi mở trang sách để kiểm tra ngôn ngữ.
 
 const shelf = (page: Page, name: string) => page.getByRole('region', { name, exact: true })
@@ -62,7 +63,7 @@ test('Mới về là sách tiếng Việt, Sách ngoại văn là sách tiếng 
   for (const href of [enHrefs[0], enHrefs.at(-1)]) expect(await bookLanguage(page, href ?? ''), href).toBe('Tiếng Anh')
 })
 
-test('CTA hero → Tất cả sách; "Xem tất cả" của kệ trỏ đúng trang', async ({ page }) => {
+test('CTA dải đồng hồ → Tất cả sách; "Xem tất cả" của kệ trỏ đúng trang', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
   await expect(shelf(page, 'Mới về').getByRole('link', { name: 'Xem tất cả' })).toHaveAttribute(
@@ -74,7 +75,8 @@ test('CTA hero → Tất cả sách; "Xem tất cả" của kệ trỏ đúng tr
     '/danh-muc/sach-ngoai-van',
   )
 
-  await page.getByRole('main').getByRole('link', { name: 'Xem tất cả sách' }).click()
+  // Nút của dải đồng hồ (thẻ Đang giảm giá cũng có link "Xem tất cả sách" → /sach, kiểm ở promo-row.spec)
+  await page.getByTestId('home-strip').getByRole('link', { name: 'Xem tất cả sách' }).click()
   await expect(page).toHaveURL(/\/sach$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Tất cả sách' })).toBeVisible()
   await expect(page.getByRole('main').locator('a[href^="/sach/"]').first()).toBeVisible()
@@ -125,7 +127,7 @@ test('/en cùng bố cục, CTA → /en/books', async ({ page }) => {
   expect(order.indexOf('New arrivals')).toBeGreaterThanOrEqual(0)
   expect(order.indexOf('Foreign Books')).toBeGreaterThan(order.indexOf('New arrivals'))
   expect(order.indexOf('Categories')).toBeGreaterThan(order.indexOf('Foreign Books'))
-  await page.getByRole('main').getByRole('link', { name: 'Browse all books' }).click()
+  await page.getByTestId('home-strip').getByRole('link', { name: 'Browse all books' }).click()
   await expect(page).toHaveURL(/\/en\/books$/)
   await expect(page.getByRole('heading', { level: 1, name: 'All books' })).toBeVisible()
   expect(errors).toEqual([])

@@ -184,7 +184,7 @@ test('(a)(b)(f) lưới danh mục: ô mờ cùng khung thẻ cạnh bên, link 
   }
 })
 
-test('(c)(d) chặn danh mục cha: kệ "Sách ngoại văn" ở trang chủ và trang danh mục con bị che hết, danh mục khác không', async ({
+test('(c)(d) chặn danh mục cha: kệ + thẻ "Sách ngoại văn" ở trang chủ và trang danh mục con bị che hết, danh mục khác không', async ({
   page,
 }, testInfo) => {
   const errors = collectErrors(page)
@@ -208,6 +208,13 @@ test('(c)(d) chặn danh mục cha: kệ "Sách ngoại văn" ở trang chủ v�
     expect(newCount).toBeGreaterThan(0)
     await expect(newArrivals.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(0)
     await expect(newArrivals.locator('[data-book-link]').filter({ visible: true })).toHaveCount(newCount)
+
+    // Hàng thẻ khuyến mãi (đợt trang-chu-khuyen-mai): ô sách của thẻ "Sách ngoại văn" dùng cùng khung chặn → che hết.
+    // Thẻ luôn có trên CI (≥ 4 sách tiếng Anh, bất biến ở scripts/e2e-seed.test.ts)
+    const foreignCard = main.locator('article[aria-labelledby="promo-foreign"]')
+    await expect(foreignCard.locator('[data-book-slot]')).toHaveCount(4)
+    await expect(foreignCard.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(4)
+    await expect(foreignCard.locator('[data-book-link]').filter({ visible: true })).toHaveCount(0)
 
     // Sách gắn vào danh mục con: chặn gốc → che ở trang danh mục con
     await page.goto(`/danh-muc/${FOREIGN_CHILD}`)

@@ -335,6 +335,24 @@ describe('e2e/fixtures/books.json', () => {
     for (const slug of [PREFS_CATEGORY, PREFS_BY_AUTHOR]) expect(spec, slug).toContain(`'${slug}'`)
   })
 
+  it('promo-row.spec: thẻ "Đang giảm giá" (≥ 4 sách giá gốc > giá bán, còn hàng, danh mục đang hiện) và "Sách ngoại văn" (≥ 4 sách) luôn hiện; seed không ghi cover_width (thẻ giảm giá chỉ xếp theo % giảm)', () => {
+    // Thẻ 2×2 ẩn khi dưới 4 cuốn (PROMO_CARD_SIZE, features/books/queries.ts); spec đếm đúng 4 ô + nhãn -X% không tăng
+    // dần. Thẻ Bán chạy ẩn trên CI: bất biến "kệ Bán chạy ẩn" ở describe seed bên dưới.
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const visible = (slug: string) => {
+      const category = categories.get(slug)
+      if (!category?.active) return false
+      return category.parent === null || categories.get(category.parent)?.active === true
+    }
+    const onSale = books.filter(
+      (b) => b.original_price !== null && b.original_price > b.price && b.stock > 0 && visible(b.category_slug),
+    )
+    expect(onSale.length).toBeGreaterThanOrEqual(4)
+    // Sách ngoại văn: danh mục con của seed-foreign-books.sql (không nằm trong seed.sql) → đếm sách tiếng Anh
+    expect(books.filter((b) => b.language === 'en').length).toBeGreaterThanOrEqual(4)
+    for (const path of ['./e2e-seed.ts', '../e2e/fixtures/books.json']) expect(read(path), path).not.toContain('cover_width')
+  })
+
   it('mô tả ≤ 300 ký tự (repo public)', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
   })

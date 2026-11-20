@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { collectErrors, waitForSettled } from './helpers'
 
-// Đồng hồ kim giờ Việt Nam + dòng giờ số và trạng thái cửa hàng ở hero trang chủ (src/features/store). Giờ lấy từ đồng
+// Đồng hồ kim giờ Việt Nam + dòng giờ số và trạng thái cửa hàng ở dải dưới hàng thẻ khuyến mãi trang chủ
+// (src/features/store; dưới sm dòng giờ nằm riêng một hàng đủ bề rộng, nên vẫn một dòng ở màn 320px). Giờ lấy từ đồng
 // hồ của trình duyệt (page.clock), hiển thị theo Asia/Ho_Chi_Minh; mở cửa 06:00 ≤ giờ < 22:00. Không tính ở server /
 // lúc prerender: mặt đồng hồ (server) có trong HTML, kim + dòng số chỉ có sau khi JS chạy.
 
@@ -592,10 +593,9 @@ test.describe('tắt JavaScript', () => {
       const face = clockFace(page)
       await expect(face).toBeVisible()
       await expect(face.locator('[data-hand]')).toHaveCount(0)
-      const viewport = page.viewportSize()
-      if (!viewport) throw new Error('Không có viewport')
-      // size-28 (112px) dưới sm (640px), sm:size-36 (144px) từ sm: Pixel 7 rộng 412px, Desktop Chrome 1280px
-      const expected = viewport.width >= 640 ? 144 : 112
+      // Dải đồng hồ dưới hàng thẻ khuyến mãi (đợt trang-chu-khuyen-mai): trang chủ thu mặt về size-12 (48px) ở mọi khổ
+      // (page.tsx ghi đè size-28 / sm:size-36 của StoreClock; trước: 112px dưới sm, 144px từ sm)
+      const expected = 48
       const box = await face.boundingBox()
       if (!box) throw new Error('Không đo được mặt đồng hồ')
       expect(box.width).toBeCloseTo(expected, 1)

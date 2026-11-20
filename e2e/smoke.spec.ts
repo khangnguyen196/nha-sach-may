@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { collectErrors } from './helpers'
 
-test('/ là tiếng Việt, dark mặc định, có danh mục', async ({ page }) => {
+// Sáng là mặc định từ đợt trang-chu-khuyen-mai (trước: tối)
+test('/ là tiếng Việt, light mặc định, có danh mục', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
-  await expect(page.locator('html')).toHaveClass(/dark/)
+  await expect(page.locator('html')).toHaveClass(/\blight\b/)
+  await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
   await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible()
   await expect(page.getByRole('main').getByText('Văn học', { exact: true })).toBeVisible()
   expect(errors).toEqual([])
@@ -25,12 +27,13 @@ test('/vi chuyển về / (as-needed)', async ({ page }) => {
   await expect(page).toHaveURL(/\/$/)
 })
 
-test('theme light lưu lại sau khi tải lại, không lỗi hydration', async ({ page }) => {
+// Theme khác mặc định (nay là dark) mới chứng minh được "lưu lại": giữ light thì test qua cả khi không đọc localStorage
+test('theme dark lưu lại sau khi tải lại, không lỗi hydration', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
-  await page.evaluate(() => localStorage.setItem('theme', 'light'))
+  await page.evaluate(() => localStorage.setItem('theme', 'dark'))
   await page.reload()
-  await expect(page.locator('html')).toHaveClass(/light/)
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/)
   expect(errors).toEqual([])
 })
 

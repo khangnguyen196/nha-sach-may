@@ -70,7 +70,7 @@ src/
   app/admin/           # quản trị — chỉ tiếng Việt, không nằm dưới [locale]
   i18n/                # routing.ts (locales, pathnames), request.ts, navigation.ts
   features/            # chia theo domain, mỗi domain tự chứa:
-    books/  cart/  checkout/  orders/  account/  reviews/  admin/  chat/
+    books/  cart/  checkout/  orders/  account/  reviews/  admin/  chat/  home/ (hàng thẻ khuyến mãi trang chủ)
       components/  actions.ts  queries.ts  schemas.ts  types.ts
   components/ui/       # shadcn primitives
   components/lazy-boundary.tsx  lazy-error-labels.ts   # error boundary cho nội dung tải lười (next/dynamic) + chuỗi của nó
@@ -248,7 +248,7 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 
 ## Design system: "Phòng đọc về đêm"
 
-Lấy cảm hứng từ không khí tối giản, tĩnh, tập trung của make10000hours.com, chuyển thể thành một nhà sách: không gian tối như phòng đọc ban đêm, nơi **ảnh bìa sách là nguồn màu chính**, giao diện lùi về sau. Đối lập có chủ đích với kiểu nhà sách nhồi nhét banner: ít thành phần trên một màn hình, nhiều khoảng thở, không có chữ chạy, không có hiệu ứng nhấp nháy.
+Lấy cảm hứng từ không khí tối giản, tĩnh, tập trung của make10000hours.com, chuyển thể thành một nhà sách: nơi **ảnh bìa sách là nguồn màu chính**, giao diện lùi về sau. Từ đợt trang-chu-khuyen-mai (2026-11-20) **giao diện sáng nền trắng là mặc định**, tối ("phòng đọc ban đêm") là tùy chọn. Đối lập có chủ đích với kiểu nhà sách nhồi nhét banner: ít thành phần trên một màn hình, nhiều khoảng thở, không có chữ chạy, không có hiệu ứng nhấp nháy. Ngoại lệ có giới hạn: **khu khuyến mãi** đầu trang chủ (mục Trang chủ bên dưới) được dùng màu nổi, nhưng chỉ qua token `promo-*` / `sale` / `sale-foreground`.
 
 **Màu**: chỉ định nghĩa ở **một chỗ** (CSS variables trong `src/app/globals.css`, map vào Tailwind bằng `@theme inline`). Component chỉ dùng token ngữ nghĩa (`bg-surface`, `text-muted-foreground`, `bg-primary`…), không bao giờ dùng mã hex.
 
@@ -256,22 +256,29 @@ Tên token theo **quy ước shadcn** để thêm component không phải sửa 
 
 > TODO: các mã hex dưới đây là bản đề xuất theo tinh thần dark-minimal của make10000hours.com. Thay bằng mã màu thật của trang đó (DevTools → Inspect → color picker) để bám sát. Đổi xong thì kiểm tra lại tương phản ≥ 4.5:1 cho chữ.
 
-| Token | Dark (mặc định) | Light | Dùng cho |
+Sáng nằm ở `:root`, tối ở `.dark` (next-themes gắn class lên `<html>`; token sáng có sẵn ở `:root` nên lần vào đầu không nháy tối).
+
+| Token | Light (mặc định) | Dark | Dùng cho |
 |---|---|---|---|
-| `background` | `#0B0B0C` | `#F7F5F0` | nền trang |
-| `foreground` | `#EDEDED` | `#1C1917` | chữ chính |
-| `surface` | `#141416` | `#FFFFFF` | card, panel |
-| `surface-raised` | `#1C1C1F` | `#EFEBE3` | hover, dropdown, input |
-| `primary` | `#F2B66D` | `#9A5B14` | màu "đèn đọc sách": CTA, giá, link |
-| `primary-foreground` | `#1A1206` | `#FFFFFF` | chữ trên nền primary |
-| `muted-foreground` | `#A3A3A3` | `#57534E` | chữ phụ, tác giả |
-| `subtle` | `#8A8A8A` | `#6B6560` | meta, placeholder |
-| `sale` | `#F87171` | `#C2410C` | nhãn giảm giá |
-| `success` | `#4ADE80` | `#15803D` | trạng thái thành công |
-| `border` | `rgb(255 255 255 / 0.08)` | `rgb(0 0 0 / 0.10)` | viền 1px |
-| `input` | `rgb(255 255 255 / 0.14)` | `rgb(0 0 0 / 0.16)` | viền ô nhập |
-| `qr`, `qr-background` | `#000000`, `#FFFFFF` | như dark | mã VietQR (app ngân hàng cần module tối trên nền sáng) |
-| `focus-ring` | `primary` 50% | `primary` | vòng focus (≥ 3:1 với `background` / `surface` / `surface-raised`, Vitest `src/app/globals.test.ts`) |
+| `background` | `#FFFFFF` | `#0B0B0C` | nền trang |
+| `foreground` | `#1C1917` | `#EDEDED` | chữ chính |
+| `surface` | `#F8F6F1` | `#141416` | card, panel |
+| `surface-raised` | `#F3EEE6` | `#1C1C1F` | hover, dropdown, input |
+| `primary` | `#9A5B14` | `#F2B66D` | màu "đèn đọc sách": CTA, giá, link |
+| `primary-foreground` | `#FFFFFF` | `#1A1206` | chữ trên nền primary |
+| `muted-foreground` | `#57534E` | `#A3A3A3` | chữ phụ, tác giả |
+| `subtle` | `#6B6560` | `#8A8A8A` | meta, placeholder |
+| `sale` | `#B83C0B` | `#F87171` | nhãn giảm giá (chữ `-X%`, nền nhãn trên bìa) |
+| `sale-foreground` | `#FFFFFF` | `#1A0606` | chữ trên nền `sale` |
+| `success` | `#15803D` | `#4ADE80` | trạng thái thành công |
+| `border` | `rgb(0 0 0 / 0.12)` | `rgb(255 255 255 / 0.08)` | viền 1px |
+| `input` | `rgb(0 0 0 / 0.22)` | `rgb(255 255 255 / 0.14)` | viền ô nhập |
+| `qr`, `qr-background` | `#000000`, `#FFFFFF` | như sáng | mã VietQR (app ngân hàng cần module tối trên nền sáng) |
+| `focus-ring` | `primary` | `primary` 50% | vòng focus (≥ 3:1 với `background` / `surface` / `surface-raised`, Vitest `src/app/globals.test.ts`) |
+| `promo-from`, `promo-to` | `#FFF4E2`, `#FDE3C0` | `#2A1D0F`, `#38260F` | nền chuyển màu của thẻ promo (khu khuyến mãi) |
+| `promo-foreground` | `#1C1917` | `#F3ECE2` | chữ chính trên nền promo |
+| `promo-accent` | `#8A4F0F` | `#F2B66D` | số nổi, link, **vòng focus** trong thẻ promo |
+| `promo-muted` | `#5B4636` | `#CDBBA5` | chữ phụ trên nền promo |
 
 Alias (không có giá trị riêng, trỏ về token ở trên):
 
@@ -282,9 +289,9 @@ Alias (không có giá trị riêng, trỏ về token ở trên):
 | `ring` | `primary` |
 | `destructive` | `sale` |
 
-Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1. Chỉ dùng **một** màu nhấn (`primary`). Không thêm gradient sặc sỡ.
+Tất cả cặp chữ/nền ở trên đã đạt ≥ 4.5:1 (cặp `sale` / `sale-foreground` / `promo-*` có Vitest riêng ở `globals.test.ts`). Chỉ dùng **một** màu nhấn (`primary`). Không thêm gradient sặc sỡ; gradient duy nhất là `promo-from` → `promo-to` của thẻ promo.
 
-Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-ring/50` (primary 50% trên nền sáng chỉ ~2:1; Vitest chặn).
+Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-ring/50` (primary 50% trên nền sáng chỉ ~2:1; Vitest chặn). Trong thẻ nền promo dùng `ring-promo-accent` (đặc), không dùng `focus-ring` (Vitest: file trong `features/home` có `from-promo-from` phải dùng `ring-promo-accent`).
 
 **Typography**
 - UI và nội dung: **Be Vietnam Pro** (400/500/600).
@@ -294,7 +301,7 @@ Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-r
 **Không gian & hình khối**
 - Spacing theo bội số của 4px. Section cách nhau 64–96px trên desktop, 40–56px trên mobile.
 - Radius: 6px (input, badge), 10px (card), 14px (modal, sheet). Ảnh bìa radius 4px.
-- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Bìa thẻ danh sách khi hover / `:focus-visible` có bóng `shadow-lg` + `shadow-glow` (`primary` ở opacity rất thấp, qua `--glow`) trong `.book-tilt` (giao diện sáng chỉ `shadow-lg`); đây là ngoại lệ duy nhất của "không dùng shadow nặng".
+- Không dùng shadow nặng. Chiều sâu tạo bằng chênh lệch giữa `surface` và `surface-raised` cộng border 1px. Bìa thẻ danh sách khi hover / `:focus-visible` có bóng `shadow-lg` + `shadow-glow` (`primary` ở opacity rất thấp, qua `--glow`) trong `.book-tilt` (giao diện sáng chỉ `shadow-lg`, quy tắc `.dark` thêm ánh cam); đây là ngoại lệ duy nhất của "không dùng shadow nặng".
 
 **Chuyển động**: 150–250ms, `ease-out`. Thẻ sách ở danh sách (BookCard, thẻ chợ sách cũ) không nâng cả thẻ: bìa nghiêng 3D nhẹ (class `book-tilt` trên link, `book-tilt-cover` trên khung bìa, định nghĩa trong `globals.css`), máy tính khi hover + `:focus-visible`, điện thoại chỉ thoáng qua lúc `:active` (nửa góc); cả hai phóng to `scale(1.05)` (cuối transform). Link thẻ luôn `position: relative`, `z-index: 1` khi nghiêng → bìa phóng to nằm trên thẻ bên cạnh. Kệ (`shelf.tsx`) dùng `-mt-4 pt-10` (vị trí lúc nghỉ như cũ; dòng tiêu đề kệ `relative z-10` để "Xem tất cả" / nút trước-sau không bị danh sách đè) + đệm ngang 8px chỉ từ `xl` (`xl:-mx-8 xl:px-8 xl:scroll-px-8`; dưới `xl` kệ đã chạm mép màn hình, đệm thêm là tràn ngang) để vùng cuộn không cắt bìa nghiêng, ánh cam, vòng focus; từ `sm` tới dưới `xl` mép ngoài ánh cam của thẻ đầu / cuối kệ bị cắt khoảng 3–5px, dưới `sm` cắt tới khoảng 10px (trước đợt ~7px); bìa và vòng focus không bị cắt, chấp nhận. Trang chuyển mượt, không bounce. Tắt mọi chuyển động (transform, transition) khi `prefers-reduced-motion`; riêng bìa thẻ sách vẫn đổi bóng (không nghiêng, không phóng to).
 
@@ -303,12 +310,12 @@ Lớp focus dùng `ring-focus-ring` / `outline-focus-ring`, không dùng `ring-r
 - **Header**: sticky, nền `background` mờ 80% + `backdrop-blur`, cao 64px. Chứa logo, ô tìm kiếm ở giữa (mở command palette với `⌘K`/`Ctrl K`), ngôn ngữ, theme, giỏ hàng, tài khoản. Dưới md: ngôn ngữ + sáng / tối gộp vào menu "⋯" (`MoreMenu`, `<details>`/`<summary>`, không popover: Safari 16.4 / Firefox < 125 chưa có; client leaf chỉ lo Esc trả focus, bấm ra ngoài đóng, `aria-expanded`), mọi nút icon 44×44 (`max-md:size-11`), logo luôn có chữ (màn < 375px: hai dòng "Nhà Sách" / "Mây" 14px); từ md giữ nguyên hai nút 36px. `LocaleSwitcher` / `ThemeToggle` có `variant` `icon` | `menu`.
 - **BookCard**: ảnh bìa tỉ lệ 2:3, tên sách tối đa 2 dòng, tác giả màu `muted-foreground`, giá màu `primary`, giá gốc gạch ngang màu `subtle`, nhãn `-X%` nhỏ màu `sale`. Hết hàng thì ảnh bìa giảm opacity kèm nhãn.
 - **Kệ sách (Shelf)**: hàng ngang cuộn được (scroll-snap), có tiêu đề cùng link "Xem tất cả", nút trước / sau từ `md` (`ShelfNav`, client leaf, chỉ hiện khi kệ tràn). Đây là đơn vị bố cục chính của trang chủ.
-- **Trang chủ**: hero tối giản (một câu trích dẫn về đọc sách bằng Lora + 1 CTA → Tất cả sách `/sach`), sau đó là các kệ Nổi bật (`is_featured`, sách tiếng Việt trước, ẩn khi < 4), Bán chạy (`sold_count > 0`, ẩn khi < 6), Mới về (chỉ sách tiếng Việt), Sách ngoại văn, rồi lưới danh mục (`getHomeShelves`). Không sách nào lên hai kệ: mỗi kệ bỏ sách đã có ở kệ đang hiện phía trên (`homeShelves`, `features/books/utils.ts`); ngưỡng ẩn tính sau khi loại trùng.
+- **Trang chủ** (đợt trang-chu-khuyen-mai, phương án A, `docs/plans/trang-chu-khuyen-mai.md`): không còn câu trích dẫn (h1 `sr-only`). Mở đầu là **hàng thẻ khuyến mãi** (`features/home/components/promo-row.tsx`, h2 ẩn "Ưu đãi"): Đang giảm giá (2×2, sách còn hàng giá gốc > giá bán, xếp % giảm, link "Xem tất cả sách" → `/sach`, không ghi số sách), Miễn phí giao hàng (nền promo; mốc + phí đọc từ RPC `quote_items` qua `getShippingTerms`, không hard-code), Bán chạy (2×2), Sách ngoại văn (2×2); thẻ nào dưới 4 cuốn thì ẩn (`saleCardBooks` / `promoCardBooks`, `getHomeShelves().promo`). Ràng buộc của khu khuyến mãi: chỉ ảnh là bìa sách (không banner / ảnh người bán), ô sách dùng khung `[data-book-slot]` + `BlockedVeil` (chặn theo sở thích), ưu tiên bìa `cover_width ≥ SHARP_COVER_WIDTH`, **không tự trượt / không chuyển động tự động** (cuộn tay + scroll-snap, nút trước / sau là `ShelfNav` từ `md` khi tràn), ảnh 3 thẻ đầu tải ngay (bìa đầu của thẻ đầu `preload`), còn lại lazy. **Ngoại lệ trùng sách**: thẻ được trùng sách với kệ bên dưới (chủ dự án duyệt 2026-11-20); quy tắc "không sách nào lên hai kệ" chỉ áp cho các kệ. Dưới hàng thẻ là dải đồng hồ giờ VN (mặt 48px) + nút "Xem tất cả sách" (`data-testid="home-strip"`). Sau đó là các kệ Nổi bật (`is_featured`, sách tiếng Việt trước, ẩn khi < 4), Bán chạy (`sold_count > 0`, ẩn khi < 6), Mới về (chỉ sách tiếng Việt), Sách ngoại văn, rồi lưới danh mục (`getHomeShelves`). Không sách nào lên hai kệ: mỗi kệ bỏ sách đã có ở kệ đang hiện phía trên (`homeShelves`, `features/books/utils.ts`); ngưỡng ẩn tính sau khi loại trùng.
 - **Trang sách**: bìa lớn bên trái (sticky trên desktop), thông tin bên phải. Nút "Thêm vào giỏ" là CTA `primary` duy nhất trên màn hình. Sách có nhãn cảnh báo đã duyệt: khung `WarningNotice` (`features/warnings/components/`, Server Component, cùng lần render với mô tả, ngay trước mô tả; `bg-surface-raised`, không màu `sale`).
 - **Lưới**: 2 cột (mobile), 3 (sm), 4 (md), 5–6 (lg+).
 - Mọi trạng thái loading/rỗng/lỗi đều có thiết kế riêng, không để trang trắng.
 
-Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn và vẫn dùng cùng bộ token.
+Light mode là mặc định (`defaultTheme="light"`, từ 2026-11-20; trước đó là dark), dark mode là tùy chọn và vẫn dùng cùng bộ token.
 
 ## Bảo mật
 
