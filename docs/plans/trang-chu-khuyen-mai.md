@@ -39,6 +39,22 @@ thư viện, không đổi DB, ảnh chỉ là bìa sách.
   `prefs-blocks-account`, `store-clock` theo hành vi mới; bất biến dữ liệu ở `scripts/e2e-seed.test.ts`; CLAUDE.md
   (Design system).
 
+## Làm (vòng 2, sửa theo code-reviewer vòng 1)
+
+- Thẻ "Miễn phí giao hàng": `getShippingTermsOrNull` (`features/home/queries.ts`) bọc ngoài `'use cache'`, đầu catch
+  là `unstable_rethrow` → lỗi query sách / RPC `quote_items` chỉ ẩn thẻ, trang chủ vẫn hiện (lỗi lúc build: HTML tĩnh
+  thiếu thẻ tới lần dựng lại kế tiếp). `getShippingTerms` vẫn throw (bắt bên trong thì null bị cache cả ngày).
+- Khung nút trước / sau `hidden md:block md:-inset-x-5` (dưới md khung thò ra ngoài màn hình).
+- `global-error.tsx`: thêm class `dark` khi `theme = 'dark'` (sáng là mặc định của token).
+- `StoreClock` nhận `faceClassName` / `lineClassName` thay selector con trong `page.tsx` (giao diện như cũ).
+- Ngưỡng Bán chạy cố ý khác nhau: **thẻ** Bán chạy hiện khi ≥ 4 cuốn (`PROMO_CARD_SIZE`), **kệ** Bán chạy khi ≥ 6
+  (`SHELF_MIN.bestselling`).
+- Thứ tự Tab (ghi nhận, không đổi): Tab đi qua mọi ô sách + link "Xem…" của từng thẻ (16 link khi đủ 4 thẻ) rồi
+  mới tới dải đồng hồ và kệ; trình duyệt tự cuộn hàng thẻ tới link đang focus.
+- e2e thêm: bìa đầu thẻ đầu `fetchpriority=high`, bìa còn lại của 3 thẻ đầu `loading=eager` (thẻ thứ 4 tải lười chỉ
+  kiểm được khi có thẻ Bán chạy; trên CI không có, đã xem tay trên bản build với dữ liệu thật); Tab tới ô đầu thẻ đầu ở
+  giao diện tối, vòng focus hiện và không bị cắt.
+
 ## Để sau
 
 1. **Thẻ Mã giảm giá**: đợt riêng thêm hàm `home_vouchers()` (anon đọc mã `is_public` đang dùng được, không lộ cột
@@ -49,5 +65,4 @@ thư viện, không đổi DB, ảnh chỉ là bìa sách.
 3. Thẻ Chợ sách cũ khi có tin `approved` (không đổi DB, không dùng ảnh người bán).
 4. Bộ lọc "đang giảm giá" ở `/sach`: cần đổi DB (cột / chỉ mục so `original_price > price`), link thẻ Đang giảm giá
    khi đó trỏ thẳng vào bộ lọc.
-5. `src/app/global-error.tsx` (ngoài phạm vi vòng 1): vẫn chỉ thêm class `light` khi `theme = 'light'`; nay sáng là mặc
-   định nên người đã chọn tối thấy trang lỗi gốc màu sáng. Sửa: thêm class `dark` khi `theme = 'dark'`.
+5. Bìa ô 2×2 tỉ lệ 3:4 cắt ~5% trên dưới bìa 2:3; chủ dự án quyết khi xem Preview (giữ theo mẫu A đã duyệt).
