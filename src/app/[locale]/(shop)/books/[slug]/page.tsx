@@ -16,6 +16,7 @@ import {
   type BookDetail,
   type Category,
 } from '@/features/books/queries'
+import { showAutoTranslatedNote } from '@/features/books/translation'
 import { discountPercent, showRelatedShelf, splitParagraphs, truncateText, visibleCategoryIds } from '@/features/books/utils'
 import { addToCart, addToCartFromForm } from '@/features/cart/actions'
 import { AddToCartButton } from '@/features/cart/components/add-to-cart-button'
@@ -435,6 +436,11 @@ async function Description({ book }: { book: BookDetail }) {
               ))}
             </div>
           </details>
+        )}
+        {lead && showAutoTranslatedNote(book, locale) && (
+          <p className="mt-3 text-xs text-muted-foreground" data-testid="auto-translated">
+            {t('autoTranslated')}
+          </p>
         )}
       </div>
     </section>
