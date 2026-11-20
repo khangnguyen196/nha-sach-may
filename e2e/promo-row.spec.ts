@@ -258,11 +258,15 @@ test('bàn phím, giao diện tối: Tab tới ô sách đầu của thẻ đầ
   await tabTo(page, first)
   await expect(first).toBeFocused()
   await expect(first).toBeInViewport()
-  // Vòng focus (ring-3 focus-visible:ring-focus-ring) là box-shadow 3px có màu
+  // Vòng focus (ring-3 focus-visible:ring-focus-ring) là lớp box-shadow lan 3px có màu; các lớp khác của Tailwind là
+  // rgba(0, 0, 0, 0) 0px (đo trên bản build: "oklab(… / 0.5) 0px 0px 0px 3px" giữa các lớp trong suốt)
   const shadow = await first.evaluate((element) => getComputedStyle(element).boxShadow)
-  expect(shadow).not.toBe('none')
-  expect(shadow).toMatch(/\b3px\b/)
-  expect(shadow).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+  const ring = shadow
+    .split(/,(?![^(]*\))/)
+    .map((layer) => layer.trim())
+    .find((layer) => /\b0px 0px 0px 3px$/.test(layer))
+  expect(ring, shadow).toBeDefined()
+  expect(ring, shadow).not.toMatch(/^(rgba\(0, 0, 0, 0\)|transparent)/)
   const clip = await focusRingClip(first, FOCUS_RING_PX)
   expect(Math.max(clip.top, clip.right, clip.bottom, clip.left)).toBe(0)
 })
