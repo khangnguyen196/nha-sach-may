@@ -1152,10 +1152,9 @@ $$;
 -- có trong câu UPDATE); các hàm security definer (place_order, *_touch_book*, refresh_book_rating) chạy bằng quyền owner.
 revoke update on public.books from anon, authenticated;
 grant  update (
-  title, slug, subtitle, description, description_en, category_id, publisher_id, isbn,
+  title, slug, subtitle, description, description_en, description_auto_translated, category_id, publisher_id, isbn,
   price, original_price, stock, cover_url, cover_width, page_count, format, language, published_year,
-  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at,
-  description_auto_translated
+  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at
 ) on public.books to authenticated;
 
 -- VOUCHERS: chỉ admin xem/sửa (khách kiểm tra mã qua quote_order / place_order)

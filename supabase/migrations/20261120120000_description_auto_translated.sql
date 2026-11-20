@@ -14,10 +14,9 @@ alter table public.books add column description_auto_translated boolean not null
 -- Cùng danh sách quyền cột với 20261025000000_prefs_warnings.sql + cột mới
 revoke update on public.books from anon, authenticated;
 grant  update (
-  title, slug, subtitle, description, description_en, category_id, publisher_id, isbn,
+  title, slug, subtitle, description, description_en, description_auto_translated, category_id, publisher_id, isbn,
   price, original_price, stock, cover_url, cover_width, page_count, format, language, published_year,
-  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at,
-  description_auto_translated
+  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at
 ) on public.books to authenticated;
 
 commit;
