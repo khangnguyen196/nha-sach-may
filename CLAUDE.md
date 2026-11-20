@@ -23,6 +23,7 @@ npm run dev | build | lint | typecheck | test | test:e2e
 npm run check:env                                         # kiểm tra .env.local, không in giá trị bí mật
 npm run measure:js -- <route>                             # sau build: JS gzip của route prerender (vi, en, vi/books/<slug>)
 gh run download <run e2e> -n database-types -D <thư mục tạm>                # types sinh từ DB local trên CI → chép vào src/types/database.ts (xem Database)
+gh workflow run data-check.yml --ref <nhánh> [-f file=supabase/data/<đợt>/vong-N-sach-*.sql]   # chạy thử file SQL dữ liệu trên Supabase local của CI
 npm run import:books -- --dry-run [--hires-covers]       # xem trước → scripts/out/preview.json | preview-hires.json
 npm run import:books -- --from-preview <file>             # import đúng file đã duyệt, không gọi lại Google Books
 npm run build:divisions                                   # sinh lại dữ liệu Tỉnh/Thành → Phường/Xã (commit nguồn cố định)
@@ -34,7 +35,7 @@ npx playwright test --project=desktop --project=mobile    # e2e catalog/layout
 npx playwright test --project=desktop-admin --project=mobile-admin   # e2e admin
 ```
 
-**e2e chỉ chạy trên Supabase local** (Docker, `supabase/config.toml`), không bao giờ trên project cloud. CI làm hết ở `.github/workflows/e2e.yml` (mọi push trừ `docs/**` / `*.md`, chạy tay bằng `gh workflow run e2e.yml --ref <nhánh>`; tắt tạm bằng variable `RUN_E2E = false`), không dùng secret. Máy dev không có Docker → xem kết quả e2e trên CI (`gh run list --workflow e2e.yml`).
+**e2e chỉ chạy trên Supabase local** (Docker, `supabase/config.toml`), không bao giờ trên project cloud. CI làm hết ở `.github/workflows/e2e.yml` (mọi push trừ `docs/**` / `*.md` / `supabase/data/**`, chạy tay bằng `gh workflow run e2e.yml --ref <nhánh>`; tắt tạm bằng variable `RUN_E2E = false`), không dùng secret. Máy dev không có Docker → xem kết quả e2e trên CI (`gh run list --workflow e2e.yml`).
 
 Quy ước e2e:
 - Env e2e: `scripts/e2e-env.ts` (`loadLocalSupabase`) lấy URL + khóa từ `supabase status -o env`, ghi đè `process.env`, **từ chối** URL production (`ylfgwcxddxvfxwldmwtf`) và mọi host không phải `127.0.0.1` / `localhost`. Dùng ở `playwright.config.ts`, `scripts/e2e-user.ts`, `scripts/e2e-seed.ts`, `e2e/mailbox.ts`. `webServer.env` của Playwright đặt rỗng `RESEND_*`, `VIETQR_*`, `SITE_URL`… để `next start` không nhặt từ `.env.local` (Next chỉ điền biến chưa có).
@@ -212,6 +213,8 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 
 - `supabase/config.toml` chỉ cho Supabase local của e2e. **Không** `supabase link` / `supabase db push` (sẽ chạy `migrations/` lên production); migration do chủ dự án chạy tay trong SQL Editor, Claude kiểm trước / sau qua MCP `supabase` chỉ đọc (mục Bảo mật).
 
+- File SQL sửa **dữ liệu** (không đổi cấu trúc, VD bản dịch mô tả) để ở `supabase/data/<đợt>/`: `vong-N-sach-*.sql` (ghi), `vong-N-kiem.sql` (chỉ đọc), `vong-N-hoan-tac.sql` (hoàn tác); tên khác → CI đỏ. Workflow `data-check` chạy thử trên Supabase local (sách lấy từ production qua REST công khai), **phải xanh** mới đưa file cho chủ dự án chạy trong SQL Editor. Chủ dự án chỉ chạy file ghi; câu kiểm chỉ đọc trước / sau do Claude chạy qua MCP `supabase`. e2e và migration-check bỏ qua thư mục này. README ở `supabase/data/mo-ta-song-ngu/`.
+
 - Tiền là `integer` VND.
 - RLS bật cho mọi bảng. Không tắt RLS, không dùng service role trong app.
 - Cột do DB quản lý (trigger/RPC), không ghi từ app: `search_text`, `sold_count`, `avg_rating`, `review_count`, `display_name`, `updated_at`.
@@ -240,6 +243,7 @@ Nguồn sự thật là `supabase/schema.sql`. Đổi schema thì viết migrati
 - Bìa mờ (< 300px) thay bằng bìa Open Library qua `scripts/covers.ts` (một request / ISBN, giãn ≥ 3.5 giây, dừng khi 403 / 429; chỉ đụng bìa tên `<isbn>.webp` của import; ghi tên mới `ol-<isbn>-<8 hex>.webp`). Điều khoản + kết quả lượt 2026-10-16 trong `docs/plans/data.md`; footer ghi nguồn Open Library. Chạy trước khi build / deploy (script không gọi được `updateTag`).
 - Bìa "ảnh lớn" của Google có thể chỉ rộng 128px, hoặc là trang lót dạng JPEG (bộ lọc PNG < 40KB không bắt được). Sau import nên xem lại bìa; bìa sai thì thay trong admin (Phase 7).
 - `description_en` để trống thì fallback về tiếng Việt. Có thể bổ sung bằng script riêng sau.
+- `import:books` **vẫn ghi sách ngoại văn theo kiểu cũ** (mô tả tiếng Anh ở `description`, `description_en` trống, cờ `description_auto_translated` tắt), khác quy ước sau đợt mo-ta-song-ngu: sách `en` để bản Anh gốc ở `description_en`, bản dịch Việt ở `description` kèm cờ bật; sách `vi` để bản dịch Anh ở `description_en` kèm cờ bật. Sửa script (và nạp mô tả dịch) trước khi nạp thêm sách ngoại văn, nếu không trang tiếng Việt hiện mô tả tiếng Anh.
 - Dữ liệu từ nguồn ngoài có thể bẩn (thiếu mô tả, tên NXB không thống nhất, HTML lẫn trong mô tả). UI phải chịu được trường hợp thiếu field. Chuẩn hóa ở script, không chuẩn hóa ở UI.
 
 ## Design system: "Phòng đọc về đêm"
@@ -313,6 +317,7 @@ Dark mode là mặc định (`defaultTheme="dark"`), light mode là tùy chọn 
 - Chỉ dùng `npm run check:env` để kiểm tra env. **Không** viết script nào khác đọc env (kể cả script tạm/debug rồi xóa, kể cả qua `loadEnvConfig` của `@next/env`). Script của dự án cần env (`import:books`, `scripts/e2e-user.ts` ở Phase 4) chỉ được viết khi đã có trong plan đã duyệt (ngoại lệ này đã được duyệt).
 - **Ngoại lệ đã duyệt (2026-10-17)**: `scripts/e2e-env.ts` đọc khóa của **Supabase local** qua `supabase status -o env` (khóa demo của stack Docker, không phải bí mật), với điều kiện: **không đọc file env nào** và **từ chối mọi URL không phải `127.0.0.1` / `localhost`** (kể cả production `ylfgwcxddxvfxwldmwtf`). Không in giá trị. e2e vì vậy không cần secret trên GitHub; khóa thật (production) vẫn không bao giờ đặt lên GitHub.
 - **Ngoại lệ (Phase 11, chủ dự án duyệt 2026-10-18)**: `GEMINI_API_KEY` và `CHAT_QUOTA_TOKEN` là khóa bí mật **chỉ ở server**, được đặt trên **Vercel** (chỉ Production) vì chatbot không chạy được nếu thiếu. Không tiền tố `NEXT_PUBLIC_`, không đặt lên GitHub (CI dùng AI giả `CHAT_AI_MOCK=1` + token e2e cố định), không đọc trong `scripts/`. Project Google của key **không gắn billing** (chi phí = 0). Lộ key → thu hồi ở AI Studio; lộ token → chạy lại `private.new_chat_quota_token()` rồi cập nhật env.
+- **Ngoại lệ (data-check, chủ dự án duyệt 2026-11-20)**: `scripts/ci/data-check.sh` **chỉ chạy trên CI**, đọc env CI `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (secrets đã có cho build của `ci.yml`) để đọc sách qua REST công khai (chỉ GET). Từ chối khóa không phải publishable / anon, che khóa trong log, không service role, không đọc file env, không in nội dung mô tả. Không chạy trên máy dev.
 - **SQL trên Supabase thật (chủ dự án duyệt 2026-10-20)**:
   - Claude chạy SQL **chỉ đọc** trên Supabase thật qua MCP server `supabase` (scope user, URL `https://mcp.supabase.com/mcp?project_ref=ylfgwcxddxvfxwldmwtf&read_only=true&features=database,debugging`). Đầu phiên kiểm `select current_setting('transaction_read_only')` = `on`.
   - SQL **ghi**: chỉ chủ dự án chạy tay trong SQL Editor. Claude cắt nguyên văn khối cần chạy (tại commit đã duyệt) ra file ngoài repo, kiểm trước, chụp các dòng sẽ đổi, kiểm sau.
