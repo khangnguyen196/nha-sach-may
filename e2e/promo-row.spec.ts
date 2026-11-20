@@ -84,8 +84,11 @@ test('vi: đủ thẻ theo dữ liệu, sách giảm giá xếp theo % giảm, l
     '/sach',
   )
 
-  // Câu trích dẫn hero đã bỏ
-  await expect(page.getByRole('main').locator('blockquote, figure')).toHaveCount(0)
+  // Câu trích dẫn hero đã bỏ: không blockquote / figure nào ở vùng đầu trang (trước dải đồng hồ); phần dưới (kệ…) không
+  // thuộc phạm vi kiểm này
+  await expect(
+    page.getByTestId('home-strip').locator('xpath=preceding::*[self::blockquote or self::figure]'),
+  ).toHaveCount(0)
   await expect(page.getByRole('main')).not.toContainText('Descartes')
   expect(errors).toEqual([])
 })
@@ -116,6 +119,25 @@ test('en: cùng thẻ, chuỗi tiếng Anh, link /en', async ({ page }) => {
     '/en/books',
   )
   expect(errors).toEqual([])
+})
+
+// Theo mẫu catalog.spec (lưới sách). Thẻ thứ 4 (tải lười) không có trên CI: Bán chạy ẩn → chỉ 3 thẻ, đều trong
+// EAGER_CARDS của promo-row.tsx
+test('ảnh: bìa đầu thẻ đầu ưu tiên cao (ứng viên LCP), các bìa còn lại của 3 thẻ đầu tải ngay', async ({ page }) => {
+  await page.goto('/')
+  const saleCovers = card(page, 'Đang giảm giá').locator('img')
+  await expect(saleCovers).toHaveCount(4)
+  await expect(saleCovers.nth(0)).toHaveAttribute('fetchpriority', 'high')
+  for (const index of [1, 2, 3]) {
+    await expect(saleCovers.nth(index)).not.toHaveAttribute('fetchpriority', 'high')
+    await expect(saleCovers.nth(index)).toHaveAttribute('loading', 'eager')
+  }
+  const foreignCovers = card(page, 'Sách ngoại văn').locator('img')
+  await expect(foreignCovers).toHaveCount(4)
+  for (const index of [0, 1, 2, 3]) {
+    await expect(foreignCovers.nth(index)).not.toHaveAttribute('fetchpriority', 'high')
+    await expect(foreignCovers.nth(index)).toHaveAttribute('loading', 'eager')
+  }
 })
 
 test('lần vào đầu (chưa chọn theme) là giao diện sáng, nền trắng', async ({ browser, baseURL }) => {
@@ -221,5 +243,26 @@ test('bàn phím: Tab đi qua từng link của hàng thẻ, thẻ được cu�
   await expect(last).toBeInViewport()
   expect(await list(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
   const clip = await focusRingClip(last, FOCUS_RING_PX)
+  expect(Math.max(clip.top, clip.right, clip.bottom, clip.left)).toBe(0)
+})
+
+test('bàn phím, giao diện tối: Tab tới ô sách đầu của thẻ đầu, vòng focus hiện và không bị cắt', async ({ page }) => {
+  // Sáng là mặc định từ đợt trang-chu-khuyen-mai: chọn tối bằng localStorage như người dùng đã chọn
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+  await waitForSettled(page)
+  const first = card(page, 'Đang giảm giá').locator('[data-book-link]').first()
+  await page.getByRole('banner').locator('a[href="/"]').focus()
+  await tabTo(page, first)
+  await expect(first).toBeFocused()
+  await expect(first).toBeInViewport()
+  // Vòng focus (ring-3 focus-visible:ring-focus-ring) là box-shadow 3px có màu
+  const shadow = await first.evaluate((element) => getComputedStyle(element).boxShadow)
+  expect(shadow).not.toBe('none')
+  expect(shadow).toMatch(/\b3px\b/)
+  expect(shadow).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+  const clip = await focusRingClip(first, FOCUS_RING_PX)
   expect(Math.max(clip.top, clip.right, clip.bottom, clip.left)).toBe(0)
 })

@@ -55,7 +55,8 @@ const PROMO_CARD_SIZE = 4
  * Ứng viên của thẻ "Đang giảm giá" (mỗi query: bìa nét / mọi bìa): PostgREST không so được price với original_price nên
  * lấy sách có giá gốc, còn hàng, mới nhất trước, rồi lọc + xếp % giảm trong bộ nhớ (saleCardBooks). Có giới hạn, không
  * tải cả catalog; % giảm cao nhất chỉ tính trong các ứng viên này (production 2026-11-20: 125 sách đang giảm còn hàng,
- * 84 bìa nét).
+ * 84 bìa nét). Sách ngoài 48 cuốn này có hàng lại thì thẻ có thể chưa đổi tới khi cache (cacheLife('hours')) hết hạn.
+ * e2e: scripts/e2e-seed.test.ts đọc số này dạng chữ (`const SALE_CANDIDATES = <số>`).
  */
 const SALE_CANDIDATES = 48
 

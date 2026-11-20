@@ -353,6 +353,36 @@ describe('e2e/fixtures/books.json', () => {
     for (const path of ['./e2e-seed.ts', '../e2e/fixtures/books.json']) expect(read(path), path).not.toContain('cover_width')
   })
 
+  it('promo-row.spec: trong SALE_CANDIDATES cuốn đầu theo thứ tự query thẻ "Đang giảm giá" có ≥ 4 cuốn giá gốc > giá bán', () => {
+    // Query (getHomeShelves → onSale, features/books/queries.ts): original_price not null, stock > 0, danh mục đang hiện,
+    // created_at giảm dần rồi id giảm dần, limit SALE_CANDIDATES; lọc original_price > price trong bộ nhớ. Sách mẫu nạp
+    // theo thứ tự fixture (created_at cùng lúc hoặc tăng dần) → mới nhất trước = fixture đảo ngược; xét cả hai chiều cho
+    // chắc. Sách e2e tạo trong spec có created_at năm 2000 (xếp sau). Danh mục của seed-foreign-books.sql (không có trong
+    // seed.sql) tính là đang hiện khi chọn cửa sổ (chiếm chỗ) nhưng không tính vào số sách giảm giá → chỉ có thể đỏ thừa.
+    const source = read('../src/features/books/queries.ts')
+    const limit = Number(/const SALE_CANDIDATES = (\d+)/.exec(source)?.[1])
+    const size = Number(/const PROMO_CARD_SIZE = (\d+)/.exec(source)?.[1])
+    expect(limit).toBeGreaterThan(0)
+    expect(size).toBeGreaterThan(0)
+    expect(source).toMatch(
+      /\.not\('original_price', 'is', null\)\s*\.gt\('stock', 0\)\s*\.order\('created_at', \{ ascending: false \}\)\s*\.order\('id', \{ ascending: false \}\)\s*\.limit\(SALE_CANDIDATES\)/,
+    )
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const isVisible = (slug: string) => {
+      const category = categories.get(slug)
+      if (!category?.active) return false
+      return category.parent === null || categories.get(category.parent)?.active === true
+    }
+    const mayBeVisible = (slug: string) => !categories.has(slug) || isVisible(slug)
+    for (const order of [books, [...books].reverse()]) {
+      const candidates = order
+        .filter((b) => b.original_price !== null && b.stock > 0 && mayBeVisible(b.category_slug))
+        .slice(0, limit)
+      const onSale = candidates.filter((b) => (b.original_price ?? 0) > b.price && isVisible(b.category_slug))
+      expect(onSale.length).toBeGreaterThanOrEqual(size)
+    }
+  })
+
   it('mô tả ≤ 300 ký tự (repo public)', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
   })
