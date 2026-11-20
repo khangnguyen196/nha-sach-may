@@ -87,7 +87,7 @@ test('vi: đủ thẻ theo dữ liệu, sách giảm giá xếp theo % giảm, l
   // Câu trích dẫn hero đã bỏ: không blockquote / figure nào ở vùng đầu trang (trước dải đồng hồ); phần dưới (kệ…) không
   // thuộc phạm vi kiểm này
   await expect(
-    page.getByTestId('home-strip').locator('xpath=preceding::*[self::blockquote or self::figure]'),
+    page.getByRole('main').getByTestId('home-strip').locator('xpath=preceding::*[self::blockquote or self::figure]'),
   ).toHaveCount(0)
   await expect(page.getByRole('main')).not.toContainText('Descartes')
   expect(errors).toEqual([])
@@ -124,6 +124,7 @@ test('en: cùng thẻ, chuỗi tiếng Anh, link /en', async ({ page }) => {
 // Theo mẫu catalog.spec (lưới sách). Thẻ thứ 4 (tải lười) không có trên CI: Bán chạy ẩn → chỉ 3 thẻ, đều trong
 // EAGER_CARDS của promo-row.tsx
 test('ảnh: bìa đầu thẻ đầu ưu tiên cao (ứng viên LCP), các bìa còn lại của 3 thẻ đầu tải ngay', async ({ page }) => {
+  const errors = collectErrors(page)
   await page.goto('/')
   const saleCovers = card(page, 'Đang giảm giá').locator('img')
   await expect(saleCovers).toHaveCount(4)
@@ -138,6 +139,7 @@ test('ảnh: bìa đầu thẻ đầu ưu tiên cao (ứng viên LCP), các bìa
     await expect(foreignCovers.nth(index)).not.toHaveAttribute('fetchpriority', 'high')
     await expect(foreignCovers.nth(index)).toHaveAttribute('loading', 'eager')
   }
+  expect(errors).toEqual([])
 })
 
 test('lần vào đầu (chưa chọn theme) là giao diện sáng, nền trắng', async ({ browser, baseURL }) => {
