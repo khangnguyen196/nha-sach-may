@@ -35,7 +35,8 @@ name: migration-check
 on:
   push:
     branches: ['**']
-    paths-ignore: ['docs/**', '**/*.md']
+    # supabase/data/**: file SQL dữ liệu, không phải migration (kiểm ở data-check.yml)
+    paths-ignore: ['docs/**', '**/*.md', 'supabase/data/**']
   workflow_dispatch:
 
 permissions:

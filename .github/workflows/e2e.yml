@@ -7,7 +7,8 @@ name: e2e
 on:
   push:
     branches: ['**']
-    paths-ignore: ['docs/**', '**/*.md']
+    # supabase/data/**: file SQL dữ liệu chủ dự án chạy tay trên production, app và DB local của e2e không đọc
+    paths-ignore: ['docs/**', '**/*.md', 'supabase/data/**']
   workflow_dispatch:
 
 concurrency:
