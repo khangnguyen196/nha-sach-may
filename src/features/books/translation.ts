@@ -1,4 +1,5 @@
 import type { Locale } from 'next-intl'
+// Giữ `import type`: file này chạy cả ở client (form sửa sách của admin), còn queries.ts có 'server-only'.
 import type { BookDetail } from './queries'
 
 type TranslatedBook = Pick<BookDetail, 'language' | 'description_auto_translated' | 'description' | 'description_en'>

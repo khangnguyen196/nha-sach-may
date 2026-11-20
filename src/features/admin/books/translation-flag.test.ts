@@ -73,6 +73,7 @@ describe('shouldClearAutoTranslated', () => {
   })
 
   it('ngôn ngữ sách không có phần dịch (khác vi / en) → chỉ bỏ dấu khi ngôn ngữ đổi', () => {
+    // Truyền object thẳng: bookFormSchema chỉ nhận vi / en, cần 'fr' để kiểm nhánh translatedKey trả null.
     const before = { ...viBook, language: 'fr' }
     expect(shouldClearAutoTranslated(before, { ...before, description_en: 'Edited.' })).toBe(false)
     expect(shouldClearAutoTranslated(before, { ...before, description: 'Sửa.' })).toBe(false)

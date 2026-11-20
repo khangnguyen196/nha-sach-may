@@ -16,6 +16,7 @@ import { WarningLabelsField } from '../../warnings/components/warning-labels-fie
 import type { BookFormLabels } from '../form-props'
 import type { AdminBook } from '../queries'
 import { AUTHOR_ROLES, BOOK_FORMATS, BOOK_LANGUAGES, MAX_AUTHOR_ROWS } from '../schemas'
+
 type Option = { id: number; name: string }
 
 type Props = {
