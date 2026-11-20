@@ -251,6 +251,11 @@ create table public.books (
 alter table public.books add constraint books_content_warnings_reviewed_check
   check (cardinality(content_warnings) = 0 or content_warnings_reviewed_at is not null);
 
+-- Mô tả là bản dịch tự động (docs/plans/mo-ta-song-ngu.md): phần dịch theo language ('vi' → description_en, 'en' →
+-- description). Admin sửa phần dịch / đổi ngôn ngữ → app ghi false. Câu alter riêng để giống hệt migration
+-- 20261120120000_description_auto_translated.sql (supabase/migrations.test.ts).
+alter table public.books add column description_auto_translated boolean not null default false;
+
 create index books_category_idx   on public.books (category_id);
 create index books_publisher_idx  on public.books (publisher_id);
 create index books_created_idx    on public.books (created_at desc);
@@ -1149,7 +1154,8 @@ revoke update on public.books from anon, authenticated;
 grant  update (
   title, slug, subtitle, description, description_en, category_id, publisher_id, isbn,
   price, original_price, stock, cover_url, cover_width, page_count, format, language, published_year,
-  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at
+  weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at,
+  description_auto_translated
 ) on public.books to authenticated;
 
 -- VOUCHERS: chỉ admin xem/sửa (khách kiểm tra mã qua quote_order / place_order)
