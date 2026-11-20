@@ -56,6 +56,25 @@ gh workflow run data-check.yml --ref <nhánh> -f file=supabase/data/mo-ta-song-n
 |---|---|---|
 | `vong-3-sach-viet.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-3-sach-viet-v3.sql` | đã chạy production 2026-11-20 (67 dòng) |
 | `vong-3-kiem.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-3-kiem-v3.sql` | đã kiểm sau ghi: vi 72 / 71 / 67 / 67 |
+| `vong-3-hoan-tac.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-3-hoan-tac-v3.sql` | chưa chạy (chỉ khi cần quay lại) |
+| `vong-4-sach-en-1.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-4-sach-en-1-v3.sql` | chưa chạy (56 câu, id 192–249) |
+| `vong-4-sach-en-2.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-4-sach-en-2-v3.sql` | chưa chạy (56 câu, id 250–308) |
+| `vong-4-kiem.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-4-kiem-v2.sql` | chỉ đọc, chạy trước / giữa / sau |
+| `vong-4-hoan-tac.sql` | `D:/Bán sách-backup/mo-ta-song-ngu/vong-4-hoan-tac-v2.sql` | chưa chạy (chỉ khi cần quay lại) |
 
-Không lưu bản v1 / v2 và file chụp trước (`*-truoc.json`, ở thư mục backup). Comment trong file còn nhắc tên cũ
-(`-v3`, `vong-3-sach-viet.sql` "bị thay"): giữ nguyên văn bản đã chạy.
+Không lưu bản v1 / v2 và file chụp trước (`*-truoc.json`), bảng dịch (`*-ban-dich*.md`): ở thư mục backup. Comment
+trong `vong-3-sach-viet.sql` / `vong-3-kiem.sql` còn nhắc tên cũ (`-v3`, `vong-3-sach-viet.sql` "bị thay"): giữ nguyên
+văn bản đã chạy. File vòng 4 và `vong-3-hoan-tac.sql` nhắc đúng tên trong repo (bản trong repo là bản chốt, md5 y hệt
+bản backup ở cột Nguồn).
+
+## Vòng 4 (sách ngoại văn, `language = 'en'`)
+
+- 114 sách en có mô tả: ghi 112 (bản Anh gốc chép sang `description_en` ngay trong DB, bản dịch Việt vào
+  `description`, cờ `description_auto_translated = true`), chia 2 file theo id tăng dần.
+- **Không ghi SQL 217, 254** (giữ nguyên trên DB: trang vi và en đều hiện bản gốc tiếng Anh; chủ dự án tự viết mô tả
+  trong admin nếu muốn): 217 The Agatha Christie Collection, mô tả gốc chép từ Wikipedia (giấy phép CC BY-SA, có chú
+  thích [1] [2] [3], thông tin cũ); 254 The SPEED of Trust, mô tả gốc chỉ là ghi chú thư viện, không nói gì về sách.
+- Thứ tự chủ dự án chạy (SQL Editor), sau khi data-check xanh: `vong-4-kiem.sql` → `vong-4-sach-en-1.sql` →
+  `vong-4-kiem.sql` → `vong-4-sach-en-2.sql` → `vong-4-kiem.sql` (file kiểm ghi sẵn số kỳ vọng trước / sau từng file).
+- Hoàn tác, **chỉ khi cần**: `vong-4-hoan-tac.sql` (trả 112 sách về trước vòng 4), `vong-3-hoan-tac.sql` (trả 67 sách
+  Việt về trước vòng 3). Sách admin đã sửa tay bản dịch (cờ đã tắt) bị bỏ qua, khối kiểm báo bằng notice.

@@ -43,6 +43,44 @@ lưu form mở từ trước sẽ ghi đè bản dịch).
 
 Build (máy và CI) đọc catalog production: query trang sách chọn cột mới nên build lỗi tới khi bước 1 xong (đã xong 2026-11-20).
 
+## Vòng 4: sách ngoại văn (file trong repo, `supabase/data/mo-ta-song-ngu/`)
+
+- 117 sách `language = 'en'`, 114 có mô tả (3 cuốn không mô tả: 248, 281, 292). Dịch 114, **ghi SQL 112**:
+  `vong-4-sach-en-1.sql` (56 câu, id 192–249), `vong-4-sach-en-2.sql` (56 câu, id 250–308). Mỗi câu:
+  `description_en = description` (bản Anh gốc chép trong DB, giữ nguyên từng byte), `description` ← bản dịch Việt
+  (`$mota$`, NFC), cờ true; chỉ khi đúng id, `language = 'en'`, `description_en is null` và `md5(description)` = md5 lúc
+  đọc 2026-11-20. Khối `do $$` cuối mỗi file: đúng các id của file (`b.id in (…)`) có cờ + md5 bản gốc + md5 bản dịch,
+  khác 56 → raise → rollback cả file.
+- Quyết định: **không ghi SQL 217, 254** (giữ nguyên trên DB, trang vi và en đều hiện bản gốc tiếng Anh; chủ dự án tự
+  viết trong admin nếu muốn): 217 The Agatha Christie Collection, mô tả gốc chép từ Wikipedia (CC BY-SA, chú thích
+  [1] [2] [3], thông tin cũ "tính đến năm 2011"); 254 The SPEED of Trust, mô tả gốc chỉ là ghi chú thư viện "Part of
+  NWTC's Talent Development collection.". Sau cả 2 file: còn đúng 2 sách en có mô tả mà chưa có `description_en`
+  (217, 254).
+- Thứ tự chủ dự án chạy (SQL Editor, sau khi CI data-check xanh): `vong-4-kiem.sql` → `vong-4-sach-en-1.sql` →
+  `vong-4-kiem.sql` → `vong-4-sach-en-2.sql` → `vong-4-kiem.sql`. Kỳ vọng (ghi trong file kiểm): trước en 117 / 114 /
+  0 / 0, sau file 1 en 117 / 114 / 56 / 56, sau file 2 en 117 / 114 / 112 / 112; vi luôn 72 / 71 / 67 / 67.
+- Hoàn tác, **chỉ khi cần**: `vong-4-hoan-tac.sql` (112 câu, `description` ← bản Anh, `description_en` ← null, cờ
+  false), `vong-3-hoan-tac.sql` (67 câu, `description_en` ← null, cờ false). Sách admin đã sửa tay bản dịch (cờ đã tắt)
+  bị bỏ qua, khối kiểm báo bằng notice.
+- Bản chốt trong repo = bản backup (`D:/Bán sách-backup/mo-ta-song-ngu/`, md5 y hệt): `vong-4-sach-en-{1,2}-v3.sql`
+  (khác v2 chỉ ở khối kiểm thêm `b.id in (…)` để data-check (d) kiểm được id của từng file), `vong-4-kiem-v2.sql`,
+  `vong-4-hoan-tac-v2.sql`, `vong-3-hoan-tac-v3.sql` (= v2, chỉ comment đổi tên tham chiếu sang `vong-3-sach-viet.sql`).
+  Bảng dịch `vong-4-ban-dich-v2.md` và ảnh chụp trước `vong-4-truoc.json` chỉ ở backup.
+
+### Cần chủ dự án biết (vòng 4, chi tiết ở `vong-4-ban-dich-v2.md`)
+
+- Lời hứa về hàng thật mà cửa hàng có thể không giao đúng (dịch đúng như gốc; giữ / bỏ / sửa trong admin): 213 "hộp bìa
+  vải" của ấn bản có chữ ký, 216 "Ấn bản giới hạn 800 bản", 280 Sapiens "Ấn bản chính thức tại Mỹ, minh họa màu".
+- 244 Atomic Habits: dòng đầu là quảng cáo đặt trước sách khác (ngày 9/12/2025, đã qua), giữ nguyên theo quy tắc không
+  thêm bớt. 234 Built to Last: bản gốc bị cắt giữa chữ, bản dịch dừng ở chỗ cắt. 253, 219: nói về ấn bản sách điện tử
+  (cửa hàng bán sách in).
+- Lỗi chính tả trong bản Anh gốc (VD 192, 199, 206, 211, 213, 225, 230, 236, 242, 244, 263, 264, 268, 278, 283, 289,
+  297) vẫn hiện ở `/en` vì `description_en` = bản gốc nguyên byte; bản dịch Việt theo nghĩa đúng. Sửa trong admin ô mô
+  tả tiếng Anh (với sách en là phần gốc, sửa không bỏ dấu "Bản dịch tự động").
+- Sửa mô tả trong admin sau khi chạy: không cần chạy lại file ghi; nếu chạy lại thì khối kiểm có thể raise (rollback,
+  không ghi gì). Trong lúc chạy SQL: không mở / lưu form sửa sách trong admin.
+- Muốn bỏ thêm cuốn nào khỏi vòng 4: báo trước khi chạy, file được sinh lại không có cuốn đó.
+
 ## data-check (CI chạy thử file SQL dữ liệu, vòng 4a)
 
 Thay việc gửi Claude chat chạy thử: file SQL dữ liệu lưu ở `supabase/data/mo-ta-song-ngu/` (README ở đó),
