@@ -116,6 +116,19 @@ describe('khu khuyến mãi (promo-*)', () => {
       })
     }
   }
+
+  it('component nền promo dùng vòng focus promo-accent, không dùng focus-ring', () => {
+    const promoFiles = readdirSync(join(SRC, 'features/home'), { withFileTypes: true, recursive: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.tsx'))
+      .map((entry) => join(entry.parentPath, entry.name))
+      .filter((file) => readFileSync(file, 'utf8').includes('from-promo-from'))
+    expect(promoFiles.length).toBeGreaterThan(0)
+    for (const file of promoFiles) {
+      const source = readFileSync(file, 'utf8')
+      expect(source, relative(SRC, file)).toContain('ring-promo-accent')
+      expect(source, relative(SRC, file)).not.toContain('ring-focus-ring')
+    }
+  })
 })
 
 describe('ô "Tính năng demo" (demo-note.tsx) trên surface-raised', () => {

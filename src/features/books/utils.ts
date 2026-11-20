@@ -57,6 +57,34 @@ export function homeShelves<T extends { id: number }>(
   return { featured, bestselling, newArrivals, foreign }
 }
 
+/**
+ * Sách của một thẻ ở hàng khuyến mãi trang chủ (lưới 2×2): bìa nét trước rồi lấp như kệ (fillShelf), đủ `size` cuốn
+ * mới hiện, thiếu thì rỗng (ẩn cả thẻ). Thẻ được trùng sách với kệ bên dưới (chủ dự án duyệt 2026-11-20): không loại
+ * sách đã hiện ở kệ.
+ */
+export function promoCardBooks<T extends { id: number }>(sharp: readonly T[], all: readonly T[], size: number): T[] {
+  const books = fillShelf(sharp, all, size)
+  return books.length < size ? [] : books
+}
+
+type SaleCandidate = { id: number; price: number; original_price: number | null; stock: number }
+
+/**
+ * Thẻ "Đang giảm giá": chỉ sách còn hàng có giá gốc cao hơn giá bán (PostgREST không so được hai cột → lọc ở đây),
+ * xếp % giảm từ cao xuống (bằng nhau giữ thứ tự query), bìa nét trước (`sharp`), đủ `size` cuốn mới hiện.
+ */
+export function saleCardBooks<T extends SaleCandidate>(sharp: readonly T[], all: readonly T[], size: number): T[] {
+  const byDiscount = (books: readonly T[]) =>
+    books
+      .flatMap((book) => {
+        const percent = discountPercent(book.price, book.original_price)
+        return percent !== null && book.stock > 0 ? [{ book, percent }] : []
+      })
+      .sort((a, b) => b.percent - a.percent)
+      .map(({ book }) => book)
+  return promoCardBooks(byDiscount(sharp), byDiscount(all), size)
+}
+
 /** % giảm so với giá gốc, làm tròn; không giảm (hoặc dữ liệu lạ) → null */
 export function discountPercent(price: number, originalPrice: number | null): number | null {
   if (!originalPrice || originalPrice <= price) return null

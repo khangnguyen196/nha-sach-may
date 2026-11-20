@@ -6,7 +6,7 @@ import { bookBlockKeys } from '@/features/prefs/blocks'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
-import { homeShelves, visibleBooksFilter, visibleCategoryIds } from './utils'
+import { homeShelves, promoCardBooks, saleCardBooks, visibleBooksFilter, visibleCategoryIds } from './utils'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -49,6 +49,15 @@ const SHELF_SIZE = 12
 const SHELF_MIN = { featured: 4, bestselling: 6 }
 /** Ứng viên mỗi query của kệ: dư để kệ sau vẫn đầy sau khi loại sách đã hiện ở kệ trên (homeShelves) */
 const SHELF_CANDIDATES = SHELF_SIZE * 3
+/** Số sách của mỗi thẻ ở hàng khuyến mãi (lưới 2×2) */
+const PROMO_CARD_SIZE = 4
+/**
+ * Ứng viên của thẻ "Đang giảm giá" (mỗi query: bìa nét / mọi bìa): PostgREST không so được price với original_price nên
+ * lấy sách có giá gốc, còn hàng, mới nhất trước, rồi lọc + xếp % giảm trong bộ nhớ (saleCardBooks). Có giới hạn, không
+ * tải cả catalog; % giảm cao nhất chỉ tính trong các ứng viên này (production 2026-11-20: 125 sách đang giảm còn hàng,
+ * 84 bìa nét).
+ */
+const SALE_CANDIDATES = 48
 
 function bookCards() {
   return createPublicClient().from('books').select(BOOK_CARD_COLUMNS)
@@ -74,6 +83,8 @@ function rows({ data, error }: BookCardResult, context: string) {
  * query chạy song song.
  * Chỉ sách thuộc danh mục đang hiện (`visibleCategoryIds`): sách đang bán nhưng nằm trong danh mục admin ẩn không lên
  * kệ (trước đây kệ Bán chạy trên CI toàn sách e2e của danh mục ẩn, bị xóa giữa chừng → link chết, prefetch 404).
+ * `promo`: sách của các thẻ ở hàng khuyến mãi đầu trang (Đang giảm giá, Bán chạy, Sách ngoại văn; 4 cuốn, bìa nét
+ * trước, thiếu thì rỗng = ẩn thẻ). Thẻ được trùng sách với kệ (ngoại lệ, CLAUDE.md → Design system).
  */
 export async function getHomeShelves(visibleCategoryIds: number[], foreignCategoryIds: number[]) {
   'use cache'
@@ -85,6 +96,20 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
   const featured = () => shelfBooks().eq('is_featured', true)
   const vietnamese = () => shelfBooks().eq('language', 'vi')
   const foreign = () => bookCards().in('category_id', foreignCategoryIds.filter((id) => visible.has(id)))
+  const bestsellingFirst = (query: BookCardQuery) =>
+    query
+      .gt('sold_count', 0)
+      .order('sold_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id')
+      .limit(SHELF_CANDIDATES)
+  const onSale = (query: BookCardQuery) =>
+    query
+      .not('original_price', 'is', null)
+      .gt('stock', 0)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(SALE_CANDIDATES)
 
   const featuredVi = () => featured().eq('language', 'vi')
 
@@ -94,40 +119,51 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
     featuredSharp,
     featuredAll,
     bestselling,
+    bestsellingSharp,
     newSharp,
     newAll,
     foreignSharp,
     foreignAll,
+    saleSharp,
+    saleAll,
   ] = await Promise.all([
     newestFirst(sharpOnly(featuredVi())),
     newestFirst(featuredVi()),
     newestFirst(sharpOnly(featured())),
     newestFirst(featured()),
-    shelfBooks()
-      .gt('sold_count', 0)
-      .order('sold_count', { ascending: false })
-      .order('created_at', { ascending: false })
-      .order('id')
-      .limit(SHELF_CANDIDATES),
+    bestsellingFirst(shelfBooks()),
+    bestsellingFirst(sharpOnly(shelfBooks())),
     newestFirst(sharpOnly(vietnamese())),
     newestFirst(vietnamese()),
     newestFirst(sharpOnly(foreign())),
     newestFirst(foreign()),
+    onSale(sharpOnly(shelfBooks())),
+    onSale(shelfBooks()),
   ])
+
+  const bestsellingAll = rows(bestselling, 'bestselling')
+  const foreignSharpRows = rows(foreignSharp, 'foreign')
+  const foreignAllRows = rows(foreignAll, 'foreign')
+  const promo = {
+    sale: saleCardBooks(rows(saleSharp, 'sale'), rows(saleAll, 'sale'), PROMO_CARD_SIZE),
+    bestselling: promoCardBooks(rows(bestsellingSharp, 'bestselling'), bestsellingAll, PROMO_CARD_SIZE),
+    foreign: promoCardBooks(foreignSharpRows, foreignAllRows, PROMO_CARD_SIZE),
+  }
 
   const shelves = homeShelves(
     {
       featuredVi: { sharp: rows(featuredViSharp, 'featured vi'), all: rows(featuredViAll, 'featured vi') },
       featured: { sharp: rows(featuredSharp, 'featured'), all: rows(featuredAll, 'featured') },
-      bestselling: rows(bestselling, 'bestselling'),
+      bestselling: bestsellingAll,
       newArrivals: { sharp: rows(newSharp, 'new'), all: rows(newAll, 'new') },
-      foreign: { sharp: rows(foreignSharp, 'foreign'), all: rows(foreignAll, 'foreign') },
+      foreign: { sharp: foreignSharpRows, all: foreignAllRows },
     },
     SHELF_SIZE,
     SHELF_MIN,
   )
-  tagBooks(Object.values(shelves).flat())
-  return shelves
+  const shown = [...Object.values(shelves), ...Object.values(promo)].flat()
+  tagBooks([...new Map(shown.map((book) => [book.id, book])).values()])
+  return { ...shelves, promo }
 }
 
 export type BookCard = Awaited<ReturnType<typeof getHomeShelves>>['newArrivals'][number]

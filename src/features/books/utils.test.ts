@@ -5,6 +5,8 @@ import {
   homeShelves,
   inVisibleCategories,
   paginationRange,
+  promoCardBooks,
+  saleCardBooks,
   showRelatedShelf,
   splitParagraphs,
   truncateText,
@@ -87,6 +89,58 @@ describe('fillShelf', () => {
 
   it('bỏ id trong exclude (đã hiện ở kệ trên), vẫn lấp đủ bằng sách sau', () => {
     expect(fillShelf(books(5, 2), books(1, 2, 3, 4, 5), 3, new Set([5, 1])).map((b) => b.id)).toEqual([2, 3, 4])
+  })
+})
+
+describe('promoCardBooks (thẻ 2×2 ở hàng khuyến mãi)', () => {
+  const books = (...ids: number[]) => ids.map((id) => ({ id }))
+  const ids = (list: { id: number }[]) => list.map((b) => b.id)
+
+  it('bìa nét trước, lấp bằng danh sách thường, không trùng', () => {
+    expect(ids(promoCardBooks(books(7, 3), books(1, 3, 5, 7, 9), 4))).toEqual([7, 3, 1, 5])
+  })
+
+  it('thiếu sách → rỗng (ẩn thẻ)', () => {
+    expect(promoCardBooks(books(1), books(1, 2, 3), 4)).toEqual([])
+  })
+})
+
+describe('saleCardBooks (thẻ Đang giảm giá)', () => {
+  const book = (id: number, price: number, original_price: number | null, stock = 10) => ({
+    id,
+    price,
+    original_price,
+    stock,
+  })
+  const ids = (list: { id: number }[]) => list.map((b) => b.id)
+
+  it('lọc: chỉ sách còn hàng có giá gốc cao hơn giá bán', () => {
+    const all = [
+      book(1, 80_000, 100_000),
+      book(2, 80_000, null),
+      book(3, 80_000, 80_000),
+      book(4, 70_000, 100_000, 0),
+      book(5, 90_000, 100_000),
+      book(6, 60_000, 100_000),
+      book(7, 50_000, 100_000),
+    ]
+    expect(ids(saleCardBooks([], all, 4))).toEqual([7, 6, 1, 5])
+  })
+
+  it('xếp % giảm từ cao xuống, bằng nhau giữ thứ tự query', () => {
+    const all = [book(1, 90_000, 100_000), book(2, 75_000, 100_000), book(3, 75_000, 100_000), book(4, 50_000, 100_000)]
+    expect(ids(saleCardBooks([], all, 4))).toEqual([4, 2, 3, 1])
+  })
+
+  it('bìa nét trước (kể cả % giảm thấp hơn), rồi lấp bằng sách bìa mờ theo % giảm, không trùng', () => {
+    const sharp = [book(1, 90_000, 100_000), book(2, 80_000, 100_000)]
+    const all = [book(3, 50_000, 100_000), ...sharp, book(4, 60_000, 100_000), book(5, 95_000, 100_000)]
+    expect(ids(saleCardBooks(sharp, all, 4))).toEqual([2, 1, 3, 4])
+  })
+
+  it('ít hơn 4 cuốn đang giảm → rỗng (ẩn thẻ)', () => {
+    const all = [book(1, 50_000, 100_000), book(2, 60_000, 100_000), book(3, 70_000, 100_000), book(4, 70_000, null)]
+    expect(saleCardBooks(all, all, 4)).toEqual([])
   })
 })
 
