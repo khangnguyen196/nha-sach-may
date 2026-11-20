@@ -34,6 +34,14 @@ describe('showAutoTranslatedNote', () => {
     }
   })
 
+  it('sách en, description_en trống / null → /en hiện description (bản dịch, fallback của localize) → có dòng', () => {
+    for (const description_en of [null, '', '  ']) {
+      const book = { language: 'en', description_auto_translated: true, description: VI, description_en }
+      expect(showAutoTranslatedNote(book, 'en')).toBe(true)
+      expect(showAutoTranslatedNote(book, 'vi')).toBe(true)
+    }
+  })
+
   it('ngôn ngữ sách khác vi / en → không có dòng', () => {
     const book = { language: 'fr', description_auto_translated: true, description: VI, description_en: EN }
     expect(showAutoTranslatedNote(book, 'vi')).toBe(false)
