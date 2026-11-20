@@ -8,10 +8,12 @@
  *   primary        = màu "đèn đọc sách" (CTA, giá, link); focus-ring = vòng focus (từ primary)
  *   accent, muted  = surface-raised (nền hover / nền phụ) — KHÔNG phải màu nhấn
  *   muted-foreground = chữ phụ (tác giả, mô tả ngắn)
- * Token riêng: surface, surface-raised, subtle, sale, success, focus-ring.
- * Dark là mặc định (:root); .light ghi đè. Không dùng mã màu ở component.
- * .light phải nằm trên <html> (next-themes làm vậy): token alias như --card: var(--surface)
- * được tính ở phần tử khai báo, đặt .light trên phần tử con sẽ không đổi được alias.
+ * Token riêng: surface, surface-raised, subtle, sale, sale-foreground, success, focus-ring; khu khuyến mãi trang chủ:
+ * promo-from / promo-to (nền chuyển màu), promo-foreground, promo-accent (số nổi + vòng focus đặc trong thẻ promo:
+ * focus-ring tối 50% trên nền promo chỉ ~2.5–2.9:1), promo-muted.
+ * Sáng là mặc định (:root, đợt trang-chu-khuyen-mai); .dark ghi đè. Không dùng mã màu ở component.
+ * .dark phải nằm trên <html> (next-themes làm vậy): token alias như --card: var(--surface)
+ * được tính ở phần tử khai báo, đặt .dark trên phần tử con sẽ không đổi được alias.
  */
 
 @custom-variant dark (&:is(.dark *));
@@ -55,7 +57,13 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-subtle: var(--subtle);
   --color-sale: var(--sale);
+  --color-sale-foreground: var(--sale-foreground);
   --color-success: var(--success);
+  --color-promo-from: var(--promo-from);
+  --color-promo-to: var(--promo-to);
+  --color-promo-foreground: var(--promo-foreground);
+  --color-promo-accent: var(--promo-accent);
+  --color-promo-muted: var(--promo-muted);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -99,8 +107,53 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --radius: 0.625rem;
+
+  --background: #ffffff;
+  --foreground: #1c1917;
+  --surface: #f8f6f1;
+  --surface-raised: #f3eee6;
+  --subtle: #6b6560;
+  --sale: #b83c0b;
+  --sale-foreground: #ffffff;
+  --success: #15803d;
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --primary: #9a5b14;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-raised);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-raised);
+  --muted-foreground: #57534e;
+  --accent: var(--surface-raised);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--sale);
+  --border: rgb(0 0 0 / 0.12);
+  --input: rgb(0 0 0 / 0.22);
+  --ring: var(--primary);
+  /* Vòng focus (ring-focus-ring / outline-focus-ring): sáng = primary 100%, vì primary 50% trên nền sáng chỉ ~2:1;
+     tối ghi đè = primary 50% (đủ 3:1 trên nền tối). WCAG 1.4.11 cần 3:1, Vitest src/app/globals.test.ts */
+  --focus-ring: var(--primary);
+
+  --glow: none;
+
+  --promo-from: #fff4e2;
+  --promo-to: #fde3c0;
+  --promo-foreground: #1c1917;
+  --promo-accent: #8a4f0f;
+  --promo-muted: #5b4636;
+
+  /* Mã QR (VietQR): app ngân hàng cần module tối trên nền sáng → giống nhau ở cả hai theme */
+  --qr: #000000;
+  --qr-background: #ffffff;
+}
+
+.dark {
+  color-scheme: dark;
 
   --background: #0b0b0c;
   --foreground: #ededed;
@@ -108,54 +161,23 @@
   --surface-raised: #1c1c1f;
   --subtle: #8a8a8a;
   --sale: #f87171;
+  --sale-foreground: #1a0606;
   --success: #4ade80;
 
-  --card: var(--surface);
-  --card-foreground: var(--foreground);
-  --popover: var(--surface);
-  --popover-foreground: var(--foreground);
   --primary: #f2b66d;
   --primary-foreground: #1a1206;
-  --secondary: var(--surface-raised);
-  --secondary-foreground: var(--foreground);
-  --muted: var(--surface-raised);
   --muted-foreground: #a3a3a3;
-  --accent: var(--surface-raised);
-  --accent-foreground: var(--foreground);
-  --destructive: var(--sale);
   --border: rgb(255 255 255 / 0.08);
   --input: rgb(255 255 255 / 0.14);
-  --ring: var(--primary);
-  /* Vòng focus (ring-focus-ring / outline-focus-ring): tối = primary 50% (đủ 3:1 trên nền tối); sáng ghi đè = primary
-     100%, vì primary 50% trên nền sáng chỉ ~2:1 (WCAG 1.4.11 cần 3:1, Vitest src/app/globals.test.ts) */
   --focus-ring: color-mix(in oklab, var(--primary) 50%, transparent);
 
   --glow: 0 0 24px color-mix(in oklab, var(--primary) 12%, transparent);
 
-  /* Mã QR (VietQR): app ngân hàng cần module tối trên nền sáng → giống nhau ở cả hai theme */
-  --qr: #000000;
-  --qr-background: #ffffff;
-}
-
-.light {
-  color-scheme: light;
-
-  --background: #f7f5f0;
-  --foreground: #1c1917;
-  --surface: #ffffff;
-  --surface-raised: #efebe3;
-  --subtle: #6b6560;
-  --sale: #c2410c;
-  --success: #15803d;
-
-  --primary: #9a5b14;
-  --primary-foreground: #ffffff;
-  --muted-foreground: #57534e;
-  --border: rgb(0 0 0 / 0.1);
-  --input: rgb(0 0 0 / 0.16);
-  --focus-ring: var(--primary);
-
-  --glow: none;
+  --promo-from: #2a1d0f;
+  --promo-to: #38260f;
+  --promo-foreground: #f3ece2;
+  --promo-accent: #f2b66d;
+  --promo-muted: #cdbba5;
 }
 
 @layer base {
@@ -194,8 +216,8 @@
  * - Máy tính: hover + focus-visible. Điện thoại: chỉ :active, nửa góc, cùng mức phóng to, nhả tay là về (không giữ
  *   nghiêng sau khi chạm).
  * - Giảm chuyển động: không nghiêng, không di chuyển, không phóng to, chỉ đổi bóng.
- * - Bóng: shadow-lg + shadow-glow (token của @theme, trỏ về --glow). --glow sáng là `none`, không ghép vào danh sách bóng
- *   được → giao diện sáng có quy tắc riêng, chỉ shadow-lg.
+ * - Bóng: shadow-lg; giao diện tối thêm shadow-glow (token của @theme, trỏ về --glow). --glow sáng là `none`, không ghép
+ *   vào danh sách bóng được → giao diện tối có quy tắc riêng.
  * - Xếp chồng: link luôn position: relative (luôn, không chỉ lúc nghiêng: sr-only absolute bên trong giữ cùng khung chứa),
  *   z-index 1 khi nghiêng → bìa phóng to nằm trên thẻ bên cạnh. Ô mờ BlockedVeil (absolute, đứng sau link) vẫn đè link
  *   lúc nghỉ; thẻ bị che không hover / focus được (link visibility: hidden).
@@ -221,11 +243,11 @@
       z-index: 1;
     }
     .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
-      box-shadow: --theme(--shadow-lg), --theme(--shadow-glow);
+      box-shadow: --theme(--shadow-lg);
       transition-duration: 240ms;
     }
-    .light .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
-      box-shadow: --theme(--shadow-lg);
+    .dark .book-tilt:is(:hover, :focus-visible) .book-tilt-cover {
+      box-shadow: --theme(--shadow-lg), --theme(--shadow-glow);
     }
   }
 

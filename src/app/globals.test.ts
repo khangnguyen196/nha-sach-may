@@ -17,10 +17,11 @@ function block(selector: string): Record<string, string> {
   )
 }
 
-const dark = block(':root')
-// .light nằm trên <html> cùng phần tử với :root → token .light không ghi đè thì giữ giá trị của :root
-const light = { ...dark, ...block('.light') }
-const THEMES = { dark, light }
+// Sáng là mặc định (:root); .dark nằm trên <html> cùng phần tử với :root → token .dark không ghi đè thì giữ giá trị của
+// :root (alias như --card: var(--surface))
+const light = block(':root')
+const dark = { ...light, ...block('.dark') }
+const THEMES = { light, dark }
 
 type Rgb = [number, number, number]
 
@@ -75,10 +76,46 @@ describe('vòng focus (token focus-ring) ≥ 3:1 với nền', () => {
     }
   }
 
-  it('tối giữ như trước (primary 50%), sáng = primary', () => {
+  it('tối = primary 50%, sáng = primary', () => {
     expect(focusAlpha(dark['focus-ring'])).toBe(0.5)
     expect(focusAlpha(light['focus-ring'])).toBe(1)
   })
+})
+
+describe('nhãn giảm giá (sale, sale-foreground)', () => {
+  for (const [theme, tokens] of Object.entries(THEMES)) {
+    it(`${theme}: chữ sale ≥ 4.5:1 trên background / surface / surface-raised, sale-foreground ≥ 4.5:1 trên nền sale`, () => {
+      for (const background of BACKGROUNDS) {
+        expect(contrast(hex(tokens, 'sale'), hex(tokens, background)), background).toBeGreaterThanOrEqual(4.5)
+      }
+      expect(contrast(hex(tokens, 'sale-foreground'), hex(tokens, 'sale'))).toBeGreaterThanOrEqual(4.5)
+    })
+  }
+
+  it('sale sáng = #b83c0b (chủ dự án chọn 2026-11-20)', () => {
+    expect(light.sale).toBe('#b83c0b')
+  })
+})
+
+// Thẻ promo ở hàng khuyến mãi trang chủ (features/home): nền chuyển màu promo-from → promo-to, mọi điểm của nền nằm
+// giữa hai đầu nên kiểm ở hai đầu là đủ
+const PROMO_BACKGROUNDS = ['promo-from', 'promo-to']
+
+describe('khu khuyến mãi (promo-*)', () => {
+  for (const [theme, tokens] of Object.entries(THEMES)) {
+    for (const background of PROMO_BACKGROUNDS) {
+      it(`${theme}: chữ promo-foreground / promo-accent / promo-muted ≥ 4.5:1 trên ${background}`, () => {
+        const bg = hex(tokens, background)
+        for (const text of ['promo-foreground', 'promo-accent', 'promo-muted']) {
+          expect(contrast(hex(tokens, text), bg), text).toBeGreaterThanOrEqual(4.5)
+        }
+      })
+
+      it(`${theme}: vòng focus trong thẻ promo (promo-accent đặc) ≥ 3:1 trên ${background}`, () => {
+        expect(contrast(hex(tokens, 'promo-accent'), hex(tokens, background))).toBeGreaterThanOrEqual(3)
+      })
+    }
+  }
 })
 
 describe('ô "Tính năng demo" (demo-note.tsx) trên surface-raised', () => {
