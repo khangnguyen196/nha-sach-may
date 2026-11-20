@@ -19,4 +19,6 @@ grant  update (
   weight_grams, dimensions, is_active, is_featured, content_warnings, content_warnings_reviewed_at
 ) on public.books to authenticated;
 
+notify pgrst, 'reload schema';
+
 commit;
