@@ -72,6 +72,13 @@ describe('shouldClearAutoTranslated', () => {
     expect(shouldClearAutoTranslated(enBook, submit({ language: 'vi' }))).toBe(true)
   })
 
+  it('ngôn ngữ sách không có phần dịch (khác vi / en) → chỉ bỏ dấu khi ngôn ngữ đổi', () => {
+    const before = { ...viBook, language: 'fr' }
+    expect(shouldClearAutoTranslated(before, { ...before, description_en: 'Edited.' })).toBe(false)
+    expect(shouldClearAutoTranslated(before, { ...before, description: 'Sửa.' })).toBe(false)
+    expect(shouldClearAutoTranslated(before, { ...before, language: 'vi' })).toBe(true)
+  })
+
   it('(e) cờ false → không đổi gì, kể cả khi sửa phần dịch hoặc đổi ngôn ngữ', () => {
     const before = { ...viBook, description_auto_translated: false }
     expect(shouldClearAutoTranslated(before, submit({}))).toBe(false)

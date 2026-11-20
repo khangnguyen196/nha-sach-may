@@ -6,6 +6,7 @@ import { CheckboxField } from '@/components/admin/checkbox-field'
 import { Button } from '@/components/ui/button'
 import { FormAlert, SelectField, TextAreaField, TextField } from '@/components/ui/field'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { translatedKey } from '@/features/books/translation'
 import type { Result } from '@/lib/errors'
 import type { FormMessages } from '@/lib/form-messages'
 import { fillTemplate } from '@/lib/template'
@@ -15,8 +16,6 @@ import { WarningLabelsField } from '../../warnings/components/warning-labels-fie
 import type { BookFormLabels } from '../form-props'
 import type { AdminBook } from '../queries'
 import { AUTHOR_ROLES, BOOK_FORMATS, BOOK_LANGUAGES, MAX_AUTHOR_ROWS } from '../schemas'
-import { translatedKey } from '../translation-flag'
-
 type Option = { id: number; name: string }
 
 type Props = {
