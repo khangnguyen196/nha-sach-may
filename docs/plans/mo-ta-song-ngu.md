@@ -51,23 +51,34 @@ thử trên Supabase local của CI. **Job đỏ thì không đưa file cho ch�
 
 - Quy ước tên: file GHI `vong-N-sach-*.sql`; file kiểm (chỉ đọc) `vong-N-kiem.sql`; file hoàn tác
   `vong-N-hoan-tac.sql` (một file cho cả vòng N). Workflow tự nhận file theo tên, gom theo vòng (cùng thư mục + N).
-  Cột được ghi: vòng 3 `description_en, description_auto_translated`; vòng 4 thêm `description`; vòng khác khai báo
-  `-- data-check: cot-duoc-ghi = …` trong file ghi.
+  Không có xanh giả do đặt sai tên (vòng 4c): mọi `*.sql` dưới `supabase/data/` phải khớp một trong 3 mẫu, file kiểm /
+  hoàn tác phải có file ghi cùng thư mục + N, 0 file ghi → đỏ (cả push lẫn chạy tay; `data-check.sh --plan`).
+  Cột được ghi: thư mục `mo-ta-song-ngu` mặc định vòng 3 `description_en, description_auto_translated`, vòng 4 thêm
+  `description`; vòng khác / thư mục khác bắt buộc khai báo `-- data-check: cot-duoc-ghi = …` trong mọi file ghi.
 - Chạy: tự động khi push nhánh khác main có đổi `supabase/data/**` (hoặc workflow / `schema.sql` / `seed*.sql`), mọi
   file ghi; chạy tay: `gh workflow run data-check.yml --ref <nhánh> -f file=supabase/data/mo-ta-song-ngu/<file ghi>`
-  (chỉ file đó). Đọc kết quả: `gh run view <run>` (bảng tóm tắt ở Summary, chỉ id và số đếm).
-- Các bước: (d) chữ trong file (NFC, không ký tự ẩn / điều khiển / CR, `$mota$` đúng cặp, mỗi id một câu) → dựng
-  Supabase local từ `schema.sql` + seed của nhánh (lỗi hạ tầng như "port 54322 already in use" → thử lại tối đa 3 lần)
-  → lấy đúng các sách file nhắc tới từ production qua REST công khai (khóa publishable như build của `ci.yml`, che
-  trong log; không service role) → nạp giữ nguyên id → chế độ theo dữ liệu production:
-  - **CHƯA GHI** (mọi dòng `description_en` null + cờ false): (e) sửa 1 ký tự mô tả gốc → file phải lỗi P0001 (raise
-    của khối kiểm cả lô), 0 dòng đổi; (a) lần 1 số dòng đổi = số câu UPDATE; (c) cột ngoài danh sách được ghi giữ
-    nguyên md5, số dòng mọi bảng không đổi; (b) lần 2 = 0 dòng; (f) có hoàn tác: hoàn tác → về đúng bản chụp đầu →
-    ghi lại → lần 2 = 0.
-  - **ĐÃ GHI** (mọi dòng cờ true): (a) lần 1 = 0 dòng, (b) lần 2 = 0 dòng; có hoàn tác: hoàn tác → trạng thái trước
-    ghi (`description_en` null, cờ false) → (e) → ghi lại (= số câu) → khớp production → lần 2 = 0; không có hoàn tác
-    thì (e) (f) bỏ qua, ghi lý do.
-  - Lẫn lộn → đỏ, in id lệch. "Dòng đổi" đếm bằng so md5 từng dòng theo id, không tin command tag.
+  (chỉ file đó, đường hoàn tác bỏ qua). Đọc kết quả: `gh run view <run>` (bảng tóm tắt ở Summary, chỉ id và số đếm).
+- Các bước: (d) chữ trong file (NFC; không ký tự ẩn: mọi `\p{Cf}`, `\p{Zl}`, `\p{Zp}`, `\p{Zs}` khác U+0020; không ký
+  tự điều khiển trừ LF, không CR; `$mota$` đúng cặp, mỗi id một câu; khối `do $$` của từng file liệt kê đúng id các
+  câu UPDATE của file và so với đúng số câu) → dựng Supabase local từ `schema.sql` + seed của nhánh (lỗi hạ tầng như
+  "port 54322 already in use" → thử lại tối đa 3 lần) → lấy đúng các sách file nhắc tới từ production qua REST công
+  khai (khóa publishable như build của `ci.yml`, che trong log; `data-check.sh` tự từ chối khóa không phải publishable
+  / anon; không service role) → nạp giữ nguyên id → chế độ theo **từng file ghi** (chỉ các id của file):
+  - **CHƯA GHI** (mọi dòng của file `description_en` null + cờ false): (e) sửa 1 ký tự mô tả gốc → file phải lỗi P0001
+    (raise của khối kiểm cả lô), 0 dòng đổi; (a) lần 1 số dòng đổi = số câu UPDATE; (c) cột ngoài danh sách được ghi
+    giữ nguyên md5, số dòng mọi bảng không đổi; (b) lần 2 = 0 dòng; (f) hoàn tác → về đúng bản chụp đầu → hoàn tác
+    lần 2 = 0 dòng → ghi lại → lần 2 = 0.
+  - **ĐÃ GHI** (mọi dòng của file cờ true): (a) lần 1 = 0 dòng, (b) lần 2 = 0 dòng; (f) hoàn tác → trạng thái trước
+    ghi (`description_en` null, cờ false) → hoàn tác lần 2 = 0 → (e) → ghi lại (= số câu) → khớp bản chụp production đã
+    nạp → lần 2 = 0.
+  - (f) (và (e) của ĐÃ GHI) chạy ở mức vòng chỉ khi có file hoàn tác, kiểm đủ file ghi của vòng và mọi file cùng chế
+    độ; không thì bỏ qua, ghi lý do (không đỏ). Vòng có file đã chạy production + file chưa chạy (VD vòng 4: file 1 đã
+    chạy, file 2 chưa): mỗi file kiểm riêng theo chế độ của nó, không đỏ "lẫn lộn"; muốn chạy riêng: chạy tay
+    `-f file=…` từng file.
+  - Lẫn lộn trong **một** file → đỏ, in id lệch. "Dòng đổi" đếm bằng so md5 từng dòng theo id, không tin command tag.
+- Vòng 4: bản gốc tiếng Anh chép trong DB (`description_en = description`, file không chứa chuỗi bản gốc) nên (d) chỉ
+  kiểm bản dịch Việt; câu ghi có điều kiện `md5(description)` (bản gốc). File kiểm không select cột mô tả (log CI công
+  khai).
 - Giới hạn: dữ liệu production lấy qua REST công khai nên chỉ thấy sách `is_active` (sách ẩn → đỏ "thiếu"); anon đọc
   được mọi cột của `books` (kiểm 2026-11-20) nên các cột kiểm là dữ liệu thật, trừ `category_id` / `publisher_id` (null:
   DB local không có danh mục / NXB thật) và `search_text` (trigger tự sinh, không có tác giả). Vòng đã ghi mà sau đó
