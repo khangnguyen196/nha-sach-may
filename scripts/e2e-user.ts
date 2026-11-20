@@ -554,6 +554,10 @@ export async function createE2eBook({
   stock = 10,
   active = true,
   titleTag,
+  description = null,
+  descriptionEn = null,
+  language = 'vi',
+  autoTranslated = false,
 }: {
   /** null: sách không có danh mục (vẫn lên danh sách, docs/plans/sau-ux.md mục 6 ★6c) */
   categoryId: number | null
@@ -564,6 +568,11 @@ export async function createE2eBook({
   active?: boolean
   /** Cụm thêm vào tên sách, VD `[mock:warn-self-harm]` điều khiển AI giả của gợi ý cảnh báo (features/warnings/mock.ts) */
   titleTag?: string
+  /** Mô tả hai ngôn ngữ + cờ bản dịch tự động (docs/plans/mo-ta-song-ngu.md) */
+  description?: string | null
+  descriptionEn?: string | null
+  language?: 'vi' | 'en'
+  autoTranslated?: boolean
 }): Promise<E2eAdminBook> {
   const slug = e2eAdminSlug()
   const { data, error } = await adminClient()
@@ -576,6 +585,10 @@ export async function createE2eBook({
       original_price: originalPrice,
       stock,
       is_active: active,
+      description,
+      description_en: descriptionEn,
+      language,
+      description_auto_translated: autoTranslated,
       created_at: '2000-01-01T00:00:00Z',
     })
     .select('id, slug, title, price, stock, category_id')
