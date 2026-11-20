@@ -16,12 +16,13 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   const lang = isGlobalErrorLocale(locale) ? locale : 'vi'
   const messages = GLOBAL_ERROR_MESSAGES[lang]
 
-  // Giữ theme người dùng đã chọn (next-themes lưu ở localStorage `theme`; dark là mặc định của token)
+  // Giữ theme người dùng đã chọn (next-themes lưu ở localStorage `theme`, enableSystem = false nên chỉ có light / dark;
+  // sáng là mặc định của token (:root), tối cần class `dark` trên <html>)
   useLayoutEffect(() => {
     try {
-      if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light')
+      if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark')
     } catch {
-      // localStorage bị chặn → giữ dark
+      // localStorage bị chặn → giữ sáng
     }
   }, [])
 
