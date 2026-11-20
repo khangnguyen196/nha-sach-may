@@ -2,6 +2,10 @@
 
 Chủ dự án duyệt 2026-11-20 (vòng 0: mẫu 10 cuốn, `D:/Bán sách-backup/mo-ta-song-ngu/mau-10.md`).
 
+**Trạng thái: XONG (2026-11-20)**. Cả đợt trên main `efd9711..dc65527`; production có cột `description_auto_translated`,
+bản dịch 67 sách Việt + 112 sách ngoại văn; kiểm production chỉ đọc ĐẠT (`docs/progress.md` dòng [Xong 2026-11-20]
+mo-ta-song-ngu). Việc còn lại: mục "Để sau" cuối file.
+
 ## Mục tiêu
 
 - Trang `/en/...` hiện mô tả tiếng Anh cho mọi sách, trang tiếng Việt hiện mô tả tiếng Việt cho mọi sách. Tên sách
@@ -37,6 +41,21 @@ Chủ dự án duyệt 2026-11-20 (vòng 0: mẫu 10 cuốn, `D:/Bán sách-back
    `updateTag`; cache trang sách `cacheLife('hours')` nên tự hết hạn nếu sót) → kiểm production
    `/en/books/<sách Việt>` hiện mô tả Anh + "Automatically translated". Dự phòng: nếu Vercel không build (commit chỉ có
    docs) hoặc /en vẫn hiện bản cũ → Redeploy bản Production trên Vercel, bỏ chọn dùng build cache.
+
+Đã thực hiện trên production (2026-11-20):
+
+1. Migration cột (chủ dự án, SQL Editor, kèm `notify pgrst`) → SELECT kiểm: cột boolean NOT NULL default false, 189
+   sách false, quyền admin sửa cột.
+2. Code lên main ff `efd9711..a6cf915` (CI main 44687371288, e2e main 44687371269 829 / 23 / 0 / 0, migration-check
+   44687371367); Vercel Production 7935007545.
+3. Vòng 3: `vong-3-sach-viet-v3.sql` (= `supabase/data/mo-ta-song-ngu/vong-3-sach-viet.sql`, 67 sách Việt), Success;
+   kiểm sau MCP chỉ đọc vi 72 | 71 | 67 | 67, en 117 | 114 | 0 | 0. data-check run 44713949961 (ĐÃ GHI) xanh.
+4. data-check vòng 3 + 4 đầy đủ (a)–(f): run 44718086709 xanh. Vòng 4: `vong-4-sach-en-1.sql` rồi `vong-4-sach-en-2.sql`
+   (112 sách ngoại văn), Success; kiểm sau MCP chỉ đọc en 117 | 114 | 112 | 112, vi 72 | 71 | 67 | 67, cờ mà bản Anh
+   trống = 0, en có bản Anh mà không cờ = 0, en có mô tả chưa có bản Anh = 217, 254, vi = 2, 3, 20, 171.
+5. Phần còn lại lên main ff `a6cf915..dc65527` (CI main 44739831047, e2e main 44739830973 829 / 23 / 0 / 0,
+   migration-check 44739831333); Vercel Production 2026-11-20 12:58:07Z dựng lại trang từ dữ liệu mới (không cần
+   redeploy riêng) → kiểm production chỉ đọc ĐẠT.
 
 Trong lúc chủ dự án chạy SQL dữ liệu: không mở / lưu form sửa sách trong admin (`updateBook` so với bản DB mới nhất,
 lưu form mở từ trước sẽ ghi đè bản dịch).
@@ -123,3 +142,24 @@ thử trên Supabase local của CI. **Job đỏ thì không đưa file cho ch�
   admin sửa một bản dịch (cờ về false) → chế độ lẫn lộn → đỏ ở mọi push đổi `schema.sql` / seed sau này. Sửa production
   bằng tay giữa lúc job chạy và lúc chủ dự án chạy file: job không thấy (điều kiện md5 + khối kiểm cả lô trong file vẫn
   chặn). Không có bước in log Docker của DB (log Postgres có thể chép nguyên câu SQL kèm mô tả).
+
+## Để sau (chủ dự án duyệt 2026-11-20)
+
+- Sửa nội dung trong admin (chủ dự án tự làm, từ từ):
+  - 213, 216, 280: câu hứa hàng thật cửa hàng có thể không giao đúng (213 hộp bìa vải của ấn bản có chữ ký, 216 ấn bản
+    giới hạn 800 bản, 280 Sapiens ấn bản Mỹ minh họa màu).
+  - 244 Atomic Habits: dòng đầu là quảng cáo đặt trước sách khác, đã hết hạn (9/12/2025).
+  - 234 Built to Last: mô tả gốc bị cắt giữa chữ (bản dịch dừng ở chỗ cắt).
+  - 254 The SPEED of Trust: mô tả gốc chỉ là ghi chú thư viện → viết mô tả thật.
+  - 217 The Agatha Christie Collection: mô tả gốc chép Wikipedia (CC BY-SA) chưa ghi nguồn, thông tin cũ → viết mô tả
+    mới.
+- Giới hạn đã biết: 2, 3, 20, 171 là sách Việt có mô tả gốc tiếng Anh (không ghi bản dịch; vi và en đều hiện bản tiếng
+  Anh).
+- Nút "Dịch tự động" trong form admin: đợt sau.
+- `import:books` vẫn ghi sách en mới theo kiểu cũ (`description` tiếng Anh, `description_en` trống, cờ false): nạp
+  thêm sách ngoại văn thì sách mới lệch quy ước của đợt này (vi hiện tiếng Anh) → cần đổi script (bản gốc vào
+  `description_en`) hoặc dịch thêm một vòng trước khi nạp.
+- Chat Mây và gợi ý cảnh báo nội dung đọc `description`: với sách en nay là bản dịch Việt (trước là bản Anh gốc). Đúng
+  ý (Mây chỉ tiếng Việt), nhưng gợi ý cảnh báo dựa trên bản dịch thay vì bản gốc: theo dõi khi dùng.
+- Lưu ý dữ liệu: bản dịch do AI dịch nên có thể sai nghĩa; trang có dòng "Bản dịch tự động" để khách biết. Admin sửa
+  phần dịch (hoặc đổi ngôn ngữ sách) thì cờ tắt và dòng này biến mất; sửa phần gốc không đổi cờ.
