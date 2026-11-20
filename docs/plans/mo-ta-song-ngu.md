@@ -24,10 +24,18 @@ Chủ dự án duyệt 2026-11-20 (vòng 0: mẫu 10 cuốn, `D:/Bán sách-back
 
 ## Thứ tự trên production
 
-1. Chủ dự án chạy migration cột trong SQL Editor → SELECT kiểm (cột có, mọi dòng false, quyền cột).
-2. Vòng 2: SQL dữ liệu sách Việt (`description_en` + cờ); vòng 3: sách ngoại văn (`description_en` ← bản Anh gốc,
+1. Chủ dự án chạy migration cột trong SQL Editor (đã chạy 2026-11-20, kèm `notify pgrst`) → SELECT kiểm (cột
+   boolean NOT NULL default false, 189 sách false, quyền admin sửa cột).
+2. Push nhánh, CI check + e2e xanh → lên main (mọi cờ false, `description_en` trống → code mới chạy y như cũ).
+3. Vòng 3: SQL sách Việt (`description_en` + cờ). Vòng 4: SQL sách ngoại văn (`description_en` ← bản Anh gốc,
    `description` ← bản dịch Việt + cờ). Dollar-quote `$mota$`, UPDATE theo id chỉ khi `description_en is null` (sách
    en kèm `language = 'en'`), NFC, 4 sách thiếu mô tả để trống; kiểm trên Postgres local 2 lần (lần 2 = 0 dòng đổi).
-3. SELECT kiểm → lên main → làm mới cache catalog.
+   SELECT kiểm sau mỗi file.
+4. Commit docs cuối đợt lên main → Vercel deploy mới, trang dựng lại từ dữ liệu mới (dữ liệu ghi ngoài app, không có
+   `updateTag`; cache trang sách `cacheLife('hours')` nên tự hết hạn nếu sót) → kiểm production
+   `/en/books/<sách Việt>` hiện mô tả Anh + "Automatically translated".
+
+Trong lúc chủ dự án chạy SQL dữ liệu: không mở / lưu form sửa sách trong admin (`updateBook` so với bản DB mới nhất,
+lưu form mở từ trước sẽ ghi đè bản dịch).
 
 Build (máy và CI) đọc catalog production: query trang sách chọn cột mới nên build lỗi tới khi bước 1 xong.
