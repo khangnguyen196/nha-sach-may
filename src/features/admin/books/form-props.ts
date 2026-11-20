@@ -34,6 +34,7 @@ export async function getBookFormProps() {
         description: t('fields.description'),
         descriptionEn: t('fields.descriptionEn'),
         descriptionEnHint: t('fields.descriptionEnHint'),
+        autoTranslatedHint: t('fields.autoTranslatedHint'),
         isbn: t('fields.isbn'),
         price: t('fields.price'),
         originalPrice: t('fields.originalPrice'),

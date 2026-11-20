@@ -37,8 +37,8 @@ export async function listAdminBooks(params: BookListParams) {
 
 export type AdminBookRow = Awaited<ReturnType<typeof listAdminBooks>>['books'][number]
 
-const BOOK_COLUMNS = `id, title, slug, subtitle, description, description_en, isbn, price, original_price, stock, cover_url,
-  page_count, format, language, published_year, weight_grams, dimensions, category_id, publisher_id, is_active,
+const BOOK_COLUMNS = `id, title, slug, subtitle, description, description_en, description_auto_translated, isbn, price,
+  original_price, stock, cover_url, page_count, format, language, published_year, weight_grams, dimensions, category_id, publisher_id, is_active,
   is_featured, content_warnings, content_warnings_reviewed_at, book_authors(author_id, role)`
 
 export async function getAdminBook(id: number) {

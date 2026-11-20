@@ -158,6 +158,7 @@
         "description": "Mô tả",
         "descriptionEn": "Mô tả (tiếng Anh)",
         "descriptionEnHint": "Để trống: trang tiếng Anh hiện mô tả tiếng Việt. Tên sách không dịch.",
+        "autoTranslatedHint": "Bản dịch tự động — sửa ô này sẽ bỏ dấu.",
         "isbn": "ISBN",
         "price": "Giá bán (₫)",
         "originalPrice": "Giá gốc (₫)",

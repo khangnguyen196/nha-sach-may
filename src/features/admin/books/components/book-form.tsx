@@ -15,6 +15,7 @@ import { WarningLabelsField } from '../../warnings/components/warning-labels-fie
 import type { BookFormLabels } from '../form-props'
 import type { AdminBook } from '../queries'
 import { AUTHOR_ROLES, BOOK_FORMATS, BOOK_LANGUAGES, MAX_AUTHOR_ROWS } from '../schemas'
+import { translatedKey } from '../translation-flag'
 
 type Option = { id: number; name: string }
 
@@ -46,6 +47,8 @@ export function BookForm({ action, messages, labels, book, categoryGroups, publi
   // Luôn có thêm một dòng trống (thêm được một tác giả mà không cần bấm "Thêm dòng"); "Thêm dòng" thêm dòng trống nữa
   const [rowCount, setRowCount] = useState(book.book_authors.length + 1)
   const label = (template: string, n: number) => fillTemplate(template, { n })
+  // Ô đang chứa bản dịch tự động (theo ngôn ngữ đã lưu, cùng quy tắc với shouldClearAutoTranslated)
+  const translatedField = book.description_auto_translated ? translatedKey(book.language) : null
 
   return (
     <form {...formProps} noValidate className="grid gap-6">
@@ -81,6 +84,7 @@ export function BookForm({ action, messages, labels, book, categoryGroups, publi
           name="description"
           label={labels.fields.description}
           defaultValue={text(book.description)}
+          hint={translatedField === 'description' ? labels.fields.autoTranslatedHint : undefined}
           rows={8}
           maxLength={10_000}
           error={fieldError('description')}
@@ -89,7 +93,11 @@ export function BookForm({ action, messages, labels, book, categoryGroups, publi
           name="description_en"
           label={labels.fields.descriptionEn}
           defaultValue={text(book.description_en)}
-          hint={labels.fields.descriptionEnHint}
+          hint={
+            translatedField === 'description_en'
+              ? `${labels.fields.autoTranslatedHint} ${labels.fields.descriptionEnHint}`
+              : labels.fields.descriptionEnHint
+          }
           rows={6}
           maxLength={10_000}
           lang="en"

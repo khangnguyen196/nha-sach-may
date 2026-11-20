@@ -11,13 +11,14 @@ import { adminCatalogTags, type BookSnapshot } from '../cache-tags'
 import { storageObjectPath, violatedUniqueConstraint } from '../db-errors'
 import { rowIdSchema } from '../schemas'
 import { bookActiveSchema, bookFormInput, bookFormSchema } from './schemas'
+import { shouldClearAutoTranslated } from './translation-flag'
 
 // id (và trạng thái ẩn / hiện) do page bind sẵn; tham số bind đi qua client nên parse lại.
 // Mọi action: câu đầu là assertAdmin (Server Action gọi thẳng được, không qua layout / proxy của /admin).
 
 const COVER_BUCKET = 'book-covers'
 const SNAPSHOT_COLUMNS =
-  'id, slug, title, subtitle, isbn, language, category_id, price, stock, is_active, is_featured, cover_url, book_authors(author_id, role)'
+  'id, slug, title, subtitle, isbn, language, category_id, price, stock, is_active, is_featured, cover_url, description, description_en, description_auto_translated, book_authors(author_id, role)'
 
 type Supabase = Awaited<ReturnType<typeof createClient>>
 type AuthorKey = { author_id: number; role: string }
@@ -35,9 +36,10 @@ async function readSnapshot(supabase: Supabase, id: number) {
     return toFailure(error)
   }
   if (!data) return ITEM_DELETED
-  const { book_authors, cover_url, ...book } = data
+  const { book_authors, cover_url, description, description_en, description_auto_translated, ...book } = data
   const snapshot: BookSnapshot = { ...book, authors: book_authors.map(authorKey) }
-  return { snapshot, coverUrl: cover_url, bookAuthors: book_authors }
+  const translation = { language: book.language, description, description_en, description_auto_translated }
+  return { snapshot, coverUrl: cover_url, bookAuthors: book_authors, translation }
 }
 
 function expire(tags: string[]) {
@@ -107,7 +109,13 @@ export async function updateBook(id: number, _prev: Result<null> | null, formDat
   if ('ok' in current) return current
   if (categoryFailure) return categoryFailure
 
-  const { data, error } = await supabase.from('books').update(fields).eq('id', bookId.data).select('id')
+  // Sửa phần dịch tự động (hoặc đổi ngôn ngữ sách) → phần đó không còn là bản dịch máy: bỏ dấu, không bao giờ bật lại
+  const clearTranslated = shouldClearAutoTranslated(current.translation, fields)
+  const { data, error } = await supabase
+    .from('books')
+    .update(clearTranslated ? { ...fields, description_auto_translated: false } : fields)
+    .eq('id', bookId.data)
+    .select('id')
   if (error) return bookWriteFailure(error)
   if (data.length === 0) return ITEM_DELETED
 
