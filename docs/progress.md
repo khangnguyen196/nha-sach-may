@@ -268,7 +268,7 @@
 - Quyết định (dieu-phoi): thứ tự production = migration cột → SELECT kiểm → file dữ liệu → SELECT kiểm → lên main; admin đổi ngôn ngữ sách cũng bỏ dấu; database.ts viết tay theo CLI, CI phân xử; dịch chia vòng 2 (sách vi) và vòng 3 (sách en).
 - 2026-11-20 mo-ta-song-ngu: chủ dự án chạy migration 20261120120000_description_auto_translated trên production (SQL Editor, kèm notify pgrst); SELECT sau: cột boolean NOT NULL default false, 189 sách false, quyền admin sửa cột = true.
 - 2026-11-20 mo-ta-song-ngu vòng 2: dòng "Bản dịch tự động" tính theo ô đang hiện (giống localize), translatedKey dùng chung ở features/books/translation.ts (ngôn ngữ khác vi / en → null: admin chỉ bỏ dấu khi đổi ngôn ngữ); migration thêm notify pgrst; plan: thứ tự production mới. Vitest 1542; thử đỏ 1 failed (12 test) → xanh. build sạch; measure:js sapiens 46.3KB → 46.3KB (177.7KB gzip, không đổi). e2e: chưa chạy (chờ push nhánh).
-- Quyết định (dieu-phoi vòng 1): thứ tự production = migration cột → push nhánh + CI → lên main (code) → SQL sách Việt (vòng 3) → SQL sách ngoại văn (vòng 4) → SELECT kiểm → commit docs cuối lên main (deploy mới làm mới cache) → kiểm production. Thay thứ tự vòng 0. Khi chạy SQL dữ liệu không mở form sửa sách trong admin.
+- Quyết định (dieu-phoi vòng 1): thứ tự production = migration cột → push nhánh + CI → lên main (code) → SQL sách Việt (vòng 3) → SQL sách ngoại văn (vòng 4) → SELECT kiểm → commit docs cuối lên main (deploy mới làm mới cache) → kiểm production. Thay thứ tự vòng 0 và quyết định dieu-phoi trước (dịch nay là vòng 3 / 4). Khi chạy SQL dữ liệu không mở form sửa sách trong admin.
 
 Chuyển từ `docs/plans/handoff.md` ("Đợt sau", chủ dự án ghi, chưa làm):
 

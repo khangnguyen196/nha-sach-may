@@ -33,9 +33,10 @@ Chủ dự án duyệt 2026-11-20 (vòng 0: mẫu 10 cuốn, `D:/Bán sách-back
    SELECT kiểm sau mỗi file.
 4. Commit docs cuối đợt lên main → Vercel deploy mới, trang dựng lại từ dữ liệu mới (dữ liệu ghi ngoài app, không có
    `updateTag`; cache trang sách `cacheLife('hours')` nên tự hết hạn nếu sót) → kiểm production
-   `/en/books/<sách Việt>` hiện mô tả Anh + "Automatically translated".
+   `/en/books/<sách Việt>` hiện mô tả Anh + "Automatically translated". Dự phòng: nếu Vercel không build (commit chỉ có
+   docs) hoặc /en vẫn hiện bản cũ → Redeploy bản Production trên Vercel, bỏ chọn dùng build cache.
 
 Trong lúc chủ dự án chạy SQL dữ liệu: không mở / lưu form sửa sách trong admin (`updateBook` so với bản DB mới nhất,
 lưu form mở từ trước sẽ ghi đè bản dịch).
 
-Build (máy và CI) đọc catalog production: query trang sách chọn cột mới nên build lỗi tới khi bước 1 xong.
+Build (máy và CI) đọc catalog production: query trang sách chọn cột mới nên build lỗi tới khi bước 1 xong (đã xong 2026-11-20).
