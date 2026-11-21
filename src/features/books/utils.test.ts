@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CATEGORY_SHELF_MIN,
+  CATEGORY_SHELF_SIZE,
+  categoryShelfBooks,
   discountPercent,
   fillShelf,
   homeShelves,
@@ -102,6 +105,40 @@ describe('promoCardBooks (thẻ 2×2 ở hàng khuyến mãi)', () => {
 
   it('thiếu sách → rỗng (ẩn thẻ)', () => {
     expect(promoCardBooks(books(1), books(1, 2, 3), 4)).toEqual([])
+  })
+})
+
+describe('categoryShelfBooks (kệ danh mục trang chủ)', () => {
+  // [id, stock]
+  const books = (...pairs: [number, number][]) => pairs.map(([id, stock]) => ({ id, stock }))
+  const ids = (list: { id: number }[]) => list.map((b) => b.id)
+
+  it('còn hàng trước, hết hàng sau, giữ thứ tự query trong mỗi nhóm', () => {
+    const rows = books([1, 0], [2, 5], [3, 0], [4, 1], [5, 9], [6, -1])
+    expect(ids(categoryShelfBooks(rows))).toEqual([2, 4, 5, 1, 3, 6])
+  })
+
+  it('tối đa CATEGORY_SHELF_SIZE cuốn', () => {
+    const rows = books(...Array.from({ length: 30 }, (_, i): [number, number] => [i + 1, 3]))
+    const shelf = categoryShelfBooks(rows)
+    expect(shelf).toHaveLength(CATEGORY_SHELF_SIZE)
+    expect(ids(shelf)).toEqual(ids(rows.slice(0, CATEGORY_SHELF_SIZE)))
+  })
+
+  it('đủ sách còn hàng thì sách hết hàng không chen vào kệ', () => {
+    const soldOut = books([100, 0], [101, 0])
+    const inStock = books(...Array.from({ length: 12 }, (_, i): [number, number] => [i + 1, 2]))
+    expect(ids(categoryShelfBooks([...soldOut, ...inStock]))).toEqual(ids(inStock))
+  })
+
+  it('ít hơn CATEGORY_SHELF_MIN cuốn → rỗng (ẩn kệ)', () => {
+    expect(CATEGORY_SHELF_MIN).toBe(4)
+    expect(categoryShelfBooks(books([1, 1], [2, 0], [3, 4]))).toEqual([])
+    expect(categoryShelfBooks([])).toEqual([])
+  })
+
+  it('đúng CATEGORY_SHELF_MIN cuốn (kể cả hết hàng) → hiện đủ', () => {
+    expect(ids(categoryShelfBooks(books([1, 0], [2, 1], [3, 0], [4, 2])))).toEqual([2, 4, 1, 3])
   })
 })
 

@@ -23,8 +23,6 @@
     "shipCta": "Start browsing",
     "bestsellingMore": "See bestsellers",
     "foreignMore": "See foreign books",
-    "categoriesTitle": "Categories",
-    "categoriesEmpty": "No categories yet.",
     "newArrivals": "New arrivals",
     "newArrivalsEmpty": "No books yet.",
     "allBooks": "Browse all books",
@@ -147,6 +145,7 @@
     "categoryMetaDescription": "{name} books at Nhà Sách Mây: details, prices and availability.",
     "shelfPrevious": "Scroll shelf left",
     "shelfNext": "Scroll shelf right",
+    "shelfSubcategories": "Subcategories of {category}",
     "loading": "Loading results…"
   },
   "book": {

@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server'
 import { buttonVariants } from '@/components/ui/button'
-import { Shelf } from '@/features/books/components/shelf'
-import { getCategories, getHomeShelves, type Category } from '@/features/books/queries'
+import { Shelf, type ShelfChips } from '@/features/books/components/shelf'
+import { getCategories, getCategoryShelf, getHomeShelves, type Category } from '@/features/books/queries'
 import { visibleCategoryIds } from '@/features/books/utils'
 import { PromoRow } from '@/features/home/components/promo-row'
 import { getShippingTermsOrNull } from '@/features/home/queries'
@@ -14,9 +14,6 @@ import { serializeJsonLd, websiteJsonLd } from '@/lib/json-ld'
 import { siteUrl } from '@/lib/site-url'
 import { placeholder } from '@/lib/template'
 
-const categoryLink =
-  'rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-focus-ring'
-
 /** Nhánh danh mục sách tiếng Anh (supabase/seed-foreign-books.sql): một kệ riêng, không trộn vào "Mới về" */
 const FOREIGN_CATEGORY_SLUG = 'sach-ngoai-van'
 
@@ -28,31 +25,43 @@ function leafIds(categories: Category[], root: Category) {
 
 /**
  * Hàng thẻ khuyến mãi (Đang giảm giá, Miễn phí giao hàng, Bán chạy, Sách ngoại văn) → dải đồng hồ giờ VN / trạng thái cửa
- * hàng + 1 CTA → kệ Nổi bật, Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn → lưới danh mục.
+ * hàng + 1 CTA → kệ Nổi bật, Bán chạy, Mới về (sách tiếng Việt), Sách ngoại văn → kệ danh mục (mỗi danh mục cha đang
+ * hiện một kệ, theo sort_order, trừ Sách ngoại văn; kèm hàng chip danh mục con).
  * Prerender: mọi query qua 'use cache' + client anon. LCP là bìa đầu của thẻ đầu (preload); ảnh 3 thẻ đầu tải ngay,
  * thẻ sau và kệ lazy.
  */
 export default async function HomePage() {
-  const [t, tCommon, locale, categories, shipping] = await Promise.all([
+  const [t, tCommon, tCatalog, locale, categories, shipping] = await Promise.all([
     getTranslations('home'),
     getTranslations('common'),
+    getTranslations('catalog'),
     getLocale(),
     getCategories(),
     // Lỗi → null: chỉ ẩn thẻ "Miễn phí giao hàng", trang chủ vẫn hiện
     getShippingTermsOrNull(),
   ])
+  const visibleIds = visibleCategoryIds(categories)
+  const visible = new Set(visibleIds)
   const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
-  const shelves = await getHomeShelves(
-    visibleCategoryIds(categories),
-    foreignRoot ? leafIds(categories, foreignRoot) : [],
-  )
-  const parents = categories.filter((c) => c.parent_id === null)
+  const shelfParents = categories.filter((c) => c.parent_id === null && c.slug !== FOREIGN_CATEGORY_SLUG)
+  // Mỗi kệ danh mục một cache riêng (giới hạn 128 tag / cache), chạy song song cùng các kệ trên
+  const [shelves, ...categoryBooks] = await Promise.all([
+    getHomeShelves(visibleIds, foreignRoot ? leafIds(categories, foreignRoot) : []),
+    ...shelfParents.map((parent) => getCategoryShelf(leafIds(categories, parent).filter((id) => visible.has(id)))),
+  ])
+  const categoryHref = (category: Category): Href => ({
+    pathname: '/categories/[slug]',
+    params: { slug: category.slug },
+  })
+  const chipsFor = (parent: Category): ShelfChips => ({
+    navLabel: tCatalog('shelfSubcategories', { category: localize(parent, 'name', locale) }),
+    items: categories
+      .filter((child) => child.parent_id === parent.id)
+      .map((child) => ({ href: categoryHref(child), label: localize(child, 'name', locale) })),
+  })
   // Thẻ + kệ "Sách ngoại văn" dùng chung tên và link danh mục
   const foreign: { title: string; href: Href } | null = foreignRoot
-    ? {
-        title: localize(foreignRoot, 'name', locale),
-        href: { pathname: '/categories/[slug]', params: { slug: foreignRoot.slug } },
-      }
+    ? { title: localize(foreignRoot, 'name', locale), href: categoryHref(foreignRoot) }
     : null
 
   return (
@@ -98,7 +107,7 @@ export default async function HomePage() {
         </Link>
       </div>
 
-      <div className="mt-12 space-y-12 md:mt-20 md:space-y-20">
+      <div className="mt-12 space-y-12 pb-12 md:mt-20 md:space-y-20 md:pb-20">
         <Shelf id="featured" title={t('featured')} books={shelves.featured} />
         <Shelf id="bestselling" title={t('bestselling')} href="/books" books={shelves.bestselling} />
         {shelves.newArrivals.length > 0 ? (
@@ -116,44 +125,29 @@ export default async function HomePage() {
             <p className="mt-4 text-muted-foreground">{t('newArrivalsEmpty')}</p>
           </section>
         )}
-        {foreign && <Shelf id="foreign-books" title={foreign.title} href={foreign.href} books={shelves.foreign} />}
-      </div>
-
-      <section aria-labelledby="categories-title" className="py-12 md:py-20">
-        <h2 id="categories-title" className="text-xl font-semibold">
-          {t('categoriesTitle')}
-        </h2>
-        {parents.length === 0 ? (
-          <p className="mt-4 text-muted-foreground">{t('categoriesEmpty')}</p>
-        ) : (
-          <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {parents.map((parent) => (
-              <li key={parent.id} className="rounded-lg border bg-surface p-4">
-                <Link
-                  href={{ pathname: '/categories/[slug]', params: { slug: parent.slug } }}
-                  className={`font-medium ${categoryLink}`}
-                >
-                  {localize(parent, 'name', locale)}
-                </Link>
-                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  {categories
-                    .filter((child) => child.parent_id === parent.id)
-                    .map((child) => (
-                      <li key={child.id}>
-                        <Link
-                          href={{ pathname: '/categories/[slug]', params: { slug: child.slug } }}
-                          className={categoryLink}
-                        >
-                          {localize(child, 'name', locale)}
-                        </Link>
-                      </li>
-                    ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+        {foreignRoot && foreign && (
+          <Shelf
+            id="foreign-books"
+            title={foreign.title}
+            href={foreign.href}
+            books={shelves.foreign}
+            chips={chipsFor(foreignRoot)}
+          />
         )}
-      </section>
+        {/* Neo của link "Xem danh mục" ở trang 404 (not-found-view.tsx). Kệ < 4 sách tự ẩn (getCategoryShelf) */}
+        <div id="categories" className="space-y-12 md:space-y-20">
+          {shelfParents.map((parent, index) => (
+            <Shelf
+              key={parent.id}
+              id={`category-${parent.slug}`}
+              title={localize(parent, 'name', locale)}
+              href={categoryHref(parent)}
+              books={categoryBooks[index] ?? []}
+              chips={chipsFor(parent)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

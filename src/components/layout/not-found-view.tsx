@@ -35,8 +35,8 @@ export async function NotFoundView({ kind, heading = 'h1', primary }: Props) {
   // Sách / danh mục / tác giả: tìm sách hoặc xem danh mục
   const catalogLinks: NotFoundLink[] = [
     { href: '/search', label: t('search') },
-    // Lưới danh mục ở cuối trang chủ
-    { href: { pathname: '/', hash: 'categories-title' }, label: t('browse') },
+    // Các kệ danh mục ở cuối trang chủ
+    { href: { pathname: '/', hash: 'categories' }, label: t('browse') },
   ]
   const links: Record<NotFoundKind, NotFoundLink[]> = {
     page: [

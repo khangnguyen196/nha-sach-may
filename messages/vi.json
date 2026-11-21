@@ -23,8 +23,6 @@
     "shipCta": "Chọn sách ngay",
     "bestsellingMore": "Xem sách bán chạy",
     "foreignMore": "Xem sách ngoại văn",
-    "categoriesTitle": "Danh mục",
-    "categoriesEmpty": "Chưa có danh mục nào.",
     "newArrivals": "Mới về",
     "newArrivalsEmpty": "Chưa có sách nào.",
     "allBooks": "Xem tất cả sách",
@@ -730,6 +728,7 @@
     "categoryMetaDescription": "Sách {name} tại Nhà Sách Mây: thông tin chi tiết, giá bán, tình trạng còn hàng.",
     "shelfPrevious": "Cuộn kệ sang trái",
     "shelfNext": "Cuộn kệ sang phải",
+    "shelfSubcategories": "Danh mục con của {category}",
     "loading": "Đang tải kết quả…"
   },
   "book": {

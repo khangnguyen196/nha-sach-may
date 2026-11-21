@@ -5,6 +5,7 @@ import { Link, type Href } from '@/i18n/navigation'
 import type { BookCard as BookCardData } from '../queries'
 import { BookCard } from './book-card'
 import { BookCardSkeleton } from './book-grid-skeleton'
+import { Chip } from './chip'
 import { ShelfNav } from './shelf-nav'
 
 const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
@@ -18,15 +19,19 @@ const ITEM_CLASS = 'w-36 shrink-0 snap-start sm:w-40'
 const LIST_CLASS =
   'relative -mx-4 -mt-4 pt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 xl:-mx-8 xl:scroll-px-8 xl:px-8'
 
+/** Hàng chip danh mục con dưới tiêu đề kệ. `navLabel` riêng từng kệ: trang chủ có nhiều nav chip */
+export type ShelfChips = { navLabel: string; items: { href: Href; label: string }[] }
+
 type Props = {
   id: string
   title: string
   href?: Href
   books: BookCardData[]
+  chips?: ShelfChips
 }
 
 /** Kệ sách: hàng ngang cuộn được (scroll-snap), nút trước / sau trên desktop. Đơn vị bố cục chính của trang chủ. */
-export async function Shelf({ id, title, href, books }: Props) {
+export async function Shelf({ id, title, href, books, chips }: Props) {
   if (books.length === 0) return null
   const t = await getTranslations('catalog')
   const listId = `${id}-list`
@@ -50,6 +55,19 @@ export async function Shelf({ id, title, href, books }: Props) {
           />
         </div>
       </ShelfHeading>
+      {chips && chips.items.length > 0 && (
+        // relative z-10: danh sách kệ (-mt-4) chồng lên 16px dưới của hàng chip, như dòng tiêu đề. Khung cuộn cắt mọi thứ
+        // ngoài vùng đệm: py-1 chừa chỗ cho vòng focus 3px (như hàng chip ở trang danh mục, catalog-view.tsx)
+        <nav aria-label={chips.navLabel} className="relative z-10 -mx-4 mt-2 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6">
+          <ul className="flex w-max gap-2">
+            {chips.items.map((item) => (
+              <li key={item.label}>
+                <Chip href={item.href}>{item.label}</Chip>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
       <ul id={listId} className={LIST_CLASS}>
         {books.map((book) => (
           <li key={book.id} className={ITEM_CLASS}>

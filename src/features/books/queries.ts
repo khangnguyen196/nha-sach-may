@@ -6,7 +6,7 @@ import { bookBlockKeys } from '@/features/prefs/blocks'
 import { createPublicClient } from '@/lib/supabase/public'
 import { PAGE_SIZE, PRICE_BOUNDS } from './catalog-params'
 import type { PriceRange, SearchHit, Sort } from './schemas'
-import { homeShelves, promoCardBooks, saleCardBooks, visibleBooksFilter, visibleCategoryIds } from './utils'
+import { categoryShelfBooks, homeShelves, promoCardBooks, saleCardBooks, visibleBooksFilter, visibleCategoryIds } from './utils'
 
 /** Danh mục đang hiển thị, theo thứ tự sort_order. Admin sửa danh mục → revalidateTag('categories'). */
 export async function getCategories() {
@@ -168,6 +168,33 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
 }
 
 export type BookCard = Awaited<ReturnType<typeof getHomeShelves>>['newArrivals'][number]
+
+/** Ứng viên của một kệ danh mục: dư để sách còn hàng vẫn đủ 12 khi đầu danh sách là sách hết hàng */
+const CATEGORY_SHELF_CANDIDATES = 36
+
+/**
+ * Kệ của MỘT danh mục cha ở trang chủ (đợt ke-danh-muc): sách thuộc các danh mục lá `leafIds` (đang hiện), bán chạy →
+ * mới nhất → id, còn hàng trước, ≤ 12 cuốn, < 4 thì rỗng (categoryShelfBooks). Mỗi kệ một cache riêng vì cacheTag nhận
+ * tối đa 128 tag / lần gọi (gộp ~10 kệ × 12 sách sẽ vượt); một kệ = `books` + ≤ 12 tag `book:{id}`. Được trùng sách với
+ * các kệ / thẻ khác của trang chủ; giữa các kệ danh mục không trùng vì sách chỉ gắn một danh mục lá.
+ */
+export async function getCategoryShelf(leafIds: number[]): Promise<BookCard[]> {
+  'use cache'
+  cacheTag('books')
+  cacheLife('hours')
+
+  if (leafIds.length === 0) return []
+  const result = await bookCards()
+    .in('category_id', leafIds)
+    .order('sold_count', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id')
+    .limit(CATEGORY_SHELF_CANDIDATES)
+  if (result.error) throw new Error(`getCategoryShelf: ${result.error.message}`)
+  const books = categoryShelfBooks(result.data)
+  tagBooks(books)
+  return books
+}
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 
