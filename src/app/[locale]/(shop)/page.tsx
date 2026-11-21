@@ -138,7 +138,7 @@ export default async function HomePage() {
           />
         )}
         {/* Neo của link "Xem danh mục" ở trang 404 (not-found-view.tsx); scroll-mt-24: header dính không che tiêu đề kệ
-            đầu khi nhảy tới neo. Kệ < 4 sách tự ẩn (getCategoryShelf) */}
+            đầu khi nhảy tới neo. Kệ không có sách tự ẩn (getCategoryShelf) */}
         <div id="categories" className="scroll-mt-24 space-y-12 md:space-y-20">
           {shelfParents.map((parent, index) => (
             <Shelf

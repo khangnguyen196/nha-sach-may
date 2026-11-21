@@ -175,9 +175,9 @@ export const CATEGORY_SHELF_CANDIDATES = 36
 
 /**
  * Kệ của MỘT danh mục cha ở trang chủ (đợt ke-danh-muc): sách thuộc các danh mục lá `leafIds` (đang hiện), bán chạy →
- * mới nhất → id, còn hàng trước, ≤ 12 cuốn, < 4 thì rỗng (categoryShelfBooks). Mỗi kệ một cache riêng vì cacheTag nhận
- * tối đa 128 tag / lần gọi (gộp ~10 kệ × 12 sách sẽ vượt); một kệ = `books` + ≤ 12 tag `book:{id}`. Được trùng sách với
- * các kệ / thẻ khác của trang chủ; giữa các kệ danh mục không trùng vì sách chỉ gắn một danh mục lá.
+ * mới nhất → id, còn hàng trước, ≤ 12 cuốn, không có cuốn nào thì rỗng (categoryShelfBooks). Mỗi kệ một cache riêng
+ * vì cacheTag nhận tối đa 128 tag / lần gọi (gộp ~10 kệ × 12 sách sẽ vượt); một kệ = `books` + ≤ 12 tag `book:{id}`.
+ * Được trùng sách với các kệ / thẻ khác của trang chủ; giữa các kệ danh mục không trùng vì sách chỉ gắn một danh mục lá.
  */
 export async function getCategoryShelf(leafIds: number[]): Promise<BookCard[]> {
   'use cache'

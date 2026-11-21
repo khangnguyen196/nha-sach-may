@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
 import { CATEGORY_SHELF_CANDIDATES } from '../src/features/books/queries'
-import { CATEGORY_SHELF_MIN, CATEGORY_SHELF_SIZE, categoryShelfBooks } from '../src/features/books/utils'
+import { CATEGORY_SHELF_SIZE, categoryShelfBooks } from '../src/features/books/utils'
 import { WARNING_LIMITS } from '../src/features/chat/config'
 import { slugify } from '../src/lib/slug'
 import { readFixture } from './e2e-seed'
@@ -395,24 +395,30 @@ describe('e2e/fixtures/books.json', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
   })
 
-  it('kệ danh mục trang chủ (home-category-shelves.spec): cha đủ / thiếu sách, có / không có danh mục con', () => {
-    // Danh mục cha của seed.sql (Sách ngoại văn ở seed-foreign-books.sql, có kệ riêng); sách gắn danh mục lá
+  it('kệ danh mục trang chủ (home-category-shelves.spec): kệ ít sách, kệ tràn, có / không có danh mục con', () => {
+    // Danh mục cha của seed.sql (Sách ngoại văn ở seed-foreign-books.sql, có kệ riêng); sách gắn danh mục lá. Kệ hiện
+    // khi có ≥ 1 cuốn. Fixture không có cha 0 cuốn (đường 0 cuốn chỉ Vitest categoryShelfBooks kiểm) và mọi cha đang
+    // hiện đều có sách → spec kỳ vọng số kệ trong #categories = số cha có sách.
     const categories = seedCategories(read('../supabase/seed.sql'))
     const parentOf = (slug: string) => categories.get(slug)?.parent ?? slug
     const parents = [...categories].filter(([, c]) => c.parent === null && c.active).map(([slug]) => slug)
     const count = (parent: string) => books.filter((b) => parentOf(b.category_slug) === parent).length
     const hasChildren = (parent: string) => [...categories.values()].some((c) => c.parent === parent)
-    const full = parents.filter((p) => count(p) >= CATEGORY_SHELF_MIN)
-    expect(full.length).toBeGreaterThanOrEqual(2)
-    expect(full.some(hasChildren)).toBe(true)
-    expect(parents.some((p) => count(p) >= 1 && count(p) < CATEGORY_SHELF_MIN)).toBe(true)
-    // Ví dụ cụ thể spec dùng: Văn học (có con, bấm chip), Lịch sử - Địa lý (không con), Kinh tế (ẩn kệ)
-    expect(count('van-hoc')).toBeGreaterThanOrEqual(CATEGORY_SHELF_MIN)
-    expect(hasChildren('van-hoc')).toBe(true)
-    expect(count('lich-su-dia-ly')).toBeGreaterThanOrEqual(CATEGORY_SHELF_MIN)
-    expect(hasChildren('lich-su-dia-ly')).toBe(false)
+    expect(parents.length).toBeGreaterThanOrEqual(2)
+    for (const parent of parents) expect(count(parent), parent).toBeGreaterThanOrEqual(1)
+    // Có kệ ít sách (1–3 cuốn) để spec kiểm kệ hiện, canh trái, không nút cuộn
+    expect(parents.some((p) => count(p) >= 1 && count(p) <= 3)).toBe(true)
+    // Ví dụ cụ thể spec dùng: Kinh tế (kệ ít sách, có con), Văn học (có con, bấm chip, kệ tràn ở 1440), Lịch sử - Địa lý
+    // (không con)
     expect(count('kinh-te')).toBeGreaterThanOrEqual(1)
-    expect(count('kinh-te')).toBeLessThan(CATEGORY_SHELF_MIN)
+    expect(count('kinh-te')).toBeLessThanOrEqual(3)
+    expect(hasChildren('kinh-te')).toBe(true)
+    // Kệ Văn học tràn ở 1440: ≥ 8 thẻ × 160px + khe 16px > bề rộng kệ (max-w-6xl 1152px − đệm 48px + đệm kệ 64px)
+    expect(count('van-hoc')).toBeGreaterThan(CATEGORY_SHELF_SIZE / 2)
+    expect(count('van-hoc')).toBeGreaterThanOrEqual(8)
+    expect(hasChildren('van-hoc')).toBe(true)
+    expect(count('lich-su-dia-ly')).toBeGreaterThanOrEqual(1)
+    expect(hasChildren('lich-su-dia-ly')).toBe(false)
   })
 
   it('prefs-blocks-account.spec (g): kệ Văn học có cả sách Tiểu thuyết lẫn sách khác trong các cuốn được hiện', () => {

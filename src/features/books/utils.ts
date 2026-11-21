@@ -69,19 +69,16 @@ export function promoCardBooks<T extends { id: number }>(sharp: readonly T[], al
 
 /** Số sách tối đa của một kệ danh mục ở trang chủ (đợt ke-danh-muc) */
 export const CATEGORY_SHELF_SIZE = 12
-/** Kệ danh mục ít sách hơn mức này thì ẩn (cả tiêu đề) */
-export const CATEGORY_SHELF_MIN = 4
 
 /**
  * Kệ của một danh mục cha ở trang chủ: giữ thứ tự query (bán chạy → mới nhất → id), sách còn hàng trước, hết hàng sau
- * (sắp xếp ổn định: thứ tự trong mỗi nhóm không đổi), cắt `CATEGORY_SHELF_SIZE`; ít hơn `CATEGORY_SHELF_MIN` thì rỗng
- * (ẩn kệ). Không bỏ sách đã hiện ở kệ khác: kệ danh mục được trùng với Nổi bật / Bán chạy / Mới về / hàng thẻ.
+ * (sắp xếp ổn định: thứ tự trong mỗi nhóm không đổi), cắt `CATEGORY_SHELF_SIZE`; không có cuốn nào thì rỗng (Shelf không
+ * vẽ kệ). Không bỏ sách đã hiện ở kệ khác: kệ danh mục được trùng với Nổi bật / Bán chạy / Mới về / hàng thẻ.
  */
 export function categoryShelfBooks<T extends { stock: number }>(rows: readonly T[]): T[] {
   const inStock = rows.filter((book) => book.stock > 0)
   const soldOut = rows.filter((book) => book.stock <= 0)
-  const books = [...inStock, ...soldOut].slice(0, CATEGORY_SHELF_SIZE)
-  return books.length < CATEGORY_SHELF_MIN ? [] : books
+  return [...inStock, ...soldOut].slice(0, CATEGORY_SHELF_SIZE)
 }
 
 type SaleCandidate = { id: number; price: number; original_price: number | null; stock: number }

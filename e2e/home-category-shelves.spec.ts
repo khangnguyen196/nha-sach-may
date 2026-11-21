@@ -1,10 +1,11 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { CATEGORY_SHELF_MIN, CATEGORY_SHELF_SIZE } from '../src/features/books/utils'
+import { CATEGORY_SHELF_SIZE } from '../src/features/books/utils'
 import { collectErrors, waitForSettled } from './helpers'
 
-// Kệ danh mục trang chủ (đợt ke-danh-muc): mỗi danh mục cha đang hiện (trừ Sách ngoại văn, có kệ riêng) một kệ ≤ 12
-// cuốn, ẩn khi < 4; dưới tiêu đề là hàng chip danh mục con; kệ Sách ngoại văn cũng có chip. Kỳ vọng suy từ seed
+// Kệ danh mục trang chủ (đợt ke-danh-muc, ke-danh-muc-nguong): mỗi danh mục cha đang hiện (trừ Sách ngoại văn, có kệ
+// riêng) một kệ ≤ 12 cuốn, ẩn khi không có cuốn nào; kệ ít sách canh trái, không giãn; dưới tiêu đề là hàng chip danh
+// mục con; kệ Sách ngoại văn cũng có chip. Fixture không có cha 0 cuốn (đường 0 cuốn chỉ Vitest kiểm). Kỳ vọng suy từ seed
 // (supabase/seed.sql, seed-foreign-books.sql) + e2e/fixtures/books.json; bất biến dữ liệu ở scripts/e2e-seed.test.ts.
 // Không tạo dữ liệu, không cần user. Bất biến: sách e2e (createE2eBook / createShopBooks) luôn nằm dưới danh mục gốc
 // ẩn hoặc không có danh mục, không vào danh mục thật đang hiện → số sách trong kệ chỉ đến từ fixture.
@@ -59,8 +60,9 @@ const bookCount = (parent: string) => {
 const shelfParents = categories
   .filter((c) => c.parent === null && c.slug !== FOREIGN_ROOT)
   .sort((a, b) => a.sortOrder - b.sortOrder)
-const fullParents = shelfParents.filter((c) => bookCount(c.slug) >= CATEGORY_SHELF_MIN)
-const thinParents = shelfParents.filter((c) => bookCount(c.slug) < CATEGORY_SHELF_MIN)
+const shownParents = shelfParents.filter((c) => bookCount(c.slug) > 0)
+// Có thể rỗng (fixture hiện không có cha 0 cuốn): giữ để kệ 0 cuốn vẫn được kiểm nếu fixture đổi
+const emptyParents = shelfParents.filter((c) => bookCount(c.slug) === 0)
 const byslug = (slug: string) => {
   const category = categories.find((c) => c.slug === slug)
   if (!category) throw new Error(`home-category-shelves.spec: seed không có danh mục ${slug}`)
@@ -81,9 +83,10 @@ async function noHorizontalOverflow(page: Page, label: string) {
   expect(scrollWidth, label).toBeLessThanOrEqual(viewport)
 }
 
-test('vi: mỗi danh mục cha đủ sách một kệ (tiêu đề, Xem tất cả, chip con), thiếu sách thì không có kệ', async ({ page }) => {
-  expect(fullParents.length).toBeGreaterThanOrEqual(2)
-  expect(thinParents.length).toBeGreaterThanOrEqual(1)
+test('vi: mỗi danh mục cha có sách một kệ (tiêu đề, Xem tất cả, chip con), không có sách thì không có kệ', async ({
+  page,
+}) => {
+  expect(shownParents.length).toBeGreaterThanOrEqual(2)
   const errors = collectErrors(page)
   await page.goto('/')
 
@@ -91,7 +94,7 @@ test('vi: mỗi danh mục cha đủ sách một kệ (tiêu đề, Xem tất c�
   await expect(page.locator('#categories-title')).toHaveCount(0)
   await expect(main(page).locator('#categories')).toHaveCount(1)
 
-  for (const parent of fullParents) {
+  for (const parent of shownParents) {
     const region = shelf(page, parent.name)
     await expect(region, parent.slug).toHaveCount(1)
     await expect(region.getByRole('heading', { level: 2 }), parent.slug).toHaveText(parent.name)
@@ -116,17 +119,17 @@ test('vi: mỗi danh mục cha đủ sách một kệ (tiêu đề, Xem tất c�
     }
   }
 
-  for (const parent of thinParents) await expect(shelf(page, parent.name), parent.slug).toHaveCount(0)
+  for (const parent of emptyParents) await expect(shelf(page, parent.name), parent.slug).toHaveCount(0)
 
   // Thứ tự kệ theo sort_order, sau kệ Sách ngoại văn
   const headings = await main(page).getByRole('heading', { level: 2 }).allTextContents()
-  const positions = [foreignRoot, ...fullParents].map((c) => headings.indexOf(c.name))
+  const positions = [foreignRoot, ...shownParents].map((c) => headings.indexOf(c.name))
   expect(positions.every((position) => position >= 0)).toBe(true)
   expect([...positions].sort((a, b) => a - b)).toEqual(positions)
   expect(errors).toEqual([])
 })
 
-test('ví dụ cụ thể: Văn học có chip, Lịch sử - Địa lý không chip, Kinh tế không có kệ; Sách ngoại văn có chip', async ({
+test('ví dụ cụ thể: Văn học có chip, Lịch sử - Địa lý không chip, Kinh tế (ít sách) có kệ + chip; Sách ngoại văn có chip', async ({
   page,
 }) => {
   const errors = collectErrors(page)
@@ -138,7 +141,19 @@ test('ví dụ cụ thể: Văn học có chip, Lịch sử - Địa lý không 
   await expect(shelf(page, literature.name).getByRole('navigation', { name: `Danh mục con của ${literature.name}` })).toHaveCount(1)
   await expect(shelf(page, history.name)).toHaveCount(1)
   await expect(shelf(page, history.name).getByRole('navigation')).toHaveCount(0)
-  await expect(shelf(page, business.name)).toHaveCount(0)
+
+  // Kinh tế: 1–3 cuốn (bất biến ở scripts/e2e-seed.test.ts) vẫn có kệ, số sách theo fixture, chip con đúng thứ tự
+  await expect(shelf(page, business.name)).toHaveCount(1)
+  await expect(shelfBooks(page, business.name)).toHaveCount(Math.min(CATEGORY_SHELF_SIZE, bookCount(business.slug)))
+  const businessChildren = childrenOf(business.slug)
+  expect(businessChildren.length).toBeGreaterThan(0)
+  const businessChips = shelf(page, business.name)
+    .getByRole('navigation', { name: `Danh mục con của ${business.name}`, exact: true })
+    .getByRole('link')
+  await expect(businessChips).toHaveText(businessChildren.map((c) => c.name))
+  for (const [index, child] of businessChildren.entries()) {
+    await expect(businessChips.nth(index)).toHaveAttribute('href', `/danh-muc/${child.slug}`)
+  }
 
   const foreignNav = shelf(page, foreignRoot.name).getByRole('navigation', {
     name: `Danh mục con của ${foreignRoot.name}`,
@@ -173,24 +188,76 @@ test('/en: tên kệ / chip tiếng Anh, link /en/categories/…', async ({ page
   const errors = collectErrors(page)
   await page.goto('/en')
   await expect(main(page).locator('#categories')).toHaveCount(1)
-  for (const parent of fullParents) {
+  for (const parent of shownParents) {
     const region = shelf(page, parent.nameEn)
     await expect(region, parent.slug).toHaveCount(1)
     await expect(region.getByRole('link', { name: 'See all', exact: true })).toHaveAttribute(
       'href',
       `/en/categories/${parent.slug}`,
     )
+    await expect(main(page).locator(`#categories section[aria-labelledby="category-${parent.slug}"]`)).toHaveCount(1)
+    await expect(shelfBooks(page, parent.nameEn), parent.slug).toHaveCount(
+      Math.min(CATEGORY_SHELF_SIZE, bookCount(parent.slug)),
+    )
     const children = childrenOf(parent.slug)
-    if (children.length === 0) continue
+    if (children.length === 0) {
+      await expect(region.getByRole('navigation'), parent.slug).toHaveCount(0)
+      continue
+    }
     const chips = region.getByRole('navigation', { name: `Subcategories of ${parent.nameEn}`, exact: true }).getByRole('link')
     await expect(chips).toHaveText(children.map((c) => c.nameEn))
-    await expect(chips.first()).toHaveAttribute('href', `/en/categories/${children[0]?.slug}`)
+    for (const [index, child] of children.entries()) {
+      await expect(chips.nth(index)).toHaveAttribute('href', `/en/categories/${child.slug}`)
+    }
   }
-  for (const parent of thinParents) await expect(shelf(page, parent.nameEn), parent.slug).toHaveCount(0)
+  for (const parent of emptyParents) await expect(shelf(page, parent.nameEn), parent.slug).toHaveCount(0)
   const foreignChips = shelf(page, foreignRoot.nameEn)
     .getByRole('navigation', { name: `Subcategories of ${foreignRoot.nameEn}`, exact: true })
     .getByRole('link')
   await expect(foreignChips).toHaveText(childrenOf(FOREIGN_ROOT).map((c) => c.nameEn))
+  expect(errors).toEqual([])
+})
+
+test('1440: kệ ít sách (Kinh tế) canh trái, thẻ không giãn, không có nút cuộn; kệ tràn (Văn học) có nút', async ({
+  page,
+}) => {
+  const errors = collectErrors(page)
+  const literature = byslug('van-hoc')
+  const business = byslug('kinh-te')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/')
+  await waitForSettled(page)
+
+  const items = (slug: string) => main(page).locator(`#category-${slug}-list > li`)
+  const box = async (locator: Locator) => {
+    const rect = await locator.boundingBox()
+    if (!rect) throw new Error('home-category-shelves.spec: phần tử không có kích thước')
+    return rect
+  }
+  await expect(items(business.slug)).toHaveCount(Math.min(CATEGORY_SHELF_SIZE, bookCount(business.slug)))
+  const businessFirst = await box(items(business.slug).first())
+  const literatureFirst = await box(items(literature.slug).first())
+  expect(Math.abs(businessFirst.x - literatureFirst.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(businessFirst.width - literatureFirst.width)).toBeLessThanOrEqual(1)
+  const businessLast = await box(items(business.slug).last())
+  const businessList = await box(main(page).locator(`#category-${business.slug}-list`))
+  expect(businessLast.x + businessLast.width).toBeLessThan(businessList.x + businessList.width)
+
+  // ShelfNav chỉ hiện sau khi hydrate và khi kệ tràn: chờ nút của Văn học trước rồi mới kết luận Kinh tế không có nút
+  await expect(shelf(page, literature.name).getByRole('button', { name: 'Cuộn kệ sang phải', exact: true })).toBeVisible()
+  const businessShelf = shelf(page, business.name)
+  await expect(businessShelf.getByRole('button', { name: 'Cuộn kệ sang trái', exact: true })).toHaveCount(0)
+  await expect(businessShelf.getByRole('button', { name: 'Cuộn kệ sang phải', exact: true })).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('neo /#categories (link "Xem danh mục" của trang 404) chứa mọi kệ có sách, kể cả Kinh tế', async ({ page }) => {
+  const errors = collectErrors(page)
+  await page.goto('/#categories')
+  const anchor = main(page).locator('#categories')
+  await expect(anchor).toHaveCount(1)
+  await expect(anchor.locator('section[aria-labelledby^="category-"]')).toHaveCount(shownParents.length)
+  await expect(anchor.locator('section[aria-labelledby="category-kinh-te"]')).toHaveCount(1)
   expect(errors).toEqual([])
 })
 

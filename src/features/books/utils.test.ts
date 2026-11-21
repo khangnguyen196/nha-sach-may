@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CATEGORY_SHELF_MIN,
   CATEGORY_SHELF_SIZE,
   categoryShelfBooks,
   discountPercent,
@@ -131,14 +130,21 @@ describe('categoryShelfBooks (kệ danh mục trang chủ)', () => {
     expect(ids(categoryShelfBooks([...soldOut, ...inStock]))).toEqual(ids(inStock))
   })
 
-  it('ít hơn CATEGORY_SHELF_MIN cuốn → rỗng (ẩn kệ)', () => {
-    expect(CATEGORY_SHELF_MIN).toBe(4)
-    expect(categoryShelfBooks(books([1, 1], [2, 0], [3, 4]))).toEqual([])
+  it('0 cuốn → rỗng (ẩn kệ)', () => {
     expect(categoryShelfBooks([])).toEqual([])
   })
 
-  it('đúng CATEGORY_SHELF_MIN cuốn (kể cả hết hàng) → hiện đủ', () => {
-    expect(ids(categoryShelfBooks(books([1, 0], [2, 1], [3, 0], [4, 2])))).toEqual([2, 4, 1, 3])
+  it('1 cuốn (kể cả hết hàng) → hiện', () => {
+    expect(ids(categoryShelfBooks(books([1, 4])))).toEqual([1])
+    expect(ids(categoryShelfBooks(books([1, 0])))).toEqual([1])
+  })
+
+  it('2 cuốn → hiện đủ, còn hàng trước', () => {
+    expect(ids(categoryShelfBooks(books([1, 0], [2, 3])))).toEqual([2, 1])
+  })
+
+  it('3 cuốn → hiện đủ, còn hàng trước', () => {
+    expect(ids(categoryShelfBooks(books([1, 0], [2, 3], [3, 0])))).toEqual([2, 1, 3])
   })
 })
 
