@@ -47,6 +47,16 @@
 
 Kệ danh mục render lúc build (production): Văn học, Tâm lý - Kỹ năng sống, Thiếu nhi, Sách học ngoại ngữ, Lịch sử - Địa lý (Kinh tế < 4 cuốn → ẩn). Mọi ảnh thêm vào đều lazy; số ảnh tải ngay không đổi.
 
+## Còn chờ chủ dự án
+
+1. Neo `#categories` của link "Xem danh mục" (trang 404) chỉ chứa các kệ ≥ 4 cuốn: Kinh tế đang ẩn kệ, danh mục con của nó chỉ vào được qua footer → trang Kinh tế.
+2. HTML trang chủ +65% (gzip 18,6 → 27,0KB): đề xuất giữ 12 cuốn / kệ nếu tốc độ tải trên Preview không tệ hơn production.
+
+## Vòng 2
+
+- `getCategoryShelfOrEmpty` (ngoài 'use cache', mẫu `getShippingTermsOrNull`): một kệ lỗi → kệ đó rỗng (ẩn), trang chủ vẫn hiện; lỗi nội bộ của Next ném tiếp. Vitest `src/features/books/queries.test.ts`.
+- `scroll-mt-24` cho neo `#categories`; key chip theo slug; e2e chặn theo sở thích ở kệ Văn học (`prefs-blocks-account.spec.ts` (g)).
+
 ## Để sau
 
 - HTML trang chủ tăng ~8KB gzip (thêm ~42 thẻ sách): theo dõi LCP / TTFB trên Preview; cần thì giảm số sách mỗi kệ hoặc stream kệ danh mục.
