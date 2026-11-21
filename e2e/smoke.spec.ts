@@ -2,22 +2,22 @@ import { expect, test } from '@playwright/test'
 import { collectErrors } from './helpers'
 
 // Sáng là mặc định từ đợt trang-chu-khuyen-mai (trước: tối)
-test('/ là tiếng Việt, light mặc định, có danh mục', async ({ page }) => {
+test('/ là tiếng Việt, light mặc định, có kệ danh mục', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
   await expect(page.locator('html')).toHaveAttribute('lang', 'vi')
   await expect(page.locator('html')).toHaveClass(/\blight\b/)
   await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
-  await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Văn học', level: 2, exact: true })).toBeVisible()
   await expect(page.getByRole('main').getByText('Văn học', { exact: true })).toBeVisible()
   expect(errors).toEqual([])
 })
 
-test('/en là tiếng Anh, tên danh mục dịch từ name_en', async ({ page }) => {
+test('/en là tiếng Anh, tên kệ danh mục dịch từ name_en', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/en')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible()
+  await expect(page.getByRole('main').getByRole('heading', { name: 'Literature', level: 2, exact: true })).toBeVisible()
   await expect(page.getByRole('main').getByText('Literature', { exact: true }).first()).toBeVisible()
   expect(errors).toEqual([])
 })

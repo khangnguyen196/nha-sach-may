@@ -3,7 +3,8 @@ import { collectErrors, waitForHydration } from './helpers'
 
 // Trang chủ (Phase 8, đợt trang-chu-khuyen-mai): hàng thẻ khuyến mãi (h2 ẩn "Ưu đãi", e2e/promo-row.spec.ts) + dải đồng
 // hồ / nút "Xem tất cả sách" → kệ Nổi bật / Bán chạy (ẩn khi ít sách) → Mới về (sách tiếng Việt) → Sách ngoại văn →
-// Danh mục. Không giả định sách cụ thể: lấy sách từ kệ rồi mở trang sách để kiểm tra ngôn ngữ.
+// các kệ danh mục (mỗi danh mục cha một kệ, e2e/home-category-shelves.spec.ts). Không giả định sách cụ thể: lấy sách
+// từ kệ rồi mở trang sách để kiểm tra ngôn ngữ.
 
 const shelf = (page: Page, name: string) => page.getByRole('region', { name, exact: true })
 const shelfBooks = (page: Page, name: string) => shelf(page, name).locator('a[href^="/sach/"], a[href^="/en/books/"]')
@@ -18,7 +19,7 @@ async function bookLanguage(page: Page, href: string) {
   return details.locator('dt', { hasText: /^(Ngôn ngữ|Language)$/ }).locator('xpath=following-sibling::dd[1]').textContent()
 }
 
-test('thứ tự kệ: Nổi bật, Bán chạy (nếu có) → Mới về → Sách ngoại văn → Danh mục', async ({ page }) => {
+test('thứ tự kệ: Nổi bật, Bán chạy (nếu có) → Mới về → Sách ngoại văn → kệ danh mục (Văn học)', async ({ page }) => {
   const errors = collectErrors(page)
   await page.goto('/')
   const order = await headingOrder(page)
@@ -26,7 +27,8 @@ test('thứ tự kệ: Nổi bật, Bán chạy (nếu có) → Mới về → S
 
   expect(index('Mới về')).toBeGreaterThanOrEqual(0)
   expect(index('Sách ngoại văn')).toBeGreaterThan(index('Mới về'))
-  expect(index('Danh mục')).toBeGreaterThan(index('Sách ngoại văn'))
+  // Kệ danh mục đứng sau Sách ngoại văn, theo sort_order (Văn học là danh mục cha đầu tiên của seed)
+  expect(index('Văn học')).toBeGreaterThan(index('Sách ngoại văn'))
   // Kệ ẩn khi ít sách (Nổi bật < 4, Bán chạy < 6); có thì phải đứng trước Mới về
   for (const name of ['Nổi bật', 'Bán chạy']) {
     if (index(name) >= 0) expect(index(name), name).toBeLessThan(index('Mới về'))
@@ -126,7 +128,7 @@ test('/en cùng bố cục, CTA → /en/books', async ({ page }) => {
   const order = await headingOrder(page)
   expect(order.indexOf('New arrivals')).toBeGreaterThanOrEqual(0)
   expect(order.indexOf('Foreign Books')).toBeGreaterThan(order.indexOf('New arrivals'))
-  expect(order.indexOf('Categories')).toBeGreaterThan(order.indexOf('Foreign Books'))
+  expect(order.indexOf('Literature')).toBeGreaterThan(order.indexOf('Foreign Books'))
   await page.getByTestId('home-strip').getByRole('link', { name: 'Browse all books' }).click()
   await expect(page).toHaveURL(/\/en\/books$/)
   await expect(page.getByRole('heading', { level: 1, name: 'All books' })).toBeVisible()

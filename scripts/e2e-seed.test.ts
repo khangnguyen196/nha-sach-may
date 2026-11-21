@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
+import { CATEGORY_SHELF_MIN } from '../src/features/books/utils'
 import { WARNING_LIMITS } from '../src/features/chat/config'
 import { slugify } from '../src/lib/slug'
 import { readFixture } from './e2e-seed'
@@ -385,6 +386,26 @@ describe('e2e/fixtures/books.json', () => {
 
   it('mô tả ≤ 300 ký tự (repo public)', () => {
     for (const book of books) expect((book.description ?? '').length, book.slug).toBeLessThanOrEqual(301)
+  })
+
+  it('kệ danh mục trang chủ (home-category-shelves.spec): cha đủ / thiếu sách, có / không có danh mục con', () => {
+    // Danh mục cha của seed.sql (Sách ngoại văn ở seed-foreign-books.sql, có kệ riêng); sách gắn danh mục lá
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const parentOf = (slug: string) => categories.get(slug)?.parent ?? slug
+    const parents = [...categories].filter(([, c]) => c.parent === null && c.active).map(([slug]) => slug)
+    const count = (parent: string) => books.filter((b) => parentOf(b.category_slug) === parent).length
+    const hasChildren = (parent: string) => [...categories.values()].some((c) => c.parent === parent)
+    const full = parents.filter((p) => count(p) >= CATEGORY_SHELF_MIN)
+    expect(full.length).toBeGreaterThanOrEqual(2)
+    expect(full.some(hasChildren)).toBe(true)
+    expect(parents.some((p) => count(p) >= 1 && count(p) < CATEGORY_SHELF_MIN)).toBe(true)
+    // Ví dụ cụ thể spec dùng: Văn học (có con, bấm chip), Lịch sử - Địa lý (không con), Kinh tế (ẩn kệ)
+    expect(count('van-hoc')).toBeGreaterThanOrEqual(CATEGORY_SHELF_MIN)
+    expect(hasChildren('van-hoc')).toBe(true)
+    expect(count('lich-su-dia-ly')).toBeGreaterThanOrEqual(CATEGORY_SHELF_MIN)
+    expect(hasChildren('lich-su-dia-ly')).toBe(false)
+    expect(count('kinh-te')).toBeGreaterThanOrEqual(1)
+    expect(count('kinh-te')).toBeLessThan(CATEGORY_SHELF_MIN)
   })
 })
 
