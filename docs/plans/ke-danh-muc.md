@@ -62,7 +62,7 @@ Kệ danh mục render lúc build (production): Văn học, Tâm lý - Kỹ năn
 - CI check 44891960245, migration-check 44891960112, e2e 44891960163: xanh (864 qua / 24 skip / 0 fail / 0 flaky).
 - Preview (deployment 7961769925) bị chặn bởi Vercel login → ảnh SAU chụp từ bản build local của nhánh (next start, đã tắt): `D:\Bán sách-backup\ke-danh-muc\sau\` (6 ảnh).
 - Trên bản build: tràn ngang 0px ở 320 / 390 / 1440, không còn `#categories-title`, 5 nav chip (Sách ngoại văn, Văn học, Tâm lý - Kỹ năng sống, Thiếu nhi, Sách học ngoại ngữ), console không lỗi.
-- Chờ chủ dự án quyết: lên main / sửa thêm / bỏ. Chưa lên main.
+- Đã quyết (chủ dự án, 2026-11-21, sau khi xem Preview): lên main (`a068f03`, Vercel Production deployment 7962853901); giữ 12 cuốn / kệ; giữ neo 404 `#categories` chỉ chứa kệ ≥ 4 cuốn (Kinh tế ẩn). Chi tiết lên main + kiểm web thật + cách quay về: dòng [Xong 2026-11-21] ke-danh-muc ở `docs/progress.md`.
 
 ## Để sau
 
