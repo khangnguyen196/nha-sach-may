@@ -57,6 +57,13 @@ Kệ danh mục render lúc build (production): Văn học, Tâm lý - Kỹ năn
 - `getCategoryShelfOrEmpty` (ngoài 'use cache', mẫu `getShippingTermsOrNull`): một kệ lỗi → kệ đó rỗng (ẩn), trang chủ vẫn hiện; lỗi nội bộ của Next ném tiếp. Vitest `src/features/books/queries.test.ts`.
 - `scroll-mt-24` cho neo `#categories`; key chip theo slug; e2e chặn theo sở thích ở kệ Văn học (`prefs-blocks-account.spec.ts` (g)).
 
+## Kết quả CI nhánh (@1a5abd2)
+
+- CI check 44891960245, migration-check 44891960112, e2e 44891960163: xanh (864 qua / 24 skip / 0 fail / 0 flaky).
+- Preview (deployment 7961769925) bị chặn bởi Vercel login → ảnh SAU chụp từ bản build local của nhánh (next start, đã tắt): `D:\Bán sách-backup\ke-danh-muc\sau\` (6 ảnh).
+- Trên bản build: tràn ngang 0px ở 320 / 390 / 1440, không còn `#categories-title`, 5 nav chip (Sách ngoại văn, Văn học, Tâm lý - Kỹ năng sống, Thiếu nhi, Sách học ngoại ngữ), console không lỗi.
+- Chờ chủ dự án quyết: lên main / sửa thêm / bỏ. Chưa lên main.
+
 ## Để sau
 
 - HTML trang chủ tăng ~8KB gzip (thêm ~42 thẻ sách): theo dõi LCP / TTFB trên Preview; cần thì giảm số sách mỗi kệ hoặc stream kệ danh mục.
