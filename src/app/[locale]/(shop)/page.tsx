@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server'
 import { buttonVariants } from '@/components/ui/button'
 import { Shelf, type ShelfChips } from '@/features/books/components/shelf'
-import { getCategories, getCategoryShelf, getHomeShelves, type Category } from '@/features/books/queries'
+import { getCategories, getCategoryShelfOrEmpty, getHomeShelves, type Category } from '@/features/books/queries'
 import { visibleCategoryIds } from '@/features/books/utils'
 import { PromoRow } from '@/features/home/components/promo-row'
 import { getShippingTermsOrNull } from '@/features/home/queries'
@@ -44,10 +44,13 @@ export default async function HomePage() {
   const visible = new Set(visibleIds)
   const foreignRoot = categories.find((c) => c.slug === FOREIGN_CATEGORY_SLUG)
   const shelfParents = categories.filter((c) => c.parent_id === null && c.slug !== FOREIGN_CATEGORY_SLUG)
-  // Mỗi kệ danh mục một cache riêng (giới hạn 128 tag / cache), chạy song song cùng các kệ trên
+  // Mỗi kệ danh mục một cache riêng (giới hạn 128 tag / cache), chạy song song cùng các kệ trên. Kệ lỗi → [] (ẩn kệ đó),
+  // trang chủ vẫn hiện
   const [shelves, ...categoryBooks] = await Promise.all([
     getHomeShelves(visibleIds, foreignRoot ? leafIds(categories, foreignRoot) : []),
-    ...shelfParents.map((parent) => getCategoryShelf(leafIds(categories, parent).filter((id) => visible.has(id)))),
+    ...shelfParents.map((parent) =>
+      getCategoryShelfOrEmpty(leafIds(categories, parent).filter((id) => visible.has(id))),
+    ),
   ])
   const categoryHref = (category: Category): Href => ({
     pathname: '/categories/[slug]',
@@ -57,7 +60,7 @@ export default async function HomePage() {
     navLabel: tCatalog('shelfSubcategories', { category: localize(parent, 'name', locale) }),
     items: categories
       .filter((child) => child.parent_id === parent.id)
-      .map((child) => ({ href: categoryHref(child), label: localize(child, 'name', locale) })),
+      .map((child) => ({ key: child.slug, href: categoryHref(child), label: localize(child, 'name', locale) })),
   })
   // Thẻ + kệ "Sách ngoại văn" dùng chung tên và link danh mục
   const foreign: { title: string; href: Href } | null = foreignRoot
@@ -134,8 +137,9 @@ export default async function HomePage() {
             chips={chipsFor(foreignRoot)}
           />
         )}
-        {/* Neo của link "Xem danh mục" ở trang 404 (not-found-view.tsx). Kệ < 4 sách tự ẩn (getCategoryShelf) */}
-        <div id="categories" className="space-y-12 md:space-y-20">
+        {/* Neo của link "Xem danh mục" ở trang 404 (not-found-view.tsx); scroll-mt-24: header dính không che tiêu đề kệ
+            đầu khi nhảy tới neo. Kệ < 4 sách tự ẩn (getCategoryShelf) */}
+        <div id="categories" className="scroll-mt-24 space-y-12 md:space-y-20">
           {shelfParents.map((parent, index) => (
             <Shelf
               key={parent.id}

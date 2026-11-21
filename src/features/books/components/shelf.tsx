@@ -20,7 +20,7 @@ const LIST_CLASS =
   'relative -mx-4 -mt-4 pt-10 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 xl:-mx-8 xl:scroll-px-8 xl:px-8'
 
 /** Hàng chip danh mục con dưới tiêu đề kệ. `navLabel` riêng từng kệ: trang chủ có nhiều nav chip */
-export type ShelfChips = { navLabel: string; items: { href: Href; label: string }[] }
+export type ShelfChips = { navLabel: string; items: { key: string; href: Href; label: string }[] }
 
 type Props = {
   id: string
@@ -61,7 +61,7 @@ export async function Shelf({ id, title, href, books, chips }: Props) {
         <nav aria-label={chips.navLabel} className="relative z-10 -mx-4 mt-2 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6">
           <ul className="flex w-max gap-2">
             {chips.items.map((item) => (
-              <li key={item.label}>
+              <li key={item.key}>
                 <Chip href={item.href}>{item.label}</Chip>
               </li>
             ))}

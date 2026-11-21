@@ -84,7 +84,7 @@ export function categoryShelfBooks<T extends { stock: number }>(rows: readonly T
   return books.length < CATEGORY_SHELF_MIN ? [] : books
 }
 
-type SaleCandidate ={ id: number; price: number; original_price: number | null; stock: number }
+type SaleCandidate = { id: number; price: number; original_price: number | null; stock: number }
 
 /**
  * Thẻ "Đang giảm giá": chỉ sách còn hàng có giá gốc cao hơn giá bán (PostgREST không so được hai cột → lọc ở đây),

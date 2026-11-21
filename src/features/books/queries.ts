@@ -1,5 +1,6 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
+import { unstable_rethrow } from 'next/navigation'
 import { cache } from 'react'
 import { SHARP_COVER_WIDTH } from '@/lib/cover-image'
 import { bookBlockKeys } from '@/features/prefs/blocks'
@@ -194,6 +195,22 @@ export async function getCategoryShelf(leafIds: number[]): Promise<BookCard[]> {
   const books = categoryShelfBooks(result.data)
   tagBooks(books)
   return books
+}
+
+/**
+ * getCategoryShelf cho trang chủ: lỗi → [] = ẩn đúng kệ đó, không kéo cả trang chủ vào trang lỗi (mỗi kệ một truy vấn
+ * riêng, ~6 truy vấn thêm vào trang chủ). Bắt lỗi ở NGOÀI 'use cache': bắt bên trong thì mảng rỗng được cache nhiều giờ.
+ * Lỗi lúc build → HTML tĩnh của trang chủ thiếu kệ tới lần dựng lại kế tiếp (chấp nhận). Mẫu: getShippingTermsOrNull.
+ */
+export async function getCategoryShelfOrEmpty(leafIds: number[]): Promise<BookCard[]> {
+  try {
+    return await getCategoryShelf(leafIds)
+  } catch (error) {
+    // Đứng đầu catch: lỗi nội bộ của Next lúc prerender (dừng prerender ở dữ liệu động…) phải ném tiếp, không thành []
+    unstable_rethrow(error)
+    console.error('getCategoryShelfOrEmpty:', error instanceof Error ? error.message.slice(0, 200) : 'unknown error')
+    return []
+  }
 }
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
