@@ -171,7 +171,7 @@ export async function getHomeShelves(visibleCategoryIds: number[], foreignCatego
 export type BookCard = Awaited<ReturnType<typeof getHomeShelves>>['newArrivals'][number]
 
 /** Ứng viên của một kệ danh mục: dư để sách còn hàng vẫn đủ 12 khi đầu danh sách là sách hết hàng */
-const CATEGORY_SHELF_CANDIDATES = 36
+export const CATEGORY_SHELF_CANDIDATES = 36
 
 /**
  * Kệ của MỘT danh mục cha ở trang chủ (đợt ke-danh-muc): sách thuộc các danh mục lá `leafIds` (đang hiện), bán chạy →
@@ -200,7 +200,8 @@ export async function getCategoryShelf(leafIds: number[]): Promise<BookCard[]> {
 /**
  * getCategoryShelf cho trang chủ: lỗi → [] = ẩn đúng kệ đó, không kéo cả trang chủ vào trang lỗi (mỗi kệ một truy vấn
  * riêng, ~6 truy vấn thêm vào trang chủ). Bắt lỗi ở NGOÀI 'use cache': bắt bên trong thì mảng rỗng được cache nhiều giờ.
- * Lỗi lúc build → HTML tĩnh của trang chủ thiếu kệ tới lần dựng lại kế tiếp (chấp nhận). Mẫu: getShippingTermsOrNull.
+ * Lỗi lúc build hoặc lúc dựng lại ngầm (tag books hết hạn) → HTML tĩnh của trang chủ thiếu kệ tới lần dựng lại kế
+ * tiếp (chấp nhận). Mẫu: getShippingTermsOrNull.
  */
 export async function getCategoryShelfOrEmpty(leafIds: number[]): Promise<BookCard[]> {
   try {

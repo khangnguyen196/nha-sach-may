@@ -1,12 +1,16 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
+import { CATEGORY_SHELF_CANDIDATES } from '../src/features/books/queries'
 import { CATEGORY_SHELF_MIN, CATEGORY_SHELF_SIZE, categoryShelfBooks } from '../src/features/books/utils'
 import { WARNING_LIMITS } from '../src/features/chat/config'
 import { slugify } from '../src/lib/slug'
 import { readFixture } from './e2e-seed'
 import { nameTokensKey } from './import-books'
+
+// queries.ts (chỉ lấy hằng CATEGORY_SHELF_CANDIDATES) import 'server-only', ném lỗi ngoài môi trường react-server
+vi.mock('server-only', () => ({}))
 
 // Dữ liệu sách của Supabase local e2e (scripts/e2e-seed.ts). Spec Playwright dựa vào các giả định dưới đây; sửa
 // fixture làm hỏng giả định thì fail ở đây (job check) thay vì fail mơ hồ lúc chạy e2e.
@@ -418,6 +422,10 @@ describe('e2e/fixtures/books.json', () => {
     const categories = seedCategories(read('../supabase/seed.sql'))
     const parentOf = (slug: string) => categories.get(slug)?.parent ?? slug
     expect(categories.get(PREFS_SHELF_LEAF)?.parent).toBe(PREFS_SHELF_PARENT)
+    // Truy vấn thật cắt CATEGORY_SHELF_CANDIDATES ứng viên TRƯỚC categoryShelfBooks: mọi sách Văn học của fixture phải
+    // lọt vào ứng viên thì mô phỏng dưới đây (không cắt) mới khớp kệ thật
+    const shelfBooks = books.filter((b) => parentOf(b.category_slug) === PREFS_SHELF_PARENT)
+    expect(shelfBooks.length).toBeLessThanOrEqual(CATEGORY_SHELF_CANDIDATES)
     for (const order of [books, [...books].reverse()]) {
       const shelf = categoryShelfBooks(order.filter((b) => parentOf(b.category_slug) === PREFS_SHELF_PARENT))
       expect(shelf.length).toBeLessThanOrEqual(CATEGORY_SHELF_SIZE)

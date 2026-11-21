@@ -7,7 +7,7 @@ import { collectErrors, waitForSettled } from './helpers'
 // cuốn, ẩn khi < 4; dưới tiêu đề là hàng chip danh mục con; kệ Sách ngoại văn cũng có chip. Kỳ vọng suy từ seed
 // (supabase/seed.sql, seed-foreign-books.sql) + e2e/fixtures/books.json; bất biến dữ liệu ở scripts/e2e-seed.test.ts.
 // Không tạo dữ liệu, không cần user. Bất biến: sách e2e (createE2eBook / createShopBooks) luôn nằm dưới danh mục gốc
-// ẩn, không vào danh mục thật đang hiện → số sách trong kệ chỉ đến từ fixture.
+// ẩn hoặc không có danh mục, không vào danh mục thật đang hiện → số sách trong kệ chỉ đến từ fixture.
 
 const FOREIGN_ROOT = 'sach-ngoai-van'
 

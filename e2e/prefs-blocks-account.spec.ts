@@ -25,7 +25,7 @@ const FOREIGN_CHILD = 'ngoai-van-thieu-nhi'
 /** Kệ danh mục trang chủ (đợt ke-danh-muc): danh mục cha Văn học, chặn danh mục lá Tiểu thuyết của nó */
 const SHELF_PARENT = 'van-hoc'
 const SHELF_BLOCKED_LEAF = 'tieu-thuyet'
-const HIDDEN_TEXT ='Đã ẩn theo sở thích của bạn'
+const HIDDEN_TEXT = 'Đã ẩn theo sở thích của bạn'
 
 const slots = (scope: Locator) => scope.locator('[data-book-slot]')
 const slotOf = (page: Page, slug: string) =>
