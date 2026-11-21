@@ -22,7 +22,10 @@ const BY_PUBLISHER = 'buoc-qua-nuoc-mat-tu-khac-truong-thanh'
 /** Danh mục gốc (kệ "Sách ngoại văn" ở trang chủ) và một danh mục con của nó */
 const FOREIGN_ROOT = 'sach-ngoai-van'
 const FOREIGN_CHILD = 'ngoai-van-thieu-nhi'
-const HIDDEN_TEXT = 'Đã ẩn theo sở thích của bạn'
+/** Kệ danh mục trang chủ (đợt ke-danh-muc): danh mục cha Văn học, chặn danh mục lá Tiểu thuyết của nó */
+const SHELF_PARENT = 'van-hoc'
+const SHELF_BLOCKED_LEAF = 'tieu-thuyet'
+const HIDDEN_TEXT ='Đã ẩn theo sở thích của bạn'
 
 const slots = (scope: Locator) => scope.locator('[data-book-slot]')
 const slotOf = (page: Page, slug: string) =>
@@ -229,6 +232,36 @@ test('(c)(d) chặn danh mục cha: kệ + thẻ "Sách ngoại văn" ở trang 
     await waitForRevealReady(page)
     expect(await slots(main).count()).toBeGreaterThan(0)
     await expect(main.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(0)
+    expect(errors).toEqual([])
+  } finally {
+    await deleteE2eUsers([user.id])
+  }
+})
+
+test('(g) kệ danh mục trang chủ: chặn danh mục lá Tiểu thuyết → trong kệ Văn học chỉ che đúng sách của nó', async ({
+  page,
+}, testInfo) => {
+  const errors = collectErrors(page)
+  const blockedId = await categoryIdBySlug(SHELF_BLOCKED_LEAF)
+  const user = await blockedSetup(`${testInfo.project.name}-prefs-shelf`, [{ kind: 'category', category_id: blockedId }])
+  try {
+    await login(page, user)
+    await page.goto('/')
+    await waitForRevealReady(page)
+    const shelf = page.getByRole('main').locator(`section[aria-labelledby="category-${SHELF_PARENT}"]`)
+    await expect(shelf).toHaveCount(1)
+    const total = await slots(shelf).count()
+    const blocked = shelf.locator(`[data-book-slot][data-c="${blockedId}"]`)
+    const blockedCount = await blocked.count()
+    // Kệ có cả sách bị chặn lẫn sách không bị chặn (bất biến ở scripts/e2e-seed.test.ts)
+    expect(blockedCount).toBeGreaterThan(0)
+    expect(total).toBeGreaterThan(blockedCount)
+    await expect(shelf.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(blockedCount)
+    await expect(blocked.locator('[data-book-veil]').filter({ visible: true })).toHaveCount(blockedCount)
+    await expect(shelf.locator('[data-book-link]').filter({ visible: true })).toHaveCount(total - blockedCount)
+    await expect(
+      shelf.locator(`[data-book-slot]:not([data-c="${blockedId}"]) [data-book-veil]`).filter({ visible: true }),
+    ).toHaveCount(0)
     expect(errors).toEqual([])
   } finally {
     await deleteE2eUsers([user.id])

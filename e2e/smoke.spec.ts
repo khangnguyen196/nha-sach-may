@@ -9,7 +9,13 @@ test('/ là tiếng Việt, light mặc định, có kệ danh mục', async ({ 
   await expect(page.locator('html')).toHaveClass(/\blight\b/)
   await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
   await expect(page.getByRole('main').getByRole('heading', { name: 'Văn học', level: 2, exact: true })).toBeVisible()
-  await expect(page.getByRole('main').getByText('Văn học', { exact: true })).toBeVisible()
+  // Chip danh mục con trong kệ Văn học
+  await expect(
+    page
+      .getByRole('main')
+      .getByRole('region', { name: 'Văn học', exact: true })
+      .getByRole('link', { name: 'Tiểu thuyết', exact: true }),
+  ).toBeVisible()
   expect(errors).toEqual([])
 })
 
@@ -18,7 +24,13 @@ test('/en là tiếng Anh, tên kệ danh mục dịch từ name_en', async ({ p
   await page.goto('/en')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('main').getByRole('heading', { name: 'Literature', level: 2, exact: true })).toBeVisible()
-  await expect(page.getByRole('main').getByText('Literature', { exact: true }).first()).toBeVisible()
+  // Chip danh mục con trong kệ Literature: tên danh mục con cũng lấy từ name_en
+  await expect(
+    page
+      .getByRole('main')
+      .getByRole('region', { name: 'Literature', exact: true })
+      .getByRole('link', { name: 'Novels', exact: true }),
+  ).toBeVisible()
   expect(errors).toEqual([])
 })
 

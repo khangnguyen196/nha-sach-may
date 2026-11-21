@@ -1,15 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { CATEGORY_SHELF_MIN, CATEGORY_SHELF_SIZE } from '../src/features/books/utils'
 import { collectErrors, waitForSettled } from './helpers'
 
 // Kệ danh mục trang chủ (đợt ke-danh-muc): mỗi danh mục cha đang hiện (trừ Sách ngoại văn, có kệ riêng) một kệ ≤ 12
 // cuốn, ẩn khi < 4; dưới tiêu đề là hàng chip danh mục con; kệ Sách ngoại văn cũng có chip. Kỳ vọng suy từ seed
 // (supabase/seed.sql, seed-foreign-books.sql) + e2e/fixtures/books.json; bất biến dữ liệu ở scripts/e2e-seed.test.ts.
-// Không tạo dữ liệu, không cần user.
+// Không tạo dữ liệu, không cần user. Bất biến: sách e2e (createE2eBook / createShopBooks) luôn nằm dưới danh mục gốc
+// ẩn, không vào danh mục thật đang hiện → số sách trong kệ chỉ đến từ fixture.
 
-/** Hằng của src/features/books/utils.ts (CATEGORY_SHELF_SIZE / CATEGORY_SHELF_MIN) */
-const SHELF_SIZE = 12
-const SHELF_MIN = 4
 const FOREIGN_ROOT = 'sach-ngoai-van'
 
 type SeedCategory = { slug: string; name: string; nameEn: string; parent: string | null; sortOrder: number }
@@ -60,8 +59,8 @@ const bookCount = (parent: string) => {
 const shelfParents = categories
   .filter((c) => c.parent === null && c.slug !== FOREIGN_ROOT)
   .sort((a, b) => a.sortOrder - b.sortOrder)
-const fullParents = shelfParents.filter((c) => bookCount(c.slug) >= SHELF_MIN)
-const thinParents = shelfParents.filter((c) => bookCount(c.slug) < SHELF_MIN)
+const fullParents = shelfParents.filter((c) => bookCount(c.slug) >= CATEGORY_SHELF_MIN)
+const thinParents = shelfParents.filter((c) => bookCount(c.slug) < CATEGORY_SHELF_MIN)
 const byslug = (slug: string) => {
   const category = categories.find((c) => c.slug === slug)
   if (!category) throw new Error(`home-category-shelves.spec: seed không có danh mục ${slug}`)
@@ -102,7 +101,7 @@ test('vi: mỗi danh mục cha đủ sách một kệ (tiêu đề, Xem tất c�
     )
     // Kệ nằm trong khung neo #categories, id theo slug
     await expect(main(page).locator(`#categories section[aria-labelledby="category-${parent.slug}"]`)).toHaveCount(1)
-    await expect(shelfBooks(page, parent.name), parent.slug).toHaveCount(Math.min(SHELF_SIZE, bookCount(parent.slug)))
+    await expect(shelfBooks(page, parent.name), parent.slug).toHaveCount(Math.min(CATEGORY_SHELF_SIZE, bookCount(parent.slug)))
 
     const children = childrenOf(parent.slug)
     const nav = region.getByRole('navigation', { name: `Danh mục con của ${parent.name}`, exact: true })

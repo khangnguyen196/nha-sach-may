@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PAGE_SIZE } from '../src/features/books/catalog-params'
-import { CATEGORY_SHELF_MIN } from '../src/features/books/utils'
+import { CATEGORY_SHELF_MIN, CATEGORY_SHELF_SIZE, categoryShelfBooks } from '../src/features/books/utils'
 import { WARNING_LIMITS } from '../src/features/chat/config'
 import { slugify } from '../src/lib/slug'
 import { readFixture } from './e2e-seed'
@@ -21,6 +21,9 @@ const PREFS_BY_AUTHOR = 'muoi-chin-chan-dung-nha-van-cung-thoi'
 const PREFS_BY_PUBLISHER = 'buoc-qua-nuoc-mat-tu-khac-truong-thanh'
 const PREFS_FOREIGN_ROOT = 'sach-ngoai-van'
 const PREFS_FOREIGN_CHILD = 'ngoai-van-thieu-nhi'
+/** Kệ danh mục trang chủ của prefs-blocks-account.spec (g): chặn danh mục lá Tiểu thuyết, xem kệ Văn học */
+const PREFS_SHELF_PARENT = 'van-hoc'
+const PREFS_SHELF_LEAF = 'tieu-thuyet'
 /** Dữ liệu thêm của prefs-book-account.spec */
 const PREFS_SHORT = 'vong-buom'
 const PREFS_CHILD_BOOK = 'how-not-to-be-a-twit-and-other-wisdom-from-roald-dahl'
@@ -406,6 +409,21 @@ describe('e2e/fixtures/books.json', () => {
     expect(hasChildren('lich-su-dia-ly')).toBe(false)
     expect(count('kinh-te')).toBeGreaterThanOrEqual(1)
     expect(count('kinh-te')).toBeLessThan(CATEGORY_SHELF_MIN)
+  })
+
+  it('prefs-blocks-account.spec (g): kệ Văn học có cả sách Tiểu thuyết lẫn sách khác trong các cuốn được hiện', () => {
+    // Thứ tự kệ (getCategoryShelf): sold_count (sách thật luôn 0 trên e2e: chỉ đặt sách e2e) → created_at mới nhất →
+    // id, rồi còn hàng trước, cắt CATEGORY_SHELF_SIZE (categoryShelfBooks). created_at theo thứ tự fixture (cùng lúc
+    // hoặc tăng dần) → xét cả hai chiều.
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const parentOf = (slug: string) => categories.get(slug)?.parent ?? slug
+    expect(categories.get(PREFS_SHELF_LEAF)?.parent).toBe(PREFS_SHELF_PARENT)
+    for (const order of [books, [...books].reverse()]) {
+      const shelf = categoryShelfBooks(order.filter((b) => parentOf(b.category_slug) === PREFS_SHELF_PARENT))
+      expect(shelf.length).toBeLessThanOrEqual(CATEGORY_SHELF_SIZE)
+      expect(shelf.filter((b) => b.category_slug === PREFS_SHELF_LEAF).length).toBeGreaterThanOrEqual(1)
+      expect(shelf.filter((b) => b.category_slug !== PREFS_SHELF_LEAF).length).toBeGreaterThanOrEqual(1)
+    }
   })
 })
 
