@@ -69,6 +69,7 @@ Kệ danh mục render lúc build (production): Văn học, Tâm lý - Kỹ năn
 - Quyết định chủ dự án: kệ danh mục hiện khi có ≥ 1 cuốn (chỉ ẩn khi 0 cuốn), kệ ít sách canh trái như kệ thường, không giãn bìa (thẻ rộng cố định `w-36 sm:w-40`, `ShelfNav` ẩn khi kệ không tràn: không sửa `shelf.tsx`), giữ 12 cuốn / kệ + chip con; neo 404 `#categories` chứa mọi kệ có sách. Thay quyết định cũ "giữ neo chỉ chứa kệ ≥ 4 cuốn (Kinh tế ẩn)".
 - Code: bỏ hằng ngưỡng 4 cuốn trong `categoryShelfBooks` (`features/books/utils.ts`); Vitest 0 / 1 / 2 / 3 cuốn (thử đỏ: đặt lại ngưỡng 4 → 3 test đỏ, bỏ → xanh). e2e `home-category-shelves.spec.ts`: mọi cha có sách có kệ, Kinh tế có kệ + chip con, ở 1440 thẻ đầu Kinh tế khớp Văn học và không có nút cuộn, neo `/#categories` đủ kệ.
 - Không đổi DB, không thêm thư viện.
+- Đã lên main (2026-11-22, chủ dự án bỏ bước Preview, đồng ý lên main nếu đủ điều kiện): main `0180410` (code `4d49136`), Vercel Production deployment 7974629736; kiểm web thật đạt (11 kệ h2, Kinh tế 3 cuốn + 3 chip, thẻ đầu khớp Văn học, không nút cuộn, 97 ảnh 0 lỗi, không tràn ngang). Chi tiết + cách quay về: dòng [Xong 2026-11-22] ke-danh-muc-nguong ở `docs/progress.md`.
 
 Số đo (build ở thư mục chính, main `8117100` → nhánh `4d49136`, dữ liệu production lúc build):
 
@@ -91,5 +92,5 @@ Kệ Kinh tế thêm 3 sách (3 ảnh, đều lazy); số ảnh tải ngay khôn
 
 ## Để sau
 
-- HTML trang chủ tăng ~8KB gzip (thêm ~42 thẻ sách): theo dõi LCP / TTFB trên Preview; cần thì giảm số sách mỗi kệ hoặc stream kệ danh mục.
-- Ảnh sau (Preview, 1440 + 390, sáng + tối): chụp khi có link Preview.
+- HTML trang chủ tăng ~8KB gzip (thêm ~42 thẻ sách): theo dõi LCP / TTFB trên production; cần thì giảm số sách mỗi kệ hoặc stream kệ danh mục.
+- [Xong 2026-11-22] Ảnh sau: bỏ bước Preview, chụp trên production sau đợt ke-danh-muc-nguong: D:\Bán sách-backup\ke-danh-muc-nguong\sau-production\.
