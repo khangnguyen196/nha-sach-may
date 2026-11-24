@@ -476,6 +476,68 @@ file_names() {
   printf '%s' "$out"
 }
 
+# (g) bản sao CRLF: SQL Editor của Supabase trên Windows (dán từ clipboard) đổi mọi xuống dòng thành CRLF, kể cả xuống
+# dòng trong chuỗi mô tả (sự cố 2026-11-24, supabase/data/README.md). Bản sao vào $WORK/crlf/ (cùng tên file), bản gốc
+# trong repo phải 0 CR, bản sao phải có CR. Kết quả ở CRLF_OUT (không dùng $(…): fail trong subshell không dừng script)
+cr_count() { tr -d -c '\r' < "$1" | wc -c | tr -d ' '; }
+
+crlf_copy() {
+  local src="$1" n
+  CRLF_OUT="$WORK/crlf/$(basename "$src")"
+  mkdir -p "$WORK/crlf"
+  n=$(cr_count "$src")
+  [ "$n" = 0 ] || fail "(g) CRLF" "$(basename "$src") trong repo đã có CR ($n ký tự): file phải LF"
+  sed 's/$/\r/' "$src" > "$CRLF_OUT"
+  n=$(cr_count "$CRLF_OUT")
+  [ "$n" -gt 0 ] || fail "(g) CRLF" "bản sao CRLF của $(basename "$src") không có CR"
+  row "(g) CRLF" "bản sao $(basename "$src"): $n CR (bản trong repo 0)"
+}
+
+# Gọi ở cuối đường CHƯA GHI: DB đang ở trạng thái sau ghi bản LF (= bản chụp s1, trừ updated_at). Đưa DB về bản chụp
+# đầu s0 (hoàn tác bản CRLF nếu có đường hoàn tác; không thì chép lại các cột được ghi từ s0), chạy bản CRLF của mọi file
+# ghi: số dòng đổi = số câu, cột ngoài danh sách giữ nguyên, lần 2 = 0 dòng, kết quả cùng md5 từng dòng với lần ghi LF
+# (s1). Kết thúc ở trạng thái sau ghi như trước bước này.
+crlf_check() {
+  local file result how
+  local -a lf_files=("${files[@]}") crlf_files=()
+  for file in "${lf_files[@]}"; do
+    crlf_copy "$file"
+    file_updates[$CRLF_OUT]=${file_updates[$file]}
+    file_ids[$CRLF_OUT]=${file_ids[$file]}
+    crlf_files+=("$CRLF_OUT")
+  done
+  if [ -z "$undo_skip" ]; then
+    crlf_copy "$undo"
+    snap pre; counts pre
+    run_sql "$CRLF_OUT" crlf-undo || fail "(g) CRLF hoàn tác" "bản CRLF của $(basename "$undo") lỗi"
+    result=$(changed pre)
+    [ "${result%%|*}" = "$id_count" ] || fail "(g) CRLF hoàn tác" "${result%%|*} dòng đổi, cần $id_count"
+    result=$(changed s0 '{updated_at}')
+    [ "${result%%|*}" = "0" ] || fail "(g) CRLF hoàn tác" "${result%%|*} dòng chưa về bản chụp đầu (id ${result#*|})"
+    columns_kept "(g) CRLF hoàn tác" pre
+    snap pre; counts pre
+    run_sql "$CRLF_OUT" crlf-undo2 || fail "(g) CRLF hoàn tác lần 2" "bản CRLF của $(basename "$undo") lỗi"
+    result=$(changed pre)
+    [ "${result%%|*}" = "0" ] || fail "(g) CRLF hoàn tác lần 2" "${result%%|*} dòng đổi (id ${result#*|}), cần 0"
+    columns_kept "(g) CRLF hoàn tác lần 2" pre
+    row "(g) CRLF hoàn tác" "bản CRLF của $(basename "$undo"): $id_count dòng đổi, về đúng bản chụp đầu (trừ updated_at); lần 2 = 0 dòng"
+    how="hoàn tác bản CRLF"
+  else
+    # Không có đường hoàn tác ở đây: chép lại các cột được ghi từ bản chụp đầu (chỉ trên DB local của CI)
+    db_psql -c "update public.books b set ($allowed) = row(s.${allowed//,/, s.}) from ci_data_check.s0 s where b.id = s.id" < /dev/null
+    result=$(changed s0 '{updated_at}')
+    [ "${result%%|*}" = "0" ] || fail "(g) CRLF" "chép lại cột từ bản chụp đầu xong mà ${result%%|*} dòng khác (id ${result#*|})"
+    how="chép lại cột {$allowed} từ bản chụp đầu (không chạy hoàn tác: $undo_skip)"
+  fi
+  files=("${crlf_files[@]}")
+  write_all "(g) CRLF ghi"
+  rerun_zero "(g) CRLF lần 2"
+  files=("${lf_files[@]}")
+  result=$(changed s1 '{updated_at}')
+  [ "${result%%|*}" = "0" ] || fail "(g) CRLF" "${result%%|*} dòng khác lần ghi bản LF (id ${result#*|})"
+  row "(g) CRLF" "$(file_names): bản sao CRLF (đưa DB về bản chụp đầu bằng $how) ghi đúng số câu, cùng md5 từng dòng với lần ghi LF (trừ updated_at), lần 2 = 0 dòng"
+}
+
 flow_not_written() {
   local result
   snap s0; counts s0
@@ -487,6 +549,7 @@ flow_not_written() {
   rerun_zero "(b) lần 2"
   if [ -n "$undo_skip" ]; then
     row "(f) hoàn tác" "$(file_names): bỏ qua: $undo_skip"
+    crlf_check
     return
   fi
   snap pre; counts pre
@@ -500,6 +563,7 @@ flow_not_written() {
   result=$(changed s1 '{updated_at}')
   [ "${result%%|*}" = "0" ] || fail "(f) ghi lại" "${result%%|*} dòng khác lần ghi đầu (id ${result#*|})"
   rerun_zero "(f) lần 2"
+  crlf_check
 }
 
 flow_written() {
@@ -511,6 +575,7 @@ flow_written() {
   if [ -n "$undo_skip" ]; then
     row "(e) sửa mô tả gốc" "$(file_names): bỏ qua: production đã ghi, cần hoàn tác để đưa về trạng thái trước ghi mà $undo_skip"
     row "(f) hoàn tác" "$(file_names): bỏ qua: $undo_skip"
+    row "(g) CRLF" "$(file_names): bỏ qua: chế độ ĐÃ GHI"
     return
   fi
   snap pre; counts pre
@@ -529,6 +594,7 @@ flow_written() {
   [ "${result%%|*}" = "0" ] || fail "(f) ghi lại" "${result%%|*} dòng khác bản chụp production đã nạp (id ${result#*|})"
   row "(f) ghi lại" "mọi cột (trừ updated_at) khớp bản chụp production đã nạp"
   rerun_zero "(f) lần 2"
+  row "(g) CRLF" "$(file_names): bỏ qua: chế độ ĐÃ GHI (production đã có bản ghi, bản CRLF chỉ kiểm được trên trạng thái trước ghi của đường CHƯA GHI)"
 }
 
 if [ "${#modes[@]}" = 1 ]; then

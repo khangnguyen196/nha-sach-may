@@ -22,6 +22,8 @@
 #             (f) hoàn tác → về đúng bản chụp đầu → hoàn tác lần 2 = 0 dòng → ghi lại → lần 2 = 0.
 #   ĐÃ GHI:   (a) lần 1 = 0 dòng; (b) lần 2 = 0 dòng; (f) hoàn tác → trạng thái trước ghi → hoàn tác lần 2 = 0 → (e) →
 #             ghi lại (= số câu) → khớp bản chụp production đã nạp → lần 2 = 0.
+#   (g) CRLF (chỉ CHƯA GHI): bản sao LF → CRLF của file ghi (và hoàn tác) như khi dán vào SQL Editor trên Windows → từ
+#       bản chụp đầu ghi đúng số câu, cùng md5 từng dòng với lần ghi LF, lần 2 = 0 (supabase/data/README.md).
 #   (f) (và (e) của ĐÃ GHI) chạy ở mức vòng: chỉ khi có file hoàn tác, kiểm đủ file ghi của vòng và mọi file cùng chế độ;
 #   không thì bỏ qua, ghi lý do (không đỏ). Vòng có file đã chạy production + file chưa chạy: mỗi file kiểm riêng.
 # "Dòng đổi" đếm bằng so md5 từng dòng theo id trước / sau (không tin command tag). Log chỉ có id, tên cột, số đếm.
