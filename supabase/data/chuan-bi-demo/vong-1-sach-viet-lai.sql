@@ -14,11 +14,11 @@ begin;
 set local lock_timeout = '5s';
 
 -- 213 And the Mountains Echoed
-update public.books set description = $mota$Năm 1952, ở một ngôi làng nghèo của Afghanistan, cậu bé Abdullah gần như là người mẹ thứ hai của cô em gái nhỏ Pari. Hai anh em gắn bó không rời, cho tới chuyến đi theo cha băng qua sa mạc tới Kabul, nơi một quyết định của người lớn chia cắt họ.
+update public.books set description = $mota$Năm 1952, ở một ngôi làng nghèo của Afghanistan, cậu bé Abdullah gần như thay cha mẹ chăm sóc cô em gái nhỏ Pari. Hai anh em gắn bó không rời, cho tới chuyến đi theo cha băng qua sa mạc tới Kabul, nơi một quyết định của người lớn chia cắt họ.
 
 Từ cuộc chia ly ấy, Khaled Hosseini mở rộng câu chuyện qua nhiều thế hệ và nhiều người kể: họ hàng, người quen và cả những người xa lạ, mỗi người giữ một phần sợi dây nối hai anh em. Bối cảnh trải từ Kabul tới Paris, California và một hòn đảo của Hy Lạp.
 
-Cuốn tiểu thuyết nói về tình thân, sự hy sinh, những lựa chọn khó khăn và ký ức theo con người suốt cả đời, kể cả khi họ đã đi rất xa nơi mình sinh ra.$mota$, description_en = $mota$In 1952, in a poor village in Afghanistan, young Abdullah is almost a second parent to his little sister Pari. The two are inseparable until a journey with their father across the desert to Kabul, where a decision made by the adults pulls them apart.
+Cuốn tiểu thuyết nói về tình thân, sự hy sinh, những lựa chọn khó khăn và ký ức theo con người suốt cả đời, kể cả khi họ đã đi rất xa nơi mình sinh ra.$mota$, description_en = $mota$In 1952, in a poor village in Afghanistan, young Abdullah all but raises his little sister Pari himself. The two are inseparable until their father sets out for Kabul with both children. At the end of that long desert crossing, a decision made by the adults pulls them apart.
 
 From that separation, Khaled Hosseini widens the story across generations and many narrators: relatives, acquaintances and strangers, each holding a thread of the bond between the siblings. The settings move from Kabul to Paris, California and a Greek island.
 
@@ -26,9 +26,9 @@ The novel is about family, sacrifice, hard choices and the memories that follow 
 where id = 213 and language = 'en' and md5(description) = 'a82ce1f968cfd9148d858b933040b322' and md5(description_en) = '93eaccc1d8025c995c791853826f799c' and description_auto_translated = true;
 
 -- 216 Death Comes as the End
-update public.books set description = $mota$Death Comes as the End là một truyện trinh thám của Agatha Christie đặt ở Ai Cập cổ đại, bên bờ sông Nile, cách nay khoảng bốn nghìn năm. Renisenb, góa chồng khi còn trẻ, trở về sống trong gia đình người cha Imhotep, một tư tế giàu có và nhiều ruộng đất, giữa các anh trai, chị dâu, người bà và những người làm công.
+update public.books set description = $mota$Death Comes as the End là một truyện trinh thám của Agatha Christie đặt ở Ai Cập cổ đại, bên bờ sông Nile, cách nay khoảng bốn nghìn năm. Renisenb, góa chồng khi còn trẻ, trở về sống trong gia đình người cha Imhotep, một tư tế giàu có và nhiều ruộng đất, giữa các anh em trai, chị dâu, người bà và những người làm công.
 
-Sự yên ổn của gia đình bị phá vỡ khi Imhotep đưa về Nofret, một người vợ lẽ trẻ đẹp và sắc sảo. Những ghen ghét, nghi kỵ lâu nay bùng lên, rồi cái chết đầu tiên xảy ra, kéo theo những cái chết khác.
+Sự yên ổn của gia đình bị phá vỡ khi Imhotep đưa về Nofret, một người vợ lẽ trẻ đẹp và đanh đá. Những ghen ghét, nghi kỵ lâu nay bùng lên, rồi cái chết đầu tiên xảy ra, kéo theo những cái chết khác.
 
 Không có thám tử nổi tiếng nào ở đây: người đọc theo chân Renisenb đoán xem kẻ gây án là ai trong chính những người thân của cô.$mota$, description_en = $mota$Death Comes as the End is an Agatha Christie mystery set in ancient Egypt, on the banks of the Nile, some four thousand years ago. Renisenb, widowed while still young, returns to the household of her father Imhotep, a prosperous priest and landowner, living among her brothers, their wives, her grandmother and the family's servants.
 
@@ -64,11 +64,11 @@ where id = 234 and language = 'en' and md5(description) = '095d91fb5e46f6d3b1a06
 -- 244 Atomic Habits
 update public.books set description = $mota$Atomic Habits của James Clear bắt đầu từ một ý đơn giản: những cải thiện rất nhỏ, lặp lại mỗi ngày, cộng dồn theo thời gian thành thay đổi lớn. Thay vì chỉ đặt mục tiêu, tác giả khuyên xây dựng hệ thống, tức những việc nhỏ ta làm hằng ngày, và gắn thói quen với bản sắc: nghĩ về con người mình muốn trở thành, chứ không chỉ kết quả muốn đạt.
 
-Phần chính của sách là bốn quy tắc để tạo thói quen tốt: làm cho nó rõ ràng, hấp dẫn, dễ dàng và thỏa mãn. Đảo ngược bốn quy tắc này giúp bỏ thói quen xấu: làm cho nó khó thấy, kém hấp dẫn, khó làm và không thỏa mãn.
+Phần chính của sách là bốn quy luật thay đổi hành vi, dùng để tạo thói quen tốt: làm cho nó rõ ràng, hấp dẫn, dễ dàng và thỏa mãn. Đảo ngược bốn quy luật này giúp bỏ thói quen xấu: làm cho nó khó thấy, kém hấp dẫn, khó làm và không thỏa mãn.
 
 Sách viết dễ đọc, có nhiều ví dụ đời thường và gợi ý áp dụng được ngay cho việc học, công việc và sức khỏe.$mota$, description_en = $mota$James Clear's Atomic Habits starts from a simple idea: very small improvements, repeated every day, compound over time into big change. Rather than relying on goals alone, the author recommends building systems, the small things we do daily, and tying habits to identity: thinking about the person you want to become, not just the result you want.
 
-The core of the book is four rules for building good habits: make them obvious, attractive, easy and satisfying. Turning the rules around helps break bad habits: make them invisible, unattractive, difficult and unsatisfying.
+The core of the book is the Four Laws of Behavior Change for building good habits: make them obvious, attractive, easy and satisfying. Turning the laws around helps break bad habits: make them invisible, unattractive, difficult and unsatisfying.
 
 It is easy to read, full of everyday examples and practical suggestions for study, work and health.$mota$, description_auto_translated = false
 where id = 244 and language = 'en' and md5(description) = 'b9caee7cc47d04e7e69a213ef57b59f9' and md5(description_en) = 'f90607930da01d8c0af6961a3b478dc8' and description_auto_translated = true;
@@ -100,7 +100,7 @@ where id = 280 and language = 'en' and md5(description) = '81187180c2bc18fa7953a
 do $$
 begin
   if (select count(*) from public.books b
-      join (values (213, 'cdd24db57ddb94558169d097c81230d0', '2d4b792780868c330aff52e566c2ca34'), (216, '5315e3ebee365fe0f8ed4c88c224dca9', 'd90f221662e95d4b75a59ae3e160adf7'), (217, 'e80f3a817820b29d48a05546094667bc', 'c94e3dfca4505c596a80f74691e8b1f1'), (234, '975cd1348585a2b043e7da8921b22d99', '2c1df8ad29104f81b8313198ef84ab6e'), (244, '0ed6760e14dab3c5b7df4d5e413567b9', 'b08bc17b3f61a34f495bcbbab03861be'), (254, '5df472ba35cd37e4e9194d29e1c556e5', 'f69f07f6e395efcbef5b763386b718e1'), (280, '7d45f338363afcd1db4e687a9e5700f9', 'd98195bb84e3f6e83be3cab91b919e74')) as v(id, md5_vi, md5_en) on b.id = v.id
+      join (values (213, 'ec5468a3c5ca2e6e8c0dc9e5ce987241', '11fae57670c7782f53dae76ea9d2c4dc'), (216, '82b636283af77f3456a4a9cacb6c4af9', 'd90f221662e95d4b75a59ae3e160adf7'), (217, 'e80f3a817820b29d48a05546094667bc', 'c94e3dfca4505c596a80f74691e8b1f1'), (234, '975cd1348585a2b043e7da8921b22d99', '2c1df8ad29104f81b8313198ef84ab6e'), (244, '225a543fc53af19641bc9ff9c4d88371', '96c7c1079c6bd2e3d93e237fe806ca1f'), (254, '5df472ba35cd37e4e9194d29e1c556e5', 'f69f07f6e395efcbef5b763386b718e1'), (280, '7d45f338363afcd1db4e687a9e5700f9', 'd98195bb84e3f6e83be3cab91b919e74')) as v(id, md5_vi, md5_en) on b.id = v.id
       where b.id in (213, 216, 217, 234, 244, 254, 280) and b.language = 'en' and not b.description_auto_translated
         and md5(b.description) = v.md5_vi and md5(b.description_en) = v.md5_en) <> 7 then
     raise exception 'chuan-bi-demo vong 1: ky vong 7 sach co mo ta moi (md5 ca hai cot) + co false, khop duoc khac 7, rollback';

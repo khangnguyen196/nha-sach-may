@@ -5,11 +5,11 @@
 -- Sau khi ghi: 7 dòng vi_moi = true, en_moi = true, vi_goc = false, en_goc = false, co = false, en_null = false.
 -- Dòng cuối (id null): tổng số id ở trạng thái gốc / mới (trước: 7 / 0; sau: 0 / 7).
 with v(id, goc_vi, goc_en, goc_co, moi_vi, moi_en) as (
-  values (213, 'a82ce1f968cfd9148d858b933040b322', '93eaccc1d8025c995c791853826f799c', true, 'cdd24db57ddb94558169d097c81230d0', '2d4b792780868c330aff52e566c2ca34'),
-         (216, 'b8516fb1edbc2a269e5ea97b68fe70f2', '09e4f0fdb0044c005261a7a08a95da6c', true, '5315e3ebee365fe0f8ed4c88c224dca9', 'd90f221662e95d4b75a59ae3e160adf7'),
+  values (213, 'a82ce1f968cfd9148d858b933040b322', '93eaccc1d8025c995c791853826f799c', true, 'ec5468a3c5ca2e6e8c0dc9e5ce987241', '11fae57670c7782f53dae76ea9d2c4dc'),
+         (216, 'b8516fb1edbc2a269e5ea97b68fe70f2', '09e4f0fdb0044c005261a7a08a95da6c', true, '82b636283af77f3456a4a9cacb6c4af9', 'd90f221662e95d4b75a59ae3e160adf7'),
          (217, '20d02ad1e1de6b61fa04fd06207c7c45', null::text, false, 'e80f3a817820b29d48a05546094667bc', 'c94e3dfca4505c596a80f74691e8b1f1'),
          (234, '095d91fb5e46f6d3b1a0684b3dcc219d', 'd5b1995e49de6c3d265786c8fa7a2c45', true, '975cd1348585a2b043e7da8921b22d99', '2c1df8ad29104f81b8313198ef84ab6e'),
-         (244, 'b9caee7cc47d04e7e69a213ef57b59f9', 'f90607930da01d8c0af6961a3b478dc8', true, '0ed6760e14dab3c5b7df4d5e413567b9', 'b08bc17b3f61a34f495bcbbab03861be'),
+         (244, 'b9caee7cc47d04e7e69a213ef57b59f9', 'f90607930da01d8c0af6961a3b478dc8', true, '225a543fc53af19641bc9ff9c4d88371', '96c7c1079c6bd2e3d93e237fe806ca1f'),
          (254, 'd5ab6c37ab7b22c7a805d92141301932', null::text, false, '5df472ba35cd37e4e9194d29e1c556e5', 'f69f07f6e395efcbef5b763386b718e1'),
          (280, '81187180c2bc18fa7953a09a778726e2', 'a789b0f92d9f3fc37b19af87c335822c', true, '7d45f338363afcd1db4e687a9e5700f9', 'd98195bb84e3f6e83be3cab91b919e74')
 ), t as (
