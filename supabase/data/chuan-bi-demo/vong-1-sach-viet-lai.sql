@@ -10,6 +10,9 @@
 -- (sự cố 2026-11-24, supabase/data/README.md); bỏ CR khi ghi → DB luôn nhận bản LF, md5 kỳ vọng tính trên bản LF.
 -- Khối kiểm cuối file: đủ 7 id có md5 bản mới (cả hai cột) + cờ false; khác 7 → raise (P0001) → rollback cả file.
 -- Câu báo lỗi kèm id lệch và cột lệch (vi = description, en = description_en, co = cờ, khong-co-sach = không có id hoặc language khác 'en'), không kèm mô tả.
+-- Cột md5 lệch kèm độ dài thực / kỳ vọng (ký tự, kỳ vọng tính trên bản LF) và số CR, VD "213:vi(len 655/651, cr 4)". Đọc:
+-- len thực = kỳ vọng + cr và cr > 0 → lỗi CRLF; len thực khác kỳ vọng mà cr = 0 (hoặc lệch kiểu khác) → lỗi bảng mã / ký tự
+-- khi chép; len bằng và cr = 0 → md5 lệch vì lý do khác (sửa chữ cùng độ dài, khác chuẩn Unicode…).
 -- Chạy lần 2: 0 dòng đổi, không lỗi (chỉ đúng khi chưa ai sửa mô tả 7 sách này trong admin).
 -- Thứ tự chủ dự án chạy (SQL Editor), sau khi data-check xanh: vong-1-kiem.sql → vong-1-sach-viet-lai.sql → vong-1-kiem.sql.
 -- Quay lại (chỉ khi cần): vong-1-hoan-tac.sql.
@@ -105,15 +108,20 @@ declare
   khop integer;
   lech text;
 begin
-  -- Một dòng mỗi id kỳ vọng (left join: sách không có / không phải 'en' vẫn hiện); loi = '' khi khớp cả 3 điều kiện
-  select count(*) filter (where t.loi = ''), string_agg(t.id || ' (' || t.loi || ')', ', ' order by t.id) filter (where t.loi <> '')
+  -- Một dòng mỗi id kỳ vọng (left join: sách không có / không phải 'en' vẫn hiện); loi = '' khi khớp cả 3 điều kiện.
+  -- len_vi / len_en: length() kỳ vọng của bản mới (bản LF, NFC, không ký tự ngoài BMP); cr = số CR trong cột. Chỉ in số, không in mô tả.
+  select count(*) filter (where t.loi = ''), string_agg(t.loi, ', ' order by t.id) filter (where t.loi <> '')
     into khop, lech
-    from (select v.id, concat_ws(' ',
-                   case when b.id is null then 'khong-co-sach' end,
-                   case when b.id is not null and md5(b.description) is distinct from v.md5_vi then 'vi' end,
-                   case when b.id is not null and md5(b.description_en) is distinct from v.md5_en then 'en' end,
-                   case when b.id is not null and b.description_auto_translated is distinct from false then 'co' end) as loi
-            from (values (213, 'ec5468a3c5ca2e6e8c0dc9e5ce987241', '11fae57670c7782f53dae76ea9d2c4dc'), (216, '82b636283af77f3456a4a9cacb6c4af9', 'd90f221662e95d4b75a59ae3e160adf7'), (217, 'e80f3a817820b29d48a05546094667bc', 'c94e3dfca4505c596a80f74691e8b1f1'), (234, '975cd1348585a2b043e7da8921b22d99', '2c1df8ad29104f81b8313198ef84ab6e'), (244, '225a543fc53af19641bc9ff9c4d88371', '96c7c1079c6bd2e3d93e237fe806ca1f'), (254, '5df472ba35cd37e4e9194d29e1c556e5', 'f69f07f6e395efcbef5b763386b718e1'), (280, '7d45f338363afcd1db4e687a9e5700f9', 'd98195bb84e3f6e83be3cab91b919e74')) as v(id, md5_vi, md5_en)
+    from (select v.id, concat_ws(', ',
+                   case when b.id is null then v.id || ':khong-co-sach' end,
+                   case when b.id is not null and md5(b.description) is distinct from v.md5_vi
+                        then format('%s:vi(len %s/%s, cr %s)', v.id, coalesce(length(b.description)::text, 'null'), v.len_vi,
+                                    coalesce((length(b.description) - length(replace(b.description, chr(13), '')))::text, 'null')) end,
+                   case when b.id is not null and md5(b.description_en) is distinct from v.md5_en
+                        then format('%s:en(len %s/%s, cr %s)', v.id, coalesce(length(b.description_en)::text, 'null'), v.len_en,
+                                    coalesce((length(b.description_en) - length(replace(b.description_en, chr(13), '')))::text, 'null')) end,
+                   case when b.id is not null and b.description_auto_translated is distinct from false then v.id || ':co' end) as loi
+            from (values (213, 'ec5468a3c5ca2e6e8c0dc9e5ce987241', '11fae57670c7782f53dae76ea9d2c4dc', 651, 715), (216, '82b636283af77f3456a4a9cacb6c4af9', 'd90f221662e95d4b75a59ae3e160adf7', 649, 678), (217, 'e80f3a817820b29d48a05546094667bc', 'c94e3dfca4505c596a80f74691e8b1f1', 783, 855), (234, '975cd1348585a2b043e7da8921b22d99', '2c1df8ad29104f81b8313198ef84ab6e', 753, 762), (244, '225a543fc53af19641bc9ff9c4d88371', '96c7c1079c6bd2e3d93e237fe806ca1f', 693, 695), (254, '5df472ba35cd37e4e9194d29e1c556e5', 'f69f07f6e395efcbef5b763386b718e1', 682, 731), (280, '7d45f338363afcd1db4e687a9e5700f9', 'd98195bb84e3f6e83be3cab91b919e74', 678, 735)) as v(id, md5_vi, md5_en, len_vi, len_en)
             left join public.books b on b.id = v.id and b.language = 'en'
            where v.id in (213, 216, 217, 234, 244, 254, 280)) t;
   if khop <> 7 then
