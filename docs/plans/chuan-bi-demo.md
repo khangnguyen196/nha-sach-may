@@ -129,9 +129,12 @@ Chờ CI (push nhánh `chuan-bi-demo`). Trên máy: `--plan` bỏ qua vòng 3 / 
 ## 7. Sự cố CRLF khi chạy production (2026-11-24, vòng 3)
 
 - **Chuyện gì xảy ra**: chủ dự án chạy `vong-1-sach-viet-lai.sql` (main `b114aea`, data-check xanh) trong SQL Editor, chép
-  file bằng `Get-Content -Raw | Set-Clipboard` rồi Ctrl+V. Khối kiểm cuối file báo P0001 "khop duoc khac 7" → cả file
+  file bằng `Get-Content -Raw | Set-Clipboard` (theo tóm tắt của chủ dự án; lệnh người điều khiển đưa có `-Encoding UTF8`,
+  chưa rõ lệnh thật đã chạy) rồi Ctrl+V. Khối kiểm cuối file báo P0001 "khop duoc khac 7" → cả file
   rollback, DB không đổi (người điều khiển kiểm lại bằng MCP chỉ đọc: 7 sách còn đúng md5 / cờ bản gốc, không có CR).
-- **Nguyên nhân** (suy ra, khớp mô phỏng): mô tả mới có 3 đoạn (LF giữa đoạn); đường clipboard Windows / ô soạn của SQL
+- **Nghi nguyên nhân** (suy ra, khớp mô phỏng; chưa xác nhận, còn khả năng lỗi bảng mã: chủ dự án tóm tắt lệnh chép không
+  có `-Encoding utf8`, Windows PowerShell 5.1 thiếu tham số này đọc UTF-8 không BOM theo bảng mã ANSI → chữ Việt hỏng → md5
+  cũng lệch ở cả 7 sách; câu lỗi lúc đó không phân biệt được hai khả năng): mô tả mới có 3 đoạn (LF giữa đoạn); đường clipboard Windows / ô soạn của SQL
   Editor đổi xuống dòng thành CRLF, kể cả trong chuỗi `$mota$` → giá trị ghi vào có CR → md5 lệch md5 kỳ vọng (tính trên
   bản LF). Điều kiện `where` (md5 bản gốc) không bị ảnh hưởng vì bản gốc không xuống dòng. CI đọc file LF nên xanh.
   Mô phỏng trên máy (node, bản sao `sed 's/$/\r/'` ngoài repo): bản `b114aea` → 7 câu có CR trong chuỗi, khớp md5 kỳ vọng
@@ -143,5 +146,13 @@ Chờ CI (push nhánh `chuan-bi-demo`). Trên máy: `--plan` bỏ qua vòng 3 / 
   ghi LF, lần 2 = 0). (d) không đổi (bọc `replace` không ảnh hưởng (d)).
 - **Bài học**: CI phải chạy file theo đúng đường chủ dự án chạy (dán trên Windows), không chỉ đọc file trong repo. Quy ước
   chung cho mọi file SQL dữ liệu sau này: `supabase/data/README.md` (một câu ở CLAUDE.md mục Database).
-- Thử đỏ / xanh của (g): máy dev không có Docker / psql → chờ CI (người điều khiển đẩy tạm một commit có file ghi chưa bọc
-  để (g) đỏ, rồi bản bọc để xanh).
+- Thử đỏ / xanh của (g) trên CI: nhánh tạm `chuan-bi-demo-red` @`5f28ded` (file ghi chưa bọc): data-check 45373856244
+  ĐỎ đúng ở "(g) CRLF ghi" (tái hiện sự cố); @`cb1f018`: data-check 45374123528 xanh đủ (e)(a)(b)(f)(g); nhánh tạm đã xóa.
+- **Vòng 4** (theo code-reviewer vòng 3): bọc `replace` chỉ chữa CRLF, không chữa lỗi bảng mã. (a) Khối kiểm file ghi báo
+  mỗi cột lệch kèm độ dài thực / kỳ vọng và số CR, VD `213:vi(len 655/651, cr 4)` (độ dài kỳ vọng là hằng trong `values`,
+  số ký tự bản LF; tính bằng node từ chính chuỗi trong file, NFC, không ký tự ngoài BMP nên trùng `length()` của Postgres):
+  len = kỳ vọng + cr, cr > 0 → CRLF; len lệch, cr = 0 → bảng mã / ký tự; bằng nhau → lý do khác. Mô phỏng node: CRLF không
+  bọc → 14 cột `len +4, cr 4`; đọc sai bảng mã windows-1252 → 7 cột `vi` (+ `234:en`, có ngoặc kép cong) `len` lớn hơn,
+  `cr 0`. Khối kiểm của file hoàn tác giữ nguyên (khối đơn giản, không có chuỗi lech). (b) Lệnh chép luôn có
+  `-Encoding utf8` (BẮT BUỘC với Windows PowerShell 5.1) + bước thử đường chép bằng file chỉ đọc
+  `D:\Bán sách-backup\chuan-bi-demo\paste-test.sql` trước khi chạy file ghi (`supabase/data/README.md`).
