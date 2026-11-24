@@ -98,10 +98,20 @@ Gợi ý chưa làm:
 
 - Chủ dự án đọc lại 248 (mức chắc chắn thấp, chỉ theo tên sách), 8 (thấp, theo nhận xét độc giả), 3, 20, 171 (dựa mô tả cũ),
   2 (thông điệp theo nhận xét độc giả); sửa trong admin nếu thấy chưa đúng.
+- Còn câu dẫn theo cảm nhận độc giả ở sách 2 ("Theo cảm nhận của nhiều độc giả" / "Many readers describe it as") và sách 8 ("Theo cảm nhận của một số độc giả" / "Some readers say"): chủ dự án tự sửa trong admin (cả ô tiếng Việt và tiếng Anh).
+- Cache trang sách: SQL sửa ngoài app không làm mới cache; dự kiến trang hiện mô tả mới sau bản deploy kế tiếp
+  hoặc khi cache hết hạn (kiểm lại ở dòng [Xong] của `docs/progress.md`); còn cũ thì chủ dự án Redeploy Production
+  trên Vercel, bỏ chọn build cache.
 - 218: nếu biết năm truyện trong tập thì bổ sung tên truyện.
 - Sau đợt này không còn sách nào trong danh sách "mô tả thiếu / quá ngắn" của `docs/plans/chuan-bi-demo.md` mục 1 (15 sách:
   217, 254 đã viết ở chuan-bi-demo, 13 sách ở đợt này); sách nạp thêm sau này có thể lại thiếu mô tả.
 
 ## 5. Trạng thái
 
-SQL ghi `vong-1-sach-viet-lai.sql`: **CHƯA chạy production**, chờ data-check xanh và chủ dự án chạy tay.
+SQL ghi `vong-1-sach-viet-lai.sql`: **ĐÃ chạy production 2026-11-24** (chủ dự án chạy trong SQL Editor: Success, paste-test ổn).
+
+- Kiểm sau bằng MCP chỉ đọc (`transaction_read_only = on`), 13 sách 2, 3, 8, 20, 171, 207, 209, 218, 248, 272, 281, 292, 302: cờ `description_auto_translated = false` 13/13; md5 + `length()` của `description` và `description_en` khớp hằng trong file 13/13; 0 CR.
+- CI: data-check 45400675076, CI nhánh 45400675401, CI main 45401266562 (e2e bỏ qua: chỉ docs + SQL dữ liệu), tất cả xanh ở `3e0a3f0`.
+- Bản quay về: dữ liệu `vong-1-hoan-tac.sql` (chủ dự án chạy tay, chỉ khi cần); code `ad04ef2` / Vercel 8027040515.
+- Đã thêm dòng vào `supabase/data/da-chay-production.txt`; `bash scripts/ci/data-check.sh --plan`: 0 vòng cần kiểm, exit 0.
+- Web thật ngay sau khi chạy SQL: 26/26 trang 200 nhưng phần lớn còn mô tả cũ do cache trang sách (`cacheLife('hours')`; SQL ngoài app không gọi `updateTag`). Quyết định chủ dự án: không Redeploy tay, chờ bản Production của commit docs cuối đợt rồi kiểm lại.

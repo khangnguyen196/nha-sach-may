@@ -39,4 +39,4 @@ Hoàn tác chỉ khi cần: `vong-1-hoan-tac.sql` (chép bằng cùng lệnh, đ
 Sau khi chạy file ghi: thêm dòng `supabase/data/mo-ta-sach-ngan/vong-1-sach-viet-lai.sql <ngày chạy>` vào
 `supabase/data/da-chay-production.txt` trong commit docs cuối đợt (không thì data-check của các đợt sau đỏ: dữ liệu đã đổi).
 
-Trạng thái: **CHƯA chạy production.**
+Trạng thái: **ĐÃ chạy production 2026-11-24** (chủ dự án chạy trong SQL Editor: Success). Kiểm sau bằng MCP chỉ đọc đạt: 13/13 sách cờ `description_auto_translated = false`, md5 + độ dài hai cột khớp hằng trong file, 0 CR. Đã thêm dòng vào `da-chay-production.txt`.
