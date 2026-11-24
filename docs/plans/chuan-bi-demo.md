@@ -54,16 +54,17 @@ mới, không phải bản dịch tự động, nên trang không hiện dòng "
 
 | id | Sách | Bản cũ có vấn đề gì | Bản mới (độ dài vi / en, ký tự) |
 |---|---|---|---|
-| 213 | And the Mountains Echoed (Khaled Hosseini) | blurb nhà phát hành (dịch tự động), hứa "ấn bản giới hạn có chữ ký, hộp bìa vải" | Afghanistan 1952, anh em Abdullah và Pari, cuộc chia ly ở Kabul, câu chuyện nhiều thế hệ, nhiều người kể, từ Kabul tới Paris, California, một hòn đảo Hy Lạp (654 / 690) |
-| 216 | Death Comes as the End (Agatha Christie) | chép blurb, hứa "ấn bản giới hạn 800 bản", số tập trong bộ sưu tập | trinh thám ở Ai Cập cổ đại, Renisenb, gia đình Imhotep, người vợ lẽ Nofret, những cái chết nối tiếp, không có thám tử nổi tiếng (646 / 678) |
+| 213 | And the Mountains Echoed (Khaled Hosseini) | blurb nhà phát hành (dịch tự động), hứa "ấn bản giới hạn có chữ ký, hộp bìa vải" | Afghanistan 1952, anh em Abdullah và Pari, cuộc chia ly ở Kabul, câu chuyện nhiều thế hệ, nhiều người kể, từ Kabul tới Paris, California, một hòn đảo Hy Lạp (651 / 715; vòng 2: câu Abdullah thay cha mẹ chăm em, viết lại câu chuyến đi tới Kabul) |
+| 216 | Death Comes as the End (Agatha Christie) | chép blurb, hứa "ấn bản giới hạn 800 bản", số tập trong bộ sưu tập | trinh thám ở Ai Cập cổ đại, Renisenb, gia đình Imhotep, người vợ lẽ Nofret, những cái chết nối tiếp, không có thám tử nổi tiếng (649 / 678; vòng 2: "anh em trai", "đanh đá") |
 | 217 | The Agatha Christie Collection | cột tiếng Việt là tiểu sử Wikipedia tiếng Anh + mục lục (2878 ký tự), không nói gì về 2 truyện; không có bản tiếng Anh | tuyển tập 2 tiểu thuyết đầu tay: The Mysterious Affair at Styles (Poirot lần đầu xuất hiện, Hastings kể) và The Secret Adversary (Tommy và Tuppence, Mr. Brown) (783 / 855) |
 | 234 | Built to Last (Jim Collins, Jerry Porras) | cả hai bản bị cắt giữa câu, mở đầu bằng phủ định, không nói sách là gì | nghiên cứu ở Stanford, 18 công ty có tầm nhìn so với đối thủ cùng thời; giữ cốt lõi / thúc đẩy tiến bộ, mục tiêu lớn táo bạo, "xây đồng hồ thay vì xem giờ" (753 / 762) |
-| 244 | Atomic Habits (James Clear) | quảng cáo hết hạn (workbook, đặt trước), chép lời khen kèm tên người khen, số bản đã bán; 2011 ký tự | cải thiện nhỏ cộng dồn, hệ thống hơn mục tiêu, thói quen gắn với bản sắc, 4 quy tắc (rõ ràng, hấp dẫn, dễ dàng, thỏa mãn) và cách đảo ngược (668 / 674) |
+| 244 | Atomic Habits (James Clear) | quảng cáo hết hạn (workbook, đặt trước), chép lời khen kèm tên người khen, số bản đã bán; 2011 ký tự | cải thiện nhỏ cộng dồn, hệ thống hơn mục tiêu, thói quen gắn với bản sắc, bốn quy luật thay đổi hành vi / Four Laws of Behavior Change (rõ ràng, hấp dẫn, dễ dàng, thỏa mãn) và cách đảo ngược (693 / 695; vòng 2: dùng thuật ngữ của sách) |
 | 254 | The SPEED of Trust (Stephen M. R. Covey) | chỉ là ghi chú thư viện (45 ký tự), không có bản tiếng Anh | niềm tin ảnh hưởng tốc độ và chi phí, 4 yếu tố đáng tin (chính trực, ý định, năng lực, kết quả), 13 hành vi, các tầng của niềm tin (682 / 731) |
 | 280 | Sapiens (Yuval Noah Harari) | chép blurb, hứa "ấn bản chính thức Mỹ, minh họa màu", số ảnh / bản đồ, lời chọn đọc của người nổi tiếng | cách mạng nhận thức, nông nghiệp, sự hợp nhất loài người (tiền, đế quốc, tôn giáo), cách mạng khoa học (678 / 735) |
 
-md5 bản gốc (cả hai cột) khớp bảng kiểm production 2026-11-24; md5 bản mới ghi trong khối kiểm của file ghi và trong
-`vong-1-kiem.sql`.
+md5 bản gốc (cả hai cột) khớp bảng kiểm production 2026-11-24; md5 bản mới ghi trong khối kiểm của file ghi, trong
+`vong-1-kiem.sql` và điều kiện `where` của `vong-1-hoan-tac.sql` (vòng 2 tính lại cho 213, 216, 244 và kiểm nhất quán
+cả 3 file bằng script). Vòng 2 rà bản mới với bản gốc: 0 cụm ≥ 6 từ liên tiếp trùng (cả vi lẫn en, 7 sách).
 
 ## 3. Quyết định
 
@@ -93,6 +94,8 @@ md5 bản gốc (cả hai cột) khớp bảng kiểm production 2026-11-24; md5
 - `import:books` vẫn ghi sách ngoại văn theo kiểu cũ (CLAUDE.md mục Dữ liệu): sửa trước khi nạp thêm sách ngoại văn.
 - Bước 2 (Supabase local) của data-check vẫn chạy khi 0 vòng cần kiểm (tốn ~2–3 phút CI); có thể bỏ qua bằng điều kiện
   `if` sau này nếu thấy cần.
+- Cân nhắc thêm sha256 vào mỗi dòng `supabase/data/da-chay-production.txt` để data-check phát hiện file đã chạy production
+  bị sửa nhầm sau đó.
 
 ## 5. Kết quả kiểm web thật (chỉ đọc)
 

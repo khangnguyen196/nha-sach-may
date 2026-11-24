@@ -86,6 +86,8 @@ bản backup ở cột Nguồn).
   cảnh báo, kết quả có thể đỏ vì dữ liệu đã đổi). Các file `.sql` ở thư mục này giữ nguyên đúng từng byte bản đã chạy.
 - Sau khi chủ dự án chạy `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`: 213, 216, 234, 244, 280 có mô tả viết mới
   (cờ `description_auto_translated` false, không còn là bản dịch của vòng 4); 217, 254 có `description_en` (bản viết mới,
-  cờ false). Câu (3) và (4) của `vong-4-kiem.sql` vì vậy không còn đúng số kỳ vọng cũ: (3) ra 7 (sách en có
+  cờ false). Câu (1), (3) và (4) của `vong-4-kiem.sql` vì vậy không còn đúng số kỳ vọng cũ: (1) dòng `en` ra
+  117 / 114 / 114 / 107 thay vì 117 / 114 / 112 / 112 (`co_en` +2 vì 217, 254; `co_co` −5 vì 213, 216, 234, 244, 280;
+  production đọc 2026-11-24 trước khi chạy: 117 / 114 / 112 / 112; dòng `vi` không đổi); (3) ra 7 (sách en có
   `description_en` mà cờ false; cộng thêm sách admin đã sửa tay, nếu có) thay vì 0; (4) ra 0 dòng thay vì 217, 254. `vong-4-hoan-tac.sql` không còn hoàn tác được
   5 sách trên (cờ đã tắt → bỏ qua, như sách admin đã sửa tay).

@@ -14,7 +14,8 @@
 # <YYYY-MM-DD>", dòng bắt đầu bằng # là comment. Dòng sai dạng, trùng, hoặc trỏ file không có → đỏ (gõ nhầm).
 # Khai báo trong comment của file ghi (mọi file của vòng giống nhau): "-- data-check: cot-duoc-ghi = a, b" (cột được ghi) và
 # "-- data-check: che-do = viet-lai" (mô tả đã có được thay bằng bản viết mới: không nhận chế độ theo cờ, cả vòng chạy đường
-# CHƯA GHI; giá trị khác → đỏ).
+# CHƯA GHI; giá trị khác → đỏ). Dòng khai báo che-do không được có chữ nào sau giá trị trên cùng dòng (ghi chú để ở dòng
+# riêng): phần sau dấu = bị gộp lại (bỏ dấu cách) thành giá trị, chữ thừa → "giá trị không hỗ trợ" → đỏ.
 # Env: SUPABASE_PROD_URL, SUPABASE_PROD_KEY (khóa publishable / anon, chỉ để đọc REST công khai), RESULTS (file bảng kết
 # quả markdown, nối thêm dòng), DB_CONTAINER (migration-check-lib.sh).
 # Không in nội dung mô tả, URL hay khóa: log chỉ có id, tên cột, số đếm, SQLSTATE.

@@ -11,15 +11,15 @@ Chuẩn bị 2 cửa sổ trình duyệt: cửa sổ thường đăng nhập **t
 | # | Đường dẫn | Thao tác | Điều cần nói (1–2 câu) | Thời gian |
 |---|---|---|---|---|
 | 1 | `/` | Cuộn qua hàng thẻ Ưu đãi (Đang giảm giá, Miễn phí giao hàng, Bán chạy, Sách ngoại văn), dải đồng hồ, các kệ Nổi bật / Bán chạy / Mới về / kệ theo danh mục. | Nhà sách chỉ bán sách, song ngữ Việt / Anh, dữ liệu sách thật (Google Books). Giao diện tối giản: ảnh bìa là nguồn màu chính, không banner, không chữ chạy. | 40 giây |
-| 2 | `/tim-kiem?q=nguyen+nhat+anh` | Bấm ô "Tìm sách, tác giả…" ở đầu trang (hoặc Ctrl K), gõ `nguyen nhat anh` **không dấu**, Enter. | Tìm kiếm gõ không dấu vẫn ra sách có dấu, khớp từng từ không cần đúng thứ tự; bộ lọc và trang nằm trên URL nên gửi link là xem lại được. | 30 giây |
-| 3 | `/sach/sapiens` → `/en/books/sapiens` | Mở trang sách Sapiens; chỉ phần mô tả, giá, nút "Thêm vào giỏ". Bấm "Xem bằng tiếng Anh" ở đầu trang (điện thoại: menu "⋯" Tùy chọn khác) → trang tiếng Anh, rồi đổi lại tiếng Việt. | Cùng một cuốn sách có URL riêng cho từng ngôn ngữ, mô tả hai thứ tiếng; giá vẫn tính bằng VND. | 40 giây |
+| 2 | `/tim-kiem?q=nguyen+nhat+anh` | Bấm ô "Tìm sách, tác giả…" ở đầu trang (hoặc Ctrl K), gõ `nguyen nhat anh` **không dấu**, **chờ danh sách kết quả hiện ra** rồi mới nhấn Enter (dòng "Xem tất cả kết quả" chỉ có khi đã có kết quả). | Tìm kiếm gõ không dấu vẫn ra sách có dấu, khớp từng từ không cần đúng thứ tự; bộ lọc và trang nằm trên URL nên gửi link là xem lại được. | 30 giây |
+| 3 | `/sach/sapiens` → `/en/books/sapiens` | Mở trang sách Sapiens; chỉ vào phần mô tả, giá, nút "Thêm vào giỏ". Bấm nút ngôn ngữ nhỏ ở đầu trang (nút vuông chỉ ghi "EN", không có chữ "Xem bằng tiếng Anh" trên nút; điện thoại: menu "⋯" Tùy chọn khác → "Xem bằng tiếng Anh") → trang tiếng Anh, rồi đổi lại tiếng Việt. | Cùng một cuốn sách có URL riêng cho từng ngôn ngữ, mô tả hai thứ tiếng; giá vẫn tính bằng VND. | 40 giây |
 | 4 | `/gio-hang` | Ở trang tiếng Việt của Sapiens bấm "Thêm vào giỏ", mở giỏ (icon giỏ ở đầu trang), tăng số lượng lên 2. | Giỏ cập nhật ngay khi bấm (chờ server ở phía sau, lỗi thì tự quay lại). Tạm tính, phí ship và mốc miễn phí giao hàng 300.000₫ do database tính, trình duyệt không tự tính tiền. | 40 giây |
 | 5 | `/thanh-toan` → `/thanh-toan/thanh-cong/<mã đơn>` | Bấm "Thanh toán". Chọn địa chỉ có sẵn, chọn "Thanh toán khi nhận hàng (COD)", bấm "Đặt hàng". | Đơn đặt qua một hàm trong database: kiểm tồn kho, tính giá, trừ kho trong một lần; bấm hai lần cũng chỉ ra một đơn. | 50 giây |
-| 6 | `/tai-khoan/don-hang` → `/tai-khoan/don-hang/<mã đơn>` | Mở "Đơn hàng" trong tài khoản, mở đơn vừa đặt (trạng thái chờ xác nhận); chỉ thêm đơn đã giao có sẵn từ trước trong danh sách. | Khách xem lịch sử đơn, tự hủy được khi đơn còn chờ xác nhận; đơn của người khác không xem được. | 30 giây |
+| 6 | `/tai-khoan/don-hang` → `/tai-khoan/don-hang/<mã đơn>` | Mở "Đơn hàng" trong tài khoản, mở đơn vừa đặt (trạng thái chờ xác nhận); giới thiệu thêm đơn đã giao có sẵn từ trước trong danh sách. | Khách xem lịch sử đơn, tự hủy được khi đơn còn chờ xác nhận; đơn của người khác không xem được. | 30 giây |
 | 7 | `/` (bong bóng góc dưới) | Bấm "Hỏi Mây gợi ý sách", xác nhận "Tôi từ 18 tuổi trở lên, bắt đầu hỏi Mây", bấm gợi ý "Sách nhẹ nhàng đọc cuối tuần". | Mây là trợ lý AI gợi ý sách, chỉ gợi ý sách đang có trong cửa hàng, chỉ tiếng Việt (trang `/en` không có bong bóng), có giới hạn lượt hỏi. | 50 giây |
 | 8 | `/cho-sach-cu` → `/cho-sach-cu/<id tin>` | Mở chợ sách cũ, mở một tin đang bán (ảnh thật, tình trạng sách, giá). | Thành viên đăng bán sách cũ của mình, admin duyệt rồi mới hiện; tiền trả người bán chỉ là sổ mô phỏng, web không lưu tài khoản ngân hàng. | 30 giây |
 | 9 | `/admin/don-hang` → `/admin/don-hang/<mã đơn>` | Sang cửa sổ admin, mở "Đơn hàng", mở đơn vừa đặt, bấm "Xác nhận đơn". Quay lại cửa sổ khách, tải lại `/tai-khoan/don-hang/<mã đơn>`: trạng thái "Đã xác nhận". | Trang quản trị chỉ vào được với quyền admin, kiểm ở server; luồng trạng thái (chờ → xác nhận → đang giao → đã giao) chặn ở database, không nhảy bước được. | 50 giây |
-| 10 | trang đang mở (VD `/`) | Bấm nút "Chuyển sang giao diện tối" ở đầu trang (điện thoại: menu "⋯"). | Sáng là mặc định, tối là tùy chọn; cả hai dùng chung một bộ màu định nghĩa ở một chỗ, đủ tương phản để dễ đọc. | 20 giây |
+| 10 | trang đang mở (VD `/`) | Bấm nút icon mặt trăng ở đầu trang (nút chỉ có hình, tên cho trình đọc màn hình là "Chuyển sang giao diện tối"; điện thoại: menu "⋯" → "Chuyển sang giao diện tối"). | Sáng là mặc định, tối là tùy chọn; cả hai dùng chung một bộ màu định nghĩa ở một chỗ, đủ tương phản để dễ đọc. | 20 giây |
 
 Tổng khoảng 6 phút. Thiếu thời gian thì bỏ bước 8 hoặc 10.
 
@@ -46,8 +46,10 @@ Ghi chú:
 - [ ] Tài khoản khách demo: có địa chỉ mặc định và ít nhất 1 đơn đã giao (để bước 6 có lịch sử).
 - [ ] Thử Mây hôm trước (hỏi 1–2 câu), xem còn lượt và trả lời bình thường.
 - [ ] Thử cả kịch bản trên điện thoại (menu "⋯", bong bóng Mây, giỏ).
-- [ ] Chạy file SQL viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`, theo hướng dẫn của đợt
-      chuan-bi-demo) để trang Sapiens / Atomic Habits… có mô tả mới hai thứ tiếng.
+- [ ] Chạy file SQL viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`) để trang Sapiens /
+      Atomic Habits… có mô tả mới hai thứ tiếng. Thứ tự: data-check trên CI xanh → file lên main → kiểm trước bằng MCP
+      chỉ đọc (`vong-1-kiem.sql`) → chủ dự án chạy file ghi trong SQL Editor → kiểm sau (`vong-1-kiem.sql`) → thêm dòng
+      `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql <ngày chạy>` vào `supabase/data/da-chay-production.txt`.
 
 ## Khi có sự cố
 
