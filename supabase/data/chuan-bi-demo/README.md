@@ -26,7 +26,7 @@ Cách chạy file ghi (chủ dự án):
 
 0. Thử đường chép trước (chỉ đọc, không ghi gì): chép `D:\Bán sách-backup\chuan-bi-demo\paste-test.sql` bằng đúng lệnh ở
    bước 1, dán vào SQL Editor, Run. Kỳ vọng `khop_sau_khi_bo_cr = true` (`co_cr = true` + `do_dai = 77` nghĩa là SQL Editor
-   đã đổi xuống dòng sang CRLF, file ghi xử lý được). `khop_sau_khi_bo_cr = false` hoặc `do_dai` không phải 73 / 77 → lỗi
+   (hoặc clipboard) đã đổi xuống dòng sang CRLF, file ghi xử lý được). `khop_sau_khi_bo_cr = false` hoặc `do_dai` không phải 73 / 77 → lỗi
    bảng mã, **KHÔNG chạy file ghi**, gửi kết quả cho Claude. Chi tiết: `supabase/data/README.md`.
 1. Chép cả file vào clipboard bằng PowerShell:
 
@@ -42,9 +42,11 @@ Cách chạy file ghi (chủ dự án):
 3. Nếu báo lỗi P0001 `chuan-bi-demo vong 1: … khop duoc N / 7, rollback; lech: …`: **cả file đã rollback, DB không đổi**.
    Phần `lech:` liệt kê từng id:cột lệch, chỉ có số, không có nội dung mô tả: `vi` = description, `en` = description_en
    (kèm `len thực/kỳ vọng, cr số CR`), `co` = cờ description_auto_translated, `khong-co-sach` = không có id hoặc language
-   khác 'en'. VD `lech: 213:vi(len 655/651, cr 4), 213:en(len 719/715, cr 4), 254:co`. Đọc:
-   - len thực = kỳ vọng + cr, cr > 0 → lỗi CRLF;
-   - len khác kỳ vọng, cr = 0 → lỗi bảng mã khi chép (VD `213:vi(len 838/651, cr 0)`; thường chỉ cột `vi`);
+   khác 'en'. VD `lech: 213:vi(len 838/651, cr 0), 254:co`. Với file này `cr` luôn 0 vì đã bọc `replace`; `len` lệch
+   gần như chắc là lỗi bảng mã. Đọc:
+   - len khác kỳ vọng, cr = 0 → lỗi bảng mã khi chép (thường chỉ cột `vi`);
+   - len thực = kỳ vọng + cr, cr > 0 → lỗi CRLF; chỉ gặp với file chưa bọc `replace` (VD bản `b114aea`:
+     `213:vi(len 655/651, cr 4)`);
    - len bằng, cr = 0 → md5 lệch vì lý do khác.
 
    Chép nguyên câu lỗi gửi lại Claude.

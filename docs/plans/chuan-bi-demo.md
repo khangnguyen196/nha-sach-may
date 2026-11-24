@@ -123,7 +123,13 @@ Còn phải kiểm lại `/sach/<slug>` 7 sách sau khi chạy file SQL.
 
 ## 6. data-check
 
-Chờ CI (push nhánh `chuan-bi-demo`). Trên máy: `--plan` bỏ qua vòng 3 / 4, ra đúng 1 vòng
+- data-check 45373856244 (nhánh tạm `chuan-bi-demo-red` @`5f28ded`, file ghi chưa bọc `replace`): ĐỎ đúng ở "(g) CRLF ghi"
+  (tái hiện sự cố).
+- data-check 45374123528 (@`cb1f018`): xanh đủ (e)(a)(b)(f)(g).
+- data-check 45375804103 (@`6f748e2`, khối kiểm mới báo len / cr): xanh, KẾT QUẢ ĐẠT, (g) CRLF ghi 7 dòng = 7 câu.
+- CI check 45375803708 (@`6f748e2`): xanh.
+
+Trên máy: `--plan` bỏ qua vòng 3 / 4, ra đúng 1 vòng
 (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`); (d) 0 lỗi (7 câu, 2 chuỗi / câu, 28 lần `$mota$`).
 
 ## 7. Sự cố CRLF khi chạy production (2026-11-24, vòng 3)

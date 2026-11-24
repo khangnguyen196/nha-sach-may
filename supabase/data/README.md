@@ -26,7 +26,7 @@ lệnh trên, dán vào SQL Editor, Run, rồi đọc một dòng kết quả:
 - `co_cr = true`: SQL Editor (hoặc clipboard) đã đổi xuống dòng sang CRLF; `replace(…, chr(13), '')` trong file ghi xử lý
   được. Khi đó `khop_khong_bo_cr = false` và `do_dai = 77` (73 ký tự + 4 CR) là bình thường.
 - `khop_sau_khi_bo_cr = false`, hoặc `do_dai` không phải 73 (LF) / 77 (CRLF): **lỗi bảng mã**, KHÔNG chạy file ghi; kiểm
-  lại lệnh chép (thiếu `-Encoding utf8`?). Đo bằng node: đọc sai bảng mã windows-1252 cho `do_dai = 108`.
+  lại lệnh chép (thiếu `-Encoding utf8`?). Đo bằng node: đọc sai bảng mã windows-1252 cho `do_dai = 108` (ví dụ với windows-1252; bảng mã khác ra số khác, quy tắc "khác 73 / 77 là lỗi bảng mã" vẫn đúng).
 
 ### Đọc chuỗi `lech` của khối kiểm (lỗi P0001)
 
