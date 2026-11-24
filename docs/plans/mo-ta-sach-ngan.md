@@ -20,14 +20,14 @@ Mức chắc chắn: **cao** = nội dung là kiến thức phổ thông về t�
 
 | id | Sách | Ngôn ngữ | Cũ có vấn đề gì (độ dài vi / en) | Mới (độ dài vi / en, tóm ý) | Mức chắc chắn, căn cứ | md5 mới vi / en |
 |---|---|---|---|---|---|---|
-| 2 | Làm bạn với bầu trời (Nguyễn Nhật Ánh) | vi | chữ Anh trong cột Việt, không có bản Anh (217 / trống) | 421 / 403: truyện dài cho bạn đọc trẻ, NXB Trẻ 2019, 249 trang; rung động đầu đời, lòng trắc ẩn; theo độc giả: cậu bé nhiều tổn thương, thông điệp biết ơn, yêu thương | trung bình: DB, mô tả cũ, nhận xét độc giả / báo chí (tra web) | `2cc75b1a…` / `8f749981…` |
-| 3 | Oxford thương yêu (Dương Thụy) | vi | chữ Anh trong cột Việt, không có bản Anh (268 / trống) | 428 / 439: truyện dài, NXB Trẻ 2023; tình yêu sinh viên Việt Nam và trợ giảng Bồ Đào Nha ở Đại học Oxford; thiên nhiên đẹp, người trẻ trưởng thành ở nước ngoài; kết thúc nhẹ nhàng, có hậu | trung bình: DB, mô tả cũ | `4ae8a8f0…` / `438a3b46…` |
-| 8 | Kiến, Chuột và Ruồi (Nguyễn Quang Lập) | vi | thiếu hẳn (trống / trống) | 382 / 406: tiểu thuyết của nhà văn, nhà biên kịch Nguyễn Quang Lập, ấn bản 2019, 364 trang; theo một số độc giả: làng quê thời Cải cách ruộng đất qua nhân vật "tôi" lớn lên từ chuồng bò | **thấp**: DB + vài nhận xét độc giả (tra web); nói thận trọng | `037290df…` / `297a6ade…` |
-| 20 | Tâm lý đàn bà, lý trí đàn ông (Bruce Bryans) | vi | chữ Anh trong cột Việt, một câu kiểu quảng cáo, không có bản Anh (122 / trống) | 430 / 446: sách tâm lý tình yêu; đàn ông và phụ nữ cảm nhận, suy nghĩ khác nhau; hiểu cảm xúc để xây quan hệ lâu bền; giọng hướng tới bạn đọc nữ trẻ; NXB Lao Động + Tsai Fong Books 2023 | trung bình: DB (phụ đề), mô tả cũ | `99797a7b…` / `57beb1b3…` |
-| 171 | Hà Nội nhớ thương của tôi (Quan Thế Dân) | vi | chữ Anh trong cột Việt, một câu (67 / trống) | 333 / 375: tập tản văn về nếp sống, phong tục, con người Hà Nội; giọng thương nhớ; NXB Hội Nhà Văn + Tsai Fong Books 2024 | trung bình: DB, mô tả cũ | `0c7ae994…` / `40162af6…` |
-| 207 | Men Without Women (Ernest Hemingway) | en | một câu (bản dịch tự động) (79 / 85) | 557 / 570: tập 14 truyện ngắn, in lần đầu 1927; văn câu ngắn, thoại tiết chế, nhiều điều không nói thẳng; đàn ông đối diện thất bại, nỗi đau, cô độc (đấu bò, quyền Anh, sau chiến tranh); có The Killers, Hills Like White Elephants; Simon and Schuster 1997, 160 trang | cao: mô tả cũ (14 truyện), kiến thức phổ thông | `890bf308…` / `3a2f0997…` |
+| 2 | Làm bạn với bầu trời (Nguyễn Nhật Ánh) | vi | chữ Anh trong cột Việt, không có bản Anh (217 / trống) | 421 / 416: truyện dài cho bạn đọc trẻ, NXB Trẻ 2019 (bản Anh: Trẻ Publishing House), 249 trang; rung động đầu đời, lòng trắc ẩn; theo độc giả: cậu bé nhiều tổn thương, thông điệp biết ơn, yêu thương | trung bình: DB, mô tả cũ, nhận xét độc giả / báo chí (tra web) | `2cc75b1a…` / `e52be61a…` |
+| 3 | Oxford thương yêu (Dương Thụy) | vi | chữ Anh trong cột Việt, không có bản Anh (268 / trống) | 433 / 465: truyện dài; ấn bản năm 2023 của NXB Trẻ (bản Anh: Trẻ Publishing House; không khẳng định năm ra đời đầu tiên); tình yêu sinh viên Việt Nam và trợ giảng Bồ Đào Nha ở Đại học Oxford; thiên nhiên đẹp, người trẻ trưởng thành ở nước ngoài; kết thúc nhẹ nhàng, có hậu | trung bình: DB, mô tả cũ | `11cc744e…` / `b4a9f30c…` |
+| 8 | Kiến, Chuột và Ruồi (Nguyễn Quang Lập) | vi | thiếu hẳn (trống / trống) | 214 / 200 (tối thiểu): tiểu thuyết của nhà văn, nhà biên kịch Nguyễn Quang Lập, ấn bản 2019, 364 trang; một ý có rào: theo một số độc giả, bối cảnh là làng quê Việt Nam thời Cải cách ruộng đất | **thấp**: DB + vài nhận xét độc giả (tra web); không kể cốt truyện | `951ee02b…` / `5d314471…` |
+| 20 | Tâm lý đàn bà, lý trí đàn ông (Bruce Bryans) | vi | chữ Anh trong cột Việt, một câu kiểu quảng cáo, không có bản Anh (122 / trống) | 430 / 463: sách tâm lý tình yêu; đàn ông và phụ nữ cảm nhận, suy nghĩ khác nhau; hiểu cảm xúc để xây quan hệ lâu bền; giọng hướng tới bạn đọc nữ trẻ; NXB Lao Động + Tsai Fong Books 2023 (bản Anh: Lao Dong Publishing House and Tsai Fong Books) | trung bình: DB (phụ đề), mô tả cũ | `99797a7b…` / `7cb9a981…` |
+| 171 | Hà Nội nhớ thương của tôi (Quan Thế Dân) | vi | chữ Anh trong cột Việt, một câu (67 / trống) | 333 / 409: tập tản văn về nếp sống, phong tục, con người Hà Nội; giọng thương nhớ; NXB Hội Nhà Văn + Tsai Fong Books 2024 (bản Anh: Vietnam Writers' Association Publishing House and Tsai Fong Books) | trung bình: DB, mô tả cũ | `0c7ae994…` / `d12aa13d…` |
+| 207 | Men Without Women (Ernest Hemingway) | en | một câu (bản dịch tự động) (79 / 85) | 566 / 567: tập 14 truyện ngắn, in lần đầu 1927; văn câu ngắn, thoại tiết chế, nhiều điều không nói thẳng; đàn ông đối diện thất bại, nỗi đau, cô độc (đấu bò, quyền Anh, trong và sau chiến tranh); có The Killers, Hills Like White Elephants; Simon and Schuster 1997, 160 trang | cao: mô tả cũ (14 truyện), kiến thức phổ thông | `bdeee8c6…` / `82f8c91d…` |
 | 209 | F. Scott Fitzgerald: The Great Gatsby | en | một câu (bản dịch tự động) (64 / 61) | 591 / 588: tiểu thuyết 1925, Long Island và New York mùa hè 1922; Nick Carraway kể, Jay Gatsby và tiệc xa hoa, Daisy (em họ của Nick, tình cũ của Gatsby); tình yêu, tiền bạc, giai cấp, giấc mơ Mỹ; Cambridge University Press 1991 (không hứa phần chú thích) | cao: kiến thức phổ thông | `0bdabc25…` / `3cf5b3e8…` |
-| 218 | Agatha Christie: Five Complete Murder Mysteries | en | một câu (bản dịch tự động) (74 / 66) | 421 / 435: gộp năm tiểu thuyết trinh thám trọn vẹn, 690 trang, 1990; lối trinh thám cổ điển (án mạng, nhóm nghi phạm, manh mối công bằng, lời giải bất ngờ); **không nêu tên năm truyện** (chưa xác minh) | trung bình: tên sách, số trang, kiến thức phổ thông về Christie | `0244046b…` / `d14acf6e…` |
+| 218 | Agatha Christie: Five Complete Murder Mysteries | en | một câu (bản dịch tự động) (74 / 66) | 423 / 435: gộp năm tiểu thuyết trinh thám trọn vẹn, 690 trang, 1990; lối trinh thám cổ điển (án mạng, nhóm nghi phạm, manh mối công bằng, lời giải bất ngờ); hợp người mới làm quen với truyện trinh thám phá án; **không nêu tên năm truyện** (chưa xác minh) | trung bình: tên sách, số trang, kiến thức phổ thông về Christie | `05b8583b…` / `d14acf6e…` |
 | 248 | Pathways to Success in Your Professional & Private Lives (Dale Carnegie) | en | thiếu hẳn (trống / trống) | 304 / 304 (một đoạn): sách của Dale Carnegie, tác giả How to Win Friends and Influence People; theo tên sách: ứng xử, giao tiếp, phát triển bản thân trong công việc và đời sống riêng; 1998, 570 trang | **thấp**: chỉ tên sách + tác giả (nội dung chi tiết chưa xác minh) | `7287b1f4…` / `bf5c7c1c…` |
 | 272 | Eric Carle's Very Little Library | en | một câu (bản dịch tự động) (44 / 52) | 468 / 513: bộ ba sách tranh nhỏ cho trẻ: The Very Hungry Caterpillar (sâu ăn dần rồi thành bướm), The Very Busy Spider (nhện chăm chỉ giăng tơ), The Very Lonely Firefly (đom đóm cô đơn tìm bạn); tranh cắt dán nhiều màu; không nhắc đèn / hộp / chất liệu bìa | cao: tra web nhiều trang bán sách, kiến thức phổ thông | `ba057649…` / `45e80907…` |
 | 281 | Yuval Noah Harari Box Set | en | thiếu hẳn (trống / trống) | 535 / 591: bộ ba Sapiens (lịch sử loài người), Homo Deus (tương lai: công nghệ, dữ liệu, trí tuệ nhân tạo), 21 Lessons for the 21st Century (hiện tại: tin giả, việc làm, tự do, ý nghĩa) | cao: tên bộ sách, kiến thức phổ thông | `c2713f5a…` / `84327523…` |
@@ -52,8 +52,10 @@ khiển đọc từ production 2026-11-24 (MCP chỉ đọc).
   đúng chỗ là gốc.
 - Sách Việt 2, 3, 20, 171: cột `description` (tiếng Việt) đang chứa chữ Anh từ Google Books → bản mới: `description` = tiếng
   Việt mới, `description_en` = tiếng Anh mới.
-- Tên sách Việt giữ nguyên trong bản Anh (không dịch tên, CLAUDE.md: tên sách không dịch); NXB viết tên thường dùng (NXB Trẻ,
-  Lao Động, Hội Nhà Văn, Tsai Fong Books).
+- Tên sách Việt giữ nguyên trong bản Anh (không dịch tên, CLAUDE.md: tên sách không dịch). Tên NXB: bản Việt "NXB …" có dấu
+  (NXB Trẻ, NXB Lao Động, NXB Hội Nhà Văn, Tsai Fong Books); bản Anh dạng tiếng Anh, không chữ "NXB" (vòng 2): Trẻ Publishing
+  House, Lao Dong Publishing House (tên trong DB: "Lao Dong/Tsai Fong Books"), Vietnam Writers' Association Publishing House
+  (Hội Nhà Văn), Tsai Fong Books.
 
 ## 3. Kiểm trên máy (vòng 1)
 
@@ -64,7 +66,33 @@ khiển đọc từ production 2026-11-24 (MCP chỉ đọc).
 - `bash -n scripts/ci/data-check.sh`: đạt. `bash scripts/ci/data-check.sh --plan`: 1 vòng
   (`supabase/data/mo-ta-sach-ngan/vong-1-sach-viet-lai.sql`; bỏ qua chuan-bi-demo, mo-ta-song-ngu vòng 3 / 4 đã chạy production).
 - Cụm ≥ 6 từ trùng mô tả cũ: 0 / 26 bản mới.
-- data-check trên CI: chờ push nhánh.
+- CI vòng 1 (commit `07efd3b`): data-check [45399016769](https://github.com/khangnguyen196/nha-sach-may/actions/runs/45399016769)
+  xanh (viet-lai: 13 dòng đổi = 13 câu; (e) (a) (b) (f) (g) CRLF đạt); CI check
+  [45399016619](https://github.com/khangnguyen196/nha-sach-may/actions/runs/45399016619) xanh.
+
+## 3b. Vòng 2 (sửa theo code-reviewer vòng 1)
+
+Reviewer vòng 1: 0 nghiêm trọng, 2 nên sửa, 6 gợi ý. Đã sửa (chỉ chữ trong `$mota$`; 3 file sinh lại bằng script, md5 / độ
+dài bản mới cập nhật ở khối kiểm file ghi, file kiểm, `where` + khối kiểm file hoàn tác; md5 và `where` bản gốc không đổi):
+
+1. **Sách 8** hạ xuống tối thiểu: bỏ câu cuối khẳng định ("dành cho bạn đọc muốn tìm hiểu…") và chi tiết cốt truyện "lớn lên
+   từ chuồng bò"; chỉ giữ tác giả, ấn bản 2019, 364 trang và đúng một ý có rào về bối cảnh. Lý do: căn cứ chỉ là vài nhận
+   xét độc giả, chi tiết cốt truyện và lời khẳng định không xác minh được nhiều nguồn.
+2. **Sách 3**: "Đây là ấn bản năm 2023 của NXB Trẻ" / "This 2023 edition is published by Trẻ Publishing House" (năm trong DB
+   là năm của ấn bản, không phải năm ra đời đầu tiên của truyện).
+3. **Sách 207**: "trong và sau chiến tranh" / "in and after the war".
+4. **Sách 218** bản Việt: "thể loại án mạng bí ẩn" (dịch sát) → "truyện trinh thám phá án".
+5. **Tên NXB bản Anh** của 2, 3, 20, 171 nhất quán dạng tiếng Anh, bỏ chữ "NXB" (mục 2).
+
+Kiểm trên máy vòng 2: (d) 0 lỗi (13 câu, 52 lần `$mota$`); nhất quán md5 / độ dài / NULL 3 file 0 lỗi; mô phỏng CRLF 26 / 26
+chuỗi (12 câu có CR), hoàn tác 13 / 13; cụm ≥ 6 từ trùng 0 / 26; NFC, không ký tự ẩn, không `$`; `bash -n` đạt, `--plan` 1
+vòng; lint sạch. data-check CI vòng 2: chờ push nhánh.
+
+Gợi ý chưa làm:
+- Khối kiểm file hoàn tác chỉ báo "khớp được khác 13", chưa báo id / cột lệch như file ghi (không bắt buộc: file hoàn tác chỉ
+  chạy khi cần quay lại).
+- 272 giữ nguyên: ISBN trong DB 9780399242045 khớp trang bán sách đã xác minh (ba cuốn Very Hungry Caterpillar, Very Busy
+  Spider, Very Lonely Firefly).
 
 ## 4. Để sau
 
