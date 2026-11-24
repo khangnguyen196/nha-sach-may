@@ -23,6 +23,10 @@ dự án chạy.
 
 ## Viết file ghi (để qua (d))
 
+- Quy ước chung cho mọi thư mục (chuỗi nhiều dòng bọc `replace(…, chr(13), '')`, bước (g) CRLF của data-check, sự cố
+  2026-11-24): `supabase/data/README.md`. File `.sql` vòng 3 / 4 ở thư mục này đã chạy production, giữ nguyên, không bọc:
+  mọi chuỗi `$mota$` của các file đó là một dòng (không có xuống dòng) nên đường dán của SQL Editor không làm lệch md5.
+
 - Mỗi câu `update … where id = N …` đúng một id, mỗi id một câu; chuỗi trong `$mota$…$mota$`: NFC, không ký tự ẩn
   (mọi ký tự định dạng vô hình như U+00AD, U+200B–U+200F, U+202A–U+202E, U+2060–U+206F, U+FEFF; U+2028 / U+2029; mọi
   khoảng trắng khác dấu cách thường như U+00A0, U+2009, U+202F), không ký tự điều khiển trừ xuống dòng LF, không CR.

@@ -83,7 +83,8 @@ cả 3 file bằng script). Vòng 2 rà bản mới với bản gốc: 0 cụm �
   kèm cảnh báo. Sau khi chạy file ghi của đợt này, thêm `vong-1-sach-viet-lai.sql` vào danh sách (commit docs cuối).
 - **Hoàn tác chứa bản gốc** (chép nguyên văn, sinh bằng script từ bản đọc production): CI kiểm được hoàn tác về đúng bản
   chụp production. Đổi lại, bản gốc (blurb nhà phát hành, tiểu sử Wikipedia) nằm trong repo công khai; đây là dữ liệu đang /
-  đã hiện công khai trên web, chấp nhận. Bản gốc không có CR / LF / `$$` nên chép thẳng trong `$mota$…$mota$`.
+  đã hiện công khai trên web, chấp nhận. Bản gốc không có CR / LF / `$$` nên chép thẳng trong `$mota$…$mota$` (từ vòng 3
+  bọc `replace(…, chr(13), '')` như file ghi, mục 7).
 - Mô tả tiếng Việt cho sách Anh viết thẳng bằng tiếng Việt (cùng ý chính với bản Anh), không dịch máy.
 
 ## 4. Để sau
@@ -124,3 +125,23 @@ Còn phải kiểm lại `/sach/<slug>` 7 sách sau khi chạy file SQL.
 
 Chờ CI (push nhánh `chuan-bi-demo`). Trên máy: `--plan` bỏ qua vòng 3 / 4, ra đúng 1 vòng
 (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`); (d) 0 lỗi (7 câu, 2 chuỗi / câu, 28 lần `$mota$`).
+
+## 7. Sự cố CRLF khi chạy production (2026-11-24, vòng 3)
+
+- **Chuyện gì xảy ra**: chủ dự án chạy `vong-1-sach-viet-lai.sql` (main `b114aea`, data-check xanh) trong SQL Editor, chép
+  file bằng `Get-Content -Raw | Set-Clipboard` rồi Ctrl+V. Khối kiểm cuối file báo P0001 "khop duoc khac 7" → cả file
+  rollback, DB không đổi (người điều khiển kiểm lại bằng MCP chỉ đọc: 7 sách còn đúng md5 / cờ bản gốc, không có CR).
+- **Nguyên nhân** (suy ra, khớp mô phỏng): mô tả mới có 3 đoạn (LF giữa đoạn); đường clipboard Windows / ô soạn của SQL
+  Editor đổi xuống dòng thành CRLF, kể cả trong chuỗi `$mota$` → giá trị ghi vào có CR → md5 lệch md5 kỳ vọng (tính trên
+  bản LF). Điều kiện `where` (md5 bản gốc) không bị ảnh hưởng vì bản gốc không xuống dòng. CI đọc file LF nên xanh.
+  Mô phỏng trên máy (node, bản sao `sed 's/$/\r/'` ngoài repo): bản `b114aea` → 7 câu có CR trong chuỗi, khớp md5 kỳ vọng
+  0 / 7 (khối kiểm raise); bản vòng 3 (bọc `replace`) → khớp 7 / 7.
+- **Sửa (vòng 3)**: 14 chuỗi mô tả mới của file ghi và 12 chuỗi gốc của file hoàn tác bọc `replace(…, chr(13), '')`; md5
+  kỳ vọng, điều kiện `where` và ý nghĩa khối kiểm giữ nguyên. Khối kiểm của file ghi tính thêm danh sách id + cột lệch
+  (`vi` / `en` / `co` / `khong-co-sach`) vào câu báo lỗi, không in mô tả. data-check thêm bước **(g) CRLF** (đường CHƯA
+  GHI): bản sao CRLF của file hoàn tác (về đúng bản chụp đầu, lần 2 = 0) và file ghi (= 7 dòng, cùng md5 từng dòng với lần
+  ghi LF, lần 2 = 0). (d) không đổi (bọc `replace` không ảnh hưởng (d)).
+- **Bài học**: CI phải chạy file theo đúng đường chủ dự án chạy (dán trên Windows), không chỉ đọc file trong repo. Quy ước
+  chung cho mọi file SQL dữ liệu sau này: `supabase/data/README.md` (một câu ở CLAUDE.md mục Database).
+- Thử đỏ / xanh của (g): máy dev không có Docker / psql → chờ CI (người điều khiển đẩy tạm một commit có file ghi chưa bọc
+  để (g) đỏ, rồi bản bọc để xanh).

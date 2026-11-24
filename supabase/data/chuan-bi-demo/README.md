@@ -18,6 +18,21 @@ CHƯA GHI: (e) → ghi → lần 2 = 0 → hoàn tác về đúng bản chụp p
 Thứ tự chạy (sau khi data-check xanh): `vong-1-kiem.sql` → `vong-1-sach-viet-lai.sql` → `vong-1-kiem.sql`.
 Hoàn tác chỉ khi cần: `vong-1-hoan-tac.sql` → `vong-1-kiem.sql`.
 
+Mọi chuỗi mô tả trong file ghi và file hoàn tác bọc `replace(…, chr(13), '')` (vòng 3, sau sự cố 2026-11-24: bản chưa bọc
+dán vào SQL Editor trên Windows thành CRLF → lỗi P0001, đã rollback; xem `supabase/data/README.md`).
+
+Cách chạy file ghi (chủ dự án):
+
+1. Chép cả file vào clipboard (VD PowerShell `Get-Content -Raw -Encoding utf8 <file> | Set-Clipboard`), mở Supabase SQL
+   Editor, dán (Ctrl+V), bấm Run. Dán bị đổi xuống dòng thành CRLF cũng không sao (đã bọc `replace`).
+2. Kết quả mong đợi: "Success. No rows returned" (không có lỗi). Claude chạy `vong-1-kiem.sql` qua MCP chỉ đọc: 7 sách có
+   md5 bản mới cả hai cột, cờ false.
+3. Nếu báo lỗi P0001 `chuan-bi-demo vong 1: … khop duoc N / 7, rollback; lech: …`: **cả file đã rollback, DB không đổi**.
+   Phần `lech:` liệt kê id và cột lệch, không có nội dung mô tả: `vi` = description, `en` = description_en, `co` = cờ
+   description_auto_translated, `khong-co-sach` = không có id hoặc language khác 'en' (VD `lech: 213 (vi en), 254 (co)`).
+   Chép nguyên câu lỗi gửi lại Claude.
+4. Chạy lần 2 (lỡ bấm Run lần nữa): 0 dòng đổi, không lỗi.
+
 Sau khi chủ dự án chạy file ghi: thêm dòng `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql <ngày chạy>` vào
 `supabase/data/da-chay-production.txt` trong commit docs cuối (không thì data-check của các đợt sau đỏ: dữ liệu đã đổi).
 
