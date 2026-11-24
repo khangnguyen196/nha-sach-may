@@ -45,7 +45,7 @@ Eric Carle's Very Little Library · 276 Eric Carle's How Things Grow · 277 The 
 The Very Eric Carle Treasury · 285 The Grand Design · 288 The Illustrated Brief History of Time · 290 Black Holes and Baby
 Universes · 292 Stephen Hawking Box Set · 305 At Home (kệ Nổi bật).
 
-## 2. Viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/`, CHƯA chạy production)
+## 2. Viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/`, ĐÃ CHẠY production 2026-11-24, mục 8)
 
 Cả 7 là sách ngoại văn (`language = 'en'`). Bản mới viết mới cả hai ngôn ngữ (không dịch blurb của nhà phát hành), 2–3
 đoạn, chỉ nêu điều chắc chắn về nội dung (chủ đề, nhân vật, bố cục); không chữ ký / bản giới hạn / hộp / minh họa / số ảnh,
@@ -119,7 +119,7 @@ viewport 390 và 1440, giao diện sáng; mỗi trang chờ tải xong, cuộn h
 
 Ảnh chụp (màn hình đầu, 20 ảnh `<trang>-<390|1440>.png`): `D:\Bán sách-backup\chuan-bi-demo\`. Trang cần đăng nhập
 (`/tai-khoan/…`, `/admin/…`) và bong bóng Mây: chủ dự án tự kiểm tay (không đăng nhập, không mở chatbot khi kiểm tự động).
-Còn phải kiểm lại `/sach/<slug>` 7 sách sau khi chạy file SQL.
+Kiểm lại `/sach/<slug>` 7 sách sau khi chạy file SQL: đã làm, mục 8.
 
 ## 6. data-check
 
@@ -162,3 +162,33 @@ Trên máy: `--plan` bỏ qua vòng 3 / 4, ra đúng 1 vòng
   `cr 0`. Khối kiểm của file hoàn tác giữ nguyên (khối đơn giản, không có chuỗi lech). (b) Lệnh chép luôn có
   `-Encoding utf8` (BẮT BUỘC với Windows PowerShell 5.1) + bước thử đường chép bằng file chỉ đọc
   `D:\Bán sách-backup\chuan-bi-demo\paste-test.sql` trước khi chạy file ghi (`supabase/data/README.md`).
+
+## 8. Đã chạy production (2026-11-24)
+
+Trạng thái: **ĐÃ CHẠY production 2026-11-24 (Success); kiểm sau MCP đạt; kiểm web 14 trang đạt.**
+
+- Lần chạy đầu (2026-11-24 sáng, bản `b114aea`): lỗi P0001, rollback, DB không đổi; nguyên nhân nghi CRLF, chưa xác nhận
+  (mục 7). Lần chạy sau, khi file đã bọc `replace(…, chr(13), '')`, khối kiểm báo len / cr của cột lệch và chủ dự án thử
+  đường chép (`paste-test.sql`) trước: Success.
+- Kiểm sau (MCP chỉ đọc, không select cột mô tả): 7 sách cờ `description_auto_translated = false`, `description_en` có chữ,
+  không có CR, md5 cả hai cột khớp hằng trong file ghi:
+
+  | id | md5 vi | md5 en | Độ dài vi / en |
+  |---|---|---|---|
+  | 213 | `ec5468a3…` | `11fae576…` | 651 / 715 |
+  | 216 | `82b63628…` | `d90f2216…` | 649 / 678 |
+  | 217 | `e80f3a81…` | `c94e3dfc…` | 783 / 855 |
+  | 234 | `975cd134…` | `2c1df8ad…` | 753 / 762 |
+  | 244 | `225a543f…` | `96c7c107…` | 693 / 695 |
+  | 254 | `5df472ba…` | `f69f07f6…` | 682 / 731 |
+  | 280 | `7d45f338…` | `d98195bb…` | 678 / 735 |
+
+- Kiểm web thật (Vercel Production deployment 8025380799, main `e76b302`): 7 sách × `/sach/<slug>` + `/en/books/<slug>` =
+  14 trang 200, hiện mô tả mới (có các từ khóa của bản mới: Abdullah, Renisenb, Styles + Secret Adversary, Built to Last,
+  "bốn quy luật" / "Four Laws", Covey, Harari), không còn câu của bản cũ (bản giới hạn, chữ ký, Workbook, đặt trước,
+  Wikipedia, NWTC, lời khen…). Chữ "giới hạn" còn thấy ở bản vi là câu giao diện của chatbot Mây (hết lượt miễn phí), không
+  thuộc mô tả.
+- `supabase/data/da-chay-production.txt` thêm `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql 2026-11-24`;
+  `data-check.sh --plan` trên máy: 0 vòng cần kiểm, exit 0.
+- Hoàn tác (`vong-1-hoan-tac.sql`): **CHƯA cần chạy**, chỉ khi muốn quay lại bản mô tả cũ (chủ dự án chạy tay, rồi kiểm bằng
+  `vong-1-kiem.sql`).

@@ -6,3 +6,4 @@
 supabase/data/mo-ta-song-ngu/vong-3-sach-viet.sql 2026-11-20
 supabase/data/mo-ta-song-ngu/vong-4-sach-en-1.sql 2026-11-20
 supabase/data/mo-ta-song-ngu/vong-4-sach-en-2.sql 2026-11-20
+supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql 2026-11-24

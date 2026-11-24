@@ -46,7 +46,7 @@ Ghi chú:
 - [ ] Tài khoản khách demo: có địa chỉ mặc định và ít nhất 1 đơn đã giao (để bước 6 có lịch sử).
 - [ ] Thử Mây hôm trước (hỏi 1–2 câu), xem còn lượt và trả lời bình thường.
 - [ ] Thử cả kịch bản trên điện thoại (menu "⋯", bong bóng Mây, giỏ).
-- [ ] Chạy file SQL viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`) để trang Sapiens /
+- [x] [đã xong 2026-11-24] Chạy file SQL viết lại mô tả 7 sách (`supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`) để trang Sapiens /
       Atomic Habits… có mô tả mới hai thứ tiếng. Thứ tự: data-check trên CI xanh → file lên main → kiểm trước bằng MCP
       chỉ đọc (`vong-1-kiem.sql`) → chủ dự án chạy file ghi trong SQL Editor → kiểm sau (`vong-1-kiem.sql`) → thêm dòng
       `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql <ngày chạy>` vào `supabase/data/da-chay-production.txt`.

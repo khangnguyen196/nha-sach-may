@@ -55,4 +55,26 @@ Cách chạy file ghi (chủ dự án):
 Sau khi chủ dự án chạy file ghi: thêm dòng `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql <ngày chạy>` vào
 `supabase/data/da-chay-production.txt` trong commit docs cuối (không thì data-check của các đợt sau đỏ: dữ liệu đã đổi).
 
-Trạng thái: **CHƯA chạy production**.
+Trạng thái: **ĐÃ CHẠY production 2026-11-24 (Success); kiểm sau MCP đạt; kiểm web 14 trang đạt.** Đã thêm vào
+`supabase/data/da-chay-production.txt` (data-check của các đợt sau bỏ qua vòng này).
+
+- Lần chạy đầu (2026-11-24 sáng, bản `b114aea` chưa bọc `replace`): lỗi P0001, cả file rollback, DB không đổi; nghi do CRLF,
+  chưa xác nhận (còn khả năng lỗi bảng mã khi chép). Lần chạy sau (bản đã bọc `replace` + câu lỗi chẩn đoán len / cr + bước
+  thử đường chép `paste-test.sql`, lệnh chép có `-Encoding utf8`): Success.
+- Kiểm sau (MCP chỉ đọc, không select cột mô tả): 7 sách cờ `description_auto_translated = false`, `description_en` có chữ,
+  không có CR; md5 cả hai cột khớp hằng trong file ghi:
+
+  | id | md5 `description` (vi) | md5 `description_en` (en) | Độ dài vi / en |
+  |---|---|---|---|
+  | 213 | `ec5468a3…` | `11fae576…` | 651 / 715 |
+  | 216 | `82b63628…` | `d90f2216…` | 649 / 678 |
+  | 217 | `e80f3a81…` | `c94e3dfc…` | 783 / 855 |
+  | 234 | `975cd134…` | `2c1df8ad…` | 753 / 762 |
+  | 244 | `225a543f…` | `96c7c107…` | 693 / 695 |
+  | 254 | `5df472ba…` | `f69f07f6…` | 682 / 731 |
+  | 280 | `7d45f338…` | `d98195bb…` | 678 / 735 |
+
+- Kiểm web thật (Vercel Production deployment 8025380799, main `e76b302`): 7 sách × `/sach/<slug>` + `/en/books/<slug>` =
+  14 trang 200, hiện mô tả mới, không còn câu của bản cũ. Chữ "giới hạn" còn thấy ở bản vi là câu giao diện của chatbot Mây
+  (hết lượt miễn phí), không thuộc mô tả.
+- Hoàn tác (`vong-1-hoan-tac.sql`): **CHƯA cần chạy**; chỉ chạy khi muốn quay lại bản mô tả cũ (rồi chạy `vong-1-kiem.sql`).
