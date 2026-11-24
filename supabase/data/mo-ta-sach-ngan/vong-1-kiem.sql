@@ -6,14 +6,14 @@
 -- Sau khi ghi: 13 dòng vi_moi = true, en_moi = true, vi_goc = false, en_goc = false, co = false, vi_null = false, en_null = false.
 -- Dòng cuối (id null): tổng số id ở trạng thái gốc / mới (trước: 13 / 0; sau: 0 / 13).
 with v(id, lang, goc_vi, goc_en, goc_co, moi_vi, moi_en) as (
-  values (2, 'vi', '3e3252cd0a9bdf57b911d5d8c361f1ed', null::text, false, '2cc75b1a3106995cce4e45103b8cebb5', '8f749981b9d11175e7dcad5780375046'),
-         (3, 'vi', 'a2b0b794796e7b785c7c453e9d6f20a8', null::text, false, '4ae8a8f059205059503f0c56945c51e6', '438a3b46a4362046ea38c1e78deb8bc3'),
-         (8, 'vi', null::text, null::text, false, '037290df449517ce35f239f812c1ead8', '297a6adea0f745dc13d6f19b7870fce9'),
-         (20, 'vi', '8d03cbbde38413fd7ffef4dd48ab4cdf', null::text, false, '99797a7bc5ca472225548d8b0c1e12ab', '57beb1b3f799a110168140f892c51839'),
-         (171, 'vi', '6cbd516b384d509491b70d7ba061b510', null::text, false, '0c7ae994d94316b768b0fb8e7ee42567', '40162af60f4c77d4e026591e3fba4fe3'),
-         (207, 'en', 'abac60d97681962ff144731540fbfa3c', '61926590dbffc90fd91ef2116fbba5ba', true, '890bf30859d9176f122049d5a12ed09f', '3a2f09974f092f62698fd8aea278bc1d'),
+  values (2, 'vi', '3e3252cd0a9bdf57b911d5d8c361f1ed', null::text, false, '2cc75b1a3106995cce4e45103b8cebb5', 'e52be61a5616c12b93242f31f8f9a3ee'),
+         (3, 'vi', 'a2b0b794796e7b785c7c453e9d6f20a8', null::text, false, '11cc744e23f2c54ac63072fa12336645', 'b4a9f30c3ed1a4506ccd9a58d03b34fd'),
+         (8, 'vi', null::text, null::text, false, '951ee02b93411d39295e135f259808b9', '5d3144718b05b21bd8e823f21da72d6f'),
+         (20, 'vi', '8d03cbbde38413fd7ffef4dd48ab4cdf', null::text, false, '99797a7bc5ca472225548d8b0c1e12ab', '7cb9a98117c5693717a54defa803188a'),
+         (171, 'vi', '6cbd516b384d509491b70d7ba061b510', null::text, false, '0c7ae994d94316b768b0fb8e7ee42567', 'd12aa13d0c0ca05dc1a0152c3a5aec75'),
+         (207, 'en', 'abac60d97681962ff144731540fbfa3c', '61926590dbffc90fd91ef2116fbba5ba', true, 'bdeee8c678be7ac6c0ce5e0af01f8cc4', '82f8c91d4efece2896f6832cac09a62e'),
          (209, 'en', 'b83c4bfc34d4d32a44e936f7fa08d97b', '06d729398fefca6fe07b4e4259366b9c', true, '0bdabc25c116325716acc2df77baf3af', '3cf5b3e8cc9d6ece3805e1c4d3a5617c'),
-         (218, 'en', '3a18474d284fc0d53e850410438500bd', '48c07fec30c5c1a6bab8a852b4ca10fa', true, '0244046b1d92c1b718767ac8c0afddde', 'd14acf6e403fce2ae94dffdbba2c73fd'),
+         (218, 'en', '3a18474d284fc0d53e850410438500bd', '48c07fec30c5c1a6bab8a852b4ca10fa', true, '05b8583ba62465ebf8cdfbafcdc90048', 'd14acf6e403fce2ae94dffdbba2c73fd'),
          (248, 'en', null::text, null::text, false, '7287b1f4216ad5880a24aa19f1261876', 'bf5c7c1c6022a314213bb520ae6b4dd7'),
          (272, 'en', 'a9788e8a56c3dfc5f2eb15ccfb356069', '114e72badfa097c19a2ed4d8a070db98', true, 'ba057649e9ec4d074dbedd08b8464c17', '45e80907914969888d439159a261e532'),
          (281, 'en', null::text, null::text, false, 'c2713f5a99ccf8448390296552449016', '8432752383a3b4d16f31db1a954c9643'),

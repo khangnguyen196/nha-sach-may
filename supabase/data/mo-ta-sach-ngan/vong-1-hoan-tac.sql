@@ -14,27 +14,27 @@ set local lock_timeout = '5s';
 
 -- 2 Làm bạn với bầu trời
 update public.books set description = replace($mota$A charming and poignant story of young stirrings and lovely emotions of several youngsters who first experienced love and compassions... By a favorite writer of novels and stories for the young and the young-at-heart.$mota$, chr(13), ''), description_en = null, description_auto_translated = false
-where id = 2 and language = 'vi' and md5(description) = '2cc75b1a3106995cce4e45103b8cebb5' and md5(description_en) = '8f749981b9d11175e7dcad5780375046' and description_auto_translated = false;
+where id = 2 and language = 'vi' and md5(description) = '2cc75b1a3106995cce4e45103b8cebb5' and md5(description_en) = 'e52be61a5616c12b93242f31f8f9a3ee' and description_auto_translated = false;
 
 -- 3 Oxford thương yêu
 update public.books set description = replace($mota$The love story of a Vietnamese student and a Portuguese teaching assistant at Oxford University - England is a happy ending Beautiful natural scenery, open-minded and good-natured views of a young class grown up in a foreign country have had the good life they wanted.$mota$, chr(13), ''), description_en = null, description_auto_translated = false
-where id = 3 and language = 'vi' and md5(description) = '4ae8a8f059205059503f0c56945c51e6' and md5(description_en) = '438a3b46a4362046ea38c1e78deb8bc3' and description_auto_translated = false;
+where id = 3 and language = 'vi' and md5(description) = '11cc744e23f2c54ac63072fa12336645' and md5(description_en) = 'b4a9f30c3ed1a4506ccd9a58d03b34fd' and description_auto_translated = false;
 
 -- 8 Kiến, Chuột và Ruồi
 update public.books set description = null, description_en = null, description_auto_translated = false
-where id = 8 and language = 'vi' and md5(description) = '037290df449517ce35f239f812c1ead8' and md5(description_en) = '297a6adea0f745dc13d6f19b7870fce9' and description_auto_translated = false;
+where id = 8 and language = 'vi' and md5(description) = '951ee02b93411d39295e135f259808b9' and md5(description_en) = '5d3144718b05b21bd8e823f21da72d6f' and description_auto_translated = false;
 
 -- 20 Tâm lý đàn bà, lý trí đàn ông
 update public.books set description = replace($mota$How to make him yearn to be with you. Longing to accompany you and begging for your commitment. You should read this book.$mota$, chr(13), ''), description_en = null, description_auto_translated = false
-where id = 20 and language = 'vi' and md5(description) = '99797a7bc5ca472225548d8b0c1e12ab' and md5(description_en) = '57beb1b3f799a110168140f892c51839' and description_auto_translated = false;
+where id = 20 and language = 'vi' and md5(description) = '99797a7bc5ca472225548d8b0c1e12ab' and md5(description_en) = '7cb9a98117c5693717a54defa803188a' and description_auto_translated = false;
 
 -- 171 Hà Nội nhớ thương của tôi
 update public.books set description = replace($mota$Social life and customs of people in Hanoi, the capital of Vietnam.$mota$, chr(13), ''), description_en = null, description_auto_translated = false
-where id = 171 and language = 'vi' and md5(description) = '0c7ae994d94316b768b0fb8e7ee42567' and md5(description_en) = '40162af60f4c77d4e026591e3fba4fe3' and description_auto_translated = false;
+where id = 171 and language = 'vi' and md5(description) = '0c7ae994d94316b768b0fb8e7ee42567' and md5(description_en) = 'd12aa13d0c0ca05dc1a0152c3a5aec75' and description_auto_translated = false;
 
 -- 207 Men Without Women
 update public.books set description = replace($mota$Tuyển tập 14 truyện ngắn hé lộ cảm nhận của Hemingway về cuộc đời và con người.$mota$, chr(13), ''), description_en = replace($mota$A collection of 14 short stories reveals Hemingway's impressions of life and mankind.$mota$, chr(13), ''), description_auto_translated = true
-where id = 207 and language = 'en' and md5(description) = '890bf30859d9176f122049d5a12ed09f' and md5(description_en) = '3a2f09974f092f62698fd8aea278bc1d' and description_auto_translated = false;
+where id = 207 and language = 'en' and md5(description) = 'bdeee8c678be7ac6c0ce5e0af01f8cc4' and md5(description_en) = '82f8c91d4efece2896f6832cac09a62e' and description_auto_translated = false;
 
 -- 209 F. Scott Fitzgerald: The Great Gatsby
 update public.books set description = replace($mota$Bức tranh kinh điển về tình yêu và bạo lực trong thập niên 1920.$mota$, chr(13), ''), description_en = replace($mota$Classical portrayal of love and violence during the Twenties.$mota$, chr(13), ''), description_auto_translated = true
@@ -42,7 +42,7 @@ where id = 209 and language = 'en' and md5(description) = '0bdabc25c116325716acc
 
 -- 218 Agatha Christie: Five Complete Murder Mysteries
 update public.books set description = replace($mota$Tuyển tập tiểu thuyết của nữ tác giả trinh thám lừng danh Agatha Christie.$mota$, chr(13), ''), description_en = replace($mota$A collection of novels by renowned mystery author Agatha Christie.$mota$, chr(13), ''), description_auto_translated = true
-where id = 218 and language = 'en' and md5(description) = '0244046b1d92c1b718767ac8c0afddde' and md5(description_en) = 'd14acf6e403fce2ae94dffdbba2c73fd' and description_auto_translated = false;
+where id = 218 and language = 'en' and md5(description) = '05b8583ba62465ebf8cdfbafcdc90048' and md5(description_en) = 'd14acf6e403fce2ae94dffdbba2c73fd' and description_auto_translated = false;
 
 -- 248 Pathways to Success in Your Professional & Private Lives
 update public.books set description = null, description_en = null, description_auto_translated = false
