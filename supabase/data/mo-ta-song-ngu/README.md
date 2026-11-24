@@ -78,3 +78,14 @@ bản backup ở cột Nguồn).
   `vong-4-kiem.sql` → `vong-4-sach-en-2.sql` → `vong-4-kiem.sql` (file kiểm ghi sẵn số kỳ vọng trước / sau từng file).
 - Hoàn tác, **chỉ khi cần**: `vong-4-hoan-tac.sql` (trả 112 sách về trước vòng 4), `vong-3-hoan-tac.sql` (trả 67 sách
   Việt về trước vòng 3). Sách admin đã sửa tay bản dịch (cờ đã tắt) bị bỏ qua, khối kiểm báo bằng notice.
+
+## Sau đợt này (cập nhật 2026-11-24, đợt chuan-bi-demo)
+
+- Vòng 3 và vòng 4 **đã chạy production 2026-11-20** (bảng File ở trên ghi trạng thái lúc soạn) và đã vào
+  `supabase/data/da-chay-production.txt`: CI data-check **không kiểm lại** khi push (chạy tay `-f file=…` vẫn kiểm, kèm
+  cảnh báo, kết quả có thể đỏ vì dữ liệu đã đổi). Các file `.sql` ở thư mục này giữ nguyên đúng từng byte bản đã chạy.
+- Sau khi chủ dự án chạy `supabase/data/chuan-bi-demo/vong-1-sach-viet-lai.sql`: 213, 216, 234, 244, 280 có mô tả viết mới
+  (cờ `description_auto_translated` false, không còn là bản dịch của vòng 4); 217, 254 có `description_en` (bản viết mới,
+  cờ false). Câu (3) và (4) của `vong-4-kiem.sql` vì vậy không còn đúng số kỳ vọng cũ: (3) ra 7 (sách en có
+  `description_en` mà cờ false; cộng thêm sách admin đã sửa tay, nếu có) thay vì 0; (4) ra 0 dòng thay vì 217, 254. `vong-4-hoan-tac.sql` không còn hoàn tác được
+  5 sách trên (cờ đã tắt → bỏ qua, như sách admin đã sửa tay).
