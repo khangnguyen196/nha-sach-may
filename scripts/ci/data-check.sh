@@ -4,9 +4,17 @@
 #   bash scripts/ci/data-check.sh --plan <ra> [<file ghi>]
 #       Kiểm tên mọi *.sql dưới supabase/data/ rồi ghi vào <ra> các vòng cần kiểm, mỗi dòng một vòng (cùng thư mục +
 #       cùng N, các file cách nhau bằng dấu cách). Có <file ghi> (chạy tay) → chỉ file đó. Không cần DB, không cần khóa.
+#       Không có <file ghi> (push): bỏ qua vòng có MỌI file ghi nằm trong supabase/data/da-chay-production.txt (đã chạy
+#       production, dữ liệu đã đổi nên kiểm lại sẽ đỏ); vòng chỉ có một phần file trong danh sách → đỏ. Bỏ qua hết → 0 vòng,
+#       exit 0. Có <file ghi> nằm trong danh sách → vẫn kiểm, kèm ::warning::.
 #   bash scripts/ci/data-check.sh <file ghi>...   (mọi file cùng thư mục, cùng vòng N): chạy thử MỘT vòng
 # Quy ước tên (supabase/data/<đợt>/): file GHI vong-N-sach-*.sql; file kiểm (chỉ đọc) vong-N-kiem.sql; file hoàn tác
 # vong-N-hoan-tac.sql (một file cho cả vòng N). *.sql khác tên, hoặc file kiểm / hoàn tác không có file ghi cùng vòng → đỏ.
+# Danh sách đã chạy production (supabase/data/da-chay-production.txt, không phải .sql): mỗi dòng "<đường dẫn file ghi>
+# <YYYY-MM-DD>", dòng bắt đầu bằng # là comment. Dòng sai dạng, trùng, hoặc trỏ file không có → đỏ (gõ nhầm).
+# Khai báo trong comment của file ghi (mọi file của vòng giống nhau): "-- data-check: cot-duoc-ghi = a, b" (cột được ghi) và
+# "-- data-check: che-do = viet-lai" (mô tả đã có được thay bằng bản viết mới: không nhận chế độ theo cờ, cả vòng chạy đường
+# CHƯA GHI; giá trị khác → đỏ).
 # Env: SUPABASE_PROD_URL, SUPABASE_PROD_KEY (khóa publishable / anon, chỉ để đọc REST công khai), RESULTS (file bảng kết
 # quả markdown, nối thêm dòng), DB_CONTAINER (migration-check-lib.sh).
 # Không in nội dung mô tả, URL hay khóa: log chỉ có id, tên cột, số đếm, SQLSTATE.
@@ -16,12 +24,39 @@ DATA_ROOT=supabase/data
 DIR_RE='^supabase/data(/[A-Za-z0-9._-]+)+$'
 NAME_RE='^vong-([1-9][0-9]*)-(sach-[A-Za-z0-9._-]+|kiem|hoan-tac)\.sql$'
 WRITE_RE='^supabase/data(/[A-Za-z0-9._-]+)+/vong-[1-9][0-9]*-sach-[A-Za-z0-9._-]+\.sql$'
+DONE_LIST="$DATA_ROOT/da-chay-production.txt"
 
 # ---- --plan: kiểm tên file + gom vòng ----
 plan_units() {
-  local out="$1" input="${2:-}" bad=0 file dir name key
-  local -a sql_files writes=() order=()
-  local -A has_write=() unit=()
+  local out="$1" input="${2:-}" bad=0 file dir name key line path run_date skipped=0 dates
+  local -a sql_files writes=() order=() unit_files listed unlisted
+  local -A has_write=() unit=() done_date=()
+  # Danh sách file ghi đã chạy production
+  if [ -f "$DONE_LIST" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line%$'\r'}"
+      if [[ "$line" =~ ^[[:space:]]*(#.*)?$ ]]; then continue; fi
+      if ! [[ "$line" =~ ^([^[:space:]]+)[[:space:]]+([0-9]{4}-[0-9]{2}-[0-9]{2})[[:space:]]*$ ]]; then
+        echo "::error::data-check: $DONE_LIST: dòng sai dạng (cần '<file ghi> <YYYY-MM-DD>'): $line"
+        bad=1
+        continue
+      fi
+      path="${BASH_REMATCH[1]}"
+      run_date="${BASH_REMATCH[2]}"
+      if ! [[ "$path" =~ $WRITE_RE ]] || [[ "$path" == *..* ]]; then
+        echo "::error::data-check: $DONE_LIST: $path không phải file ghi supabase/data/…/vong-N-sach-*.sql"
+        bad=1
+      elif [ ! -f "$path" ]; then
+        echo "::error::data-check: $DONE_LIST: không có file $path (gõ nhầm?)"
+        bad=1
+      elif [ -n "${done_date[$path]:-}" ]; then
+        echo "::error::data-check: $DONE_LIST: $path có nhiều dòng"
+        bad=1
+      else
+        done_date[$path]="$run_date"
+      fi
+    done < "$DONE_LIST"
+  fi
   mapfile -t sql_files < <(find "$DATA_ROOT" -type f -iname '*.sql' 2> /dev/null | LC_ALL=C sort)
   for file in "${sql_files[@]}"; do
     dir=$(dirname "$file")
@@ -58,11 +93,35 @@ plan_units() {
       bad=1
     else
       echo "$input" > "$out"
+      if [ -n "${done_date[$input]:-}" ]; then
+        echo "::warning::data-check: $input đã chạy production (${done_date[$input]}), kết quả có thể đỏ do dữ liệu đã đổi"
+      fi
     fi
   else
-    for key in "${order[@]}"; do echo "${unit[$key]}" >> "$out"; done
+    for key in "${order[@]}"; do
+      read -r -a unit_files <<< "${unit[$key]}"
+      listed=()
+      unlisted=()
+      for file in "${unit_files[@]}"; do
+        if [ -n "${done_date[$file]:-}" ]; then listed+=("$file"); else unlisted+=("$file"); fi
+      done
+      if [ "${#listed[@]}" = 0 ]; then
+        echo "${unit[$key]}" >> "$out"
+      elif [ "${#unlisted[@]}" = 0 ]; then
+        dates=$(for file in "${listed[@]}"; do echo "${done_date[$file]}"; done | LC_ALL=C sort -u | paste -sd, -)
+        echo "bỏ qua (đã chạy production $dates): ${unit[$key]}"
+        skipped=$((skipped + 1))
+      else
+        echo "::error::data-check: vòng ${key/ / vòng } chỉ có một phần file ghi trong $DONE_LIST (có: ${listed[*]}; chưa có: ${unlisted[*]}); thêm đủ hoặc bỏ hết"
+        bad=1
+      fi
+    done
   fi
   if [ "$bad" = 0 ] && [ ! -s "$out" ]; then
+    if [ -z "$input" ] && [ "${#writes[@]}" -gt 0 ] && [ "$skipped" -gt 0 ]; then
+      echo "0 vòng cần kiểm (mọi vòng đã chạy production, xem $DONE_LIST)"
+      return 0
+    fi
     echo "::error::data-check: không có file ghi nào để kiểm (0 vòng)"
     bad=1
   fi
@@ -163,6 +222,29 @@ fi
 [[ "$allowed" =~ ^[a-z_]+(,[a-z_]+)*$ ]] || fail "cột được ghi" "khai báo sai dạng"
 allowed_pg="{$allowed,updated_at}"
 row "cột được ghi" "$allowed (+ updated_at do trigger)"
+
+# ---- Chế độ khai báo: "-- data-check: che-do = viet-lai" (mọi file của vòng giống nhau, kể cả có / không) ----
+# viet-lai: mô tả đã có (có thể đã dịch, cờ true) được thay bằng bản viết mới → không nhận chế độ theo cờ, chạy đường CHƯA GHI
+declared_mode=""
+first=true
+for file in "${files[@]}"; do
+  line=$(grep -m1 -E '^-- data-check: *che-do' "$file" || true)
+  value=""
+  if [ -n "$line" ]; then
+    value=$(printf '%s' "$line" | sed -E 's/^-- data-check: *che-do *= *//' | tr -d ' ')
+    [ -n "$value" ] || value="(trống)"
+  fi
+  if [ "$first" = true ]; then
+    declared_mode="$value"
+    first=false
+  elif [ "$value" != "$declared_mode" ]; then
+    fail "che-do" "các file của vòng khai báo khác nhau (hoặc file có, file không)"
+  fi
+done
+case "$declared_mode" in
+  "" | viet-lai) ;;
+  *) fail "che-do" "giá trị không hỗ trợ (chỉ nhận 'viet-lai')" ;;
+esac
 
 # ---- (d) chữ trong file (không cần DB) ----
 if ! node scripts/ci/data-check-text.mjs --json "$WORK/text.json" "${files[@]}"; then
@@ -277,12 +359,18 @@ columns_kept() {
 
 # Ghi từng file một lần: số dòng đổi = số câu UPDATE, đúng các id của file; cột ngoài danh sách không đổi
 write_all() {
-  local label="$1" file result n ids
+  local label="$1" file result n ids hint
   for file in "${files[@]}"; do
     snap pre; counts pre
     run_sql "$file" write || fail "$label" "$(basename "$file") lỗi khi ghi"
     result=$(changed pre); n=${result%%|*}; ids=${result#*|}
-    [ "$n" = "${file_updates[$file]}" ] || fail "$label" "$(basename "$file"): $n dòng đổi, cần ${file_updates[$file]}"
+    if [ "$n" != "${file_updates[$file]}" ]; then
+      hint=""
+      if [ "$n" = 0 ] && [ "$declared_mode" = viet-lai ]; then
+        hint=" (che-do = viet-lai: có thể đã chạy production: thêm vào danh sách đã chạy $DONE_LIST)"
+      fi
+      fail "$label" "$(basename "$file"): $n dòng đổi, cần ${file_updates[$file]}$hint"
+    fi
     [ "$ids" = "$(tr , '\n' <<< "${file_ids[$file]}" | sort -n | paste -sd, -)" ] \
       || fail "$label" "$(basename "$file"): dòng đổi không đúng các id của file"
     columns_kept "$label" pre
@@ -340,9 +428,16 @@ broken_original() {
 }
 
 # ---- Chế độ: tính theo TỪNG FILE ghi (chỉ các id của file đó) ----
-# CHƯA GHI: mọi dòng của file description_en null + cờ false; ĐÃ GHI: mọi dòng của file cờ true; lẫn lộn trong một file → đỏ
+# CHƯA GHI: mọi dòng của file description_en null + cờ false; ĐÃ GHI: mọi dòng của file cờ true; lẫn lộn trong một file → đỏ.
+# Khai báo che-do = viet-lai: bỏ bước này, cả vòng một chế độ VIẾT LẠI (đường CHƯA GHI, không dựa vào cờ)
 declare -A file_mode
-for file in "${files[@]}"; do
+mode_files=("${files[@]}")
+if [ "$declared_mode" = viet-lai ]; then
+  mode_files=()
+  for file in "${files[@]}"; do file_mode[$file]="VIẾT LẠI"; done
+  row "chế độ" "VIẾT LẠI (khai báo che-do = viet-lai): không nhận chế độ theo cờ; cả vòng chạy đường CHƯA GHI"
+fi
+for file in "${mode_files[@]}"; do
   mode_row=$(db_psql -c "select count(*) filter (where description_en is null and not description_auto_translated)
     || '|' || count(*) filter (where description_auto_translated) from public.books where id = any('{${file_ids[$file]}}')" < /dev/null)
   not_written=${mode_row%%|*}
@@ -437,7 +532,7 @@ flow_written() {
 
 if [ "${#modes[@]}" = 1 ]; then
   echo "[$UNIT] Chế độ cả vòng: ${modes[0]}"
-  if [ "${modes[0]}" = "CHƯA GHI" ]; then flow_not_written; else flow_written; fi
+  if [ "${modes[0]}" = "ĐÃ GHI" ]; then flow_written; else flow_not_written; fi
 else
   # Vòng có file đã chạy production và file chưa chạy: kiểm riêng từng file theo chế độ của nó
   echo "[$UNIT] Chế độ khác nhau giữa các file: kiểm riêng từng file"

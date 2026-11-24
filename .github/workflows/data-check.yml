@@ -9,10 +9,14 @@
 # Workflow tự nhận file theo tên: thêm vòng mới không cần sửa workflow. *.sql khác tên, file kiểm / hoàn tác không có file
 # ghi cùng vòng, hoặc 0 file ghi → đỏ (cả push lẫn chạy tay). Thư mục khác mo-ta-song-ngu (hoặc vòng khác 3 / 4) khai báo
 # "-- data-check: cot-duoc-ghi = a, b" trong file ghi (xem scripts/ci/data-check.sh).
+# File ghi đã chạy production ghi vào supabase/data/da-chay-production.txt ("<file ghi> <YYYY-MM-DD>"): push bỏ qua vòng có
+# mọi file ghi trong danh sách (dữ liệu đã đổi, kiểm lại sẽ đỏ), vòng chỉ có một phần → đỏ; bỏ qua hết → 0 vòng, xanh, bảng
+# tóm tắt ghi "0 vòng cần kiểm". Chạy tay một file trong danh sách vẫn kiểm, kèm cảnh báo.
 #
 # Mỗi vòng (scripts/ci/data-check.sh): (d) chữ trong file (NFC, ký tự ẩn, $mota$, khối do $$) → lấy production → chế độ
 # theo TỪNG FILE ghi: CHƯA GHI (mọi dòng của file description_en null + cờ false) / ĐÃ GHI (mọi dòng của file cờ true),
-# lẫn lộn trong một file → đỏ.
+# lẫn lộn trong một file → đỏ. File ghi khai báo "-- data-check: che-do = viet-lai" (thay mô tả đã có bằng bản viết mới):
+# bỏ bước nhận chế độ theo cờ, cả vòng chạy đường CHƯA GHI.
 #   CHƯA GHI: (e) sửa 1 ký tự mô tả gốc → file phải lỗi P0001, 0 dòng đổi; (a) lần 1 số dòng đổi = số câu UPDATE;
 #             (c) cột ngoài danh sách được ghi giữ nguyên md5, số dòng mọi bảng không đổi; (b) lần 2 = 0 dòng;
 #             (f) hoàn tác → về đúng bản chụp đầu → hoàn tác lần 2 = 0 dòng → ghi lại → lần 2 = 0.
@@ -123,6 +127,10 @@ jobs:
             fi
             echo "::endgroup::"
           done < "$RUNNER_TEMP/units.txt"
+          # Mọi vòng đã chạy production (bước 1 bỏ qua hết): bảng không để trống
+          if [ ! -s "$RUNNER_TEMP/units.txt" ]; then
+            echo '| (không) | vòng cần kiểm | 0 vòng cần kiểm (mọi vòng đã chạy production, xem bước 1) |' >> "$RESULTS"
+          fi
           echo
           echo "===== Tóm tắt ====="
           cat "$RESULTS"

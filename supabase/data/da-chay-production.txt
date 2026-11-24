@@ -1,0 +1,8 @@
+# File SQL dữ liệu ĐÃ CHẠY trên production (chủ dự án chạy tay trong SQL Editor). Đọc bởi scripts/ci/data-check.sh --plan.
+# Mỗi dòng: "<đường dẫn file ghi> <YYYY-MM-DD>" (ngày chạy). Dòng bắt đầu bằng # là comment.
+# Khi push, data-check bỏ qua vòng có MỌI file ghi nằm ở đây (dữ liệu production đã đổi, kiểm lại sẽ đỏ); vòng chỉ có một phần
+# file ở đây → đỏ. Chạy tay (gh workflow run data-check.yml -f file=…) vẫn kiểm file đó, kèm cảnh báo.
+# Thêm dòng trong commit docs cuối đợt, sau khi chủ dự án chạy file ghi.
+supabase/data/mo-ta-song-ngu/vong-3-sach-viet.sql 2026-11-20
+supabase/data/mo-ta-song-ngu/vong-4-sach-en-1.sql 2026-11-20
+supabase/data/mo-ta-song-ngu/vong-4-sach-en-2.sql 2026-11-20
