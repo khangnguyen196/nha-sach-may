@@ -6,22 +6,22 @@ import { createPublicClient } from '@/lib/supabase/public'
 import { MARKET_PAGE_SIZE, type MarketListInput } from './market-params'
 import { signUsedPhotoUrls } from './signed-urls'
 
-// Chá»£ sÃ¡ch cÅ©, pháº§n cÃ´ng khai (docs/plans/cho-sach-cu.md, P-B vÃ²ng 9). Client anon khÃ´ng cookies â†’ dÃ¹ng Ä‘Æ°á»£c trong
-// 'use cache'; RLS cho anon chá»‰ Ä‘á»c tin Ä‘Ã£ duyá»‡t / Ä‘Ã£ bÃ¡n, chá»‰ cÃ¡c cá»™t Ä‘Æ°á»£c cáº¥p (khÃ´ng seller_id, fee, reject_reason).
-// Tin cá»§a sÃ¡ch ngá»«ng bÃ¡n khÃ´ng hiá»‡n: danh sÃ¡ch embed `books!inner` (bá» dÃ²ng), trang tin embed thÆ°á»ng rá»“i tráº£ null khi
-// khÃ´ng Ä‘á»c Ä‘Æ°á»£c sÃ¡ch (RLS cá»§a books). Quyáº¿t Ä‘á»‹nh 7a: hÃ m nÃ o cÃ³ link áº£nh kÃ½ (háº¡n 7 ngÃ y) giá»¯ cacheLife('hours')
-// (expire 1 ngÃ y); Vitest cache-life.test.ts kiá»ƒm.
+// Chợ sách cũ, phần công khai (docs/plans/cho-sach-cu.md, P-B vòng 9). Client anon không cookies → dùng được trong
+// 'use cache'; RLS cho anon chỉ đọc tin đã duyệt / đã bán, chỉ các cột được cấp (không seller_id, fee, reject_reason).
+// Tin của sách ngừng bán không hiện: danh sách embed `books!inner` (bỏ dòng), trang tin embed thường rồi trả null khi
+// không đọc được sách (RLS của books). Quyết định 7a: hàm nào có link ảnh ký (hạn 7 ngày) giữ cacheLife('hours')
+// (expire 1 ngày); Vitest cache-life.test.ts kiểm.
 
 const RANGE_NOT_SATISFIABLE = 'PGRST103'
 
-/** Tag cá»§a tá»«ng sÃ¡ch trong danh sÃ¡ch: admin áº©n / sá»­a sÃ¡ch (book:{id}) thÃ¬ danh sÃ¡ch Ä‘ang chá»©a sÃ¡ch Ä‘Ã³ lÃ m má»›i */
+/** Tag của từng sách trong danh sách: admin ẩn / sửa sách (book:{id}) thì danh sách đang chứa sách đó làm mới */
 function tagBooks(bookIds: readonly number[]) {
   if (bookIds.length > 0) cacheTag(...new Set(bookIds.map((id) => `book:${id}`)))
 }
 
 /**
- * Danh sÃ¡ch tin Ä‘ang bÃ¡n (chá»‰ `approved`; tin Ä‘Ã£ bÃ¡n khÃ´ng lÃªn danh sÃ¡ch, quyáº¿t Ä‘á»‹nh 5) theo bá»™ lá»c cá»§a URL. áº¢nh Ä‘áº§u
- * má»—i tin kÃ½ báº±ng anon. Trang vÆ°á»£t quÃ¡ â†’ máº£ng rá»—ng (trang hiá»‡n InlineNotFound).
+ * Danh sách tin đang bán (chỉ `approved`; tin đã bán không lên danh sách, quyết định 5) theo bộ lọc của URL. Ảnh đầu
+ * mỗi tin ký bằng anon. Trang vượt quá → mảng rỗng (trang hiện InlineNotFound).
  */
 export async function listMarketListings(input: MarketListInput) {
   'use cache'
@@ -31,14 +31,14 @@ export async function listMarketListings(input: MarketListInput) {
   const supabase = createPublicClient()
   let query = supabase
     .from('used_listings')
-    // Cá»™t cháº·n theo sá»Ÿ thÃ­ch (category_id, publisher_id, content_warnings, tÃ¡c giáº£) láº¥y tá»« sÃ¡ch catalog cá»§a tin, khÃ´ng tá»«
-    // used_listings (anon khÃ´ng Ä‘á»c seller_id / fee / reject_reason)
+    // Cột chặn theo sở thích (category_id, publisher_id, content_warnings, tác giả) lấy từ sách catalog của tin, không từ
+    // used_listings (anon không đọc seller_id / fee / reject_reason)
     .select(
       'id, condition, price, photos, seller_name, approved_at, books!inner(id, slug, title, category_id, publisher_id, content_warnings, book_authors(role, author_id))',
       { count: 'exact' },
     )
     .eq('status', 'approved')
-  // Lá»c trÃªn sÃ¡ch nhÃºng `!inner`: tin khÃ´ng khá»›p bá»‹ bá» khá»i danh sÃ¡ch (khÃ´ng chá»‰ Ä‘á»ƒ books null)
+  // Lọc trên sách nhúng `!inner`: tin không khớp bị bỏ khỏi danh sách (không chỉ để books null)
   if (input.categoryIds) query = query.in('books.category_id', input.categoryIds)
   if (input.visibleCategoryIds) query = query.or(visibleBooksFilter(input.visibleCategoryIds), { referencedTable: 'books' })
   if (input.bookSlug) query = query.eq('books.slug', input.bookSlug)
@@ -88,13 +88,13 @@ export async function listMarketListings(input: MarketListInput) {
 
 export type MarketListing = Awaited<ReturnType<typeof listMarketListings>>['listings'][number]
 
-/** max_rows cá»§a PostgREST (1000): catalog ~250 cuá»‘n nÃªn má»™t trang Ä‘á»§ chá»©a má»i sÃ¡ch khá»›p; vÆ°á»£t thÃ¬ sÃ¡ch sau bá»‹ bá» */
+/** max_rows của PostgREST (1000): catalog ~250 cuốn nên một trang đủ chứa mọi sách khớp; vượt thì sách sau bị bỏ */
 const SEARCH_BOOK_ID_LIMIT = 1000
 
 /**
- * Tab SÃ¡ch cÅ© cá»§a trang tÃ¬m kiáº¿m, bÆ°á»›c 1: id cÃ¡c sÃ¡ch khá»›p tá»« khÃ³a (RPC search_books nhÆ° tab SÃ¡ch má»›i, gÃµ khÃ´ng dáº¥u)
- * thuá»™c danh má»¥c Ä‘ang hiá»‡n (quyáº¿t Ä‘á»‹nh 10). KhÃ´ng gáº¯n tag tá»«ng sÃ¡ch: sÃ¡ch bá»‹ áº©n / ngá»«ng bÃ¡n sau Ä‘Ã³ bá»‹ bÆ°á»›c 2
- * (listMarketListings / countUsedListings, `books!inner` + tag book:{id}) bá» ra; sÃ¡ch má»›i khá»›p / hiá»‡n láº¡i lÃ m má»›i tag
+ * Tab Sách cũ của trang tìm kiếm, bước 1: id các sách khớp từ khóa (RPC search_books như tab Sách mới, gõ không dấu)
+ * thuộc danh mục đang hiện (quyết định 10). Không gắn tag từng sách: sách bị ẩn / ngừng bán sau đó bị bước 2
+ * (listMarketListings / countUsedListings, `books!inner` + tag book:{id}) bỏ ra; sách mới khớp / hiện lại làm mới tag
  * `books` / `categories`.
  */
 export async function matchingUsedSearchBookIds(q: string, visibleIds: number[]) {
@@ -113,11 +113,11 @@ export async function matchingUsedSearchBookIds(q: string, visibleIds: number[])
 }
 
 /**
- * NhÃ£n "SÃ¡ch cÅ© (N)" á»Ÿ tab SÃ¡ch má»›i: sá»‘ tin Ä‘ang bÃ¡n cá»§a cÃ¡c sÃ¡ch `bookIds` (cÃ¹ng Ä‘iá»u kiá»‡n vá»›i listMarketListings:
- * `approved` + `books!inner` bá» tin cá»§a sÃ¡ch ngá»«ng bÃ¡n). KHÃ”NG kÃ½ link áº£nh.
- * Äá»c dÃ²ng (`book_id`) kÃ¨m count exact thay vÃ¬ head count: chá»‰ gáº¯n tag book:{id} cho sÃ¡ch CÃ“ tin (khÃ´ng pháº£i má»i sÃ¡ch
- * khá»›p tá»« khÃ³a: Next bá» tag thá»© 129 trá»Ÿ Ä‘i kÃ¨m cáº£nh bÃ¡o). SÃ¡ch khá»›p mÃ  khÃ´ng cÃ³ tin bá»‹ áº©n â†’ sá»‘ khÃ´ng Ä‘á»•i; sÃ¡ch cÃ³
- * tin bá»‹ áº©n â†’ tag cá»§a nÃ³ lÃ m má»›i; tin má»›i duyá»‡t / rÃºt â†’ tag `used-listings`.
+ * Nhãn "Sách cũ (N)" ở tab Sách mới: số tin đang bán của các sách `bookIds` (cùng điều kiện với listMarketListings:
+ * `approved` + `books!inner` bỏ tin của sách ngừng bán). KHÔNG ký link ảnh.
+ * Đọc dòng (`book_id`) kèm count exact thay vì head count: chỉ gắn tag book:{id} cho sách CÓ tin (không phải mọi sách
+ * khớp từ khóa: Next bỏ tag thứ 129 trở đi kèm cảnh báo). Sách khớp mà không có tin bị ẩn → số không đổi; sách có
+ * tin bị ẩn → tag của nó làm mới; tin mới duyệt / rút → tag `used-listings`.
  */
 export async function countUsedListings(bookIds: number[]) {
   'use cache'
@@ -135,8 +135,8 @@ export async function countUsedListings(bookIds: number[]) {
 }
 
 /**
- * Má»™t tin cÃ´ng khai: Ä‘Ã£ duyá»‡t hoáº·c Ä‘Ã£ bÃ¡n (nhÃ£n "ÄÃ£ bÃ¡n"), má»i áº£nh kÃ½ báº±ng anon (áº£nh khÃ´ng cÃ²n â†’ url null). Tin cá»§a
- * sÃ¡ch thuá»™c danh má»¥c áº©n váº«n xem Ä‘Æ°á»£c báº±ng link trá»±c tiáº¿p (nhÆ° trang sÃ¡ch); sÃ¡ch ngá»«ng bÃ¡n â†’ null.
+ * Một tin công khai: đã duyệt hoặc đã bán (nhãn "Đã bán"), mọi ảnh ký bằng anon (ảnh không còn → url null). Tin của
+ * sách thuộc danh mục ẩn vẫn xem được bằng link trực tiếp (như trang sách); sách ngừng bán → null.
  */
 async function getMarketListingCached(id: number) {
   'use cache'
@@ -144,7 +144,7 @@ async function getMarketListingCached(id: number) {
   cacheLife('hours')
 
   const supabase = createPublicClient()
-  // NhÃºng sÃ¡ch KHÃ”NG `!inner`: tin cá»§a sÃ¡ch ngá»«ng bÃ¡n váº«n ra dÃ²ng (books null do RLS cá»§a books) Ä‘á»ƒ biáº¿t book_id
+  // Nhúng sách KHÔNG `!inner`: tin của sách ngừng bán vẫn ra dòng (books null do RLS của books) để biết book_id
   const { data, error } = await supabase
     .from('used_listings')
     .select('id, book_id, condition, price, description, photos, status, seller_name, approved_at, books(id, slug, title)')
@@ -153,7 +153,7 @@ async function getMarketListingCached(id: number) {
     .maybeSingle()
   if (error) throw new Error(`getMarketListing: ${error.message}`)
   if (!data) return null
-  // Gáº¯n tag sÃ¡ch cáº£ khi sÃ¡ch ngá»«ng bÃ¡n (tráº£ null bÃªn dÆ°á»›i): admin báº­t láº¡i sÃ¡ch (updateTag book:{id}) â†’ trang tin hiá»‡n láº¡i
+  // Gắn tag sách cả khi sách ngừng bán (trả null bên dưới): admin bật lại sách (updateTag book:{id}) → trang tin hiện lại
   tagBooks([data.book_id])
   if (!data.books) return null
 
@@ -171,14 +171,14 @@ async function getMarketListingCached(id: number) {
   }
 }
 
-/** React.cache: generateMetadata vÃ  page cÃ¹ng láº¥y má»™t tin trong má»™t request â†’ má»™t láº§n gá»i */
+/** React.cache: generateMetadata và page cùng lấy một tin trong một request → một lần gọi */
 export const getMarketListing = cache(getMarketListingCached)
 
 export type MarketListingDetail = NonNullable<Awaited<ReturnType<typeof getMarketListingCached>>>
 
 /**
- * "CÃ³ N báº£n cÅ© tá»« X â‚«" á»Ÿ trang sÃ¡ch: sá»‘ tin Ä‘ang bÃ¡n + giÃ¡ tháº¥p nháº¥t cá»§a má»™t cuá»‘n. KHÃ”NG kÃ½ link áº£nh. CÃ¹ng profile
- * 'hours' vá»›i getBookBySlug cá»§a trang sÃ¡ch â†’ cáº¥u hÃ¬nh cache cá»§a trang sÃ¡ch khÃ´ng ngáº¯n Ä‘i.
+ * "Có N bản cũ từ X ₫" ở trang sách: số tin đang bán + giá thấp nhất của một cuốn. KHÔNG ký link ảnh. Cùng profile
+ * 'hours' với getBookBySlug của trang sách → cấu hình cache của trang sách không ngắn đi.
  */
 export async function getUsedCopies(bookId: number) {
   'use cache'
