@@ -18,7 +18,10 @@ tab Sách cũ hiện tin đang bán trong Chợ sách cũ của các sách khớ
   2. Tab Sách cũ: `listMarketListings({ bookIds, sort: 'newest', page })` (thêm `bookIds` vào `MarketListInput`: dùng lại
      select, ký ảnh, PGRST103, `.range` + count exact, tag `used-listings` + `book:{id}` của từng sách trên trang). N =
      `total`. Trang > 1 rỗng → `InlineNotFound`.
-  3. Tab Sách mới: N bằng `countUsedListings(bookIds)` chạy song song với `listBooks` (`Promise.all`). Không ký ảnh.
+  3. Tab Sách mới: N bằng `searchUsedCount` (`features/used/search-count.ts` → `matchingUsedSearchBookIds` +
+     `countUsedListings`), chạy song song với `listBooks` (`Promise.all`); lỗi ở bất kỳ bước nào → nhãn "Sách cũ" không
+     số (key `tabUsedPlain`), kết quả sách mới vẫn hiện; lỗi nội bộ của Next ném tiếp (`unstable_rethrow`); log chỉ ghi
+     bước (ids / count) + tên lỗi. Không ký ảnh.
 - **Đếm N** (`countUsedListings`): `select('book_id, books!inner(id)', { count: 'exact' })` + `status = approved` +
   `in(book_id)`, KHÔNG head count: đọc `book_id` để chỉ gắn tag `book:{id}` cho sách có tin (gắn cho mọi sách khớp thì
   từ khóa rộng vượt 128 tag, Next bỏ phần thừa kèm cảnh báo). `books!inner` bỏ tin của sách ngừng bán (RLS của books),
@@ -50,5 +53,3 @@ tab Sách cũ hiện tin đang bán trong Chợ sách cũ của các sách khớ
 - URL dài: `.in('book_id', ≤ 1000 id)` ≈ 5–6KB trên URL GET; catalog lớn dễ gặp 414 trước trần 1000 → cùng hướng RPC
   riêng.
 - `?type=used` khi chưa có từ khóa / từ khóa 1 ký tự: màn gợi ý không có dải tab; có thể nhắc "tìm trong chợ sách cũ".
-- Nhánh đếm N ở tab Sách mới lỗi → nhãn "Sách cũ" không số, kết quả sách mới vẫn hiện (`searchUsedCount`,
-  `features/used/search-count.ts`, vòng 2): đã làm; ghi ở đây để nhớ hành vi khi đọc log `searchUsedCount (ids|count)`.
