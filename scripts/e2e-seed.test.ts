@@ -19,6 +19,13 @@ const FREE_SHIP_FROM = 300_000
 const SHELF_SIZE = 12
 /** Sách thật của used-market-public-account.spec: desktop-account, mobile-account */
 const USED_MARKET_BOOKS = ['cha-me-5-0', 'nang-cao-von-tu-vung-tieng-nhat-theo-chu-de-bang-hinh-anh']
+/** Sách thật + từ khóa không dấu của search-used-account.spec theo project; từ khóa trạng thái rỗng */
+const SEARCH_USED_BOOKS: Record<string, { slug: string; query: string }> = {
+  'desktop-account': { slug: 'suong-khoi-que-nha', query: 'suong khoi' },
+  'mobile-account': { slug: 'oxford-thuong-yeu', query: 'oxford thuong' },
+}
+const SEARCH_USED_NO_LISTING = 'ky mong'
+const SEARCH_USED_NO_BOOK = 'qxzw vjk'
 /** Dữ liệu của prefs-blocks-account.spec */
 const PREFS_CATEGORY = 'truyen-ngan-tan-van'
 const PREFS_BY_AUTHOR = 'muoi-chin-chan-dung-nha-van-cung-thoi'
@@ -157,6 +164,76 @@ describe('e2e/fixtures/books.json', () => {
       expect(others, slug).not.toContain(slug)
     }
     expect(spec).toContain(`'${USED_MARKET_BOOKS[0]}'`)
+  })
+
+  it('search-used-account.spec: mỗi project một sách thật + từ khóa không dấu chỉ khớp cuốn đó; từ khóa rỗng khớp sách không có tin / không khớp sách nào', () => {
+    // Spec đăng tin trên sách của project rồi tìm từ khóa ở tab Sách cũ, đếm N "Sách cũ (N)" trên mọi tin khớp → từ khóa
+    // (search_books: mọi từ là chuỗi con của search_text = tên + phụ đề + ISBN + tên tác giả, bỏ dấu như normalize_vi,
+    // xấp xỉ bằng NFD trong JS) chỉ khớp đúng cuốn của project, không khớp chéo, không khớp sách / tác giả e2e; sách
+    // thuộc danh mục lá đang bật (tab chỉ tìm trong danh mục đang hiện), không spec nào khác nhắc tới slug.
+    const spec = read('../e2e/search-used-account.spec.ts')
+    const categories = seedCategories(read('../supabase/seed.sql'))
+    const normalize = (text: string) =>
+      text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
+    const searchText = (b: (typeof books)[number]) => normalize([b.title, b.subtitle, b.isbn, ...b.authors].filter(Boolean).join(' '))
+    const matching = (query: string) => {
+      const terms = normalize(query).split(/\s+/)
+      return books.filter((b) => terms.every((term) => searchText(b).includes(term))).map((b) => b.slug)
+    }
+    const templates = [...read('./e2e-user.ts').matchAll(/(?:title|name): (?:titleTag \? )?`([^`]*)`/g)].map((match) =>
+      normalize((match[1] ?? '').replace(/\$\{[^}]*\}/g, ' ')),
+    )
+    expect(templates.length).toBeGreaterThan(0)
+    const notE2eMatch = (query: string) => {
+      const terms = normalize(query).split(/\s+/)
+      for (const term of terms) expect(term, `${query}: ${term} chỉ có chữ hex`).toMatch(/[^0-9a-f]/)
+      for (const template of templates) expect(terms.every((term) => template.includes(term)), `${query}: ${template}`).toBe(false)
+    }
+    const others = readdirSync(new URL('../e2e/', import.meta.url))
+      .filter((file) => file.endsWith('.ts') && file !== 'search-used-account.spec.ts')
+      .map((file) => read(`../e2e/${file}`))
+      .join(' ')
+
+    // Giá tin viết thẳng trong lời gọi createPendingListing của spec: không vượt giá gốc (trần giá của RPC)
+    const prices = [...spec.matchAll(/(?<!function )createPendingListing\(([^)]*)\)/g)].map((match) => match[1] ?? '')
+    for (const args of prices) expect(args, 'giá tin phải viết thẳng (VD 41_000)').toMatch(/^\d[\d_]*$/)
+    expect(prices.length).toBeGreaterThan(0)
+    const maxPrice = Math.max(...prices.map((args) => Number(args.replaceAll('_', ''))))
+
+    const projectBooks = Object.values(SEARCH_USED_BOOKS).map((entry) => entry.slug)
+    for (const [project, { slug, query }] of Object.entries(SEARCH_USED_BOOKS)) {
+      expect(spec, project).toContain(`'${project}': { slug: '${slug}', query: '${query}' }`)
+      expect(normalize(query), `${project}: từ khóa phải không dấu`).toBe(query)
+      const book = books.find((b) => b.slug === slug)
+      expect(book, slug).toBeDefined()
+      if (!book) continue
+      // Đúng cuốn của project, không khớp chéo cuốn của project kia
+      expect(matching(query), `${project}: ${query}`).toEqual([slug])
+      notE2eMatch(query)
+      expect(book.original_price ?? book.price, slug).toBeGreaterThanOrEqual(maxPrice)
+      const category = categories.get(book.category_slug)
+      expect(category, `${slug}: danh mục ${book.category_slug} không có trong seed.sql`).toBeDefined()
+      if (!category) continue
+      expect(category.active, `${slug}: ${book.category_slug} đang tắt`).toBe(true)
+      if (category.parent) expect(categories.get(category.parent)?.active, `${slug}: danh mục cha`).toBe(true)
+      expect([...categories.values()].filter((c) => c.parent === book.category_slug), `${slug}: có danh mục con`).toEqual([])
+      expect(others, slug).not.toContain(slug)
+      expect(USED_MARKET_BOOKS, slug).not.toContain(slug)
+    }
+    expect(new Set(projectBooks).size).toBe(projectBooks.length)
+
+    // Từ khóa rỗng: khớp ≥ 1 sách đang hiện mà không sách nào có tin của spec nào; từ khóa không khớp sách nào
+    for (const value of [SEARCH_USED_NO_LISTING, SEARCH_USED_NO_BOOK]) expect(spec, value).toContain(`'${value}'`)
+    const noListing = matching(SEARCH_USED_NO_LISTING)
+    expect(noListing.length).toBeGreaterThan(0)
+    for (const slug of noListing) {
+      expect([...projectBooks, ...USED_MARKET_BOOKS], slug).not.toContain(slug)
+      const category = categories.get(books.find((b) => b.slug === slug)?.category_slug ?? '')
+      expect(category?.active, `${slug}: danh mục`).toBe(true)
+    }
+    notE2eMatch(SEARCH_USED_NO_LISTING)
+    expect(matching(SEARCH_USED_NO_BOOK)).toEqual([])
+    notE2eMatch(SEARCH_USED_NO_BOOK)
   })
 
   it('admin-warnings.spec (e): đủ sách mẫu cho lô gợi ý, không slug e2e-, không cụm [mock: trong tên', () => {
