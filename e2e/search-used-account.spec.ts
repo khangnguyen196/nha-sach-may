@@ -292,3 +292,21 @@ test('(f) không tràn ngang ở 320 / 390 / 1440: tab Sách mới, tab Sách c�
   expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
   expect(errors).toEqual([])
 })
+
+// Trang vượt quá (không phải kết quả rỗng): từ khóa của project còn 1 tin đang bán (sau (b)) → page=99 → UI 404 +
+// noindex, HTTP 200 (soft 404, như mẫu ở catalog.spec.ts)
+test('(g) tab Sách cũ, page vượt quá → UI 404 + noindex, không lỗi console', async ({ page }) => {
+  const [kept] = listed
+  if (!kept) throw new Error('Thiếu tin của beforeAll')
+  const errors = collectErrors(page)
+  await page.goto(searchUrl(query, '&type=used'))
+  await expect(card(page, kept.id)).toBeVisible()
+
+  const response = await page.goto(searchUrl(query, '&type=used&page=99'))
+  expect(response?.status()).toBe(200)
+  await expect(main(page).getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible()
+  await expect(page.locator('meta[name="robots"][content*="noindex"]').first()).toBeAttached()
+  await expect(main(page).getByTestId('market-listing')).toHaveCount(0)
+  await waitForHydration(page, 'main a[href="/"]')
+  expect(errors).toEqual([])
+})

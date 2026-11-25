@@ -230,6 +230,8 @@ describe('e2e/fixtures/books.json', () => {
       expect([...projectBooks, ...USED_MARKET_BOOKS], slug).not.toContain(slug)
       const category = categories.get(books.find((b) => b.slug === slug)?.category_slug ?? '')
       expect(category?.active, `${slug}: danh mục`).toBe(true)
+      if (category?.parent) expect(categories.get(category.parent)?.active, `${slug}: danh mục cha`).toBe(true)
+      expect(others, slug).not.toContain(slug)
     }
     notE2eMatch(SEARCH_USED_NO_LISTING)
     expect(matching(SEARCH_USED_NO_BOOK)).toEqual([])
