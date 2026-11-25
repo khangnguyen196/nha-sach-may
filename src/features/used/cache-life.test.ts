@@ -164,6 +164,9 @@ describe('link ký ảnh sách cũ: cache ngắn hơn hạn link (quyết địn
         'app/[locale]/(shop)/used-books/page.tsx',
         'app/[locale]/(shop)/used-books/[id]/page.tsx',
         'app/[locale]/(shop)/books/[slug]/page.tsx',
+        // Tab Sách cũ của trang tìm kiếm (tim-sach-cu): listMarketListings + matchingUsedSearchBookIds / countUsedListings
+        'app/[locale]/(shop)/search/page.tsx',
+        'features/used/components/search-used-results.tsx',
       ]),
     )
     expect(files.flatMap((file) => cacheProblems(parse(file)))).toEqual([])

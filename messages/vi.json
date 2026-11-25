@@ -941,7 +941,17 @@
     "hint": "Gõ ít nhất 2 ký tự: tên sách, tác giả hoặc ISBN. Có thể gõ không dấu.",
     "emptyTitle": "Không tìm thấy sách nào cho “{q}”",
     "emptyDescription": "Thử từ khóa ngắn hơn hoặc kiểm tra chính tả.",
-    "metaDescription": "Tìm sách theo tên, tác giả hoặc ISBN tại Nhà Sách Mây."
+    "metaDescription": "Tìm sách theo tên, tác giả hoặc ISBN tại Nhà Sách Mây.",
+    "tabsLabel": "Loại sách",
+    "tabNew": "Sách mới",
+    "tabUsed": "Sách cũ ({count})",
+    "usedResultsFor": "Sách cũ cho “{q}”",
+    "usedCount": "{count, plural, other {# tin sách cũ}} cho “{q}”",
+    "usedEmpty": {
+      "title": "Chưa có sách cũ nào cho “{q}”",
+      "description": "Chợ sách cũ chưa có tin nào của các sách khớp từ khóa này. Bạn xem các tin khác trong chợ nhé.",
+      "action": "Xem Chợ sách cũ"
+    }
   },
   "validation": {
     "required": "Vui lòng điền thông tin này.",

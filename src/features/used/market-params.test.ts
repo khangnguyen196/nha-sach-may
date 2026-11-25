@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Category } from '@/features/books/queries'
-import { marketFilter, marketHref, marketQuery, withMarketParams } from './market-params'
+import {
+  marketFilter,
+  marketHref,
+  marketQuery,
+  parseSearchTab,
+  searchTabHref,
+  searchTabQuery,
+  withMarketParams,
+} from './market-params'
 import { marketParamsSchema } from './schemas'
 
 const category = (id: number, slug: string, parent_id: number | null = null): Category => ({
@@ -99,5 +107,42 @@ describe('marketFilter (lọc như /sach, quyết định 10: ẩn danh mục �
       sort: 'price-desc',
       page: 2,
     })
+  })
+})
+
+describe('tab Sách mới | Sách cũ của trang tìm kiếm', () => {
+  it('parseSearchTab: chỉ type=used (giá trị đầu) là tab Sách cũ, còn lại tab Sách mới', () => {
+    expect(parseSearchTab({ type: 'used' })).toBe('used')
+    expect(parseSearchTab({ type: ['used', 'new'] })).toBe('used')
+    for (const type of [undefined, '', 'new', 'USED', 'used ', ['new', 'used']]) {
+      expect(parseSearchTab({ type }), JSON.stringify(type)).toBe('new')
+    }
+    expect(parseSearchTab({})).toBe('new')
+  })
+
+  it('searchTabHref: giữ q đúng chữ gõ + sort / price / lang / cat / stock, bỏ page; tab Sách cũ thêm type=used', () => {
+    const raw = {
+      q: '  Sương khói  quê ',
+      sort: 'price-asc',
+      price: '0-100',
+      lang: 'vi',
+      cat: 'van-hoc',
+      stock: '1',
+      page: '3',
+      other: 'x',
+    }
+    const kept = { q: 'Sương khói  quê', sort: 'price-asc', price: '0-100', lang: 'vi', cat: 'van-hoc', stock: '1' }
+    expect(searchTabHref(raw, 'used')).toEqual({ pathname: '/search', query: { ...kept, type: 'used' } })
+    expect(searchTabHref(raw, 'new')).toEqual({ pathname: '/search', query: kept })
+  })
+
+  it('searchTabHref: tab Sách mới bỏ type=used; key lặp lấy giá trị đầu; giá trị rỗng / thiếu không thêm', () => {
+    expect(searchTabQuery({ q: 'suong khoi', type: 'used', page: '2' }, 'new')).toEqual({ q: 'suong khoi' })
+    expect(searchTabQuery({ q: ['a b', 'c'], sort: ['newest', 'price-asc'], lang: '' }, 'used')).toEqual({
+      q: 'a b',
+      sort: 'newest',
+      type: 'used',
+    })
+    expect(searchTabQuery({ q: '   ' }, 'used')).toEqual({ type: 'used' })
   })
 })

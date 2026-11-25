@@ -358,7 +358,17 @@
     "hint": "Type at least 2 characters: a title, author or ISBN. Vietnamese diacritics are optional.",
     "emptyTitle": "No books found for “{q}”",
     "emptyDescription": "Try a shorter keyword or check the spelling.",
-    "metaDescription": "Search books by title, author or ISBN at Nhà Sách Mây."
+    "metaDescription": "Search books by title, author or ISBN at Nhà Sách Mây.",
+    "tabsLabel": "Book type",
+    "tabNew": "New books",
+    "tabUsed": "Used books ({count})",
+    "usedResultsFor": "Used books for “{q}”",
+    "usedCount": "{count, plural, one {# used listing} other {# used listings}} for “{q}”",
+    "usedEmpty": {
+      "title": "No used books for “{q}”",
+      "description": "The used book market has no listings for books matching this keyword yet. Have a look at the other listings.",
+      "action": "Browse used books"
+    }
   },
   "validation": {
     "required": "Please fill in this field.",
