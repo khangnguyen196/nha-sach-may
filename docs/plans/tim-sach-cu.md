@@ -57,3 +57,7 @@ tab Sách cũ hiện tin đang bán trong Chợ sách cũ của các sách khớ
   vào fallback cũng mất khi form thật thay vào (có từ trước đợt). Chưa sửa vì: form cần q từ URL nên phải nằm trong
   Suspense; khóa fallback làm hỏng tìm kiếm khi tắt JS; chuyển sang client useSearchParams thì tốn JS mà vẫn cần
   Suspense. e2e chờ form thật trước khi gõ (search-used-account ca (c), như catalog.spec).
+- Tắt JS thì form tìm ở tab Sách cũ luôn gửi sang tab Sách mới (cửa hàng cần JS, theo `docs/plans/no-js.md`).
+- Comment ở `e2e/search-used-account.spec.ts` (đoạn chờ form thật ở ca (c)) nêu lý do không chờ `input[name=type]` chưa
+  chính xác (reviewer vòng 4: bản sao ẩn nằm ngoài `<main>`); sửa khi đụng file đó lần tới (không sửa ở vòng 5 để
+  không làm e2e chạy lại).
