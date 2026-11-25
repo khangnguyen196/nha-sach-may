@@ -945,6 +945,7 @@
     "tabsLabel": "Loại sách",
     "tabNew": "Sách mới",
     "tabUsed": "Sách cũ ({count})",
+    "tabUsedPlain": "Sách cũ",
     "usedResultsFor": "Sách cũ cho “{q}”",
     "usedCount": "{count, plural, other {# tin sách cũ}} cho “{q}”",
     "usedEmpty": {

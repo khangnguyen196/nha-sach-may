@@ -7,8 +7,11 @@ type Props = {
   /** searchParams thô của trang tìm kiếm: link giữ q đúng chữ đã gõ + bộ lọc / sắp xếp */
   raw: Record<string, string | string[] | undefined>
   active: SearchTab
-  /** Số tin sách cũ đang bán của các sách khớp (tính cả tin của sách bị chặn theo sở thích, như mọi bộ đếm khác) */
-  usedCount: number
+  /**
+   * Số tin sách cũ đang bán của các sách khớp (tính cả tin của sách bị chặn theo sở thích, như mọi bộ đếm khác);
+   * null = đếm lỗi ở tab Sách mới → nhãn "Sách cũ" không số
+   */
+  usedCount: number | null
 }
 
 const TAB_CLASS =
@@ -22,7 +25,7 @@ export async function SearchTabs({ raw, active, usedCount }: Props) {
   const t = await getTranslations('searchPage')
   const tabs = [
     { tab: 'new', label: t('tabNew') },
-    { tab: 'used', label: t('tabUsed', { count: usedCount }) },
+    { tab: 'used', label: usedCount === null ? t('tabUsedPlain') : t('tabUsed', { count: usedCount }) },
   ] as const
   return (
     <nav aria-label={t('tabsLabel')} className="mb-6 border-b" data-testid="search-tabs">

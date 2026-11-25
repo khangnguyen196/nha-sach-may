@@ -15,7 +15,8 @@ import { visibleCategoryIds } from '@/features/books/utils'
 import { SearchTabs, SearchTabsSkeleton } from '@/features/used/components/search-tabs'
 import { SearchUsedResults } from '@/features/used/components/search-used-results'
 import { DEFAULT_MARKET_SORT, parseSearchTab, type SearchTab } from '@/features/used/market-params'
-import { countUsedListings, listMarketListings, matchingUsedSearchBookIds } from '@/features/used/public-queries'
+import { listMarketListings, matchingUsedSearchBookIds } from '@/features/used/public-queries'
+import { searchUsedCount } from '@/features/used/search-count'
 import { localeAlternates } from '@/i18n/alternates'
 import { getPathname } from '@/i18n/navigation'
 import { localize } from '@/lib/i18n-db'
@@ -122,10 +123,8 @@ async function SearchResults({ locale, searchParams }: { locale: Locale; searchP
   }
 
   const { params, parents, input } = withCategoryFilter(parsed, categories, 'search')
-  const [result, usedCount] = await Promise.all([
-    listBooks(input),
-    matchingUsedSearchBookIds(parsed.q, visibleIds).then((ids) => (ids.length > 0 ? countUsedListings(ids) : 0)),
-  ])
+  // N lỗi → null (nhãn "Sách cũ" không số), kết quả sách mới vẫn hiện; tab Sách cũ ở trên thì lỗi là lỗi thật (throw)
+  const [result, usedCount] = await Promise.all([listBooks(input), searchUsedCount(parsed.q, visibleIds)])
   // Trang vượt quá → UI 404 (soft 404)
   if (params.page > 1 && result.books.length === 0) return <InlineNotFound kind="page" />
 

@@ -362,6 +362,7 @@
     "tabsLabel": "Book type",
     "tabNew": "New books",
     "tabUsed": "Used books ({count})",
+    "tabUsedPlain": "Used books",
     "usedResultsFor": "Used books for “{q}”",
     "usedCount": "{count, plural, one {# used listing} other {# used listings}} for “{q}”",
     "usedEmpty": {
