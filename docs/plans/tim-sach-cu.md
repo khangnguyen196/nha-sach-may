@@ -42,3 +42,13 @@ tab Sách cũ hiện tin đang bán trong Chợ sách cũ của các sách khớ
 - (h) e2e ô mờ chặn theo sở thích ở tab Sách cũ (chưa có helper chặn dùng lại được cho spec này; khóa chặn của thẻ
   MarketGrid có Vitest `features/used/market-blocks.test.ts`, chưa có e2e ở chợ sách cũ).
 - Fallback chung cho cả 2 tab là lưới sách mới (bìa 2:3); tab Sách cũ (ảnh 3:4) nhảy nhẹ khi stream vào lần đầu.
+- Trần 128 tag của Next: từ khóa rộng khớp > 127 sách có tin → tag `book:{id}` thừa bị bỏ, N của sách ngừng bán chỉ
+  đúng lại khi `used-listings` đổi hoặc hết hạn `hours`; tag cũng chỉ tính trên 1000 tin đầu (max_rows). Gộp với hướng
+  RPC riêng.
+- Hai cách đếm có thể lệch tạm thời: tab Sách cũ chỉ gắn `book:{id}` của sách ở trang đang xem → sách có tin ở trang 2
+  ngừng bán thì total của trang 1 cũ tới khi `used-listings` đổi (như chợ sách cũ hiện nay).
+- URL dài: `.in('book_id', ≤ 1000 id)` ≈ 5–6KB trên URL GET; catalog lớn dễ gặp 414 trước trần 1000 → cùng hướng RPC
+  riêng.
+- `?type=used` khi chưa có từ khóa / từ khóa 1 ký tự: màn gợi ý không có dải tab; có thể nhắc "tìm trong chợ sách cũ".
+- Nhánh đếm N ở tab Sách mới lỗi → nhãn "Sách cũ" không số, kết quả sách mới vẫn hiện (`searchUsedCount`,
+  `features/used/search-count.ts`, vòng 2): đã làm; ghi ở đây để nhớ hành vi khi đọc log `searchUsedCount (ids|count)`.
