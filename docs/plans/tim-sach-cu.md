@@ -53,3 +53,7 @@ tab Sách cũ hiện tin đang bán trong Chợ sách cũ của các sách khớ
 - URL dài: `.in('book_id', ≤ 1000 id)` ≈ 5–6KB trên URL GET; catalog lớn dễ gặp 414 trước trần 1000 → cùng hướng RPC
   riêng.
 - `?type=used` khi chưa có từ khóa / từ khóa 1 ký tự: màn gợi ý không có dải tab; có thể nhắc "tìm trong chợ sách cũ".
+- Gửi ô tìm trong lúc trang tìm kiếm còn đang tải (form fallback của Suspense) ở tab Sách cũ → về tab Sách mới; chữ gõ
+  vào fallback cũng mất khi form thật thay vào (có từ trước đợt). Chưa sửa vì: form cần q từ URL nên phải nằm trong
+  Suspense; khóa fallback làm hỏng tìm kiếm khi tắt JS; chuyển sang client useSearchParams thì tốn JS mà vẫn cần
+  Suspense. e2e chờ form thật trước khi gõ (search-used-account ca (c), như catalog.spec).
