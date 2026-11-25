@@ -216,6 +216,11 @@ test('(c) đổi tab hai chiều giữ ô tìm, q và sort; gửi lại form ở
 
   // Gửi lại form (Enter) ở tab Sách cũ với từ khóa khác → vẫn ở tab Sách cũ
   await page.goto(searchUrl(query, '&type=used'))
+  // Lúc trang còn tải, ô đang hiện là form fallback của Suspense: ô trống, không có ô ẩn type → gõ vào đó thì gửi sang
+  // tab Sách mới. Chờ form thật (tab Sách cũ đang chọn + ô có từ khóa); không chờ input[name=type] vì bản sao ẩn
+  // <div hidden id="S:…"> của React cũng có ô đó.
+  await expect(tab(page, /^Sách cũ/)).toHaveAttribute('aria-current', 'page')
+  await expect(input()).toHaveValue(query)
   await input().fill(QUERY_NO_LISTING)
   await input().press('Enter')
   await expect.poll(() => params(page)).toEqual({ q: QUERY_NO_LISTING, type: 'used' })
